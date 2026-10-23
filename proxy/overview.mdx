@@ -1,0 +1,236 @@
+---
+title: "Proxied records"
+description: "Put a name behind one or more reverse proxies, so DNS answers with the proxies' addresses and your servers stay hidden."
+---
+
+A proxied record works like Cloudflare's orange cloud. DNS answers its name with the address of a
+**proxy**, and the proxy sends the visit on to your servers, which visitors never see.
+
+A record can go through **several proxies**. DNS then answers with all of their addresses, so
+visitors spread over them and one proxy going down doesn't take the name with it.
+
+What each proxy serves is set up in DNZ the way Traefik sees it: **routers** pick hostnames from
+DNZ's zones and send them to a **service** (your servers), through **middlewares**. See
+[Routers, services and middlewares](/proxy/routing).
+
+<Note>
+  Proxying is **off by default**. Setting it up, and everything on the **Proxy** page, needs a
+  superadmin.
+</Note>
+
+## Two backends
+
+DNZ works with two kinds of proxy. Both serve the same routers, services and middlewares, so you can
+switch later without setting them up again.
+
+| | Traefik | dnz-proxy |
+| --- | --- | --- |
+| What it is | A [Traefik](https://traefik.io/) v3 you run | DNZ's own reverse proxy, built on Cloudflare's Pingora; ships with DNZ |
+| How it gets its routes | Polls DNZ through Traefik's HTTP provider | DNZ pushes the configuration to every node within a second |
+| Servers per proxy | One Traefik per proxy (connect several, for example one per site) | Any number of nodes per proxy |
+| What DNS answers with | The proxy's addresses | The public addresses of the proxy's healthy nodes, with a short TTL |
+| Certificates | Traefik's own certificate resolvers | DNZ issues them over ACME and hands them to the nodes |
+| Extras | [Records from Traefik's routers](/proxy/traefik-records), from its other providers | Caching, a firewall, an "under attack" challenge, analytics and request logs |
+| TCP and UDP | Yes | Yes |
+| Set up | [Connecting Traefik](/proxy/traefik) | [dnz-proxy](/proxy/dnz-proxy) |
+
+Pick Traefik when you already run it, or want its providers (Docker, Kubernetes) to feed DNS. Pick
+dnz-proxy when you want DNZ to run the whole path, from certificates to analytics.
+
+## Turning proxying on
+
+Go to **Settings → Proxy** and choose a backend: **Off**, **Traefik** or **dnz-proxy**.
+
+Switching from one backend to the other changes where every proxied name points:
+
+- To **dnz-proxy**: proxied names answer with the addresses of their proxy's healthy dnz-proxy nodes
+  (the proxy's own address while it has none), and every Traefik gets an empty route list.
+- To **Traefik**: proxied names answer with their proxy's own address, and dnz-proxy nodes stop
+  getting configuration. They keep serving the last one they had.
+
+The **Proxy** page shows up in the menu, next to DNS, while proxying is on and a proxy is listed
+(detected ones included). Until then, **Add proxy** on the settings page leads to it.
+
+### From the environment
+
+You can also set the backend when DNZ starts. The switch in the UI is then read-only. Proxies are
+still managed in the UI.
+
+<CodeGroup>
+
+```bash Environment
+DNZ_PROXY_BACKEND=dnz      # traefik, dnz or off
+```
+
+```toml /etc/dnz/dnz.toml
+[proxy]
+backend = "dnz"
+```
+
+</CodeGroup>
+
+See [Configuration](/deploy/configuration) for where DNZ reads its settings from.
+
+## Using it
+
+<Steps>
+  <Step title="Turn on proxying">
+    Under **Settings → Proxy**, pick **Traefik** or **dnz-proxy**.
+  </Step>
+  <Step title="Connect a proxy">
+    Connect a Traefik ([Connecting Traefik](/proxy/traefik)) or run dnz-proxy nodes
+    ([dnz-proxy](/proxy/dnz-proxy)). The proxy then shows up on the **Proxy** page.
+  </Step>
+  <Step title="Add a route">
+    On the proxy's page, **Add route** does it in one step. See [Adding a route](#adding-a-route)
+    below.
+  </Step>
+  <Step title="Proxy the record">
+    If the route didn't already do it, edit the record in its zone and pick the proxies. See
+    [Proxying a record from the zone](#proxying-a-record-from-the-zone).
+  </Step>
+</Steps>
+
+### Adding a route
+
+**Add route** takes a hostname and its upstreams. You choose HTTPS (with a redirect from `http://`)
+and middlewares. DNZ then:
+
+- adds the service and the router,
+- adds a second router on the HTTP entry point with a *Redirect to HTTPS* middleware, when you chose
+  HTTPS with a redirect,
+- proxies the name's DNS record, and makes an A record pointing at the proxy when there is none.
+
+The **Services**, **Middlewares** and **Routers** tabs are there to fine-tune afterwards.
+
+As you type the hostname, the field offers:
+
+- names that already have A, AAAA or CNAME records, tagged with their types;
+- under each of DNZ's zones, the name you are typing, tagged **new**: a new DNS record is added for
+  it;
+- a name outside every zone is tagged **no zone**, and one the proxy already routes **has router**.
+
+The routers go on the proxy's entry points on port 80 and 443. Under dnz-proxy these are its own
+entry points. Under Traefik they are the ones its API lists (when the proxy has **Traefik API**
+set), else `web` and `websecure`. The dialog says where they came from.
+
+A record without a router links straight to this dialog, with its name filled in.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    **Proxy** → open the proxy → **Add route**.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz proxy hosts local                             # names with A/AAAA/CNAME records, and whether local routes them
+    dnz proxy route local app.example.com -u http://10.0.0.10:8080
+    dnz proxy route local app.example.com -u http://10.0.0.10:8080=3 -u http://10.0.0.11:8080 \
+      --cert-resolver letsencrypt -m compress         # weights 3:1, a middleware by name
+    dnz proxy route local intranet.example.com -u http://10.0.0.20 --http     # HTTP only
+    ```
+
+    `local` is the proxy's name. See [Proxy commands](/cli/proxy) for every option.
+
+  </Tab>
+</Tabs>
+
+### Proxying a record from the zone
+
+In the zone, edit the record and pick the proxies. With only one proxy this is a switch. With
+several, tick one or more of them; none means DNS only.
+
+A proxy can only be picked when one of its routers has the record's name. Otherwise it is greyed
+out and the form points to **Proxy**.
+
+The form shows the whole path: what the visitor opens, the proxies DNS points to (with every address
+in the answer), and each proxy's router and service that take it from there.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    **DNS → Zones** → the zone → edit the record → pick the proxies.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz record add example.com shop A 10.0.0.5 --proxy edge-jkt,edge-sgp   # DNS answers with both proxies
+    dnz record edit example.com shop --proxy edge-jkt,edge-ams --all       # every A/AAAA/CNAME of the name at once
+    dnz record edit example.com shop --proxy none --all                    # back to DNS only
+    ```
+
+    See [Zones and records](/cli/zones-records).
+
+  </Tab>
+</Tabs>
+
+While a record is proxied, its own value is not used: the router's service decides where visits go.
+The value is used again as soon as the record goes back to DNS only, or proxying is turned off.
+
+### Several proxies per name
+
+Adding a route for the same hostname on a second proxy adds that proxy to the name's records. A
+name is spread over more proxies just by routing it there.
+
+<Tip>
+  While proxying is on, the request flow on the **Overview** gets a **Proxy** tab: visitors, each
+  proxy, its routers and middlewares, services and upstreams.
+</Tip>
+
+## What DNS answers
+
+While proxying is on, every name with proxied records answers A and AAAA queries with the addresses
+of every proxy its records go through. One proxy gives its address, two give both, and so on. An
+address two proxies share is answered once.
+
+- The record's own value is never handed out, and a proxied CNAME is not answered as a CNAME.
+- Other record types at the name (TXT, MX, and so on) are answered as usual.
+- The answer uses the lowest TTL of the name's proxied records and, with dnz-proxy, the lowest DNS
+  TTL cap among its proxies.
+
+While proxying is off, proxied records answer with their own value, and every Traefik gets an empty
+route list, so it drops the routes it had. The proxy choice is kept for when proxying comes back on.
+
+Changing proxying, or a proxy's addresses, bumps the SOA serial of the zones involved, so
+secondaries pick up the new answers. Zone transfers carry the proxy's addresses, not the origins.
+
+## Rules
+
+- Only **A, AAAA and CNAME** records can be proxied.
+- All A, AAAA and CNAME records of one name go through the **same proxies, or none**. Otherwise DNS
+  would hand out the origin next to a proxy, or answer differently per record type. Change them
+  together: the record form does it per record, `dnz record edit … --proxy` and the bulk API's
+  `set_proxies` move a name's records at once.
+- Records in a **view** can't be proxied. A proxy serves every client the same.
+- A record can only be proxied through approved proxies that each have a router for its name.
+- Router hostnames must be in one of DNZ's local zones.
+- **Wildcards** (`*.apps.example.com`) work. They match one label, and exact names win over them
+  unless you set priorities.
+- Automatic PTR skips proxied names.
+- A router that proxied records rely on can't be deleted, turned off, or have that hostname taken
+  out.
+- A proxy can't be deleted while records use it. Take it off them first; they may keep their other
+  proxies.
+
+Objects that other objects use are protected too. See
+[What can't be deleted](/proxy/routing#what-cant-be-deleted).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Connecting Traefik" icon="network-wired" href="/proxy/traefik">
+    Point Traefik's HTTP provider at DNZ.
+  </Card>
+  <Card title="dnz-proxy" icon="server" href="/proxy/dnz-proxy">
+    Run DNZ's own proxy on any number of servers.
+  </Card>
+  <Card title="Routers, services and middlewares" icon="route" href="/proxy/routing">
+    What a proxy serves, and how to check it works.
+  </Card>
+  <Card title="Proxy API" icon="code" href="/api/proxy">
+    Proxies, routes and records over HTTP.
+  </Card>
+</CardGroup>

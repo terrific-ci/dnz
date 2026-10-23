@@ -1,0 +1,117 @@
+---
+title: "First run"
+description: "Create the first admin with the setup page, the dnz setup command, or environment variables, then let the setup wizard point your network or registrar at DNZ."
+---
+
+A new DNZ has no users. There are three ways to create the first one, a **superadmin** who can do
+everything, including managing other users, divisions and roles.
+
+<Tabs>
+  <Tab title="Setup page">
+    While the database is empty, every page of the dashboard redirects to **/setup**:
+
+    <Steps>
+      <Step title="Admin account">
+        Username, name, e-mail and password. Passwords need at least 10 characters.
+      </Step>
+      <Step title="First division">
+        Every zone belongs to a division, so name the first one (for example *IT*). You can add the
+        first zone here too.
+      </Step>
+      <Step title="Forward DNS">
+        Pick a resolver preset (Cloudflare, Google, Quad9) or enter your own upstreams, then a
+        [forwarding strategy](/dns/forwarding#strategies).
+      </Step>
+    </Steps>
+
+    You're signed in when it's done, and the [setup wizard](#the-setup-wizard) takes over.
+  </Tab>
+  <Tab title="dnz setup">
+    Without the web UI, run this on the server. It asks for the admin and the first division, then
+    the setup wizard's questions, in the terminal:
+
+    ```bash
+    dnz setup
+    ```
+
+    Or pass the answers, with the password in `DNZ_PASSWORD`. Without a terminal only the flags
+    count, and the steps they don't cover stay open:
+
+    ```bash
+    DNZ_PASSWORD='…' dnz setup --username admin --division IT \
+      --upstream 1.1.1.1,9.9.9.9 --zone example.com
+    DNZ_PASSWORD='…' dnz setup --username admin --division IT --role resolver \
+      --recursive --zone-file home.lan.zone --guide router
+    ```
+
+    You're signed in to the CLI when it's done. See [CLI overview](/cli/overview).
+  </Tab>
+  <Tab title="Environment (Docker)">
+    For automated installs, set the admin's password in the environment. When there are no users
+    yet, DNZ creates the admin at startup and skips the setup page.
+
+    ```yaml docker-compose.yml
+    environment:
+      DNZ_ADMIN_USERNAME: admin        # optional, default "admin"
+      DNZ_ADMIN_PASSWORD: change-me-please
+    ```
+
+    This admin must choose a new password at the first sign-in.
+  </Tab>
+</Tabs>
+
+## The setup wizard
+
+Right after the setup page (or `dnz setup`), four short steps get DNZ working for what you need.
+Skip any of them: a banner offers the rest until you're done or dismiss it, and **Settings → Health
+check → Open the setup wizard** or `dnz setup` picks it up where it stopped.
+
+<Steps>
+  <Step title="What DNZ will be">
+    A **resolver for a network** (devices ask it: local zones, filtering, forwarding), **authoritative
+    for public zones** (the internet asks it for your domains), or **both**. It shapes the next steps.
+  </Step>
+  <Step title="Upstreams">
+    Where names outside your zones go: a preset (Cloudflare, Google, Quad9, encrypted or plain), your
+    own list, or **recursive**, resolving from the root servers without any upstream.
+  </Step>
+  <Step title="First zone">
+    A new zone, a BIND zone file (previewed before anything is created), or a copy of a Cloudflare zone
+    once a [Cloudflare connection](/integrations/cloudflare) exists.
+  </Step>
+  <Step title="Point at DNZ">
+    Copy-paste guides with this server's address filled in:
+
+    - **Router and DHCP** (option 6): your router, ISC dhcpd, Kea, dnsmasq (OpenWrt), MikroTik and
+      Windows Server DHCP;
+    - **Devices**: Windows, macOS, Linux (NetworkManager, systemd-resolved), phones;
+    - **Encrypted DNS**: Android Private DNS, Apple profiles, Windows 11 DoH, systemd-resolved DoT
+      and browsers, once DNZ has a certificate;
+    - **Registrar**, for a public zone: the nameservers, their glue, the DS when DNSSEC is on, the
+      firewall, and **Check now**, which runs the [health check](/admin/health-check) of the
+      delegation right there.
+
+    In a Docker container DNZ may only see the container's own address. The step then asks for the
+    host's LAN address ([Device address](/admin/settings#device-address)).
+  </Step>
+</Steps>
+
+In the terminal, `dnz setup --guide windows,kea` prints guides on their own (`--guide all` for every
+one, `--guide registrar` for the first public zone).
+
+## After the first sign-in
+
+- Add the people who work with DNS and give them a role in a division. See
+  [Users, divisions and roles](/admin/access).
+- Check the server's time zone under **Settings → General**. Times in the UI and in notifications
+  use it.
+- Set up [notifications](/integrations/notifications) so you hear when an upstream goes down.
+- Point your network at DNZ. See [Pointing clients at DNZ](/deploy/clients).
+- Run the [health check](/admin/health-check) (**Settings → Health check** or `dnz doctor`): port
+  53, the delegation of public zones, DNSSEC at the registrar, certificates, the clock and weak
+  settings, each with a copy-paste fix.
+
+<Tip>
+  To start over, **Settings → General → Factory reset** (or `dnz --reset --all`) erases everything
+  and brings the setup page back. See [Settings](/admin/settings#factory-reset).
+</Tip>

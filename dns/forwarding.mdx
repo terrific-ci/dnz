@@ -1,0 +1,244 @@
+---
+title: "Forwarding"
+description: "Send names outside your zones to upstream resolvers over plain or encrypted DNS, choose how DNZ picks between them, and route some domains or networks elsewhere."
+---
+
+Every query for a name outside your local zones is **forwarded** to upstream resolvers, such as
+Cloudflare `1.1.1.1`, Quad9 or your own Active Directory DNS. DNZ keeps a cache of their answers,
+spreads queries across them with a strategy you pick, checks their health, and can send some
+domains or some client networks to other servers.
+
+Manage forwarding under **DNS → Forwarding** (superadmins) or with `dnz forwarding`. Changes are
+applied immediately, without a restart.
+
+<Tip>
+DNZ can also resolve names itself from the root servers instead of forwarding them, for the whole
+server or for some rules: see [Recursive resolution](/dns/recursive). Answers can be checked with
+[DNSSEC validation](/dns/dnssec-validation) either way.
+</Tip>
+
+## Set the upstreams
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Open DNS → Forwarding">
+        The **Upstreams** card lists the current resolvers with their live status.
+      </Step>
+      <Step title="Add or change upstreams">
+        Pick a preset (Cloudflare, Google, Quad9) or type an address in one of the
+        [formats below](#upstream-address-format). Set the order, the weight (for strategies that
+        use it) and turn upstreams on or off.
+      </Step>
+      <Step title="Pick a strategy">
+        Choose one in the **Strategy** card. See [Strategies](#strategies).
+      </Step>
+      <Step title="Save">
+        Click **Save & apply** in the bar at the bottom, or **Discard** to undo.
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz forwarding show
+    dnz forwarding add tls://dns.quad9.net --position 1
+    dnz forwarding edit 1.1.1.1 --weight 3 --enabled off
+    dnz forwarding rm 8.8.8.8
+    dnz forwarding strategy least_time
+    ```
+
+    See [CLI: forwarding](/cli/forwarding).
+
+  </Tab>
+</Tabs>
+
+The first upstreams and strategy come from the setup wizard, or from `DNZ_UPSTREAM` (default
+`1.1.1.1:53,8.8.8.8:53`) and `DNZ_FORWARD_STRATEGY` (default `failover`). Those settings are only
+read on the first start; after that the list lives in the database and is managed in the UI or the
+CLI.
+
+## Upstream address format
+
+| Written as | Meaning |
+| --- | --- |
+| `1.1.1.1`, `1.1.1.1:53`, `udp://1.1.1.1` | Plain DNS (UDP, TCP when the answer is truncated) |
+| `tls://1.1.1.1`, `tls://dns.google:853` | DNS over TLS (RFC 7858), port 853 by default |
+| `https://cloudflare-dns.com/dns-query` | DNS over HTTPS (RFC 8484, HTTP/2), `/dns-query` by default |
+| `quic://unfiltered.adguard-dns.com` | DNS over QUIC (RFC 9250), UDP port 853 by default |
+| `h3://cloudflare-dns.com/dns-query` | DNS over HTTPS on HTTP/3 (QUIC), UDP port 443 by default |
+| `tls://dns.google#8.8.8.8` | `#ip` pins the server address so the hostname doesn't have to be resolved first |
+
+Encrypted upstreams reuse their connections and verify the server's certificate. A TLS failure, for
+example because something on the network intercepts the connection, shows up as a **TLS** error on
+the dashboard.
+
+QUIC upstreams keep one connection open and send each query on its own stream, so a slow answer
+never holds up the next. Networks that block UDP 853 or 443 need DoT or DoH instead; the
+[upstream diagnosis](#diagnose-an-upstream) shows this as a failed QUIC handshake.
+
+<Tip>
+  Without `#ip`, DoT, DoH, DoQ and DoH3 hostnames are resolved with the system resolver. If this
+  machine uses DNZ itself as its resolver, add `#ip` to avoid a loop.
+</Tip>
+
+<Warning>
+  Many ISPs intercept plain DNS on port 53. If privacy or genuine answers matter, use only
+  encrypted upstreams. The `least_time` strategy picks the fastest path, which can be the ISP's
+  proxy when plain DNS upstreams are listed too.
+</Warning>
+
+## Strategies
+
+The strategy decides which upstream gets each query. You can switch it at any time without a
+restart. Upstreams that are down are skipped by every strategy and only tried when nothing else
+answers.
+
+| Strategy | Key | How it picks | Uses weight |
+| --- | --- | --- | --- |
+| Failover | `failover` | All queries go to the first healthy upstream in order; the next one takes over only when it fails. This is the default. | No |
+| Weighted round robin | `wrr` | Spreads queries across upstreams in proportion to their weight. | Yes |
+| Power of two choices | `p2c` | Picks two upstreams at random and sends to the one with lower latency × in-flight load. | No |
+| Rendezvous hashing | `hrw` | The same domain always goes to the same upstream (weighted), so upstream caches stay warm. | Yes |
+| Least time | `least_time` | Sends to the upstream with the lowest recent response time; ties go to the one with fewer queries in flight. | No |
+
+Weights run from 1 to 100. With `p2c` and `least_time`, the order is only a tie-breaker.
+
+## Cache, timeout and rate limit
+
+These are server settings in the config file or the environment (see
+[Configuration](/deploy/configuration)):
+
+| Setting | Environment | Default | What it does |
+| --- | --- | --- | --- |
+| `dns.cache_size` | `DNZ_CACHE_SIZE` | `10000` | Upstream answers kept in the cache. `0` turns the cache off. |
+| `forwarding.timeout_ms` | `DNZ_UPSTREAM_TIMEOUT_MS` | `2000` | How long to wait for one upstream, in milliseconds. |
+| `dns.rate_limit` | `DNZ_RATE_LIMIT` | `200` | Queries per second per client IP over UDP. `0` turns limiting off. |
+
+The cache honors the upstreams' TTLs, including negative caching. While every upstream is down it
+keeps answering from expired entries, and it refreshes busy names before they expire; see
+[Resolver options](/dns/resolver-options) for these, EDNS Client Subnet, DNS64, cookies and NSID.
+
+```toml /etc/dnz/dnz.toml
+[dns]
+cache_size = 10000
+rate_limit = 200
+
+[forwarding]
+timeout_ms = 2000
+```
+
+[Notifications](/integrations/notifications) can warn you when clients hit the rate limit, or when
+the cache is full (answers pushed out before their TTL, meaning `cache_size` is too small). For the
+rate limit and response rate limiting (RRL) against amplification, see
+[Rate limiting](/dns/rate-limiting).
+
+## Conditional forwarding
+
+A rule can also answer **recursively**: choose **Answer with → Recursive, from the root** in the
+rule dialog (or give `recursive` as its upstreams in the CLI), and its names are resolved by DNZ
+from the root servers. See [Recursive resolution](/dns/recursive).
+
+A **forwarding rule** sends a domain and its subdomains to other DNS servers, for example
+`corp.local` to your Active Directory DNS. Local zones are still answered first.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    On **DNS → Forwarding**, click **Add rule**:
+
+    - **Match**: **Domain**, **Client network**, or **Both**.
+    - **Domain**: autocompletes from names clients actually queried (domains and subdomains, with
+      their NXDOMAIN counts).
+    - **Client networks**: only clients in these networks get the rule.
+    - **DNS servers**: where matching queries go, tried in order. Any
+      [upstream format](#upstream-address-format) works.
+    - **Label** (optional): names the rule in lists and in the Overview's request flow.
+    - **Note** (optional).
+
+    Use the switch on a rule to turn it off, and the menu for **Diagnose**, edit and delete.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz forwarding rule add corp.local 10.0.0.10 10.0.0.11 --comment "AD"
+    dnz forwarding rule edit corp.local --enabled off
+    dnz forwarding rule rm corp.local
+
+    # Everything clients in 172.31.4.0/24 ask goes to Google DNS (`*` = every name)
+    dnz forwarding rule add '*' 8.8.8.8 8.8.4.4 --network 172.31.4.0/24 --label "Lab network"
+    # corp.local only for some clients
+    dnz forwarding rule add corp.local 10.4.0.10 --network 172.31.4.0/24,10.20.0.5
+    dnz forwarding rule edit "Lab network" --network 172.31.4.0/24,172.31.5.0/24
+    dnz forwarding rule edit 7 --network none        # back to every client
+    dnz forwarding rule edit "Lab network" --position 1   # checked first
+    ```
+
+    Rules are found by id, label or domain.
+
+  </Tab>
+</Tabs>
+
+### Client networks
+
+A rule can be limited to **client networks**, so only those clients get it. A rule with networks
+and no domain (or `*` in the CLI) catches **every name** those clients ask for, outside local zones.
+For example, `172.31.4.0/24 → 8.8.8.8` sends a lab network straight to Google DNS.
+
+### Order
+
+Rules are checked from top to bottom and **the first match wins**. In the dashboard, drag a rule by
+its handle (or use the arrow keys) to reorder it; in the CLI, the order is the `#` column of
+`dnz forwarding rule list`, and `--position` moves a rule.
+
+A new rule lands above the first **less specific** rule (a shorter domain, or a wider network),
+unless you give `--position`.
+
+A rule that an earlier rule always catches first can never match. The list flags it as **Never
+matches** and names the rule above that catches its queries; move it higher.
+
+Each rule's servers are monitored for latency and health like the main upstreams.
+
+## Monitoring
+
+Superadmins see **Forward DNS** on the Overview: latency per upstream (last, average, p95, loss and
+a sparkline), from a probe every 15 seconds, with *request timeout* and *unreachable* detection, a
+warning banner on every page, toasts when an upstream goes down or recovers, and an incident log.
+See [Monitoring](/dashboard/monitoring).
+
+## Diagnose an upstream
+
+When an upstream or a rule's server doesn't answer, click **Diagnose** on it. DNZ checks the path
+from the server step by step and streams the progress live:
+
+1. name lookup (for DoT and DoH hostnames),
+2. the local route,
+3. ping,
+4. the TCP port,
+5. the TLS handshake,
+6. a DNS query over the upstream's protocol (and over TCP for plain DNS),
+7. a check for port 53 interception,
+8. a traceroute.
+
+Failed or suspicious steps come with a hint at the likely cause: a filtered port, an ACL that
+answers REFUSED, no recursion, a rejected certificate, or DNS redirected by the network. Ping and
+traceroute need no root and no ping binary.
+
+```bash
+dnz forwarding diagnose 10.0.0.10 --name corp.local --type SOA   # why does it not answer?
+```
+
+`diag` is an alias. `--name` and `--type` choose the test query (default `example.com A`);
+`--json` prints the whole report.
+
+<CardGroup cols={2}>
+  <Card title="Filtering" icon="shield-halved" href="/dns/filtering">
+    Block ads and malware before queries reach the upstreams.
+  </Card>
+  <Card title="Encrypted DNS" icon="lock" href="/dns/encrypted-dns">
+    Serve DoT, DoH and DoQ to your own devices.
+  </Card>
+</CardGroup>

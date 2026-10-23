@@ -1,0 +1,111 @@
+---
+title: "Install"
+description: "Get DNZ as a Docker image or as a Linux binary."
+---
+
+DNZ is one program, `dnz`, that contains the DNS server, the API and the web dashboard. All data
+lives in one SQLite file, or in [Postgres or MySQL](/deploy/database). It comes with `dnz-proxy`, the optional
+[reverse proxy](/proxy/dnz-proxy).
+
+<CardGroup cols={2}>
+  <Card title="Docker" icon="docker" href="/deploy/docker">
+    The quickest way to run it on a server.
+  </Card>
+  <Card title="systemd" icon="linux" href="/deploy/systemd">
+    The binary as a sandboxed Linux service.
+  </Card>
+</CardGroup>
+
+## Docker image
+
+The image runs on `linux/amd64` and `linux/arm64` and contains both `dnz` and `dnz-proxy`.
+
+```bash
+docker pull terrificci/dnz:latest
+```
+
+| Tag | Meaning |
+| --- | --- |
+| `latest` | The newest stable release |
+| `1.0.0` | One exact version |
+| `1.0` | The newest patch of a minor version |
+
+Pre-releases (versions with a `-`, such as `1.1.0-rc.1`) never get the `latest` tag. Continue with
+[Docker](/deploy/docker).
+
+A server that only runs the proxy uses `terrificci/dnz-proxy`, with the same tags and only the
+`dnz-proxy` binary (published from the release after 1.1.0); see
+[dnz-proxy](/proxy/dnz-proxy).
+
+## Linux binary
+
+To run DNZ without Docker, install `dnz` and `dnz-proxy` with one command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh
+```
+
+The script downloads both binaries for the machine's architecture (amd64 or arm64) from the
+[Docker image](#docker-image), without needing Docker, checks them against the image's checksums,
+makes sure they run, and puts them in `/usr/local/bin` (asking for `sudo` when it needs to). Run it
+again to upgrade; it tells you to restart the services if they're running.
+
+| Option | Meaning |
+| --- | --- |
+| `--service` | Also run `dnz` as a systemd service and start it; see [systemd](/deploy/systemd) |
+| `--version 1.0.0` | One exact version instead of the latest release (also `1.0` for the newest patch) |
+| `--only dnz` | Only `dnz`; `--only dnz-proxy` for a [dnz-proxy](/proxy/dnz-proxy) node |
+| `--dir DIR` | Install into another directory |
+
+Pass options after `sh -s --`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.0.0
+```
+
+<Accordion title="Without the script">
+  Copy the binaries out of the image with Docker. Docker picks the image for the machine's
+  architecture, so run this on the server itself, or add `--platform linux/arm64` (or
+  `linux/amd64`) to `docker create` for another one.
+
+  ```bash
+  VERSION=1.0.0
+  docker create --name dnz-extract terrificci/dnz:$VERSION
+  mkdir -p dnz
+  docker cp dnz-extract:/usr/local/bin/dnz dnz/dnz
+  docker cp dnz-extract:/usr/local/bin/dnz-proxy dnz/dnz-proxy
+  docker rm dnz-extract
+  sudo install -m 755 dnz/dnz dnz/dnz-proxy /usr/local/bin/
+  ```
+</Accordion>
+
+The binary is self-contained: the dashboard, the database migrations and the TLS root certificates
+are built in. It needs a glibc-based Linux distribution (Debian 12, Ubuntu 22.04, RHEL 9 or newer),
+not Alpine or another musl-based one. Continue with [systemd](/deploy/systemd).
+
+## Check that it runs
+
+```bash
+dnz --version        # prints the version
+dnz healthcheck      # exits 0 when the API answers (GET /api/health)
+```
+
+Without a command, `dnz` runs the server. Every other command manages a running server; see the
+[CLI](/cli/overview).
+
+## Next
+
+<Steps>
+  <Step title="Run it as a service">
+    [Docker](/deploy/docker) or [systemd](/deploy/systemd).
+  </Step>
+  <Step title="Free port 53">
+    See [Port 53 and systemd-resolved](/deploy/port-53).
+  </Step>
+  <Step title="Put HTTPS in front of the dashboard">
+    See [HTTPS and reverse proxies](/deploy/https).
+  </Step>
+  <Step title="Create the first admin">
+    See [First run](/get-started/first-run).
+  </Step>
+</Steps>

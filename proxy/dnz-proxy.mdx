@@ -1,0 +1,557 @@
+---
+title: "dnz-proxy"
+description: "Run DNZ's own Pingora-based reverse proxy on any number of servers, with certificates, caching, a firewall and analytics."
+---
+
+dnz-proxy is DNZ's own reverse proxy, built on Cloudflare's
+[Pingora](https://github.com/cloudflare/pingora). It is the second proxy backend next to
+[Traefik](/proxy/traefik).
+
+It serves the same routers, services and middlewares you set up for a proxy in DNZ (the same objects a
+Traefik would get), and adds what DNZ can do because it controls the proxy:
+
+- **Many servers per proxy.** Any number of servers ("nodes") join a proxy. DNZ pushes the
+  configuration to all of them the moment it changes, and DNS answers the proxy's names with the
+  addresses of the nodes that are up.
+- **Certificates from DNZ**, issued over ACME with DNS-01 through DNZ's own zones or a Cloudflare
+  token per domain, or HTTP-01 answered by every node. See [Certificates](/proxy/certificates).
+- **Analytics and request logs** for every proxied hostname.
+- **Caching**, a **firewall**, and an **"under attack"** challenge as middlewares.
+- **TCP and UDP** routing.
+
+<Note>
+  Proxying is off by default. Turn it on with **Settings → Proxy → dnz-proxy**, or
+  `DNZ_PROXY_BACKEND=dnz`. See [Turning proxying on](/proxy/overview#turning-proxying-on).
+</Note>
+
+## Nodes
+
+A node is a server running the `dnz-proxy` binary. It ships with DNZ (in the release archives and
+the DNZ image) and on its own in the `terrificci/dnz-proxy` image. A node needs only DNZ's HTTP
+address. It never has to be on the same machine.
+
+### Running a node
+
+**Settings → Proxy → Set up dnz-proxy** shows these commands filled in, for systemd, Docker, Docker
+Swarm and a plain command line.
+
+<Tabs>
+  <Tab title="Command line">
+
+    ```bash
+    dnz-proxy --dnz https://dnz.example.com --key dnzp_… --name jkt-1 --proxy "Edge JKT" --public-ipv4 203.0.113.10
+    ```
+
+  </Tab>
+  <Tab title="systemd">
+
+    This unit runs dnz-proxy as its own throwaway user, with its state in `/var/lib/dnz-proxy` and
+    permission to bind ports 80 and 443. Install the binary first (see
+    [Linux binary](/deploy/install#linux-binary)):
+
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --only dnz-proxy
+    ```
+
+    ```ini /etc/systemd/system/dnz-proxy.service
+    [Unit]
+    Description=dnz-proxy, DNZ's reverse proxy
+    After=network-online.target
+    Wants=network-online.target
+
+    [Service]
+    Type=simple
+    ExecStart=/usr/local/bin/dnz-proxy
+    Restart=always
+    RestartSec=2
+
+    # Its own throwaway user; its identity, last configuration and cache live
+    # in /var/lib/dnz-proxy.
+    DynamicUser=yes
+    StateDirectory=dnz-proxy
+    Environment=DNZ_PROXY_STATE_DIR=/var/lib/dnz-proxy
+    EnvironmentFile=/etc/dnz-proxy/dnz-proxy.env
+
+    # Ports 80 and 443 without root.
+    AmbientCapabilities=CAP_NET_BIND_SERVICE
+    CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+    LimitNOFILE=1048576
+
+    # Hardening
+    NoNewPrivileges=yes
+    ProtectSystem=strict
+    ProtectHome=yes
+    PrivateTmp=yes
+    PrivateDevices=yes
+    ProtectKernelTunables=yes
+    ProtectKernelModules=yes
+    ProtectKernelLogs=yes
+    ProtectControlGroups=yes
+    ProtectClock=yes
+    ProtectHostname=yes
+    RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+    RestrictNamespaces=yes
+    RestrictRealtime=yes
+    RestrictSUIDSGID=yes
+    LockPersonality=yes
+    SystemCallArchitectures=native
+    SystemCallFilter=@system-service
+    SystemCallFilter=~@privileged
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+
+    ```ini /etc/dnz-proxy/dnz-proxy.env
+    # DNZ's address, as this server reaches it.
+    DNZ_URL=https://dnz.example.com
+    # The connect key from DNZ (Settings → Proxy). Only needed to join.
+    DNZ_PROXY_KEY=dnzp_change-me
+    # This node's name, and the proxy it joins (empty: an admin picks it).
+    DNZ_PROXY_NAME=
+    DNZ_PROXY_PROXY=
+    # Where visitors reach this server; DNS answers with these.
+    DNZ_PROXY_PUBLIC_IPV4=
+    DNZ_PROXY_PUBLIC_IPV6=
+    # Accept a self-signed certificate from DNZ.
+    #DNZ_PROXY_INSECURE=true
+    ```
+
+    ```bash
+    sudo chmod 600 /etc/dnz-proxy/dnz-proxy.env
+    sudo systemctl daemon-reload && sudo systemctl enable --now dnz-proxy
+    journalctl -u dnz-proxy -f
+    ```
+
+  </Tab>
+  <Tab title="Docker">
+
+    `terrificci/dnz-proxy` carries only `dnz-proxy` (amd64 and arm64) and keeps the node's state in
+    `/data`:
+
+    ```bash
+    docker run -d --name dnz-proxy --restart unless-stopped -p 80:80 -p 443:443 -v dnz-proxy:/data \
+      -e DNZ_URL=https://dnz.example.com -e DNZ_PROXY_KEY=dnzp_… terrificci/dnz-proxy:latest
+    ```
+
+    Or with Compose:
+
+    ```yaml docker-compose.yml
+    services:
+      dnz-proxy:
+        image: terrificci/dnz-proxy:latest
+        restart: unless-stopped
+        ports:
+          - "80:80"
+          - "443:443"
+        volumes:
+          - dnz-proxy:/data
+        environment:
+          DNZ_URL: https://dnz.example.com
+          DNZ_PROXY_KEY: dnzp_…
+          # DNZ_PROXY_NAME: jkt-1
+          # DNZ_PROXY_PROXY: Edge
+          # DNZ_PROXY_PUBLIC_IPV4: 203.0.113.10
+        ulimits:
+          nofile: 65536
+
+    volumes:
+      dnz-proxy:
+    ```
+
+    Publish the ports your proxy's entry points listen on (`web` :80 and `websecure` :443 by
+    default). The image is published from the release after 1.1.0; until then, run the DNZ image
+    with `--entrypoint /usr/local/bin/dnz-proxy -e DNZ_PROXY_STATE_DIR=/data`.
+
+  </Tab>
+  <Tab title="Docker Swarm">
+
+    Run one node on every server of a Swarm that should serve the proxy: a **global** service,
+    limited to the servers with a label.
+
+    <Steps>
+      <Step title="Label the servers">
+        On a manager, for each server that serves the proxy:
+
+        ```bash
+        docker node update --label-add dnz-proxy=true <server>
+        ```
+      </Step>
+      <Step title="Write the stack file">
+        Save as `dnz-proxy-stack.yml`, with your DNZ address and proxy name:
+
+        ```yaml dnz-proxy-stack.yml
+        services:
+          dnz-proxy:
+            image: terrificci/dnz-proxy:latest
+            environment:
+              DNZ_URL: https://dnz.example.com
+              # Only needed to join; taken from the shell at deploy time.
+              DNZ_PROXY_KEY: ${DNZ_PROXY_KEY:?paste the connect key from Settings → Proxy}
+              DNZ_PROXY_NAME: "{{.Node.Hostname}}"
+              # The proxy to join, by name; with "Let nodes join without approval" on
+              # that proxy, new servers join by themselves.
+              DNZ_PROXY_PROXY: Edge
+            ports:
+              - { target: 80, published: 80, protocol: tcp, mode: host }
+              - { target: 443, published: 443, protocol: tcp, mode: host }
+            volumes:
+              - dnz-proxy:/data
+            ulimits:
+              nofile: 65536
+            deploy:
+              mode: global
+              placement:
+                constraints:
+                  - node.labels.dnz-proxy == true
+              # Host-mode ports: stop the old container before starting the new one,
+              # one server at a time, so the others keep serving.
+              update_config:
+                parallelism: 1
+                delay: 10s
+                order: stop-first
+                failure_action: rollback
+              restart_policy:
+                condition: any
+
+        volumes:
+          dnz-proxy:
+        ```
+      </Step>
+      <Step title="Deploy">
+        ```bash
+        DNZ_PROXY_KEY=dnzp_… docker stack deploy -c dnz-proxy-stack.yml dnz-proxy
+        docker service ps dnz-proxy_dnz-proxy
+        ```
+
+        Each server's node shows up on the Proxy page, named after the server. Approve them, or turn on
+        **Let nodes join without approval** on the proxy so new servers join by themselves.
+      </Step>
+    </Steps>
+
+    Things that differ from a single container:
+
+    - **Ports in host mode.** Swarm's routing mesh would hide visitors' addresses from the firewall,
+      rate limits and analytics, and DNS already sends visitors to each node's own address. Publish
+      every port your proxy's entry points use the same way.
+    - **One identity per server.** The `dnz-proxy` volume is local to each server and holds the node's
+      token, last configuration and cache. A container that restarts on the same server comes back
+      as the same node; a new server joins as a new one.
+    - **Public addresses.** Without `DNZ_PROXY_PUBLIC_IPV4`, DNZ takes the address the node calls it
+      from. Behind NAT that is the wrong one: correct it when approving the node, or later with
+      **Edit** on the proxy's **Nodes** tab. A node keeps the address you set.
+    - **Updates** go one server at a time (`stop-first`, since a host port can't be bound twice), so
+      the other nodes keep serving. DNZ stops sending visitors to a node once its health checks fail.
+    - **The connect key** comes from the shell at deploy time and is only needed to join; nodes that
+      have joined don't use it again.
+
+    The same file is in the repository as `deploy/dnz-proxy-stack.yml`.
+
+  </Tab>
+</Tabs>
+
+| Flag | Environment | Meaning |
+| --- | --- | --- |
+| `--dnz` | `DNZ_URL` | DNZ's address, as this server reaches it |
+| `--key` | `DNZ_PROXY_KEY` | The connect key (**Settings → Proxy**). Only needed to join. |
+| `--name` | `DNZ_PROXY_NAME` | The node's name in its proxy. Empty: DNZ picks one. |
+| `--proxy` | `DNZ_PROXY_PROXY` | The proxy to join, by name. Empty: whoever approves it picks one. |
+| `--public-ipv4`, `--public-ipv6` | `DNZ_PROXY_PUBLIC_IPV4`, `DNZ_PROXY_PUBLIC_IPV6` | Where visitors reach this server; DNS answers with these |
+| `--state-dir` | `DNZ_PROXY_STATE_DIR` | Identity, last configuration and disk cache (`/var/lib/dnz-proxy` on Linux) |
+| `--insecure` | `DNZ_PROXY_INSECURE` | Accept a self-signed certificate from DNZ |
+| | `DNZ_PROXY_LOG` | Log filter, for example `info` or `debug,pingora=warn` |
+
+### Joining
+
+A node joins with the connect key, in one of three ways:
+
+- **Added by address.** On the proxy's **Nodes** tab, **Add node** with the address it calls DNZ
+  from. A node calling from there joins at once.
+- **Approved.** Any other node shows up as **New node waiting** on the **Proxy** page. Approve it
+  into a proxy (check its public addresses), or ignore it. At most 20 wait at once.
+- **Automatically.** A proxy with **Let nodes join without approval** (its **Settings** tab) takes
+  every node that names it.
+
+Once joined, a node gets a token of its own, kept in its state directory. The connect key isn't
+needed any more, and replacing the connect key doesn't affect joined nodes. Removing a node revokes
+its token; with the connect key still set, it asks to join again.
+
+### Configuration and failures
+
+Each node keeps a stream open to DNZ (`GET /api/proxy/dnz/stream`). When anything the proxy serves
+changes, DNZ rebuilds its configuration within a second and sends it to every node, which swaps it in
+without dropping connections.
+
+A node stores the last configuration on disk and keeps serving it while DNZ is away or restarting. It
+reconnects by itself.
+
+<Warning>
+  If DNZ is behind a reverse proxy, it must not buffer responses, or the stream stalls. DNZ sends
+  `X-Accel-Buffering: no`. See [HTTPS](/deploy/https).
+</Warning>
+
+Nodes report every 5 seconds: the configuration they serve, their listeners, the health of each
+upstream, cache use, warnings (a rule or middleware they couldn't use), and their traffic.
+
+### DNS and health
+
+With dnz-proxy, a proxied name is answered with the public addresses of the proxy's **healthy**
+nodes and a short TTL, so a node that goes down leaves the answers quickly. The TTL is **TTL of
+proxied answers** on the proxy's **Settings** tab, 60 seconds by default.
+
+A node is healthy while it reports (within 15 seconds) and, with **Check the nodes' ports from DNZ**
+on, while DNZ can connect to its HTTPS (or HTTP) port.
+
+- If no node is healthy, DNS answers with all of them rather than with nothing.
+- A proxy without nodes answers with its own addresses.
+
+**Drain** takes a node out of the answers for maintenance. It keeps serving visitors who still reach
+it.
+
+### Managing nodes from the CLI
+
+```bash
+dnz proxy show                                    # backend, proxies, connect key
+dnz proxy nodes                                   # every node: proxy, state, addresses, config
+dnz proxy approve jkt-1 --proxy "Edge JKT" --ipv4 203.0.113.10
+dnz proxy ignore node-10-0-0-9
+dnz proxy drain jkt-1                             # out of DNS answers, still serving
+dnz proxy drain jkt-1 --undo
+dnz proxy remove jkt-1
+```
+
+These need a superadmin. See [Proxy commands](/cli/proxy).
+
+### Running one on DNZ's server
+
+**Settings → Proxy → Run dnz-proxy on this server** starts a node as a child of DNZ, joined to the
+chosen proxy as `local`. DNZ uses the `dnz-proxy` next to its own binary, or on the `PATH`, or the
+one `DNZ_PROXY_BIN` names. It restarts the node if it exits and shows its last log lines.
+
+<Note>
+  Ports 80 and 443 need root or `CAP_NET_BIND_SERVICE`. The systemd unit and the Docker image allow
+  it.
+</Note>
+
+## Entry points
+
+A proxy's nodes listen on its **entry points**, on the proxy's **Entry points** tab. Each has a name,
+an address (`:443` listens on every address, IPv6 and IPv4), and a protocol: `http`, `https`, `tcp`
+or `udp`.
+
+A proxy starts with `web` (`:80`, HTTP) and `websecure` (`:443`, HTTPS). Routers name entry points
+as they do with Traefik. A router with TLS answers on HTTPS entry points, one without on HTTP ones.
+
+Per entry point:
+
+- **PROXY protocol from**: addresses or ranges of load balancers in front of the nodes that send a
+  PROXY protocol header (v1 or v2). The visitor's address comes from it.
+- **Trusted forwarders**: peers whose `X-Forwarded-*` headers are kept. From anyone else they are
+  replaced.
+- Timeouts for idle connections and for reading a request.
+
+## Routing
+
+Routers, services and middlewares work as described in
+[Routers, services and middlewares](/proxy/routing). dnz-proxy reads them as Traefik v3 does:
+
+- **Rules**: `Host`, `HostRegexp`, `Path`, `PathPrefix`, `PathRegexp`, `Method`, `Header`,
+  `HeaderRegexp`, `Query`, `QueryRegexp`, `ClientIP` with `&&`, `||`, `!` and parentheses. Priority
+  is by the rule's length unless set.
+- **Services**: load balancing (`wrr`, `p2c`, `hrw`, `leasttime`), sticky cookies, active and passive
+  health checks, weighted, mirroring (without request bodies) and failover services. HTTP/1.1,
+  HTTP/2 and h2c upstreams, WebSocket and gRPC.
+- **Headers to the upstream**: `X-Forwarded-For`, `-Proto`, `-Host`, `-Port`, `-Server` and
+  `X-Real-Ip`.
+- **Certificates**: HTTPS entry points pick the certificate by the name the visitor asks for (SNI),
+  in this order: DNZ's issued and uploaded certificates, the TLS certificates of the proxy, the
+  default certificate, then a self-signed one.
+
+### Client certificates
+
+Client certificates follow `clientAuth` in the router's TLS options: `clientAuthType`, and `caFiles`
+as paths on the node or PEM text. CAs alone mean `RequireAndVerifyClientCert`, as in Traefik.
+
+- The handshake asks for a certificate when the name the visitor asks for belongs to such a router,
+  and checks that the visitor holds its key.
+- Whether one is required and signed by the CAs is checked once the visit is routed. A visit that
+  fails gets a **403** (Traefik ends the handshake instead), or a **421** when it came over a
+  connection made for another name (HTTP/2 reuses connections), so the browser retries on one of its
+  own.
+- A name served by routers with different TLS options gets the `default` options.
+- Routers without a `Host` rule get the `default` options' client certificate setting.
+- TCP routers that end TLS don't ask for client certificates.
+
+### Middlewares it runs
+
+redirectScheme, redirectRegex, addPrefix, stripPrefix(Regex), replacePath(Regex), encodedCharacters,
+chain, headers (custom, CORS, security), basicAuth, digestAuth, forwardAuth, ipAllowList,
+passTLSClientCert, rateLimit, inFlightReq, compress, contentType, grpcWeb, errors, retry,
+circuitBreaker, buffering.
+
+<Warning>
+  Plugins are not supported. A router that uses one is turned off, with a warning on the node.
+</Warning>
+
+<AccordionGroup>
+  <Accordion title="encodedCharacters">
+    Answers 400 to paths with an encoded `/`, `\`, `;`, `%`, `?` or `#` that isn't allowed. The query
+    isn't checked.
+  </Accordion>
+  <Accordion title="passTLSClientCert">
+    Writes `X-Forwarded-Tls-Client-Cert` (each certificate as base64 DER, joined with `,`) and
+    `X-Forwarded-Tls-Client-Cert-Info` (URL-escaped `Subject="…";Issuer="…";…`) as Traefik does.
+    Copies of these headers sent by the visitor are dropped.
+  </Accordion>
+  <Accordion title="grpcWeb">
+    Turns `application/grpc-web` and `application/grpc-web-text` (base64) requests into gRPC, and the
+    answer back, with the trailers written into the body. CORS preflights from `allowOrigins` are
+    answered. The service needs an HTTP/2 server (`h2c://` or `https://`).
+  </Accordion>
+  <Accordion title="rateLimit">
+    Counts per node in memory, or with `redis` in Redis, shared by every node that uses it. One
+    endpoint is a single Redis, several are a cluster. User, password, database, timeouts and TLS
+    (CA, client certificate and key, `insecureSkipVerify`) work as in Traefik.
+
+    Buckets are keyed by the middleware's name and the client, so proxies sharing a Redis share the
+    counts of same-named middlewares. While Redis can't be reached, each node counts on its own and
+    logs it.
+  </Accordion>
+</AccordionGroup>
+
+### TCP and UDP
+
+- **TCP routers** on `tcp` entry points route by `HostSNI` (TLS passthrough, or TLS ended on the node
+  with its certificates), ``HostSNI(`*`)`` for everything, `ClientIP` and `ALPN`.
+- **TCP services** balance by weight, send a PROXY protocol header if asked, and may speak TLS to the
+  server.
+- **TCP middlewares**: ipAllowList and inFlightConn.
+- **UDP routers** on `udp` entry points send each client's datagrams to one server of their service.
+  Sessions end after 3 seconds without traffic.
+
+## dnz-proxy's middlewares
+
+These appear under **dnz-proxy** in **Add middleware** while dnz-proxy is the backend. Traefik never
+gets them.
+
+### Cache (`dnzCache`)
+
+Caches answers on each node.
+
+- Answers are stored for as long as `Cache-Control` (`s-maxage`, `max-age`) or `Expires` allows, or
+  for the default TTL when the origin says nothing. With **Respect the origin** off, the default TTL
+  always applies.
+- Never stored: `no-store`, `private`, answers that set cookies or vary on anything but
+  `Accept-Encoding`, and statuses outside the list.
+- Visits with `Authorization` or one of the bypass cookies go to the origin. Prefixes in the style of
+  `wordpress_logged_in*` work.
+
+The cache key is the host, path and query (unless **Query in key** is off), chosen headers and
+cookies, and the accepted encoding.
+
+- **Stale while revalidate** serves an expired answer while one visit fetches it again.
+- **Stale if error** serves it while the origin fails.
+
+Answers carry `X-Cache: HIT | MISS | STALE | BYPASS` and `Age`.
+
+Each node caches in memory (256 MiB by default) and, with a **disk cache directory** and size, on disk
+too. Both are on the proxy's **Settings** tab.
+
+**Purge cache** on the proxy clears everything, a hostname, a URL or a path prefix on every node:
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    **Proxy** → open the proxy → **Purge cache**.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz proxy purge "Edge JKT"                        # every cached answer
+    dnz proxy purge "Edge JKT" --host app.example.com --prefix /assets
+    dnz proxy purge "Edge JKT" --url https://app.example.com/logo.png
+    ```
+
+  </Tab>
+</Tabs>
+
+### Firewall (`dnzFirewall`)
+
+An ordered list of rules; the first that matches decides.
+
+A rule has conditions, all or any of which must hold, on the client's address or range, **country**,
+host, path, method, a header, a query parameter or the user agent. Each condition uses **is**, **is
+not**, **in range**, **contains**, **starts with** or **matches** (a regular expression).
+
+| Action | What it does |
+| --- | --- |
+| **Block** | Answers with a status (403 by default) and an optional message |
+| **Challenge** | The under attack check, below |
+| **Allow** | Skips the rules after it |
+| **Log** | Notes it in the request log and goes on |
+
+Countries need a GeoIP database. Set **GeoIP database URL** on the proxy's **Settings** tab to an
+`.mmdb` (or `.mmdb.gz`) file, such as MaxMind GeoLite2 Country or DB-IP's IP to Country Lite. Each
+node downloads it.
+
+### Under attack (`dnzChallenge`)
+
+Browsers get a short page that solves a small proof of work. A cookie, signed for the visitor's
+network and valid for **Valid for**, then lets them through.
+
+- Bots can be let through by user agent and by address.
+- Requests that aren't a browser page (APIs, forms) get a 403 until a page has been visited.
+- **Difficulty** is in bits: each one doubles the work. 16 takes well under a second.
+
+## Analytics
+
+**Proxy → Analytics** shows, per proxy and hostname, over the last hour to 30 days:
+
+- requests by status class, bandwidth, and latency (p50, p95, p99)
+- cache hit ratio, blocked and challenged visits
+- top hosts, paths, clients, countries, user agents and statuses
+- a **request log** with filters and a live view
+
+Counters are kept per minute for two days and per hour for 90 days. Each node sends up to **Logged
+per second, per node** log lines; errors, blocks and challenges get ten times as many. Logs are kept
+for 7 days by default.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="A node doesn't show up">
+    Check that it can reach DNZ at `--dnz` and has the current connect key. A node that calls from an
+    address no node was added for waits under **New node waiting** on the **Proxy** page. At most 20
+    wait at once. With a self-signed certificate on DNZ, add `--insecure`.
+  </Accordion>
+  <Accordion title="Nodes stop getting changes">
+    The configuration stream goes through `GET /api/proxy/dnz/stream`. A reverse proxy in front of
+    DNZ that buffers responses holds it back. Turn buffering off for DNZ.
+  </Accordion>
+  <Accordion title="DNS still answers with a node that is down">
+    A node leaves the answers once it stops reporting for 15 seconds, or once DNZ can't connect to
+    its port when **Check the nodes' ports from DNZ** is on. Resolvers may keep the old answer for the
+    **TTL of proxied answers**. If no node is healthy, DNS answers with all of them.
+  </Accordion>
+  <Accordion title="A router is off with a warning on the node">
+    It uses something the node couldn't run, such as a plugin middleware. The node's report lists
+    the warning.
+  </Accordion>
+  <Accordion title="The local node doesn't start">
+    DNZ looks for `dnz-proxy` next to its own binary, then on the `PATH`; set `DNZ_PROXY_BIN` to
+    point at it. Ports 80 and 443 need root or `CAP_NET_BIND_SERVICE`. DNZ shows the node's last log
+    lines.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Certificates" icon="certificate" href="/proxy/certificates">
+    Let DNZ issue and renew certificates for the nodes.
+  </Card>
+  <Card title="dnz-proxy API" icon="code" href="/api/dnz-proxy">
+    Nodes, entry points, analytics and purges over HTTP.
+  </Card>
+</CardGroup>

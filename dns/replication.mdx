@@ -1,0 +1,251 @@
+---
+title: "Replication"
+description: "Run more than one nameserver for your zones: DNZ as primary, secondary or both, with AXFR/IXFR, TSIG, NOTIFY and a catalog zone."
+---
+
+Replication copies your zones to more nameservers, so DNS keeps answering when one server is down.
+DNZ can be a **primary** that other nameservers copy from, a **secondary** that copies from a
+primary, or both at once.
+
+Copies are made with standard zone transfers (AXFR/IXFR, RFC 5936/1995), authenticated with
+**TSIG** (RFC 8945), and kept current with **NOTIFY** (RFC 1996) plus the SOA refresh timers.
+
+Everything is under **DNS → Replication** (superadmins), and in the CLI under `dnz replication`.
+
+| You want | Go to |
+| --- | --- |
+| A second DNZ that follows the first one | [DNZ to DNZ](#dnz-to-dnz) |
+| BIND, Knot or PowerDNS copying zones from DNZ | [DNZ as primary for other nameservers](#dnz-as-primary-for-bind-knot-or-powerdns) |
+| DNZ copying a zone from any other primary | [DNZ as secondary of any primary](#dnz-as-secondary-of-any-primary) |
+
+## DNZ to DNZ
+
+The easy way: one DNZ is the primary, the others join it. A joined secondary follows the primary's
+**catalog zone** (RFC 9432), so every zone you add or delete on the primary appears or disappears
+on the secondary by itself. DNSSEC keys are copied too (with their rollover state and the zone's signing settings; only the
+primary rolls keys), so both servers sign with the same keys and
+the one DS record at your registrar covers them.
+
+There are two ways to join.
+
+### Find it on the network
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Look for the primary">
+        On the **secondary**, open **DNS → Replication → Join a primary**. The **On this network**
+        tab shows a radar of the DNZ servers it finds.
+      </Step>
+      <Step title="Pick it">
+        Click the primary. The secondary shows a 6-digit code.
+      </Step>
+      <Step title="Approve on the primary">
+        On the **primary**, the request appears under **Waiting to join** with the same code. Check
+        that the codes match, then click **Approve**.
+      </Step>
+      <Step title="Done">
+        The secondary receives its credentials and starts copying zones.
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="CLI">
+
+    On the **secondary**:
+
+    ```bash
+    dnz replication discover                            # DNZ servers on the local network
+    dnz replication pair http://10.0.0.5:8080           # ask to join; approve it on the primary
+    ```
+
+    On the **primary**, join requests wait for you:
+
+    ```bash
+    dnz replication show                                # lists them with their code
+    dnz replication approve <id>
+    dnz replication deny <id>
+    ```
+
+  </Tab>
+</Tabs>
+
+DNZ servers find each other through mDNS (`_dnz._tcp`) and by probing the local private subnets
+for `/api/info` on ports 8080, 443, 80 and 8443 (up to a /22 per interface).
+
+<Warning>
+  Discovery only works when the primary's web UI listens on the network
+  (`DNZ_HTTP_ADDR=0.0.0.0:8080`), not on the default `127.0.0.1`. If the primary isn't found, type
+  its address under the radar instead.
+</Warning>
+
+Join requests expire after 10 minutes. At most 20 can wait at once.
+
+### Join code
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Create a code on the primary">
+        On the **primary**, click **Add secondary → DNZ server**. Give it a name and check **This
+        server's address** (where the secondary reaches the primary's web UI). You get a join code
+        that starts with `dnz-join:`.
+      </Step>
+      <Step title="Use it on the secondary">
+        On the **secondary**, open **Join a primary → Join code**, paste it, and pick the division
+        the zones go to.
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="CLI">
+
+    On the **primary**:
+
+    ```bash
+    dnz replication secondary add dns-2                 # another DNZ: prints a join code
+    dnz replication secondary list
+    dnz replication secondary join-code 1               # a new code for a DNZ secondary
+    ```
+
+    On the **secondary**:
+
+    ```bash
+    dnz replication join 'dnz-join:…'                   # follow the primary's catalog
+    ```
+
+  </Tab>
+</Tabs>
+
+<Warning>
+  The join code holds a secret. Anyone with it can copy your zones and DNSSEC keys, so treat it
+  like a password. **New join code** in the secondary's menu replaces it.
+</Warning>
+
+### What a joined secondary does
+
+- It asks the primary's HTTPS/HTTP API once for its TSIG key and the catalog name
+  (`/api/replication/bootstrap`), then uses DNS for everything else.
+- It transfers the catalog `catalog.dnz.invalid.`, adds a secondary zone for each member, and
+  removes the ones that left. A member whose name already exists here as a local zone is not
+  touched; the subscription shows a conflict instead.
+- After each change it fetches the DNSSEC keys of signed zones (`/api/replication/keys`).
+- The primary sends NOTIFY to the address the secondary joined from, on its DNS port.
+
+**Leave** (in the secondary's list, or `dnz replication leave 1`) stops following the primary and
+deletes the zones copied from it.
+
+## DNZ as primary for BIND, Knot or PowerDNS
+
+**Add secondary → Other nameserver** creates a TSIG key for it and shows ready-to-paste
+configuration for BIND 9.18+ and Knot DNS. Both follow the catalog zone, so new zones show up there
+without editing their config. Fill in:
+
+- **Transfers allowed from**: optional addresses or networks. With **Require TSIG** off, this list
+  is the only check, so it's required then.
+- **Send NOTIFY to**: where to send NOTIFY (port 53 unless given). Without it, the secondary picks
+  up changes at its SOA refresh interval (1 hour).
+
+```bash
+dnz replication secondary add bind9 --kind other --allow 192.0.2.53 --notify 192.0.2.53
+```
+
+Example for BIND, inside `options` and as a zone:
+
+```text named.conf
+key "dnz-ns2-1a2b3c" {
+    algorithm hmac-sha256;
+    secret "…";
+};
+
+options {
+    catalog-zones {
+        zone "catalog.dnz.invalid" default-primaries { 192.0.2.10 key "dnz-ns2-1a2b3c"; };
+    };
+};
+
+zone "catalog.dnz.invalid" {
+    type secondary;
+    file "catalog.db";
+    primaries { 192.0.2.10 key "dnz-ns2-1a2b3c"; };
+};
+```
+
+A secondary that doesn't support catalog zones can list each zone itself with the same key.
+
+<Note>
+  Zones are transferred without signatures, because DNZ signs answers online. A non-DNZ secondary
+  therefore serves them unsigned. For signed zones, use DNZ secondaries (they share the key), or
+  sign on the secondary with its own key and add its DS too. See [DNSSEC](/dns/dnssec).
+</Note>
+
+## DNZ as secondary of any primary
+
+**Secondary zone** (in **Copied from other primaries**) copies one zone from any primary. Give:
+
+- the zone name,
+- the primary's addresses (tried in order),
+- if the primary needs it, the TSIG key name, algorithm (hmac-sha256, hmac-sha384 or hmac-sha512)
+  and base64 secret.
+
+```bash
+dnz replication add-zone example.org --primary 192.0.2.1 --tsig-name xfr --tsig-secret …
+dnz replication sync 1
+```
+
+The primary has to allow transfers to this server's address.
+
+## How secondary zones behave
+
+- They're **read-only**: records, import, DNSSEC and Dynamic DNS/ACME tokens only work on the
+  primary. The zone page shows the primary, the last transfer, when the copy expires, and any
+  error.
+- DNZ checks the primary's SOA serial at the SOA *refresh* interval (clamped to 1 minute – 1 day),
+  after a NOTIFY, or when you click **Refresh**. A higher serial (RFC 1982 arithmetic) triggers a
+  full transfer. **Transfer again** transfers even if the serial didn't change
+  (`dnz zone refresh example.org --full`).
+- After a failed check it retries at the SOA *retry* interval.
+- If the primary can't be reached for longer than the SOA *expire* time (at least 1 hour), the zone
+  answers SERVFAIL instead of serving stale data. It answers again after the next successful
+  transfer.
+- DNSSEC records from a presigned primary (RRSIG, NSEC, NSEC3, DNSKEY) are not stored; DNZ signs
+  online with its own or the shared key.
+- Secondary zones never forward names they don't have (see
+  [Forward missing names](/dns/zones#forward-missing-names)).
+
+## How DNZ answers transfers
+
+- AXFR and IXFR over TCP only (UDP is refused). IXFR from a secondary that's already current gets
+  just the SOA; otherwise the whole zone is sent as AXFR (RFC 1995 allows this).
+- A transfer is allowed when the request is signed with a secondary's TSIG key and comes from one of
+  its allowed addresses (if any), or, for secondaries without TSIG, when it comes from an allowed
+  address. Anything else is REFUSED; a wrong signature gets a signed BADSIG/BADKEY answer.
+- Large zones are split into messages of about 16 KB, each signed (TSIG over the whole stream).
+- The catalog serial goes up whenever a primary zone is added or removed; zones keep their own
+  serials, which change with every record edit. Both trigger NOTIFY to all secondaries, retried
+  three times.
+- A disabled zone counts as removed: it leaves the catalog (secondaries following it drop the zone)
+  and transfers of it are refused with NOTAUTH until it is turned on again. Disabled records are
+  left out of transfers.
+- Only a zone's default records are transferred, never [view](/dns/views) records.
+
+## Test with dig
+
+```bash
+dig @192.0.2.10 example.com AXFR -y hmac-sha256:dnz-ns2-1a2b3c:SECRET
+dig @192.0.2.10 catalog.dnz.invalid AXFR -y hmac-sha256:dnz-ns2-1a2b3c:SECRET
+```
+
+The **Last transfer** column on the primary shows when each secondary last transferred and from
+which address.
+
+<CardGroup cols={2}>
+  <Card title="DNSSEC" icon="signature" href="/dns/dnssec">
+    One DS for every DNZ nameserver.
+  </Card>
+  <Card title="CLI: replication" icon="terminal" href="/cli/replication">
+    Every replication command.
+  </Card>
+</CardGroup>

@@ -1,0 +1,59 @@
+---
+title: "Backups and updates"
+description: "Back up DNZ, with its own scheduled backups or the database's tools, and update DNZ."
+---
+
+## Backups
+
+DNZ backs itself up: **Settings → Backups** makes scheduled, optionally encrypted archives of the whole
+install (zones, users, settings, DNSSEC keys, certificates, the GeoIP database) to a folder,
+S3-compatible storage or SFTP, keeps N daily, weekly and monthly ones, and restores them onto any
+database, even a new install from its first-run page. See [Backups and restore](/admin/backups).
+
+The database's own tools work too. With SQLite, the default, all of DNZ's data is in one file:
+
+| Install | Database |
+| --- | --- |
+| systemd | `/var/lib/dnz/dnz.db` |
+| Docker | the `/data` volume (`dnz-data`) |
+| Default | `dnz.db` in the working directory (`DNZ_DATABASE_URL`) |
+
+Take a consistent copy while DNZ runs with SQLite's `.backup`:
+
+```bash
+sqlite3 /var/lib/dnz/dnz.db ".backup '/root/dnz-$(date +%F).db'"
+```
+
+<Warning>
+  Don't just copy `dnz.db` while DNZ runs: recent changes may still be in `dnz.db-wal`. Use
+  `.backup`, or stop DNZ first.
+</Warning>
+
+With Postgres or MySQL, use their own tools (`pg_dump`, `mysqldump`). See
+[Database](/deploy/database#backups). To restore such a copy, stop DNZ, put it back in place of the
+database (for SQLite, remove any `dnz.db-wal` and `dnz.db-shm` next to it), then start DNZ again.
+
+## Updates
+
+<Tabs>
+  <Tab title="Binary">
+    [Copy the new binary](/deploy/install#linux-binary) out of the new image, replace it and restart:
+
+    ```bash
+    sudo install -m 755 dnz/dnz /usr/local/bin/dnz
+    sudo systemctl restart dnz
+    ```
+  </Tab>
+  <Tab title="Docker">
+    ```bash
+    docker compose pull && docker compose up -d
+    ```
+  </Tab>
+</Tabs>
+
+Database migrations run automatically at startup. Take a backup before updating, so you can go
+back.
+
+If you run [dnz-proxy](/proxy/dnz-proxy) nodes, update them together with DNZ, to the same
+version. With Docker, pull the same tag of `terrificci/dnz-proxy` on each node
+(`docker compose pull && docker compose up -d`); with the binary, run the install script again.

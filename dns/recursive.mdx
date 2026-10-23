@@ -1,0 +1,129 @@
+---
+title: "Recursive resolution"
+description: "Let DNZ resolve names itself from the root servers, like Unbound, instead of forwarding them to a public resolver."
+---
+
+By default DNZ [forwards](/dns/forwarding) names outside your zones to upstream resolvers. In
+**recursive mode** it resolves them itself: it asks a root server, follows the referral to the TLD's
+servers, then to the domain's own name servers, and caches what it learns along the way. No
+third-party resolver sees what your clients look up.
+
+It is a choice of upstream, so everything else stays the same: local zones answer first, filtering
+and the answer cache work as before, and conditional forwarding rules still send their domains or
+client networks where they say. A rule can be recursive too, for example a lab network that should
+not use a public resolver while everyone else does.
+
+## Turn it on
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Open DNS → Forwarding">
+        At the top, **Names outside your zones** has two choices.
+      </Step>
+      <Step title="Choose Recursive, from the root">
+        The upstream list stays (and is no longer probed) for when you switch back.
+      </Step>
+      <Step title="Save">
+        Click **Save & apply**. The **Recursive resolver** card shows the root priming, cache sizes
+        and the servers DNZ talks to.
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz forwarding mode recursive        # back with: dnz forwarding mode upstreams
+    dnz forwarding recursor              # status: priming, caches, busiest servers
+    ```
+
+  </Tab>
+  <Tab title="First start">
+
+    Set `DNZ_UPSTREAM=recursive`, or `upstreams = "recursive"` under `[forwarding]` in `dnz.toml`.
+    Like the upstream list, it only seeds the database on the first start.
+
+  </Tab>
+</Tabs>
+
+A forwarding rule resolves recursively when you choose **Answer with → Recursive, from the root**
+in the rule dialog, or:
+
+```bash
+dnz forwarding rule add '*' recursive --network 172.31.4.0/24 --label "Lab network"
+dnz forwarding rule add example.org recursive
+```
+
+## Trace a name
+
+**Trace a name from the root** on the Recursive resolver card (or `dnz forwarding trace`) resolves a
+name from the root down, ignoring the caches, and lists every query: which zone, which server, how
+long it took and what came back, like `dig +trace`. It works whatever the mode, so you can see what
+recursion would do before turning it on.
+
+```bash
+dnz forwarding trace example.com --type AAAA
+```
+
+## Network requirements
+
+Recursion talks to thousands of authoritative servers directly, so DNZ needs **outbound UDP and TCP
+to port 53 anywhere** (TCP for large answers). IPv6 servers are used when the host has a global IPv6
+address.
+
+<Warning>
+Some networks intercept every outgoing port-53 packet and answer it themselves (ISP DNS
+redirection, captive portals, some firewalls and routers). Recursion cannot work through them.
+Real root servers never offer recursion, so when the replies for them come back with the RA flag,
+DNZ shows **Something on this network intercepts DNS** on the card and in
+`dnz forwarding recursor`. Switch back to upstream resolvers and pick an encrypted preset (DoT, DoH
+or DoQ), which the interception cannot touch.
+</Warning>
+
+To check from a shell on the DNZ host:
+
+```bash
+dig @198.41.0.4 . NS +norec
+```
+
+A real root server answers `NOERROR` with flags `qr aa` and the 13 root servers; an interceptor
+answers `REFUSED` (or a full answer) with `ra` set.
+
+## How it works
+
+- **Root hints and priming** (RFC 9609): the 13 root servers are built in. The first lookup asks one
+  of them for the current root NS set, used until its TTL runs out.
+- **Infrastructure cache**: zone cuts (name servers and glue) are kept for the NS TTL (at most a
+  day). DNZ keeps a smoothed RTT for every server, picks the fastest of a zone's servers (servers
+  never asked get a chance too), and gives each try about three times its RTT (0.4 to 1.5 s). A
+  server that times out three times in a row rests for a minute.
+- **Record cache**: up to 100,000 RRsets with their signatures, negative answers for the SOA minimum
+  (RFC 2308, at most an hour), and an NXDOMAIN covers every name below it (RFC 8020).
+- **QNAME minimisation** (RFC 9156): each server only sees one label more than the zone it serves,
+  so the root sees `com`, not `www.example.com`.
+- **Spoofing resistance** (RFC 5452): a random source port and ID for every query, and **0x20**
+  (the name in random letter case, echoed exactly). Anything a server sends outside its zone is
+  dropped.
+- **EDNS** with a 1232-byte buffer and the DO bit; **TCP** when an answer is truncated.
+- **CNAME and DNAME** chains are followed across zones (at most 12 links).
+- **Lame servers** (refusing, or neither answering nor referring) are skipped for that zone for 15
+  minutes.
+- **Limits**: at most 100 queries and 8 seconds per client question, 30 referrals, and only 3 name
+  servers without glue resolved per delegation (NXNSAttack).
+- **Locally served zones**: `localhost`, `invalid`, `test`, `onion`, `home.arpa` and the reverse zones
+  of private address space are answered by DNZ itself, never sent to the root.
+- **DNSSEC validation** is on by default for recursive answers: see
+  [DNSSEC validation](/dns/dnssec-validation).
+- **SERVFAIL** when no server of a zone answers, with an Extended DNS Error (code 22, No Reachable
+  Authority) naming the zone.
+
+<CardGroup cols={2}>
+  <Card title="DNSSEC validation" icon="shield-halved" href="/dns/dnssec-validation">
+    Reject forged answers for signed domains.
+  </Card>
+  <Card title="Benchmarks" icon="gauge-high" href="/deploy/benchmarks">
+    DNZ against Knot, Unbound and CoreDNS.
+  </Card>
+</CardGroup>

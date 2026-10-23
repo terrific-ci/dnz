@@ -1,0 +1,106 @@
+---
+title: "Maintenance"
+description: "Write and check the configuration, run health checks, print the version and factory-reset a server."
+---
+
+These commands look after the server itself rather than its DNS data. For the settings themselves,
+see [Configuration](/deploy/configuration).
+
+## Configuration
+
+```bash
+dnz config example > /etc/dnz/dnz.toml   # a commented file with every setting
+dnz config show                          # effective values and where each comes from
+dnz config check                         # validate and exit
+```
+
+- `config example` prints a commented config file with every setting. Start a new
+  `/etc/dnz/dnz.toml` from it.
+- `config show` prints the effective value of every setting and where it came from, with its file
+  key next to its environment name.
+- `config check` only validates the configuration. Unknown keys in the file are errors, so typos
+  don't go unnoticed. It also says which database the configuration points at (SQLite, Postgres or
+  MySQL), without the password.
+
+DNZ reads the config file first, then the environment, then flags; a later one wins. Pass another
+file with `-c` / `--config` or `DNZ_CONFIG`. See [Configuration](/deploy/configuration) for the full
+order and every setting.
+
+```bash
+dnz -c /srv/dnz/dnz.toml config check
+```
+
+## Move to Postgres or MySQL
+
+```bash
+dnz db migrate-from-sqlite /var/lib/dnz/dnz.db                           # into database.url
+dnz db migrate-from-sqlite /var/lib/dnz/dnz.db --to postgres://dnz:secret@db.internal/dnz
+```
+
+Unlike the other commands, this one works on the databases directly, on the machine DNZ runs on.
+Stop DNZ first. It brings the SQLite file up to this version's schema, creates DNZ's tables in the
+target and copies every table, printing the rows of each. The target must have no users or zones
+yet. Afterwards the ids continue after the copied ones and the row counts are compared. Keep the
+SQLite file as a backup, set `database.url` / `DNZ_DATABASE_URL` to the new database and start DNZ.
+See [Database](/deploy/database#move-an-existing-install-from-sqlite).
+
+## Health check
+
+```bash
+dnz healthcheck
+```
+
+Exits with status 0 when this machine's server answers (`GET /api/health`), so it works as a Docker
+`HEALTHCHECK` or a monitoring probe.
+
+## Doctor
+
+`dnz doctor` runs the [health check](/admin/health-check): port 53, zone delegations (NS, glue, DS,
+lame nameservers), secondaries, certificates, the clock, disk space, the DNZ version and weak
+settings, each finding with its evidence and a copy-paste fix. Superadmin.
+
+```bash
+dnz doctor                         # check now and print what needs fixing
+dnz doctor --all                   # also what is fine
+dnz doctor --json                  # the report as JSON; exits 1 when a check fails
+dnz doctor --cached                # the last stored report
+dnz doctor --local                 # this machine only, without the server (e.g. before it starts)
+dnz doctor --mute version          # leave a finding (or a whole check) out of the badge and alerts
+dnz doctor --unmute version
+dnz settings health-check --interval 30 --version-check off
+```
+
+When no server answers, `dnz doctor` checks the machine it runs on by itself: whether DNZ can bind
+its DNS port and what holds it (systemd-resolved, dnsmasq), disk space, the clock and the version.
+
+## Version
+
+```bash
+dnz --version
+```
+
+## Factory reset
+
+```bash
+dnz --reset --all                  # or: dnz -ra
+```
+
+A factory reset erases everything on the server:
+
+- zones and records
+- users and divisions
+- API tokens and update keys
+- proxies and replication
+- filtering, notifications and settings
+- logs
+
+The server goes back to first-run setup (`dnz setup`, or the web UI), and your saved session for it
+is forgotten. The config file and the environment stay. With `DNZ_ADMIN_PASSWORD` set, that admin is
+created again.
+
+<Warning>
+  This can't be undone. Take a [backup](/deploy/backups) first if you might need anything back.
+</Warning>
+
+Only a superadmin can do it. It asks you to type `RESET`; `--yes` skips that, for example in
+scripts. The dashboard has the same under **Settings → General → Factory reset**.

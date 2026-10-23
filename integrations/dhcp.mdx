@@ -1,0 +1,255 @@
+---
+title: "DHCP and IPAM"
+description: "Names for the machines your DHCP servers hand addresses to, and a view of the address space: Kea, ISC dhcpd and Windows DHCP."
+---
+
+DNZ gives the machines your DHCP servers hand addresses to a name, and shows the address space they
+live in: the subnets, what uses each address, what is free, and what doesn't add up.
+
+Names follow DHCP two ways, and you can use either or both:
+
+- **DNS updates from the DHCP server** (RFC 2136): Kea's DHCP-DDNS and ISC dhcpd sign them with an
+  [update key](/dns/dynamic-updates); Windows DHCP sends them unsigned. The name changes the moment
+  a lease does, and DNZ holds these updates to the [DHCID rules](#the-dhcid-rules) of RFC 4701/4703.
+- **DNZ reads the leases**: Kea through its control agent's API, ISC dhcpd and Windows DHCP from a
+  lease file that is pushed to DNZ, uploaded, or fetched from a URL. A, AAAA and PTR records then
+  follow the leases, and leases that end lose their records.
+
+Records a lease or a DHCP update made are marked **DHCP-managed**: a *DHCP* badge in the record
+list, with the lease's MAC and end. **Records you made are never changed**: a name that has records
+of its own is left alone, and a DHCP-managed record you edit by hand becomes yours.
+
+Everything lives in a division, under **DNS → DHCP & IPAM**.
+
+| To | You need |
+| --- | --- |
+| Connect, change or remove a DHCP server | `integrations.manage` |
+| Sync a server, upload or push a lease file (an API token can) | `records.write` |
+| See servers, leases and IPAM | `zones.read` |
+| Add IPAM subnets by hand | `zones.write` |
+
+## Which names leases get
+
+A live lease (active, not run out) with a hostname gets:
+
+- an **A** record (IPv4) or **AAAA** record (IPv6) in the division's zone the name falls in. A
+  hostname with a domain in one of the zones (`pc1.lan.example.com`, as Kea and Windows send it) is
+  used as it is; a bare hostname (`pc1`), or one in a domain DNZ has no zone for (`ws01.corp.local`),
+  gets its first label in the server's **domain**: `pc1.lan.example.com`.
+- a **PTR** record in the reverse zone, when the division has one (`0.10.in-addr.arpa` for
+  `10.0.x.x`, an `ip6.arpa` zone for IPv6). PTRs can be turned off per server.
+
+A lease gets **no records**, listed on the server's card with the reason, when its name has records
+DNZ didn't make from this server's leases (static records are a *conflict*; names Kea's DHCP-DDNS
+keeps are *skipped*), when another client already holds the name (the one that has it keeps it),
+when the name falls in no zone here, or when the address already has a PTR of its own.
+
+When a lease ends, is released, or changes its name or address, its records go. Turning a server's
+records off keeps reading its leases for IPAM. Every change is a version in the zone's
+[history](/dns/history) (source *DHCP*), and reads run on the [cluster](/deploy/cluster)'s leader.
+
+## Connect a DHCP server
+
+**DNS → DHCP & IPAM → Add DHCP server**, then the **Setup guide** on its card has every block below
+filled in for your server, with copy buttons.
+
+<Tabs>
+  <Tab title="Kea">
+    DNZ reads Kea through the **control agent** (`kea-ctrl-agent`), or from Kea 3.0 the DHCP
+    server's own HTTP control socket. It asks for `config-get` (subnets, pools, reservations) and
+    `lease4-get-all` / `lease6-get-all`, which need the **lease_cmds** hook. It never changes Kea's
+    configuration.
+
+    In `kea-dhcp4.conf` (the hook's path depends on the package):
+
+    ```json
+    {
+      "Dhcp4": {
+        "control-socket": { "socket-type": "unix", "socket-name": "/run/kea/kea4-ctrl-socket" },
+        "hooks-libraries": [{ "library": "/usr/lib/x86_64-linux-gnu/kea/hooks/libdhcp_lease_cmds.so" }]
+      }
+    }
+    ```
+
+    `kea-ctrl-agent.conf`, with a password you give DNZ too:
+
+    ```json
+    {
+      "Control-agent": {
+        "http-host": "0.0.0.0",
+        "http-port": 8000,
+        "authentication": { "type": "basic", "realm": "kea", "clients": [{ "user": "dnz", "password": "change-me" }] },
+        "control-sockets": { "dhcp4": { "socket-type": "unix", "socket-name": "/run/kea/kea4-ctrl-socket" } }
+      }
+    }
+    ```
+
+    <Warning>
+      Let only DNZ reach the control agent's port. Recent Kea versions also want `/run/kea` at mode
+      750 or tighter.
+    </Warning>
+
+    DNZ reads it every 60 seconds, and at once on **Sync now**. Delegated prefixes (IA_PD) are left
+    out; reservations without a lease show in IPAM as reserved.
+
+    **Kea's DHCP-DDNS (D2)** updates DNS the moment a lease changes. Make an update key with `A`,
+    `AAAA`, `PTR` and `DHCID` for the forward and reverse zones, then in `kea-dhcp-ddns.conf` (D2
+    wants DNZ's DNS address as an IP):
+
+    ```json
+    {
+      "DhcpDdns": {
+        "ip-address": "127.0.0.1",
+        "port": 53001,
+        "tsig-keys": [{ "name": "kea-ddns", "algorithm": "HMAC-SHA256", "secret": "the key's secret" }],
+        "forward-ddns": { "ddns-domains": [{ "name": "lan.example.com.", "key-name": "kea-ddns", "dns-servers": [{ "ip-address": "192.0.2.53", "port": 53 }] }] },
+        "reverse-ddns": { "ddns-domains": [{ "name": "0.10.in-addr.arpa.", "key-name": "kea-ddns", "dns-servers": [{ "ip-address": "192.0.2.53", "port": 53 }] }] }
+      }
+    }
+    ```
+
+    and in `kea-dhcp4.conf`:
+
+    ```json
+    {
+      "Dhcp4": {
+        "dhcp-ddns": { "enable-updates": true },
+        "ddns-send-updates": true,
+        "ddns-override-client-update": true,
+        "ddns-replace-client-name": "when-not-present",
+        "ddns-qualifying-suffix": "lan.example.com.",
+        "ddns-update-on-renew": true,
+        "ddns-conflict-resolution-mode": "check-with-dhcid"
+      }
+    }
+    ```
+
+    <Tip>
+      With D2 on, turn the server's **A / AAAA records** off in DNZ: D2 keeps the names, and DNZ
+      still reads the leases for IPAM.
+    </Tip>
+  </Tab>
+  <Tab title="ISC dhcpd">
+    DNZ reads `dhcpd.leases`: IPv4 `lease` blocks and IPv6 `ia-na` / `ia-ta` blocks. The last entry
+    for an address holds; the name is the lease's `ddns-fwd-name` when dhcpd set one, else its
+    `client-hostname`.
+
+    The file stays on the dhcpd server. Push it every minute with a cron job and an API token with
+    `records.write` (**Settings → API tokens**):
+
+    ```sh
+    install -m 600 /dev/null /etc/dnz-leases.token && echo 'dnz_…' > /etc/dnz-leases.token
+    cat > /usr/local/bin/dnz-push-leases <<'EOF'
+    #!/bin/sh
+    exec curl -fsS -X POST -H "Authorization: Bearer $(cat /etc/dnz-leases.token)" \
+      -H 'Content-Type: text/plain' --data-binary @/var/lib/dhcp/dhcpd.leases \
+      'https://dnz.example.com/api/dhcp-servers/3/import' > /dev/null
+    EOF
+    chmod 755 /usr/local/bin/dnz-push-leases
+    echo '* * * * * root /usr/local/bin/dnz-push-leases' > /etc/cron.d/dnz-leases
+    ```
+
+    DNZ changes only what changed. Or serve the file over HTTP(S) and give the server a URL: DNZ
+    fetches it every interval. Or upload it with **Upload** on the server's card.
+
+    dhcpd can also send DNS updates itself, signed with an update key; its `standard` style uses
+    DHCIDs, so the [DHCID rules](#the-dhcid-rules) apply:
+
+    ```
+    ddns-update-style standard;
+    ddns-domainname "lan.example.com.";
+    ddns-rev-domainname "in-addr.arpa.";
+    update-conflict-detection true;
+    key dhcp-ddns { algorithm hmac-sha256; secret "the key's secret"; }
+    zone lan.example.com. { primary 192.0.2.53; key dhcp-ddns; }
+    zone 0.10.in-addr.arpa. { primary 192.0.2.53; key dhcp-ddns; }
+    ```
+  </Tab>
+  <Tab title="Windows DHCP">
+    **Leases and scopes.** DNZ reads the CSV `Export-Csv` writes for `Get-DhcpServerv4Lease` /
+    `Get-DhcpServerv6Lease`, and for `Get-DhcpServerv4Scope` / `Get-DhcpServerv6Scope`, which gives
+    the subnets and their pools. A scheduled task on the DHCP server pushes both every 5 minutes, as
+    SYSTEM, in UTC (so the server's language and time zone don't matter). Put an API token with
+    `records.write` in place of `dnz_…`:
+
+    ```powershell
+    New-Item -ItemType Directory -Force C:\ProgramData\dnz | Out-Null
+    Set-Content C:\ProgramData\dnz\token.txt 'dnz_…'
+    @'
+    $token = (Get-Content C:\ProgramData\dnz\token.txt -Raw).Trim()
+    $url = 'https://dnz.example.com/api/dhcp-servers/4/import'
+    $headers = @{ Authorization = "Bearer $token" }
+    $utc = @{ n = 'LeaseExpiryTime'; e = { if ($_.LeaseExpiryTime) { $_.LeaseExpiryTime.ToUniversalTime().ToString('o') } } }
+    $leases = @(Get-DhcpServerv4Scope | Get-DhcpServerv4Lease) + @(Get-DhcpServerv6Scope | Get-DhcpServerv6Lease)
+    $csv = $leases | Select-Object IPAddress, ClientId, ClientDuid, HostName, AddressState, $utc | ConvertTo-Csv -NoTypeInformation | Out-String
+    Invoke-RestMethod -Method Post -Uri $url -Headers $headers -ContentType 'text/csv; charset=utf-8' -Body $csv
+    $scopes = @(Get-DhcpServerv4Scope | Select-Object ScopeId, SubnetMask, Name, StartRange, EndRange) + @(Get-DhcpServerv6Scope | Select-Object Prefix, Name)
+    $csv = $scopes | Select-Object ScopeId, SubnetMask, Prefix, Name, StartRange, EndRange | ConvertTo-Csv -NoTypeInformation | Out-String
+    Invoke-RestMethod -Method Post -Uri $url -Headers $headers -ContentType 'text/csv; charset=utf-8' -Body $csv
+    '@ | Set-Content C:\ProgramData\dnz\push-leases.ps1
+    icacls C:\ProgramData\dnz /inheritance:r /grant:r 'SYSTEM:(OI)(CI)F' 'Administrators:(OI)(CI)F' | Out-Null
+    $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -ExecutionPolicy Bypass -File C:\ProgramData\dnz\push-leases.ps1'
+    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5)
+    Register-ScheduledTask -TaskName 'DNZ leases' -Action $action -Trigger $trigger -User 'SYSTEM' -RunLevel Highest -Force
+    ```
+
+    **DNS dynamic updates.** Windows DHCP can register its clients' A and PTR records itself. It
+    can't sign updates with TSIG, and its secure updates are **GSS-TSIG** (Kerberos, for Active
+    Directory-integrated zones), which DNZ doesn't do. So the updates are **unsecured**, and DNZ
+    lets them in only from the addresses under **Accept unsigned DNS updates from** on the server:
+    only A, AAAA, PTR and DHCID records, never over a record you made. On the DHCP server:
+
+    ```powershell
+    Set-DhcpServerv4OptionValue -DnsDomain 'lan.example.com'
+    Set-DhcpServerv4DnsSetting -DynamicUpdates Always -DeleteDnsRROnLeaseExpiry $true -UpdateDnsRRForOlderClients $true -NameProtection $true
+    ```
+
+    **Name protection** keeps a DHCID with each name, so one client can't take another's name.
+    Windows finds DNZ through the zone's SOA: the DHCP server's own resolver must answer the zone's
+    primary name server with DNZ's address.
+
+    <Warning>
+      Unsecured updates come over UDP, whose source address can be forged: keep DNZ's DNS port
+      closed to everything but your networks.
+    </Warning>
+  </Tab>
+</Tabs>
+
+## The DHCID rules
+
+A DHCID record is a hash of the client's identity; DHCP servers keep one at every name they
+register (RFC 4701), so a name stays with the client that has it. Kea checks this itself
+(`check-with-dhcid`, RFC 4703): it adds a name only while it is free, changes or removes it only
+while the DHCID is its client's, and on release removes the address, then the DHCID.
+
+DNZ holds every DNS UPDATE that carries a DHCID, and every unsigned update from a DHCP server, to
+the same rules on its own side, whatever the client's conflict resolution mode:
+
+- a name with **static records** (A, AAAA, PTR, CNAME or DHCID no DHCP update or lease made) is
+  never changed: the update gets YXDOMAIN;
+- an update with a DHCID never changes a name whose DHCID is **another client's** (YXDOMAIN).
+
+So Kea's `no-check-with-dhcid` still can't take another client's name, or yours. To let clients take
+names over, use `no-check-without-dhcid`: Kea then sends ordinary DNS UPDATEs, limited only by the
+key's scope.
+
+## IPAM
+
+**DNS → DHCP & IPAM → IPAM** puts together, per division:
+
+- **Subnets**: the DHCP servers' (Kea's subnets and shared networks, Windows scopes), the division's
+  client networks, and ones added by hand. The same CIDR from several places is one subnet.
+- **Addresses**: every lease and reservation, A/AAAA record and PTR, with its hostname, MAC, source
+  and when the client was last seen. An address counts as used while it has a live lease, a
+  reservation, or a record.
+- **Use and free ranges**: per subnet and pool; an IPv4 network loses its network and broadcast
+  address. Any network can be opened, known or not.
+- **Conflicts**: two names on one address, a static record on an address leased to another
+  machine, a static record inside a DHCP pool, a PTR to a local name without that address, and
+  leases whose name is taken.
+
+Subnets and DHCP servers also show in the [topology map](/dashboard/topology). The counts are on
+[/metrics](/dashboard/prometheus): `dnz_dhcp_leases`, `dnz_dhcp_records_synced_total`,
+`dnz_dhcp_read_success`, `dnz_ipam_conflicts` and more.
+
+See also: [`dnz dhcp` and `dnz ipam`](/cli/dhcp), [DHCP and IPAM API](/api/dhcp).

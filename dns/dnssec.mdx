@@ -1,0 +1,191 @@
+---
+title: "DNSSEC"
+description: "Sign a local zone with DNSSEC so validating resolvers can verify that DNZ's answers are genuine."
+---
+
+DNSSEC adds signatures to DNS answers. Validating resolvers (Google `8.8.8.8`, Cloudflare
+`1.1.1.1`, Quad9, modern ISPs) check them against a **DS record** at your domain registrar, so
+nobody in between can forge an answer for your zone. DNZ signs the answers of local zones, one zone
+at a time.
+
+To have DNZ check the signatures of other domains it resolves for your clients, see
+[DNSSEC validation](/dns/dnssec-validation).
+
+<Note>
+  DNSSEC is only useful when DNZ is the zone's **public nameserver**. For zones on Cloudflare, turn
+  on DNSSEC at Cloudflare. Internal zones (such as `corp.local`) have no public DS; internal
+  resolvers can use their DNSKEY as a trust anchor if needed.
+</Note>
+
+## Turn it on
+
+<Steps>
+  <Step title="Turn on DNSSEC for the zone">
+    Open the zone under **DNS → Zones** and turn on **DNSSEC** (needs the *Manage zones*
+    permission). To sign with something other than the defaults, open **Signing settings** first
+    (see [below](#signing-settings)). Or from the terminal:
+
+    ```bash
+    dnz zone dnssec example.com on                # prints the DS record for the registrar
+    ```
+
+    DNZ creates the zone's key (one **ECDSA P-256, algorithm 13** key by default) and starts
+    signing its answers right away.
+  </Step>
+  <Step title="Add the DS record at your registrar">
+    Copy the **DS record** shown and add it at your domain registrar (or in the parent zone). Most
+    registrars ask for the *Key tag*, *Algorithm*, *Digest type* (2) and *Digest*. Some ask for
+    the DNSKEY (public key) instead; the card shows both.
+  </Step>
+  <Step title="Check the chain of trust">
+    Once the DS is published, run the [checks below](#check-it).
+  </Step>
+</Steps>
+
+Until the DS is in place, the zone works as before, just unvalidated ("insecure").
+
+<Warning>
+  A signed zone answers every name in it itself, so [Forward missing
+  names](/dns/zones#forward-missing-names) is turned off when you turn DNSSEC on, and can't be
+  turned back on while the zone is signed.
+</Warning>
+
+## Signing settings
+
+| Setting | Choices | Default |
+| --- | --- | --- |
+| **Algorithm** | ECDSA P-256 (13), Ed25519 (15), RSA/SHA-256 (8, 2048-bit keys) | ECDSA P-256 |
+| **Keys** | One combined key (CSK, flags 257), or a KSK (flags 257) that signs the DNSKEY RRset and a ZSK (flags 256) that signs everything else | One combined key |
+| **Proof of missing names** | Compact denial (RFC 9824) or NSEC3 (RFC 5155) | Compact denial |
+| **NSEC3 iterations / salt** | 0–100, salt up to 32 bytes in hex | 0, no salt (RFC 9276) |
+| **Roll the ZSK every** | Days, or 0 for only by hand (KSK + ZSK only) | 90 days |
+| **Roll the KSK (or key) every** | Days, or 0 for only by hand | 0 |
+| **Publish CDS/CDNSKEY** | On or off | On |
+
+```bash
+dnz zone dnssec example.com --algorithm ed25519 --keys ksk-zsk
+dnz zone dnssec example.com --denial nsec3 --nsec3-iterations 0 --nsec3-salt -
+dnz zone dnssec example.com --zsk-lifetime 60 --ksk-lifetime 365 --cds on
+```
+
+Ed25519 gives the smallest answers; RSA is there for parents and validators that need it. Changing
+the algorithm or the key split of a signed zone starts a [rollover](#key-rollover); it can't be
+changed again until that rollover has finished.
+
+<AccordionGroup>
+  <Accordion title="Compact denial or NSEC3">
+    - **Compact denial** (RFC 9824, "black lies"): a missing name or type gets a NOERROR answer with
+      an NSEC that covers only the queried name (type `NXNAME` for names that don't exist). Nothing
+      is computed ahead and the zone's contents can't be walked. Some older validators and
+      monitoring tools expect NXDOMAIN for missing names.
+    - **NSEC3** (RFC 5155, opt-out off): missing names get a real NXDOMAIN with the closest encloser
+      proof, missing types an NSEC3 matching the name, and wildcard answers are signed as the
+      wildcard with the next closer name proven missing. The hashed chain is computed once per
+      version of the zone, and the apex answers `NSEC3PARAM`.
+
+    RFC 9276 asks for 0 extra NSEC3 iterations and no salt: neither makes hashed names much harder
+    to guess, both cost resolvers work, and validators may treat high iteration counts as insecure.
+  </Accordion>
+</AccordionGroup>
+
+## Key rollover
+
+DNZ rolls keys by itself; each step waits long enough for caches to forget what they had. The zone
+page shows the rollover in progress, each key's state and when the next step is due. Start one by
+hand with **Roll KSK / Roll ZSK / Roll CSK**, or:
+
+```bash
+dnz zone dnssec example.com --roll zsk        # csk with one key, ksk or zsk with two
+```
+
+- **ZSK** (pre-publish, RFC 6781): the new ZSK is published first, starts signing once the DNSKEY
+  RRset's TTL (1 hour) plus a margin has passed, and the old one stays published until the zone's
+  longest TTL plus a margin has passed. Nothing changes at the registrar.
+- **KSK or combined key** (double signature): the new key signs next to the old one at once. Once
+  caches have the new DNSKEY RRset, **CDS and CDNSKEY** (RFC 7344) switch to the new key and the zone
+  page shows the new DS. The rollover then waits for the parent zone's DS to point at the new key.
+- **Algorithm** (RFC 6781 section 4.1.4): the new keys sign everything before they are published,
+  are published once the zone's longest TTL has passed, take over the DS like a KSK, and the old
+  keys leave the DNSKEY RRset before they stop signing.
+- **One key ↔ KSK + ZSK** with the same algorithm needs no new DS.
+
+<Steps>
+  <Step title="Update the DS">
+    When the zone page says it's waiting for the parent, put the new DS at your registrar.
+    Registrars and registries that read CDS (RFC 8078) do it by themselves.
+  </Step>
+  <Step title="DNZ notices">
+    DNZ looks up the zone's DS through its upstreams every 15 minutes while it waits. Where that
+    can't work (an internal zone), confirm with **The registrar has the new DS**, or:
+
+    ```bash
+    dnz zone dnssec example.com --ds-updated
+    ```
+  </Step>
+  <Step title="The old key goes">
+    Two days later (the parent's DS TTL plus a margin), the old key is removed.
+  </Step>
+</Steps>
+
+## How it works
+
+- **Online signing**: every answer is signed as it is sent, for clients that set the DO bit, by each
+  key that signs that RRset. No zone needs re-signing and no signature expires unnoticed. Record
+  changes are signed immediately.
+- **DNSKEY, CDS and CDNSKEY** (and NSEC3PARAM with NSEC3) are answered automatically at the zone
+  apex.
+- **Views, wildcards, CNAMEs, DNAMEs and Auto PTR** are signed too; a CNAME chain that ends at a
+  missing name carries the proof for that name.
+- **Disabled records** and disabled zones are not signed (they aren't answered either).
+- **Keys are kept** when DNSSEC is turned off, so turning it on again doesn't change the DS.
+- **DNZ secondaries** of a signed zone receive the same keys from the primary, with their rollover
+  states, so one DS covers every DNZ nameserver. Only the primary rolls keys. See
+  [Replication](/dns/replication).
+
+## Check it
+
+```bash
+dig +dnssec @192.0.2.10 example.com A          # RRSIG in the answer
+dig @192.0.2.10 example.com DNSKEY
+dig @192.0.2.10 example.com CDS                # the DS the parent should have
+delv @1.1.1.1 example.com                      # once the DS is in place: "fully validated"
+```
+
+Before the DS is at the parent, validate against DNZ directly with the DS as a trust anchor (BIND
+9.18's `delv`):
+
+```bash
+cat > anchor.conf <<'EOF'
+trust-anchors { "example.com." static-ds 12345 13 2 "49FD46E6…"; };
+EOF
+delv @192.0.2.10 -a anchor.conf +root=example.com www.example.com A
+```
+
+Replace `192.0.2.10` with your DNZ server's address. [DNSViz](https://dnsviz.net) and the
+[Verisign DNSSEC Debugger](https://dnssec-debugger.verisignlabs.com) work too.
+
+## Turn it off
+
+<Steps>
+  <Step title="Remove the DS at the registrar">
+    Delete the DS record at your registrar first.
+  </Step>
+  <Step title="Wait for its TTL">
+    Wait for the DS record's TTL to run out, usually a day.
+  </Step>
+  <Step title="Turn DNSSEC off in DNZ">
+    Only then turn **DNSSEC** off on the zone page.
+  </Step>
+</Steps>
+
+<Warning>
+  While the DS is still published but answers are no longer signed, validating resolvers reject the
+  zone (SERVFAIL).
+</Warning>
+
+## Secondaries that aren't DNZ
+
+Zones are transferred without signatures, because DNZ signs answers online. A BIND, Knot or
+PowerDNS secondary therefore serves them unsigned. For signed zones, use DNZ secondaries (they share
+the key), or sign on the secondary with its own key and add its DS too. See
+[Replication](/dns/replication#dnz-as-primary-for-bind-knot-or-powerdns).

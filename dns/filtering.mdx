@@ -1,0 +1,321 @@
+---
+title: "Filtering"
+description: "Block ads, trackers, malware or specific sites in DNS with blocklists and your own rules, server-wide or per division, with safe search, parental control, schedules and per-client rules."
+---
+
+DNZ can block ads, trackers, malware or specific sites right in DNS. A device asks for a blocked
+name and gets an answer that goes nowhere, so the ad or tracker never loads. You subscribe to shared
+**blocklists**, add your own **allow** and **block** rules, and test any domain to see why it is
+blocked. Lists and rules can apply to **some clients only** and to **some hours only**, and
+**safe search** and **parental control** keep a child's devices clean.
+
+Filtering lives under **DNS → Filtering**, and in the CLI under `dnz filter`.
+
+## Scopes
+
+| Scope | Applies to | Managed by |
+| --- | --- | --- |
+| **Server-wide** | Every client | Superadmins |
+| **Per division** | Devices in that division's *client networks*, on top of the server-wide lists | The *Manage blocklists* permission (`filtering.manage`, Owner by default) |
+
+The division is picked from the **client's IP address**. A superadmin maps networks to divisions in
+the **Client networks** card, for example `10.10.0.0/16 → SIMRS` and `10.20.0.0/16 → Marketing`.
+When networks overlap, the most specific one (longest prefix) wins.
+
+Only superadmins can map networks, so one division can't claim another division's devices. Until a
+network belongs to a division, that division's lists don't apply to any device.
+
+Client networks also decide whose traffic a query is: forwarded, cached and blocked queries from a
+division's networks show in that division's [query log](/dns/query-logs) and Overview.
+
+## Get started
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Add a blocklist">
+        Open **DNS → Filtering**. In **Blocklists**, click one of the suggested lists, or paste the
+        URL of any list you trust (with an optional name). The list is downloaded right away.
+      </Step>
+      <Step title="Map client networks (per-division filtering)">
+        As a superadmin, add each division's networks in **Client networks**, for example
+        `10.20.0.0/16` for Radiology.
+      </Step>
+      <Step title="Test a domain">
+        Type a domain in **Test a domain**, optionally with a **Client IP**, to check that it is
+        blocked.
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz filter show [--division it]
+    dnz filter list presets
+    dnz filter list add "HaGeZi Multi Light" https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/light.txt
+    dnz filter network add 10.20.0.0/16 --division radiology
+    dnz filter check ads.example.net [--client 10.20.1.5]
+    ```
+
+    Without `--division`, filtering commands work on the server-wide lists and rules (superadmin).
+    See [CLI: filtering](/cli/filtering).
+
+  </Tab>
+</Tabs>
+
+## Order of decisions
+
+For each query, DNZ decides in this order:
+
+1. **Local zones** are always answered and never blocked.
+2. **Allow** (your own rule, or an `@@||domain^` entry in a list) beats block. A division's allow
+   also beats a server-wide block.
+3. **Response policy zones** (RPZ feeds, server-wide), see [Response policy zones](/dns/rpz).
+4. **Block** from a list or your own rule.
+5. **Safe search**: a search engine's name is answered with its safe variant.
+6. Anything else is forwarded upstream as usual (see [Forwarding](/dns/forwarding)).
+
+Lists and rules limited to [some clients](#clients-rules-for-some-devices-only) or a
+[schedule](#schedules) only take part while they apply: an allow rule for *Kids tablets* only beats a
+block for those devices.
+
+An entry covers the domain **and all its subdomains**: `doubleclick.net` also blocks
+`ad.doubleclick.net`.
+
+## Blocklists
+
+- One-click buttons for popular lists: **AdGuard DNS filter**, **Steven Black hosts**, **HaGeZi
+  Multi Light**, **OISD small** and **HaGeZi Threat Intelligence**. You can also enter your own URL.
+- A list is downloaded when you add it, then updated automatically every 24 hours. The ⟳ button
+  updates it now (`dnz filter list refresh 2`).
+- If a download fails, the old contents stay in use and the error is shown.
+- Up to 64 MB per list.
+- A list can be turned off without deleting it (`dnz filter list set 2 off`).
+
+### Formats
+
+- **hosts**: `0.0.0.0 ads.example.com`
+- **AdGuard / Adblock**: `||ads.example.com^`, `@@||ok.example.com^`
+- **One domain per line**: `ads.example.com` (a leading `*.` is ignored)
+
+Cosmetic rules, regexes and rules with modifiers (`$client=…`) are skipped. To get the effect of
+`$client`, limit the whole list to some clients instead (see
+[Clients](#clients-rules-for-some-devices-only)).
+
+## Your own rules
+
+**Your rules** block or always allow single domains on top of the lists. Each rule can carry a
+note. Allow wins over any block.
+
+```bash
+dnz filter rule block ads.example.net
+dnz filter rule allow cdn.example.net --division it
+```
+
+## Clients: rules for some devices only
+
+Like AdGuard's `$client`, any list, rule or the safe search settings can be limited to some
+clients. Open a list's **⋯ → Clients & schedule…** (or the sliders button on a rule) and pick
+**Only some clients**:
+
+- **Named clients** from the **Clients** card: a name for a group of addresses, for example
+  `Kids tablets → 192.168.1.50, 192.168.1.51` or `Guest Wi-Fi → 192.168.50.0/24`. Rename it or change
+  its addresses later, and every list and rule that uses it follows.
+- **Addresses and networks** typed straight in: `192.168.1.50`, `10.0.5.0/24`, `2001:db8::/64`.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Name the devices">
+        In the **Clients** card, add a client with a name, such as *Kids tablets*, and its
+        addresses or networks.
+      </Step>
+      <Step title="Limit a list or rule">
+        Open a list's **⋯ → Clients & schedule…**, or the sliders button on a rule, choose **Only
+        some clients** and pick *Kids tablets*.
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz filter client add "Kids tablets" 192.168.1.50 192.168.1.51
+    dnz filter client set 1 --addresses 192.168.1.50,192.168.1.52
+    dnz filter rule block tiktok.com --clients "Kids tablets"
+    dnz filter list limit 3 --clients 192.168.1.0/24
+    dnz filter list limit 3 --clients ""            # back to every client
+    ```
+
+  </Tab>
+</Tabs>
+
+A client group is in a scope like lists are: a division's groups are only for its lists and rules,
+and the server-wide ones can be used everywhere. A group can't be deleted while a list or rule still
+uses it (they would silently apply to no one), and neither can a schedule.
+
+In a **division**, limiting to clients narrows the division's devices further; the division itself
+still comes from the [client networks](#scopes). In the **server-wide** scope, client limits work
+for any device, with no divisions involved.
+
+## Schedules
+
+A **schedule** is a set of days and a time range, in the server's
+[time zone](/admin/settings#time-zone) (**Settings → General**). For example:
+
+| Name | Days | Time |
+| --- | --- | --- |
+| School hours | Mon–Fri | 07:00–14:00 |
+| Bedtime | Sun–Thu | 21:00–06:00 (runs past midnight, into the next day) |
+| Weekend | Sat, Sun | 00:00–24:00 (the same start and end also means the whole day) |
+
+Pick one in **Clients & schedule…** to apply a list or rule only then: block *Games* during school
+hours, or *Social media* at bedtime for *Kids tablets*. Outside the schedule the list or rule does
+nothing.
+
+A night schedule belongs to the day it starts on: *Bedtime* on Sunday covers Sunday 21:00 to Monday
+06:00.
+
+```bash
+dnz filter schedule add "School hours" --days mon-fri --from 07:00 --to 14:00
+dnz filter schedule add Bedtime --days sun-thu --from 21:00 --to 06:00
+dnz filter rule block roblox.com --clients "Kids tablets" --schedule "School hours"
+dnz filter list limit 3 --schedule none        # always again
+```
+
+`--days` takes `mon,tue,…`, a range like `mon-fri`, `weekdays`, `weekend` or `daily`.
+
+## Safe search
+
+**Safe search** answers search engines with their safe variant, which hides explicit results in
+every browser and app on the device. The engines document these names for networks to use:
+
+| Service | Names | Answered with |
+| --- | --- | --- |
+| Google | `google.com`, `www.google.com` and the country domains (`google.co.id`, `www.google.de`…) | `forcesafesearch.google.com` |
+| Bing | `bing.com`, `www.bing.com` | `strict.bing.com` |
+| DuckDuckGo | `duckduckgo.com`, `www.`, `start.`, `html.`, `lite.` | `safe.duckduckgo.com` |
+| YouTube | `www.youtube.com`, `m.youtube.com`, `youtubei.googleapis.com`, `youtube.googleapis.com`, `www.youtube-nocookie.com` | `restrict.youtube.com` (*Strict*) or `restrictmoderate.youtube.com` (*Moderate*) |
+
+The answer is a CNAME to the safe name plus its addresses, looked up through the upstreams (and the
+cache, and forwarding rules). Blocking wins over safe search; an allow rule doesn't turn it off.
+
+Safe search is set per scope. A division can have its own settings, which then replace the
+server-wide ones for its devices; **Follow server-wide** removes them again. Safe search can be
+limited to clients and a schedule too. Answers show up in the query log as *safe search*.
+
+```bash
+dnz filter safe-search                          # show
+dnz filter safe-search --google on --bing on --duckduckgo on --youtube moderate
+dnz filter safe-search --division it --youtube strict --clients "Kids tablets"
+dnz filter safe-search --division it --inherit  # follow the server-wide settings again
+```
+
+Check it from a device's point of view:
+
+```bash
+dnz filter check www.google.com --client 192.168.1.50
+```
+
+## Parental control
+
+The **Parental control** card offers blocklists by category, from
+[HaGeZi](https://github.com/hagezi/dns-blocklists) and the
+[Block List Project](https://github.com/blocklistproject/Lists):
+
+| Category | CLI name | Lists |
+| --- | --- | --- |
+| Adult content | `adult` | HaGeZi NSFW, Block List Project Porn |
+| Gambling | `gambling` | HaGeZi Gambling, Block List Project Gambling |
+| Social media | `social` | HaGeZi Social Networks, Block List Project TikTok / Facebook / Twitter |
+| Video | `video` | Block List Project YouTube (or use YouTube [safe search](#safe-search) instead) |
+| Games | `games` | Block List Project Fortnite |
+| Piracy | `piracy` | HaGeZi Anti-Piracy, Block List Project Piracy |
+| Drugs | `drugs` | Block List Project Drugs, Vaping |
+
+Each one you add is an ordinary blocklist, with the category shown next to it, so it updates daily
+and can be limited to some clients and a schedule like any other list.
+
+For a child's devices: add a client group for them, add the categories, then limit each list to that
+group.
+
+```bash
+dnz filter client add "Kids tablets" 192.168.1.50 192.168.1.51
+dnz filter parental list                        # categories and their lists
+dnz filter parental add adult --clients "Kids tablets"
+dnz filter parental add social --all --clients "Kids tablets" --schedule Bedtime
+```
+
+`parental add` subscribes to a category's first list, or to all of them with `--all`.
+
+## Response policy zones
+
+Superadmins can also subscribe to **RPZ** threat feeds, by zone transfer or URL, and serve DNZ's own
+server-wide lists as an RPZ zone for BIND, Unbound or PowerDNS. See
+[Response policy zones](/dns/rpz).
+
+## Answers for blocked queries
+
+A superadmin sets this in the server-wide scope under **Blocked answers**:
+
+| Mode | Answer |
+| --- | --- |
+| **Null IP** (default) | A → `0.0.0.0`, AAAA → `::`, other types get an empty answer. Apps fail right away without trying another resolver. |
+| **NXDOMAIN** | Answered as if the domain didn't exist. |
+
+```bash
+dnz filter mode nxdomain                       # or null_ip
+```
+
+Blocked answers have a TTL of 60 seconds, so unblocking reaches clients quickly.
+
+## Check and monitor
+
+- **Test a domain** shows whether a domain is blocked, by which entry and from which list (or which
+  [RPZ](/dns/rpz) rule), whether that entry is only for some clients or a schedule, and whether safe
+  search rewrites it. Fill in **Client IP** to see it from a particular device's point of view: its
+  division comes from the client networks, its client groups from their addresses. Schedules are
+  checked at the current time. The **Allow** and **Block** buttons add a rule straight away.
+- **Query Logs → All queries → Blocked** lists every blocked query (blocklists and RPZ) with the
+  client's IP (see [Query logs](/dns/query-logs)).
+- Every change to lists, rules and networks is recorded in the [audit log](/admin/audit-log).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="A site is blocked and shouldn't be">
+
+    Run **Test a domain** (or `dnz filter check <domain> --client <ip>`) to find the entry and the
+    list behind it, then click **Allow**. A division's allow beats a server-wide block, so a
+    division owner can unblock a site for their own devices.
+
+  </Accordion>
+  <Accordion title="A division's lists don't apply to its devices">
+
+    Check that the device's address is in one of the division's **Client networks**, and that no
+    more specific network belongs to another division. Only superadmins can add networks.
+
+  </Accordion>
+  <Accordion title="A list or rule limited to some clients doesn't apply">
+
+    Run **Test a domain** with the device's **Client IP**. Check that its address is in the client
+    group, and, for a list with a schedule, that the schedule covers the current time in the
+    server's time zone (**Settings → General**).
+
+  </Accordion>
+  <Accordion title="Safe search doesn't work in a browser">
+
+    Browsers that use their own encrypted DNS (DoH) bypass DNZ. Turn that off in the browser, or
+    point it at DNZ's [encrypted DNS](/dns/encrypted-dns). Blocking also wins over safe search, so
+    check that the search engine isn't on a blocklist.
+
+  </Accordion>
+  <Accordion title="A name in my own zone isn't blocked">
+
+    Local zones are always answered and never blocked. Remove or turn off the record instead.
+
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,69 @@
+---
+title: "Security and firewall"
+description: "Sign-in protection, sessions, security headers, and which ports to open."
+---
+
+## Account security
+
+<AccordionGroup>
+  <Accordion title="First passwords" icon="key" defaultOpen>
+    The first admin created with `DNZ_ADMIN_PASSWORD` must choose a new password at the first
+    sign-in. So must every user whose password an admin created or reset. Passwords need at least
+    10 characters and are hashed with argon2.
+  </Accordion>
+  <Accordion title="Brute-force protection" icon="lock">
+    After 5 failed sign-ins, that username is locked for 15 minutes. An IP address is locked after
+    20 failures. Both show up in the audit log as `user.login_failed` and `user.login_locked`.
+
+    Behind a reverse proxy, set `DNZ_TRUSTED_PROXIES` so the client's address is locked, not the
+    proxy's. See [HTTPS and reverse proxies](/deploy/https).
+  </Accordion>
+  <Accordion title="Sessions" icon="clock">
+    Sessions end after `DNZ_SESSION_TTL_HOURS` (168 hours by default), or sooner when unused for
+    `DNZ_SESSION_IDLE_HOURS` (72 hours by default). Signed-in devices are listed under
+    **Account → Sessions**, where you can sign any of them out. The CLI has the same with
+    `dnz session list` and `dnz session revoke`.
+  </Accordion>
+  <Accordion title="Security headers" icon="shield">
+    Every response carries a per-page Content Security Policy that only allows DNZ's own scripts,
+    `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and HSTS when reached over HTTPS
+    (directly, or through a proxy that sends `X-Forwarded-Proto: https`).
+  </Accordion>
+  <Accordion title="Secrets" icon="eye-slash">
+    API tokens and update-key secrets are shown once; DNZ stores only a hash of each API token.
+    Passwords and secrets are never written to the audit log, and notification secrets are shown
+    masked.
+  </Accordion>
+</AccordionGroup>
+
+## Firewall
+
+```bash
+sudo ufw allow 53/udp
+sudo ufw allow 53/tcp
+sudo ufw allow 443/tcp     # with a reverse proxy, or DNZ's own HTTPS
+```
+
+<Warning>
+  Don't open port 53 to the whole internet unless DNZ is a public nameserver: an open resolver can
+  be abused for amplification attacks. Limit it to your own networks:
+
+  ```bash
+  sudo ufw allow from 192.168.1.0/24 to any port 53
+  ```
+
+  A public nameserver should turn on [response rate limiting (RRL)](/dns/rate-limiting).
+</Warning>
+
+Other ports you may need:
+
+| Port | Protocol | When |
+| --- | --- | --- |
+| 853 | TCP | DNS over TLS |
+| 853 | UDP | DNS over QUIC |
+| 443 | UDP | DoH over HTTP/3 |
+| 53 | TCP | Secondaries transferring zones from this primary |
+| 53 | UDP | NOTIFY from the primary to its secondaries |
+| 8080 (or your HTTPS port) | TCP | DNZ secondaries joining once, and Traefik or dnz-proxy nodes fetching configuration |
+
+See [Encrypted DNS](/dns/encrypted-dns) and [Replication](/dns/replication).

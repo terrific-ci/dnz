@@ -1,0 +1,101 @@
+---
+title: "Threats"
+description: "API endpoints for threat detection: findings, their status, mute rules, the allow list, threat feeds, blocks and settings."
+---
+
+Threat detection endpoints need a signed-in **superadmin** session, not an
+[API token](/api/overview#what-a-token-can-reach). For what the detectors look for, see
+[Threat detection](/dns/threats).
+
+## Endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/threats` | On/off, learning, open findings per detector and status, feeds, blocks, this node's counters |
+| `GET` | `/api/threats/findings` | Findings, newest first |
+| `GET` | `/api/threats/groups?by=client` | Findings grouped per client (or `by=domain`) |
+| `GET` | `/api/threats/findings/{id}` | One finding, with the mute rules that match it |
+| `POST` | `/api/threats/findings/status` | Set the status of findings |
+| `POST` | `/api/threats/findings/{id}/block` | Block the finding's domain through filtering |
+| `GET` | `/api/threats/blocks` | Domains blocked because of findings |
+| `DELETE` | `/api/threats/blocks/{id}` | Lift a block |
+| `GET` / `PUT` | `/api/threats/settings` | The settings |
+| `GET` / `POST` | `/api/threats/mutes` | Mute rules |
+| `DELETE` | `/api/threats/mutes/{id}` | Remove a mute rule |
+| `GET` / `POST` | `/api/threats/allow` | The allow list (and the built-in one) |
+| `DELETE` | `/api/threats/allow/{id}` | Remove a domain from the allow list |
+| `GET` / `POST` | `/api/threats/feeds` | Threat feeds, and the presets |
+| `PATCH` / `DELETE` | `/api/threats/feeds/{id}` | Change or remove a feed |
+| `POST` | `/api/threats/feeds/{id}/refresh` | Download a feed now |
+
+## Listing findings
+
+`GET /api/threats/findings` and `/api/threats/groups` take:
+
+<ParamField query="status" type="string" default="open">
+  `open` (new and acknowledged), `all`, `new`, `acknowledged`, `muted` or `resolved`.
+</ParamField>
+<ParamField query="detector" type="string">
+  `dga`, `tunnel`, `new_domain`, `baseline` or `feed`.
+</ParamField>
+<ParamField query="client" type="string">
+  One client address.
+</ParamField>
+<ParamField query="domain" type="string">
+  The domain or a parent of it.
+</ParamField>
+<ParamField query="q" type="string">
+  Client or domain containing this.
+</ParamField>
+<ParamField query="limit" type="integer" default="200">
+  At most 1000 (5000 for groups).
+</ParamField>
+
+```json
+{
+  "findings": [
+    {
+      "id": 10, "detector": "tunnel", "detector_label": "DNS tunneling",
+      "client": "10.0.0.9", "domain": "tunnel-test.example", "status": "new",
+      "score": 2.4, "last_score": 2.4, "hits": 60,
+      "first_seen": "2026-10-22T11:51:19Z", "last_seen": "2026-10-22T11:51:19Z",
+      "samples": [{ "name": "2424ee…775.tunnel-test.example", "qtype": "TXT", "rcode": "NXDOMAIN", "at": 1792669879 }],
+      "evidence": { "queries": 60, "unique_names": 60, "encoded_names": 60, "record_names": 60, "answer_bytes": 11040, "window_minutes": 5 },
+      "alerted_at": "2026-10-22T11:51:20Z", "status_by": null, "status_at": null,
+      "block": { "id": 3, "expires_at": "2026-10-23T11:51:20Z", "created_by": "auto" }
+    }
+  ]
+}
+```
+
+## Changing findings
+
+```bash
+curl -X POST https://dnz.example.com/api/threats/findings/status \
+  -H "Authorization: Bearer $SESSION" -H "Content-Type: application/json" \
+  -d '{"ids": [10, 12], "status": "acknowledged"}'
+
+curl -X POST https://dnz.example.com/api/threats/findings/10/block \
+  -H "Authorization: Bearer $SESSION" -H "Content-Type: application/json" \
+  -d '{"hours": 24}'                     # 0 = until removed; empty: the automatic blocking setting
+```
+
+A mute rule (`POST /api/threats/mutes`) takes `detector`, `client` (address or network), `domain`,
+`hours` (empty or 0 = for good), `comment` and `apply` (also mute the open findings it matches,
+default `true`). An allow entry (`POST /api/threats/allow`) takes `domain`, `comment` and `resolve`
+(resolve its open findings and lift its block, default `true`).
+
+## Feeds
+
+`POST /api/threats/feeds` takes `name`, `url` and `auth_key` (sent as the `Auth-Key` header, for
+abuse.ch) and downloads the feed right away; a failed download is returned as `error` and kept on
+the feed. `PATCH` takes `name`, `url`, `enabled` and `auth_key` (`""` removes it). Feeds come back
+with `has_key`, never the key.
+
+## Settings
+
+`PUT /api/threats/settings` takes the whole settings object as `GET` returns it: `enabled`,
+`retention_days`, one object per detector (`dga`, `tunnel`, `new_domain`, `baseline`, `feed`) with
+`enabled`, `threshold`, `window_minutes`, `alert`, `block` and its own limits, `alerts`
+(`enabled`, `client_cooldown_minutes`, `max_per_hour`) and `auto_block` (`enabled`, `hours`). Missing
+fields get their defaults; values out of range are a `400`.

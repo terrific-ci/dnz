@@ -1,0 +1,284 @@
+---
+title: "Records"
+description: "API endpoints for records: the record format, filtering, proxied records, traffic steering and bulk changes."
+---
+
+Record endpoints work with an [API token](/api/overview#api-tokens) or a signed-in session. Reading
+needs `zones.read`; every change needs `records.write`.
+
+## Endpoints
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/zones/{id}/records` | `zones.read` | List records, optionally filtered |
+| `GET` | `/api/zones/{id}/tags` | `zones.read` | Tags used in the zone |
+| `POST` | `/api/zones/{id}/records` | `records.write` | Create a record |
+| `POST` | `/api/zones/{id}/records/bulk` | `records.write` | Add, change and delete many records at once, all or nothing |
+| `GET` | `/api/records/{id}` | `zones.read` | One record by its id (for clients that keep ids, like Terraform) |
+| `PATCH` | `/api/records/{id}` | `records.write` | Change a record |
+| `DELETE` | `/api/records/{id}` | `records.write` | Delete a record |
+| `GET` | `/api/zones/{id}/traffic` | `zones.read` | Steered records with their health, and whether a GeoIP database is loaded |
+| `PUT` | `/api/records/{id}/traffic` | `records.write` | Set a record's GeoDNS, weight and health check |
+| `DELETE` | `/api/records/{id}/traffic` | `records.write` | Remove the steering: the record answers as usual |
+| `POST` | `/api/records/{id}/traffic/test` | `records.write` | Run a health check once, without saving it |
+
+## Record format
+
+```json
+{
+  "name": "www", "type": "A", "value": "192.0.2.10", "ttl": 300, "priority": null,
+  "enabled": true, "comment": "Main site", "tags": ["prod", "web"]
+}
+```
+
+<ParamField body="name" type="string" required>
+  Relative to the zone: `www`, or `@` for the apex.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  The record type: `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `NS`, `SRV`, `CAA`, `HTTPS`, `SVCB`, `PTR`,
+  `TLSA`, `SSHFP`, `NAPTR`, `DS`, `URI`, `DNAME`, `LOC`.
+</ParamField>
+
+<ParamField body="value" type="string" required>
+  The record's value. For SRV, `value` holds `"weight port target"`, e.g. `"5 5060 sip.example.com"`;
+  for URI `"weight target"`, e.g. `"1 https://example.com/"`. TLSA, SSHFP, NAPTR, DS, DNAME and LOC
+  take their zone-file presentation format and come back in DNZ's canonical form (see [Record
+  types](/dns/zones#record-types)). A DS can't be at the apex (400); records below a DNAME, a
+  second DNAME at a name, or a DNAME next to a CNAME are refused (409).
+</ParamField>
+
+<ParamField body="ttl" type="integer">
+  Seconds. When left out, the zone's `default_ttl` is used (300 unless changed).
+</ParamField>
+
+<ParamField body="priority" type="integer">
+  Used for MX, SRV and URI.
+</ParamField>
+
+<ParamField body="enabled" type="boolean" default="true">
+  Off keeps the record but stops serving it. See [Turning records off](#turning-records-off).
+</ParamField>
+
+<ParamField body="comment" type="string">
+  A note on the record. A new record has none.
+</ParamField>
+
+<ParamField body="tags" type="string[]">
+  Tags for finding and changing records in groups. A new record has none.
+</ParamField>
+
+<ParamField body="view_id" type="integer">
+  A [split-horizon view](/dns/views) to serve the record in. Absent or `null`: every client.
+</ParamField>
+
+<ParamField body="proxies" type="integer[]">
+  Proxy ids to serve an A, AAAA or CNAME record through. See [Proxied records](#proxied-records).
+</ParamField>
+
+### Creating a record
+
+```bash
+curl -X POST https://dns.example.com/api/zones/3/records \
+  -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"app","type":"A","value":"192.0.2.20","ttl":300}'
+```
+
+### Changing a record
+
+`PATCH /api/records/{id}` replaces the record's DNS data, so send **every DNS field** (`name`, `type`,
+`value`, `ttl`, `priority`). `enabled`, `comment`, `tags` and `proxies` are kept when you leave them
+out.
+
+```bash
+curl -X PATCH https://dns.example.com/api/records/42 \
+  -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"app","type":"A","value":"192.0.2.21","ttl":300,"priority":null}'
+```
+
+## Proxied records
+
+`proxies` puts an A, AAAA or CNAME record behind one or more proxies, like Cloudflare's orange cloud:
+
+```json
+{ "name": "shop", "type": "A", "value": "10.0.0.5", "proxies": [1, 3] }
+```
+
+- DNS answers the name with the addresses of **all** the listed proxies.
+- Each proxy needs a router for the record's name; see [Routing](/proxy/routing).
+- `[]` means DNS only.
+- A new record is DNS only, and an edit that leaves `proxies` out keeps it as it is.
+- The older `"proxy_id": 3` (or `null`) is still accepted when `proxies` is absent.
+
+Records come back with `"proxies": [1, 3]`. The proxy endpoints are described in
+[Proxy](/api/proxy).
+
+Records also come back with `"caddy_id"`: the [Caddy](/integrations/caddy) that keeps the record for
+a site it serves, or `null` for records made by hand or another way. Changing a record with
+`PATCH` clears it, so the Caddy leaves that record alone from then on.
+
+## Traffic steering
+
+GeoDNS, weights and health checks of A and AAAA records have their own endpoints. For how an answer
+is picked, see [GeoDNS and health checks](/dns/geodns).
+
+`PUT /api/records/{id}/traffic` replaces the record's steering:
+
+```json
+{
+  "countries": ["ID", "SG"],
+  "continents": [],
+  "weight": null,
+  "check": {
+    "kind": "https", "port": null, "path": "/health", "host": "",
+    "expect": "200-399", "interval": 30, "timeout_ms": 3000, "fall": 3, "rise": 2
+  }
+}
+```
+
+<ParamField body="countries" type="string[]">
+  ISO 3166 two-letter country codes the address is for.
+</ParamField>
+
+<ParamField body="continents" type="string[]">
+  `AF`, `AN`, `AS`, `EU`, `NA`, `OC` or `SA`. With no countries and no continents, the record is a
+  default for clients from anywhere else.
+</ParamField>
+
+<ParamField body="weight" type="integer">
+  0 to 1000 among the name's records, or `null` for not weighted.
+</ParamField>
+
+<ParamField body="check" type="object">
+  The health check, or `null` for none. `kind` is `https`, `http` or `tcp`. `port` defaults to 443
+  for HTTPS and 80 otherwise; `host` to the record's name; `expect` to `200-399`. An address leaves
+  the answers after `fall` failures in a row and comes back after `rise` passes.
+</ParamField>
+
+```bash
+curl -X PUT https://dns.example.com/api/records/42/traffic \
+  -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+  -d '{"countries":["ID"],"continents":[],"weight":null,"check":{"kind":"https","path":"/health"}}'
+```
+
+`POST /api/records/{id}/traffic/test` takes a `check` object and answers
+`{"healthy": true, "latency_ms": 41}` or `{"healthy": false, "error": "…"}`.
+
+`GET /api/zones/{id}/traffic` lists the zone's steered records, each with its `record_id`, its
+steering and its `health` (`healthy`, `latency_ms`, `error`, `checked_at`, `changed_at`), plus a
+`geoip` object that says whether a database is `loaded`.
+
+Changes are in the [audit log](/admin/audit-log) as `record.traffic`. The GeoIP database itself is
+managed under [Settings: GeoIP database](/api/settings#geoip-database).
+
+## Turning records off
+
+A disabled record is kept, but not answered, not sent in zone transfers (AXFR/IXFR) and not
+DNSSEC-signed.
+
+CNAME exclusivity and the duplicate check only count enabled records, so a disabled CNAME can wait
+next to the A record it will replace. Turning a record on runs the checks, and answers 409 on a
+conflict.
+
+## Filtering the list
+
+`GET /api/zones/{id}/records` takes optional query parameters:
+
+<ParamField query="tag" type="string">
+  Comma-separated tags, e.g. `tag=prod,web`. Returns records carrying **every** tag listed.
+</ParamField>
+
+<ParamField query="enabled" type="boolean">
+  `true` for records that are on, `false` for records that are off.
+</ParamField>
+
+<ParamField query="q" type="string">
+  Case-insensitive text in the name, value or comment.
+</ParamField>
+
+```bash
+curl -fsS -H "Authorization: Bearer $DNZ_TOKEN" \
+  "https://dns.example.com/api/zones/3/records?tag=prod&enabled=true"
+```
+
+`GET /api/zones/{id}/tags` lists the tags in use and how many records carry each:
+
+```json
+[{ "tag": "prod", "count": 4 }]
+```
+
+## Bulk changes
+
+`POST /api/zones/{id}/records/bulk` takes a list of operations and applies them **in order**, all or
+nothing:
+
+```json
+{
+  "operations": [
+    { "op": "create", "records": [
+      { "name": "app", "type": "A", "value": "192.0.2.20", "tags": ["lab"] },
+      { "name": "db", "type": "A", "value": "192.0.2.20", "ttl": 60 }
+    ] },
+    { "op": "delete", "ids": [12, 13] },
+    { "op": "set_ttl", "ids": [14, 15], "ttl": 3600 },
+    { "op": "disable", "ids": [14] },
+    { "op": "enable", "ids": [16] },
+    { "op": "add_tag", "ids": [14, 15], "tag": "legacy" },
+    { "op": "remove_tag", "ids": [15], "tag": "prod" },
+    { "op": "set_comment", "ids": [15], "comment": "Moved to the new cluster" },
+    { "op": "set_proxies", "ids": [20, 21], "proxies": [1, 3] }
+  ]
+}
+```
+
+### Operations
+
+| `op` | Fields | What it does |
+| --- | --- | --- |
+| `create` | `records` | Adds records, in the same format as `POST /api/zones/{id}/records` |
+| `delete` | `ids` | Deletes records |
+| `set_ttl` | `ids`, `ttl` | Sets the TTL |
+| `disable` | `ids` | Turns records off |
+| `enable` | `ids` | Turns records on |
+| `add_tag` | `ids`, `tag` | Adds a tag |
+| `remove_tag` | `ids`, `tag` | Removes a tag |
+| `set_comment` | `ids`, `comment` | Sets the comment |
+| `set_proxies` | `ids`, `proxies` | Moves records to these proxies; `[]` for DNS only |
+
+### Validation
+
+The request is checked as a whole before anything is written:
+
+- every id must belong to the zone (400);
+- values must be valid (400);
+- records added, turned on or moved to other proxies must not break CNAME exclusivity, duplicate
+  another enabled record, or leave a name's A, AAAA and CNAME records on different proxies,
+  including each other (409);
+- `set_proxies` needs a router for the name on every proxy (400). Move a name's A and AAAA records in
+  one operation.
+
+Then the changes are applied in one transaction, with **one serial bump** and one `record.bulk` audit
+entry holding the records before and after.
+
+<Note>
+  A request holds at most **100 operations** and **5000 records** (ids plus new records).
+</Note>
+
+### The answer
+
+```json
+{
+  "created": [ /* new records */ ],
+  "deleted": [12, 13],
+  "updated": [ /* records as they are now */ ],
+  "serial": 2026102105
+}
+```
+
+The CLI uses this endpoint for every change to several records; see
+[How bulk changes work](/cli/zones-records#how-bulk-changes-work).
+
+## Secondary zones are read-only
+
+Records of [secondary zones](/dns/replication) can be read but not changed. Writes answer 400; change
+the records on the primary instead.

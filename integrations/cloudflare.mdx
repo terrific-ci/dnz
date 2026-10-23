@@ -1,0 +1,121 @@
+---
+title: "Cloudflare"
+description: "Manage a division's Cloudflare zones from DNZ, and copy records between Cloudflare and local DNS."
+---
+
+Each division can connect its own Cloudflare account. Its Cloudflare zones then appear under
+**DNS → Zones → Cloudflare** and are edited with the same record editor as local zones, including
+the **Proxied** toggle and **Auto** TTL. Changes are written straight to Cloudflare.
+
+Connecting needs the `integrations.manage` permission in the division (Owner by default).
+
+## Connect a division
+
+<Tabs>
+  <Tab title="API token">
+    <Steps>
+      <Step title="Create a token on Cloudflare">
+        Under **Settings → Integrations**, **Create token on Cloudflare** opens Cloudflare with
+        `Zone · Read` and `DNS · Edit` already filled in. Pick the zones the token may access, then
+        **Continue to summary → Create Token**.
+
+        Or make one yourself at **Cloudflare → API Tokens** with the **Edit zone DNS** template.
+      </Step>
+      <Step title="Paste the token">
+        Paste it into DNZ. DNZ checks it and lists the zones it can reach.
+      </Step>
+    </Steps>
+
+    From the terminal:
+
+    ```bash
+    dnz cloudflare connect --division it    # asks for the token (or DNZ_CLOUDFLARE_TOKEN)
+    dnz cf verify                           # re-check it, e.g. after changing its permissions
+    ```
+  </Tab>
+  <Tab title="Sign in with Cloudflare">
+    **Sign in with Cloudflare** connects in one click with OAuth, once a superadmin has registered
+    an OAuth client (below). OAuth tokens refresh by themselves.
+
+    DNZ must be opened over `https://` for the sign-in to come back. See
+    [HTTPS and reverse proxies](/deploy/https).
+
+    ```bash
+    dnz cf sign-in --origin https://dnz.example.com   # prints the address to open in a browser
+    ```
+  </Tab>
+</Tabs>
+
+Right after signing in with Cloudflare, a dialog offers to **import the Cloudflare zones into local
+DNS**. You can also do that any time later, see below.
+
+### Register the OAuth client (superadmin)
+
+<Steps>
+  <Step title="Create a client on Cloudflare">
+    In Cloudflare: **Manage Account → OAuth clients → Create client**.
+  </Step>
+  <Step title="Set grant types">
+    **Authorization code** and **Refresh token**; token authentication **Client secret** (or
+    None, for a PKCE-only client).
+  </Step>
+  <Step title="Set the redirect URL">
+    `https://dnz.example.com/api/cloudflare/oauth/callback`, with your DNZ address. The setup dialog
+    shows the exact URL to copy.
+  </Step>
+  <Step title="Enter the client in DNZ">
+    Paste the client ID and, if any, the secret under **Settings → Integrations**, or:
+
+    ```bash
+    dnz cf oauth-app show                    # also shows the callback to register
+    dnz cf oauth-app set CLIENT_ID --secret  # asks for the secret (or DNZ_CLOUDFLARE_CLIENT_SECRET)
+    dnz cf oauth-app set CLIENT_ID --no-secret
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  New Cloudflare OAuth clients are private: only members of your Cloudflare account can sign in.
+  Make the client public in Cloudflare to let other accounts connect. The client can also be set
+  with `DNZ_CLOUDFLARE_OAUTH_CLIENT_ID`, `DNZ_CLOUDFLARE_OAUTH_CLIENT_SECRET` and
+  `DNZ_CLOUDFLARE_OAUTH_SCOPES` (default `zone.read dns.read dns.write offline_access`); the
+  dashboard can't change it then.
+</Note>
+
+## Copy between Cloudflare and local DNS
+
+<CardGroup cols={2}>
+  <Card title="Copy to local" icon="download">
+    Cloudflare → a local zone of the same name (created when missing). Local records already there
+    are kept. Take all records or only the ones you tick.
+  </Card>
+  <Card title="Push to Cloudflare" icon="upload">
+    Local records that Cloudflare doesn't have yet → Cloudflare. It only adds; it never changes or
+    deletes anything on Cloudflare.
+  </Card>
+</CardGroup>
+
+Both show a preview first: what will be added, what is skipped and why.
+
+```bash
+dnz cf zones --refresh
+dnz cf records example.com
+dnz cf import example.com example.org                    # previewed, then asks
+dnz cf import --all --dry-run
+dnz cf import example.com --type A,CNAME --name www,api  # only some records
+dnz cf push example.com
+dnz cf disconnect
+```
+
+Without filters, `import` takes every record it can. `--type` and `--name` (relative to the zone,
+`@` for the apex) narrow it, and zones without matching records are left alone. Copying needs
+`records.write` too, and `zones.write` when a new zone is created.
+
+See [Import and export](/dns/import-export) for BIND zone files, and the full
+[CLI reference](/cli/cloudflare).
+
+## Other uses
+
+- [dnz-proxy certificates](/proxy/certificates) can solve DNS-01 challenges through a division's
+  Cloudflare connection.
+- Every Cloudflare change is in the [audit log](/admin/audit-log).

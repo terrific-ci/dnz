@@ -1,0 +1,204 @@
+---
+title: "Backups and restore"
+description: "Scheduled, encrypted backups of the whole install to a folder, S3-compatible storage or SFTP, and restores onto any database, of everything or one zone."
+---
+
+DNZ backs up the whole install on a schedule: zones and records, users, divisions, roles and API
+tokens, settings, DNSSEC and TSIG keys, certificates and ACME accounts, filtering, forwarding,
+replication, proxies, notification providers, zone history and the audit log, plus the GeoIP
+database and the local dnz-proxy's state. Archives go to a folder, S3-compatible storage or an SFTP
+server, encrypted if you like, and old ones are pruned by a retention policy.
+
+A backup restores onto SQLite, Postgres or MySQL, whichever it was made on, and onto a newer DNZ:
+older backups are migrated forward. A dry run lists what a restore would change first, and one zone
+can be restored on its own.
+
+It all lives under **Settings → Backups** (superadmins), `dnz backup` ([CLI](/cli/backups)) and
+`/api/backups` ([API](/api/backups)).
+
+## Add a target
+
+**Settings → Backups → Add target**. Each target has its own schedule, retention and encryption: for
+example hourly to a local disk, and daily, encrypted, to S3.
+
+<Tabs>
+  <Tab title="Folder">
+    A folder on the DNZ server: a mounted disk, NFS or SMB share. Absolute, or relative to the data
+    folder; created if missing. On the same disk as DNZ it is no backup on its own.
+
+    ```bash
+    sudo mkdir -p /var/backups/dnz
+    sudo chown dnz: /var/backups/dnz
+    sudo chmod 700 /var/backups/dnz
+    ```
+
+    With Docker, mount it into the container (`-v /var/backups/dnz:/backups`) and use `/backups`.
+  </Tab>
+  <Tab title="S3-compatible">
+    AWS S3, Cloudflare R2, Backblaze B2, MinIO, Wasabi or anything else with the S3 API (signed with
+    AWS Signature Version 4). The dialog fills in the usual endpoints:
+
+    | Provider | Endpoint | Region |
+    | --- | --- | --- |
+    | AWS S3 | `https://s3.REGION.amazonaws.com` (path-style off) | the bucket's, e.g. `eu-central-1` |
+    | Cloudflare R2 | `https://ACCOUNT_ID.r2.cloudflarestorage.com` | `auto` |
+    | Backblaze B2 | `https://s3.us-west-004.backblazeb2.com` (on the bucket's page) | e.g. `us-west-004` |
+    | MinIO | `https://minio.example.com:9000` | `us-east-1` |
+
+    The key needs to list, read, write and delete objects in the bucket (or under the folder you give
+    as the prefix). On AWS:
+
+    ```json
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        { "Effect": "Allow", "Action": ["s3:ListBucket"], "Resource": "arn:aws:s3:::acme-dns-backups" },
+        { "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"], "Resource": "arn:aws:s3:::acme-dns-backups/dnz/*" }
+      ]
+    }
+    ```
+  </Tab>
+  <Tab title="SFTP">
+    Any SSH server, signed in with a key (or a password). A user that may only use SFTP:
+
+    ```bash
+    # Anywhere: a key pair; paste the private key into the target
+    ssh-keygen -t ed25519 -N '' -C dnz-backup -f dnz-backup
+
+    # On the SSH server, with dnz-backup.pub copied there
+    sudo useradd -m dnz-backup
+    sudo mkdir -p ~dnz-backup/.ssh ~dnz-backup/dnz
+    sudo sh -c 'cat >> ~dnz-backup/.ssh/authorized_keys' < dnz-backup.pub
+    sudo chown -R dnz-backup: ~dnz-backup/.ssh ~dnz-backup/dnz
+    sudo chmod 700 ~dnz-backup/.ssh
+    printf 'Match User dnz-backup\n    ForceCommand internal-sftp\n    AllowTcpForwarding no\n    X11Forwarding no\n' | sudo tee /etc/ssh/sshd_config.d/dnz-backup.conf
+    sudo sshd -t && sudo systemctl reload ssh
+    ```
+
+    The server's host key is pinned by its SHA-256 fingerprint: the one you give, or the one seen on
+    the first backup. Compare it with `ssh-keyscan backup.example.com 2>/dev/null | ssh-keygen -lf -`.
+    If the server is replaced, clear the target's host key.
+  </Tab>
+</Tabs>
+
+**Test** writes, lists and deletes a small file. Every kind's dialog has **Show setup steps** with
+these commands, filled in with what you typed.
+
+## Schedules and retention
+
+| Setting | |
+| --- | --- |
+| Back up | Only by hand, every hour (at a minute), every day (at a time), or every week (on a day, at a time), in DNZ's [time zone](/admin/settings) |
+| Keep daily / weekly / monthly | After each backup, older archives are deleted except the newest of each of the last N days, weeks and months, and every archive of the last 24 hours. The newest always stays. 0, 0 and 0 keeps all. Default 7, 4, 6 |
+| Query log and statistics | Left out unless turned on: they can be large. Restoring a backup without them leaves the query log as it is |
+
+Schedules run on the [cluster](/deploy/cluster) leader, one backup at a time. A backup missed while
+DNZ was down runs once it is back. Only DNZ's own archives (`dnz-backup-…`) are ever deleted.
+
+## Encryption
+
+With a passphrase, archives (`.zip.enc`) are sealed with AES-256-GCM, with the key derived by
+Argon2id (64 MiB, 3 passes) from the passphrase and a random salt, in 1 MiB chunks so a changed,
+reordered or cut-off part is caught.
+
+<Warning>
+  Keep the passphrase somewhere other than DNZ, in a password manager. DNZ keeps it for the scheduled
+  backups but never shows it again, and without it the archives can't be restored. Archives hold
+  every secret DNZ keeps (DNSSEC and TSIG keys, provider credentials), so encrypt any copy that
+  leaves the server.
+</Warning>
+
+`dnz backup decrypt FILE` turns an encrypted archive into the plain zip, without a server.
+
+## What's in an archive
+
+A zip any unzip tool opens:
+
+```text
+dnz-backup-20261022-030000Z.zip
+├── manifest.json            DNZ version, schema version, database, when, which node; tables, files, zones
+├── database/<table>.jsonl   every table, one JSON array per row
+└── files/                   geoip-country.mmdb, dnz-proxy/…
+```
+
+The tables are a logical dump, the same on every database. Sessions, the cluster's node list,
+change feed and lease, and the backup history are left out.
+
+## Restore
+
+<Tabs>
+  <Tab title="Dashboard">
+    **Settings → Backups → Restore from a file**, or **Archives → Restore…** on a target. Give the
+    passphrase if it's encrypted, pick **Everything** or **One zone**, and **Check what would
+    change**. Restoring everything over a server with data takes typing `RESTORE`.
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    dnz backup restore offsite:latest --dry-run
+    dnz backup restore offsite:latest
+    dnz backup restore ./dnz-backup-20261022-030000Z.zip
+    dnz backup restore offsite:latest --zone example.com
+    ```
+  </Tab>
+</Tabs>
+
+What a full restore does:
+
+<Steps>
+  <Step title="Dry run">
+    Lists the zones added, removed and changed (with record counts), users added and removed, and the
+    tables whose row counts change. Nothing is written.
+  </Step>
+  <Step title="Safety copy">
+    Over a server with users or zones, DNZ first saves everything as it is to
+    `<data folder>/backups/pre-restore/` (the newest five stay). Restore that one to undo.
+  </Step>
+  <Step title="Replace">
+    Every table is replaced in one transaction: if anything fails, nothing changed. DNS answers,
+    forwarding and filtering are loaded again, on every node of a cluster, and the GeoIP database and
+    dnz-proxy state are put back (unless you leave them out).
+  </Step>
+  <Step title="Sign in again">
+    Everyone is signed out: users, roles and API tokens are the backup's now.
+  </Step>
+</Steps>
+
+**One zone** puts the zone's records, default TTL and forwarding of missing names back as they were
+in the backup, as a new version of its [history](/dns/history), so it can be rolled back like any
+change. A zone deleted since is created again. With change approval on, the restore waits for
+approval like any edit.
+
+### On a new server
+
+Install DNZ with any database. Then either open the dashboard and pick **Restore from a backup** on
+the first-run page (no account needed while setup is pending, as for setup itself), or restore
+before starting DNZ:
+
+```bash
+DNZ_DATABASE_URL=postgres://dnz:secret@db.internal/dnz dnz backup restore dnz-backup-20261022-030000Z.zip --offline
+```
+
+`--offline` works on `database.url` directly. Stop DNZ first; in a cluster, stop every node, restore
+once, then start them all.
+
+### Across databases and versions
+
+A backup from SQLite restores onto Postgres or MySQL and back. The rows go through a staging SQLite
+database brought to the backup's schema version and migrated forward to this DNZ's, then into the
+database DNZ runs on; new ids continue after the restored ones. A backup from a newer DNZ is refused:
+update DNZ first.
+
+## Every zone as BIND files
+
+**Export all zones** on the Backups page, **Export all** on the Zones page (that division), or
+`dnz zone export --all`: one zip with a BIND file per zone you can read. A readable copy, not a
+backup: no keys, settings or history. See [Import and export](/dns/import-export).
+
+## Status and alerts
+
+Each target's card shows whether the last backup worked, the last good one and its size, the next
+run, and failures in a row with the error; the recent runs are listed below. A failed backup, and
+the first good one after, goes to the [notification providers](/integrations/notifications) with
+**Backup failed** (`backup_failed`). For Prometheus there are `dnz_backup_*` metrics and the
+`DnzBackupFailing` and `DnzBackupOverdue` alerts ([Prometheus](/dashboard/prometheus)). Targets also
+show on the [topology map](/dashboard/topology).

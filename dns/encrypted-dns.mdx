@@ -1,0 +1,236 @@
+---
+title: "Encrypted DNS"
+description: "Serve DNS over TLS, HTTPS, QUIC and HTTP/3 to your devices, so the network in between can't read or change their queries."
+---
+
+Plain DNS on port 53 is sent in clear text: anyone on the network can read it or change it. With a
+TLS certificate, DNZ also serves **encrypted DNS** to your devices, plus the dashboard over HTTPS.
+
+| Protocol | Address | Used by |
+| --- | --- | --- |
+| **DNS over TLS** (RFC 7858) | `DNZ_DOT_ADDR`, `0.0.0.0:853` by default | Android "Private DNS", iOS/macOS, systemd-resolved, routers |
+| **DNS over HTTPS** (RFC 8484) | `https://<host>/dns-query` on `DNZ_HTTPS_ADDR`, `0.0.0.0:443` by default | Browsers, Windows 11, iOS/macOS |
+| **DNS over QUIC** (RFC 9250) | `quic://<host>` on `DNZ_DOQ_ADDR` (UDP), the DoT address by default | AdGuard apps, dnsproxy, `kdig +quic`, `q` |
+| **DoH over HTTP/3** | `h3://<host>/dns-query` on `DNZ_H3_ADDR` (UDP), the HTTPS address by default | dnsproxy, AdGuard, curl `--http3-only` |
+| **HTTPS** for the UI and API | `DNZ_HTTPS_ADDR` | Browsers (HTTP/2) |
+
+Encrypted queries go through the same path as UDP and TCP: local zones, views, blocklists, the
+cache, conditional forwarding and the query log.
+
+<Info>
+  This page is about DNZ **serving** encrypted DNS to clients. To have DNZ **forward** over DoT,
+  DoH or DoQ to its upstreams, see [Forwarding](/dns/forwarding#upstream-address-format).
+</Info>
+
+## Turn it on
+
+<Steps>
+  <Step title="Get a certificate">
+    The hostname (for example `dns.example.com`) must be a public name, and the certificate must
+    come from a CA that devices trust, such as Let's Encrypt. See
+    [Get a certificate](#get-a-certificate).
+  </Step>
+  <Step title="Point DNZ at the certificate">
+
+    ```ini /etc/dnz/dnz.env
+    DNZ_TLS_CERT=/etc/dnz/tls/dns.example.com.crt    # PEM, full chain
+    DNZ_TLS_KEY=/etc/dnz/tls/dns.example.com.key     # PEM: PKCS#8, RSA or EC (named curve)
+    #DNZ_DOT_ADDR=0.0.0.0:853
+    #DNZ_HTTPS_ADDR=0.0.0.0:443
+    #DNZ_DOQ_ADDR=off        # DNS over QUIC (UDP), default: DNZ_DOT_ADDR's
+    #DNZ_H3_ADDR=off         # DoH over HTTP/3 (UDP), default: DNZ_HTTPS_ADDR's
+    ```
+
+    The same settings live in the `[tls]` section of the config file (`cert`, `key`, `dot_addr`,
+    `https_addr`, `doq_addr`, `h3_addr`). See [Configuration](/deploy/configuration).
+
+  </Step>
+  <Step title="Open the ports">
+    Ports 853 and 443 are below 1024. The [systemd unit](/deploy/systemd) already has
+    `CAP_NET_BIND_SERVICE`. For Docker, publish the ports (TCP and UDP):
+
+    ```yaml docker-compose.yml
+        ports:
+          - "53:53/udp"
+          - "53:53/tcp"
+          - "853:853/tcp"
+          - "853:853/udp"   # DNS over QUIC
+          - "443:443/tcp"
+          - "443:443/udp"   # DoH over HTTP/3
+        volumes:
+          - dnz-data:/data
+          - ./tls:/tls:ro
+        environment:
+          DNZ_TLS_CERT: /tls/fullchain.pem
+          DNZ_TLS_KEY: /tls/privkey.pem
+    ```
+
+  </Step>
+  <Step title="Restart DNZ">
+    The log shows `dns-over-tls listening on …`, `dns-over-quic listening on …`,
+    `dns-over-http/3 listening on …` and `https listening on …`. **Settings → General → Encrypted
+    DNS** shows which protocols are on.
+  </Step>
+</Steps>
+
+### Renewing the certificate
+
+DNZ checks the certificate files every minute and reads them again when they change, so renewing
+the certificate **doesn't need a restart**. If the new files are broken, the old certificate stays
+in use and the error appears under **Settings → General → Encrypted DNS**.
+
+### Ports for DoQ and DoH3
+
+DoQ and DoH3 run over UDP on the same port numbers as DoT and HTTPS, so one certificate and one
+pair of port numbers cover everything. Set `DNZ_DOQ_ADDR` or `DNZ_H3_ADDR` to another address to
+move them, or to `off` to turn them off. If their UDP port is taken (by another HTTP/3 server, say),
+DNZ logs a warning and runs without them.
+
+Over HTTP/3, DNZ answers only `/dns-query`. The UI stays on HTTPS over TCP, and DNZ doesn't send
+`Alt-Svc`, so browsers keep using HTTP/2. Clients reach DoH3 when they are configured for it, or by
+finding it in an `HTTPS`/`SVCB` record, for example:
+
+```text
+_dns.example.com SVCB 1 dns.example.com alpn=h3,h2,doq
+```
+
+### DoH behind your own reverse proxy
+
+`/dns-query` is also served on the plain HTTP port (`DNZ_HTTP_ADDR`), so DoH can sit behind your own
+HTTPS reverse proxy such as Caddy or nginx. Set `DNZ_TRUSTED_PROXIES` to the proxy's address so the
+real client IP is still used for views, blocklists and logs. See [HTTPS](/deploy/https).
+
+## Get a certificate
+
+<Tabs>
+  <Tab title="DNZ serves the zone">
+
+    When DNZ is the public nameserver for the hostname's zone, use DNZ's own ACME endpoint with
+    [lego](https://go-acme.github.io/lego/). Create an [API token](/api/overview) with
+    `records.write` for that zone, then:
+
+    ```bash
+    HTTPREQ_ENDPOINT=http://127.0.0.1:8080/api/acme/httpreq \
+    HTTPREQ_USERNAME=dnz HTTPREQ_PASSWORD=dnz_… \
+    lego --path /etc/dnz/tls --dns httpreq --domains dns.example.com --email you@example.com run
+
+    # Renew automatically (cron / systemd timer); DNZ reloads it by itself:
+    lego --path /etc/dnz/tls --dns httpreq --domains dns.example.com --email you@example.com renew --days 30
+    ```
+
+    lego stores `certificates/dns.example.com.crt` and `.key` under `--path`. Point
+    `DNZ_TLS_CERT` and `DNZ_TLS_KEY` at those files. See [ACME certificates](/integrations/acme).
+
+  </Tab>
+  <Tab title="Zone on another provider">
+
+    When the zone is on Cloudflare or another provider, use the matching lego provider (for example
+    `--dns cloudflare`) or certbot. All that matters is that DNZ can read the PEM files.
+
+  </Tab>
+</Tabs>
+
+<Note>
+  With the [systemd unit](/deploy/systemd) (`DynamicUser`), the service can't read a root-owned key with mode 600.
+  Give it access through the `ssl-cert` group: turn on `SupplementaryGroups=ssl-cert` in the unit,
+  then after creating or renewing the certificate run:
+
+  ```bash
+  chgrp ssl-cert /etc/dnz/tls/certificates/dns.example.com.key
+  chmod 640 /etc/dnz/tls/certificates/dns.example.com.key
+  ```
+
+  This can go in lego's `--renew-hook`.
+</Note>
+
+## Connect devices
+
+**Settings → General → Encrypted DNS** shows the hostname, the DoH, DoQ and DoH3 addresses and the
+certificate's expiry. Replace `dns.example.com` below with your hostname.
+
+<Tabs>
+  <Tab title="Android">
+
+    Android 9 and later: **Settings → Network & internet → Private DNS → Private DNS provider
+    hostname** → `dns.example.com`.
+
+    This uses DNS over TLS, so port 853 must be reachable.
+
+  </Tab>
+  <Tab title="iPhone, iPad, Mac">
+
+    Download a profile from **Settings → General → Encrypted DNS** (**DoH profile** or **DoT
+    profile**), or open:
+
+    ```text
+    https://dns.example.com/api/encrypted-dns/apple.mobileconfig
+    ```
+
+    Then install it under **Settings → General → VPN & Device Management**.
+
+  </Tab>
+  <Tab title="Windows 11">
+
+    **Settings → Network → DNS server assignment**: enter DNZ's IP, then choose **Encrypted only**
+    with the template:
+
+    ```text
+    https://dns.example.com/dns-query
+    ```
+
+  </Tab>
+  <Tab title="Browsers">
+
+    Chrome, Edge and Firefox: **secure DNS → custom provider** →
+    `https://dns.example.com/dns-query`.
+
+  </Tab>
+  <Tab title="Linux">
+
+    systemd-resolved:
+
+    ```ini /etc/systemd/resolved.conf
+    [Resolve]
+    DNS=192.0.2.10#dns.example.com
+    DNSOverTLS=yes
+    ```
+
+    Replace `192.0.2.10` with DNZ's IP.
+
+  </Tab>
+  <Tab title="AdGuard, dnsproxy">
+
+    ```text
+    quic://dns.example.com                 # DNS over QUIC
+    h3://dns.example.com/dns-query         # DoH over HTTP/3
+    ```
+
+    Networks that block UDP 853 or 443 break these; DoT and DoH over TCP still work there.
+
+  </Tab>
+</Tabs>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="DoQ or DoH3 doesn't start">
+
+    Their UDP port is probably taken by another program, such as another HTTP/3 server. DNZ logs a
+    warning and runs without them. Move them with `DNZ_DOQ_ADDR` / `DNZ_H3_ADDR`, or turn them off
+    with `off`.
+
+  </Accordion>
+  <Accordion title="A renewed certificate isn't used">
+
+    Look under **Settings → General → Encrypted DNS** for the error. If the new files are broken,
+    DNZ keeps the old certificate. Under systemd, also check that the service can read the key (see
+    the `ssl-cert` note above).
+
+  </Accordion>
+  <Accordion title="Android says the Private DNS server can't be reached">
+
+    Android uses DNS over TLS on port 853. Make sure the port is open in the firewall and published
+    in Docker, and that the hostname matches the certificate.
+
+  </Accordion>
+</AccordionGroup>

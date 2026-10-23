@@ -1,0 +1,115 @@
+---
+title: "Benchmarks"
+description: "How fast DNZ answers compared with Knot DNS, Knot Resolver, Unbound and CoreDNS, how much memory it uses, and how to measure it yourself."
+---
+
+DNZ was measured against the servers it is often compared to: Knot DNS and CoreDNS as authoritative
+servers, Unbound, Knot Resolver and CoreDNS as caching resolvers.
+
+## Results
+
+Measured on 2026-10-22 on a MacBook (Apple silicon) in Docker Desktop's VM: 2 CPUs and 1 GiB per
+server, dnsperf on 2 CPUs over UDP, 32 clients, 500 queries outstanding, median of 3 runs of 20 s.
+
+| Scenario | Server | Queries/s | Avg latency |
+| --- | --- | ---: | ---: |
+| Authoritative | DNZ | 231,268 | 0.61 ms |
+| Authoritative | Knot DNS 3.4.6 | 351,827 | 0.18 ms |
+| Authoritative | Unbound 1.26.1 (`auth-zone`) | 398,678 | 0.11 ms |
+| Authoritative | CoreDNS 1.12.1 (`file`) | 131,751 | 1.68 ms |
+| Cached forwarding | DNZ | 268,590 | 0.51 ms |
+| Cached forwarding | Unbound 1.26.1 | 427,128 | 0.09 ms |
+| Cached forwarding | Knot Resolver 5.7.5 | 447,558 | 0.18 ms |
+| Cached forwarding | CoreDNS 1.12.1 | 213,092 | 0.95 ms |
+
+- **Authoritative**: DNZ answers about 60% of what Knot DNS and Unbound do on the same CPUs, and
+  1.75 times what CoreDNS does, while also logging every query.
+- **Cached forwarding**: about 60% of Unbound and Knot Resolver, and about 1.25 times CoreDNS. DNZ's
+  cache keeps answers in wire format in a sharded map; what remains is the work around it: DNZ
+  parses every query, logs every query, and receives UDP in one loop where Unbound and Knot Resolver
+  use a socket per thread or process.
+- On a laptop, the same run varies a lot from one try to the next for every server. Real servers
+  with more cores are much faster for every one of them; compare the servers within one run, not
+  the absolute numbers.
+
+### Cache hits, before and after
+
+DNZ used to keep cached answers as parsed messages behind one lock and encode each hit again. It
+now keeps them in wire format in a map split into shards, and a hit only copies the bytes and
+patches the id, the question and the TTLs. Both builds side by side, taking turns for six rounds of
+20 s:
+
+| DNZ | Queries/s (median) | Avg latency (median) |
+| --- | ---: | ---: |
+| Before | 181,945 | 0.87 ms |
+| After | 261,893 | 0.53 ms |
+
+About 44% more cached answers per second on the same two CPUs, ahead in every round.
+
+## Method
+
+- Every server runs in its own container on one Docker network, with the **same CPU and memory
+  limits**. The load generator is [dnsperf](https://www.dns-oarc.net/tools/dnsperf) in another
+  container.
+- **Authoritative**: a zone of 10,000 A records, each queried in turn, with one query in ten for a
+  name that does not exist. DNZ gets the zone through its import API like a user would.
+- **Cached forwarding**: 10,000 names of another zone, which the resolvers forward to a Knot DNS
+  container. One warm-up pass fills the caches, so the measured runs are all cache hits. Nobody
+  validates DNSSEC here (DNZ's default for forwarding).
+- Defaults otherwise: DNZ writes every query to its query log; its per-client rate limit is off
+  because all queries come from one address.
+
+## Memory
+
+How much memory DNZ holds through a day's work: the release image with its defaults (web UI
+included) on 2 CPUs, idle after start, after importing a zone of 10,000 records, under
+authoritative and cached query load, and idle a minute later. The figure is the resident set (RSS);
+about 20 MB of it is the `dnz` binary itself, which the kernel can drop and read again.
+
+| Phase | Before | After |
+| --- | ---: | ---: |
+| Idle after start | 37.3 MB | 27.8 MB |
+| After the import | 86.4 MB | 85.8 MB |
+| Authoritative load | 95.9 MB | 64.3 MB |
+| Cached forwarding load | 115.4 MB | 84.4 MB |
+| Idle, a minute later | 117.3 MB | 72.9 MB |
+
+On 4 CPUs: 30.3 MB at idle instead of 48.5 MB, and 59.6 MB a minute after the load instead of
+155.9 MB. Each extra CPU adds about 1.2 MB. Query throughput is the same as before.
+
+- The web server's routes no longer compile into full regexes once per CPU.
+- On Linux, DNZ uses one malloc arena per CPU and returns freed memory to the system every minute,
+  so the minute after a large import or a burst of queries is the high point, not the new normal.
+- Zones kept in memory no longer reserve room for four records under every name.
+
+## Threat detection on and off
+
+[Threat detection](/dns/threats) looks at a copy of the query log, on its own task. The same release
+build ran twice side by side, detection on and off, taking turns for six rounds of 20 seconds per
+scenario on a busy MacBook:
+
+| Scenario | Detection on (median) | Detection off (median) |
+| --- | ---: | ---: |
+| Authoritative | 27,056 q/s | 26,698 q/s |
+| Cached forwarding | 70,465 q/s | 71,826 q/s |
+
+The same within the noise (+1% and −2%); detection looked at all 11.3 million queries, dropped
+none, and held about 5 MB more.
+
+## Run it yourself
+
+The harness is in the source repository under
+[`deploy/bench/`](https://github.com/alfianlensundev/dnz/tree/main/deploy/bench). It needs Docker
+and builds DNZ from the checkout:
+
+```bash
+deploy/bench/run.sh
+BENCH_DURATION=60 BENCH_RUNS=5 BENCH_CPUS=4 deploy/bench/run.sh
+```
+
+The memory table comes from `deploy/bench/memory.sh` (`MEM_CPUS=4` for 4 CPUs, `MEM_IMAGE=` to
+measure an image you already have).
+
+It prints the table above for your machine, with the versions it ran. Recursion from the root is not
+part of it: a cold recursive lookup depends on the internet far more than on the resolver, and a
+cached one is the cached forwarding case.

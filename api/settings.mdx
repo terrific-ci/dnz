@@ -1,0 +1,80 @@
+---
+title: "Settings"
+description: "API endpoints for server settings: response rate limiting (RRL), the GeoIP database and the cluster."
+---
+
+These endpoints change server-wide settings under **Settings → General**. They need a signed-in
+session, not an [API token](/api/overview#what-a-token-can-reach), and a superadmin, except the
+GeoIP lookup, which any signed-in user may call.
+
+## Endpoints
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/settings/rrl` | superadmin | RRL settings, the defaults and the counters |
+| `PUT` | `/api/settings/rrl` | superadmin | Replace the RRL settings |
+| `GET` | `/api/geoip` | superadmin | The GeoIP database in use, where it comes from, automatic updates |
+| `PUT` | `/api/geoip` | superadmin | Where to download from and whether to update monthly |
+| `POST` | `/api/geoip/download` | superadmin | Download the database now |
+| `GET` | `/api/geoip/lookup?ip=` | signed in | Where an address is, as GeoDNS sees it |
+| `GET` | `/api/cluster` | superadmin | The [cluster](/deploy/cluster): nodes, leader, change feed |
+| `DELETE` | `/api/cluster/nodes/{id}` | superadmin | Remove a node that is gone for good from the list |
+
+## Response rate limiting
+
+`GET /api/settings/rrl` returns `config`, `defaults` and `counters` (dropped, truncated and would be
+limited, since the server started). `PUT /api/settings/rrl` takes the whole `config` object:
+
+```json
+{
+  "enabled": true, "log_only": false,
+  "responses_per_second": 10, "nodata_per_second": 10, "nxdomains_per_second": 10, "errors_per_second": 10,
+  "window": 15, "slip": 2, "ipv4_prefix": 24, "ipv6_prefix": 56,
+  "exempt": ["10.0.0.0/8"]
+}
+```
+
+| Field | What it does |
+| --- | --- |
+| `enabled` | Turns RRL on |
+| `log_only` | Counts what would be limited, but answers everything |
+| `responses_per_second` | Identical answers per second to one client network (name + type) |
+| `nodata_per_second`, `nxdomains_per_second` | NODATA and NXDOMAIN answers per second, per zone |
+| `errors_per_second` | SERVFAIL, REFUSED and other errors per second |
+| `window` | Seconds of credits the debt can grow to |
+| `slip` | Every n-th limited answer goes out truncated; `0` drops all, `1` truncates all |
+| `ipv4_prefix`, `ipv6_prefix` | The size of a client network |
+| `exempt` | Networks that are never limited |
+
+A rate of `0` doesn't limit that kind. Settings take effect right away. Every change is in the
+[audit log](/admin/audit-log) as `settings.rrl`. See [Rate limiting](/dns/rate-limiting).
+
+## GeoIP database
+
+`PUT /api/geoip` sets where the country database comes from:
+
+```json
+{ "url": "https://download.db-ip.com/free/dbip-country-lite-{year}-{month}.mmdb.gz", "auto_update": true }
+```
+
+<ParamField body="url" type="string">
+  A `.mmdb` or `.mmdb.gz` URL; `{year}` and `{month}` are filled in. `GET /api/geoip` returns the
+  DB-IP Lite URL as `default_url`.
+</ParamField>
+
+<ParamField body="auto_update" type="boolean">
+  Download the database again every month.
+</ParamField>
+
+`GET /api/geoip` returns the `config`, the `default_url`, the `status` of the loaded database, and how
+many steered records depend on where clients are (`placed_records`). `POST /api/geoip/download`
+fetches it now and answers with the same.
+
+`GET /api/geoip/lookup?ip=203.0.113.9` answers with the address's country and continent, or `null`
+for `location` when the address isn't in the database (or no database is loaded):
+
+```json
+{ "ip": "203.0.113.9", "location": { "country": "ID", "continent": "AS" } }
+```
+
+Changes are in the audit log as `settings.geoip` and `settings.geoip_download`. See [GeoDNS and health checks](/dns/geodns#where-clients-are).

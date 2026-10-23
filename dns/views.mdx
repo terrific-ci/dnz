@@ -1,0 +1,77 @@
+---
+title: "Views (split horizon)"
+sidebarTitle: "Views"
+description: "Answer the same name differently depending on where the client asks from, such as a private address inside the office and a public one outside."
+---
+
+A **view** is a set of client networks that get their own answers for some names. This is called
+split-horizon DNS. For example, `app.example.com` answers `10.0.0.10` for office computers and
+`203.0.113.10` for everyone else.
+
+Use a view when the same hostname must reach a service by its private address on your LAN or VPN,
+and by its public address from the internet.
+
+## Set up a view
+
+<Steps>
+  <Step title="Create the view">
+    Open **DNS → Views** and click **Add view** (superadmins). Give it a name, for example
+    *Internal*, an optional description, and its client networks, one per line, such as
+    `10.0.0.0/8` and `192.168.0.0/16`.
+  </Step>
+  <Step title="Add view-only records">
+    In a zone, add or edit a record and choose **Answer → Only the Internal view**. Such records
+    carry a badge with the view's name in the record table.
+  </Step>
+  <Step title="Test from both sides">
+    Query the name from a client inside the view's networks and from one outside it.
+  </Step>
+</Steps>
+
+From the command line:
+
+```bash
+dnz view list
+dnz view add lan 10.0.0.0/8 192.168.0.0/16
+dnz record add example.com intranet A 10.1.1.1 --view lan
+dnz view rm lan
+```
+
+`dnz view rm` deletes the view and its records; its networks then get the default answers. See
+[CLI: zones and records](/cli/zones-records).
+
+A network can belong to only one view. When networks overlap, a client belongs to the view with
+the most specific network.
+
+## How answers work
+
+For a client in a view:
+
+1. If the queried name has records in that view, the client gets only those, for every type. The
+   name's default records are hidden from this client.
+2. If not, the client gets the default records, the same as everyone.
+
+Clients outside every view only see default records. Names that exist only in a view are NXDOMAIN
+for them.
+
+<Note>
+  A view replaces a name's records as a whole. If `app.example.com` has an A and an AAAA record by
+  default, and the Internal view adds only an A record, clients in the view get no AAAA for that
+  name. Add every type the view needs.
+</Note>
+
+**Auto PTR** (when on, see [Zones](/dns/zones#auto-ptr)) follows views too: a client in a view gets
+names from its view's records.
+
+[Forward missing names](/dns/zones#forward-missing-names) respects views: a name that a client's
+view adds is answered for that client, not forwarded.
+
+## What views leave out
+
+These only use a zone's **default records**, so internal addresses don't leak:
+
+- zone file export and import ([Import and export](/dns/import-export)),
+- *Copy to local* and *Push to Cloudflare*,
+- zone transfers to secondaries ([Replication](/dns/replication)),
+- Dynamic DNS and ACME,
+- [dynamic updates (RFC 2136)](/dns/dynamic-updates), which never touch view records.

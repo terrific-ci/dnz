@@ -1,0 +1,177 @@
+---
+title: "Zones"
+description: "API endpoints for zones, zone files, secondary refresh, the query log and token info."
+---
+
+Zone endpoints work with an [API token](/api/overview#api-tokens) or a signed-in session. Paths take
+numeric ids: a division id for listing and creating, a zone id for the rest.
+
+## Endpoints
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/divisions/{id}/zones` | `zones.read` | List zones |
+| `POST` | `/api/divisions/{id}/zones` | `zones.write` | Create a zone |
+| `GET` | `/api/zones/{id}` | `zones.read` | Zone details |
+| `PATCH` | `/api/zones/{id}` | `zones.write` | Turn a zone on or off, set its default TTL, choose whether missing names are forwarded |
+| `DELETE` | `/api/zones/{id}` | `zones.write` | Delete a zone |
+| `GET` | `/api/zones/{id}/export` | `zones.read` | The zone as a BIND zone file |
+| `POST` | `/api/zones/{id}/refresh` | `zones.read` | Secondary zones: check the primary now |
+| `GET` | `/api/divisions/{id}/logs` | `logs.read` | Query log of the division's zones |
+| `GET` | `/api/token` | – | Token info |
+
+Records have their own endpoints; see [Records](/api/records).
+
+## Create a zone
+
+`POST /api/divisions/{id}/zones`
+
+<ParamField body="name" type="string" required>
+  The zone name, e.g. `example.com`.
+</ParamField>
+
+<ParamField body="default_ttl" type="integer">
+  TTL in seconds for records created without one. Defaults to 300.
+</ParamField>
+
+```bash
+curl -X POST https://dns.example.com/api/divisions/1/zones \
+  -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+  -d '{"name": "example.com", "default_ttl": 300}'
+```
+
+A token limited to some zones can't create new zones.
+
+## Change a zone
+
+`PATCH /api/zones/{id}`. Every field is optional; send only what changes.
+
+<ParamField body="enabled" type="boolean">
+  Turn the zone on or off. See [Turning a zone off](#turning-a-zone-off).
+</ParamField>
+
+<ParamField body="default_ttl" type="integer">
+  TTL for records created without one.
+</ParamField>
+
+<ParamField body="forward_missing" type="boolean">
+  Forward names the zone doesn't have to the upstreams. See
+  [Forwarding names a zone doesn't have](#forwarding-names-a-zone-doesnt-have).
+</ParamField>
+
+```bash
+curl -X PATCH https://dns.example.com/api/zones/3 \
+  -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+  -d '{"enabled": false, "default_ttl": 3600}'
+```
+
+### Turning a zone off
+
+A disabled zone is kept, but:
+
+- it is not answered,
+- it is not sent in zone transfers (AXFR/IXFR),
+- it is not DNSSEC-signed,
+- it leaves the catalog zone, so DNZ secondaries drop it until it is turned on again.
+
+Turning a local zone on or off bumps its SOA serial. Records can be turned off one by one too; see
+[Records](/api/records#turning-records-off).
+
+### Forwarding names a zone doesn't have
+
+`{"forward_missing": true}` is the default for local zones. A query the zone has no answer for then
+goes through the normal path (filtering, forwarding rules, cache, upstreams) instead of getting
+NXDOMAIN, or NODATA when the name exists without that type. This lets a local zone override a few
+names of a public domain.
+
+What counts as having an answer:
+
+- a record of the type, or a CNAME, chased as usual (the answer stays local wherever the chase ends);
+- a wildcard match;
+- the apex SOA and NS.
+
+Views are respected: a name a client's view adds is answered for that client. Signed queries (update
+clients looking up a name's zone, secondaries) always get this server's answer.
+
+<Warning>
+  `forward_missing` can't be turned on for a DNSSEC-signed zone (400): its denial proofs say missing
+  names don't exist. Turning DNSSEC on turns it off. Secondary zones never forward.
+</Warning>
+
+Changing `forward_missing` doesn't bump the serial.
+
+## Export a zone
+
+`GET /api/zones/{id}/export` returns the zone as a BIND zone file.
+
+```bash
+curl -fsS -H "Authorization: Bearer $DNZ_TOKEN" \
+  https://dns.example.com/api/zones/3/export > example.com.zone
+```
+
+## Refresh a secondary zone
+
+`POST /api/zones/{id}/refresh` makes a [secondary zone](/dns/replication) check its primary for a new
+serial now.
+
+<ParamField query="full" type="boolean">
+  `true` transfers the whole zone even if the serial is unchanged.
+</ParamField>
+
+```bash
+curl -X POST -H "Authorization: Bearer $DNZ_TOKEN" \
+  "https://dns.example.com/api/zones/7/refresh?full=true"
+```
+
+## Query log
+
+`GET /api/divisions/{id}/logs` returns the query log of the division's zones, newest first. It needs
+`logs.read`.
+
+<ParamField query="q" type="string">
+  Only queries whose name or client address contains this text.
+</ParamField>
+
+<ParamField query="client" type="string">
+  Only queries from exactly this client address.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="100">
+  How many entries to return, from 1 to 1000.
+</ParamField>
+
+```bash
+curl -fsS -H "Authorization: Bearer $DNZ_TOKEN" \
+  "https://dns.example.com/api/divisions/1/logs?q=example.com&limit=100"
+```
+
+See [Query logs](/dns/query-logs) for what each entry means.
+
+## Token info
+
+`GET /api/token` tells you what the calling token may do. It needs no permission, but it must be called
+with an API token.
+
+```bash
+curl -fsS -H "Authorization: Bearer $DNZ_TOKEN" https://dns.example.com/api/token
+```
+
+<ResponseField name="id" type="integer">
+  The token's id.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The token's name.
+</ResponseField>
+
+<ResponseField name="division" type="object">
+  The division it belongs to: `id` and `name`.
+</ResponseField>
+
+<ResponseField name="permissions" type="string[]">
+  Its permissions, e.g. `["zones.read", "records.write"]`.
+</ResponseField>
+
+<ResponseField name="zones" type="object[]">
+  The zones it can reach, each with `id` and `name`.
+</ResponseField>

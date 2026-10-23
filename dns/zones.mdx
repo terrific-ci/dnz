@@ -1,0 +1,369 @@
+---
+title: "Zones and records"
+description: "Create local zones, add and edit records, and control how DNZ answers for names a zone does not have."
+---
+
+A **zone** is a domain that DNZ answers for itself, such as `example.com`, `corp.internal` or
+`home.lan`. Every zone belongs to one [division](/get-started/concepts). DNZ keeps zones in its
+[database](/deploy/database) and in memory, and reloads them on every change, so a new record is answered right away. Names
+outside your zones are forwarded to the upstreams (see [Forwarding](/dns/forwarding)).
+
+You manage zones under **DNS → Zones**, with the `dnz zone` and `dnz record` commands, or over the
+[API](/api/zones).
+
+## Create a zone
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    1. Open **DNS → Zones** and click **Add zone**.
+    2. Enter the zone name, for example `example.com`.
+    3. Open the zone and click **Add record**.
+
+    To start from an existing BIND zone file, click **Import zone** instead. See
+    [Import and export](/dns/import-export).
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz zone add example.com --division it
+    dnz zone add example.com --default-ttl 3600   # TTL for records added without one
+    dnz zone add --file example.com.zone          # a new zone from a BIND file (name from $ORIGIN)
+    dnz zone list [--division it]
+    dnz zone show example.com
+    dnz zone rm example.com
+    ```
+
+    Zones are named by name or id. With several divisions, commands that create something need
+    `--division` (id, slug or name). See [CLI: zones and records](/cli/zones-records).
+
+  </Tab>
+</Tabs>
+
+Creating a zone needs the `zones.write` permission; adding records needs `records.write`. See
+[Users, divisions and roles](/admin/access).
+
+DNZ writes the zone's **SOA** and apex **NS** records itself. The nameserver in them comes from
+`DNZ_NAMESERVER` (default `ns1.dnz.local`). The SOA serial goes up with every change.
+
+## Record types
+
+| Type | Value | Example |
+| --- | --- | --- |
+| `A` | IPv4 address | `192.0.2.1` |
+| `AAAA` | IPv6 address | `2001:db8::1` |
+| `CNAME` | Target hostname. Answers for any type when no direct record exists. | `target.example.com` |
+| `MX` | Mail server, with a priority (lower is tried first) | `10 mail.example.com` |
+| `TXT` | Free-form text, such as SPF or verification tokens | `v=spf1 mx -all` |
+| `NS` | Nameserver that this name is delegated to | `ns1.example.com` |
+| `SRV` | `weight port target`, with a priority. Name like `_sip._tcp`. | `5 5060 sip.example.com` |
+| `CAA` | `flags tag value`: `issue` / `issuewild` with optional `; key=value` parameters, or `iodef` with a `mailto:` or `https://` address | `0 issue "letsencrypt.org"` |
+| `HTTPS` | `priority target params`. Target `.` means this name; priority 0 is an alias. | `1 . alpn=h3,h2 ipv4hint=192.0.2.1` |
+| `SVCB` | Same form as HTTPS, for other protocols (for example on `_dns` to advertise DoT/DoH) | `1 dns.example.com alpn=dot port=853` |
+| `PTR` | Hostname, for reverse lookups in an `in-addr.arpa` zone | `host.example.com` |
+| `TLSA` | DANE: `usage selector matching-type data`. Name like `_443._tcp.www`. | `3 1 1 9F86D081…0A08` |
+| `SSHFP` | SSH host key fingerprint: `algorithm type fingerprint` (`ssh-keygen -r host` prints them) | `4 2 1234…CDEF` |
+| `NAPTR` | `order preference "flags" "service" "regexp" replacement`, for SIP, ENUM and other DDDS uses | `100 10 "S" "SIP+D2U" "" _sip._udp.example.com.` |
+| `DS` | Delegation signer for a child zone with its own DNSSEC keys: `key-tag algorithm digest-type digest`. At the delegated name, never at the apex. | `12345 13 2 49FD46E6…` |
+| `URI` | `weight target`, with a priority. Name like `_ftp._tcp`. | `1 https://example.com/path` |
+| `DNAME` | Target name: every name **below** this one is redirected to the same name under the target | `new.example.net` |
+| `LOC` | Location (RFC 1876): latitude, longitude, altitude, then optional size and precision | `52 22 23.000 N 4 53 32.000 E -2.00m 1m 10000m 10m` |
+
+A `*` wildcard name catches every subdomain that has no records of its own.
+
+DNZ stores these types in one canonical form (hex in upper case, names absolute and in lower
+case), so the same record always reads the same.
+
+A **DNAME** (RFC 6672) answers a query for `www.old.example.com`, with `old IN DNAME
+new.example.net`, with the DNAME, a CNAME `www.old.example.com → www.new.example.net` made from
+it, and the target's records when the target is in one of DNZ's zones. The DNAME's own name is not
+redirected and keeps its other records. Names below a DNAME can't have records, and a name has at
+most one DNAME.
+
+DNZ answers with automatic SOA, follows CNAME chains, and sends negative answers with the SOA. An
+unknown EDNS version gets `BADVERS`.
+
+<Note>
+  Records that a [dynamic update](/dns/dynamic-updates) client sends in other types (DHCID, TXT
+  split into several strings) are kept exactly as received and shown as **Read-only** in the
+  editor. You can turn them off, tag them or delete them there, but not edit them.
+</Note>
+
+## The record editor
+
+Open a zone under **DNS → Zones** to see its records. **Add record** opens a form with these
+fields:
+
+| Field | What it does |
+| --- | --- |
+| **Type** | One of the types above. |
+| **Name** | Relative to the zone: `www`, or `@` for the zone apex. |
+| **Value** | The record's content. The label changes with the type (IPv4 address, Target, Mail server…). |
+| **Priority** | MX and SRV only. |
+| **TTL** | How long resolvers may cache the answer. **Default** uses the zone's default TTL. |
+| **Answer** | Shown when [views](/dns/views) exist: **All clients**, or **Only the** *name* **view**. |
+| **Tags** | Labels such as `prod` or `web`, to filter and change records in groups. |
+| **Comment** | What the record is for (up to 500 characters). |
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    - **Add record**: fill in the form and save.
+    - **Edit**: click a record row.
+    - **Search**: the search box matches the name or the content. **Filter** narrows the list by
+      type, on/off and tags.
+    - **Turn off / Turn on**: the switch on each row.
+    - **Delete**: open the record and click **Delete**. It stops resolving immediately.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz record list example.com [--name www] [--type A]
+    dnz record add example.com www A 192.0.2.10 --ttl 300
+    dnz record add example.com @ MX 10 mail.example.com     # priority in front, or --priority 10
+    dnz record add example.com _sip._tcp SRV 10 5 5060 sip.example.com
+    dnz record add example.com @ TXT "v=spf1 mx -all"
+    dnz record edit example.com www A --value 192.0.2.11
+    dnz record edit example.com www A 192.0.2.10 --value 192.0.2.12 --ttl 60
+    dnz record edit example.com --id 42 --rename web
+    dnz record rm example.com www A 192.0.2.11
+    ```
+
+    Records are picked by **name, type and (optionally) value**, by `--id` (several: `--id 4,7`),
+    or by `--tag`. Names may be relative (`www`, `@`) or full (`www.example.com.`). When more than
+    one record matches, the command lists them and stops: narrow it down, or pass `--all` to act on
+    every one.
+
+  </Tab>
+</Tabs>
+
+### Comments, tags and turning records off
+
+A record can carry a comment and tags, and can be turned off without deleting it. A disabled
+record is kept, but it is not answered, not sent in zone transfers and not DNSSEC-signed.
+
+```bash
+dnz record add example.com www A 192.0.2.10 --tag prod,web --comment "Main site"
+dnz record add example.com next A 192.0.2.30 --disabled
+dnz record list example.com --tag prod
+dnz record list example.com --enabled off
+dnz record list example.com -q "main site"    # text in the name, value or comment
+dnz record tags example.com                   # tags in use and how many records carry each
+dnz record disable example.com www A 192.0.2.10
+dnz record enable example.com --tag legacy --all
+dnz record tag example.com www --all --add v2 --remove web
+```
+
+### View-only records
+
+When the server has [views](/dns/views), the **Answer** field lets a record be answered only to
+clients in one view. Such records carry a badge with the view's name in the table. In the CLI, add
+`--view`:
+
+```bash
+dnz record add example.com intranet A 10.1.1.1 --view lan
+```
+
+### Proxied records
+
+An A, AAAA or CNAME record can go through one or more proxies, like Cloudflare's orange cloud: DNS
+answers the name with the proxies' addresses and the origin stays hidden. Once proxying is set up,
+the record form lists the proxies; one without a router for the record's name shows **no router for
+this name** and can't be picked until you add a route.
+
+```bash
+dnz record add example.com shop A 10.0.0.5 --proxy edge-jkt,edge-sgp   # DNS answers with both proxies
+dnz record edit example.com shop --proxy edge-jkt,edge-ams --all       # every A/AAAA/CNAME of the name at once
+dnz record edit example.com shop --proxy none --all                    # back to DNS only
+```
+
+A name's A, AAAA and CNAME records must all use the same proxies. See
+[Proxy overview](/proxy/overview).
+
+### Traffic steering
+
+Plain A and AAAA records can be answered by the client's country or continent, by weight, and only
+while a health check of the address passes. Open a record and click **Traffic steering…**, or use
+`dnz record steer`. Steered records carry a badge with a green or red health dot. See
+[GeoDNS and health checks](/dns/geodns).
+
+```bash
+dnz record steer example.com www A 203.0.113.10 --countries ID,SG --check https --path /health
+```
+
+## Add many records at once
+
+To add many subdomains on one IP, give several names in the **Name** field of **Add record**
+(press Enter after each, `@` for the apex). Every name gets the same value, and the button changes
+to **Add N records**.
+
+From the CLI, `add-many` does the same. A line of `--file` may carry its own value after the name:
+
+```bash
+dnz record add-many example.com A 192.0.2.20 --names app,api,db
+dnz record add-many example.com A 192.0.2.20 --file hosts.txt --tag lab --dry-run
+printf 'mx1 10 mail1.example.com\nmx2 20 mail2.example.com\n' | dnz record add-many example.com MX --file -
+```
+
+A names file holds one name per line or several separated by commas; `#` starts a comment:
+
+```text hosts.txt
+# monitoring
+grafana, prometheus, loki
+vault
+backup 192.0.2.99        # its own address
+```
+
+The records are added together, or none if one fails (a duplicate, a CNAME clash, a bad value).
+
+## Change many records at once
+
+In the dashboard, tick records (Shift-click selects a range) and use the bar that appears: **Turn
+on**, **Turn off**, **TTL**, **Tags**, **Comment** or **Delete**.
+
+From the CLI, use `--all` or several `--id`s:
+
+```bash
+dnz record edit example.com --tag prod --all --ttl 60 --comment "Cut over"
+dnz record rm example.com --tag legacy --all
+dnz record rm example.com www --all           # every record named www
+```
+
+Changes to several records go in one request that is checked as a whole and applied all or
+nothing, with one serial bump and one audit log entry. Only TTL, comment, on/off, tags and proxies
+change in bulk; `--value`, `--rename`, `--priority` and `--view` change one record at a time. The
+API's bulk endpoint takes up to 100 operations and 5000 records per request; see
+[Records API](/api/records).
+
+## Zone settings
+
+The settings card at the bottom of a zone page holds three switches.
+
+### Default TTL
+
+The TTL used for records added without one, 300 seconds unless you change it. It shows as
+**Default** in the record form and is used for imports without `$TTL`. Existing records keep their
+TTL.
+
+```bash
+dnz zone set example.com --default-ttl 600
+```
+
+### Forward missing names
+
+A local zone can override a few names of a public domain. With **Forward missing names** on (the
+default), names and record types the zone doesn't have are forwarded to the upstreams instead of
+answered NXDOMAIN or NODATA.
+
+For example, a LAN zone `example.com` that holds only `intranet` still resolves `www.example.com`
+from public DNS.
+
+```bash
+dnz zone set example.com --forward-missing off # answer NXDOMAIN for names the zone doesn't have
+```
+
+Turn it off for a zone that is the whole truth for its domain.
+
+<AccordionGroup>
+  <Accordion title="What counts as having an answer">
+
+    A query the zone has no answer for goes through the normal path (filtering, forwarding rules,
+    cache, upstreams). The zone has an answer when it has:
+
+    - a record of the queried type, or a CNAME (chased as usual; the answer stays local wherever
+      the chase ends),
+    - a wildcard match,
+    - the apex SOA and NS.
+
+    Views are respected: a name that a client's view adds is answered for that client. Signed
+    queries (update clients looking up a name's zone, secondaries) always get this server's answer.
+    Changing the setting doesn't bump the serial.
+
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  A DNSSEC-signed zone can't forward missing names, because its denial proofs say missing names
+  don't exist. Turning [DNSSEC](/dns/dnssec) on turns this off, and it can't be turned back on
+  while the zone is signed. Secondary zones never forward.
+</Warning>
+
+### Serve this zone (turning a zone off)
+
+**Serve this zone** off keeps the zone and its records without answering for them, like a pause.
+The zone shows an **Off** badge in the list.
+
+```bash
+dnz zone disable example.com                  # keep it, but stop answering and transferring it
+dnz zone enable example.com
+```
+
+A disabled zone is not answered, not sent in zone transfers (AXFR/IXFR) and not DNSSEC-signed. It
+also leaves the catalog zone, so DNZ secondaries drop it until it is turned on again (see
+[Replication](/dns/replication)). Queries for its names are forwarded upstream instead. Turning a
+local zone on or off bumps its SOA serial.
+
+## Auto PTR
+
+With **Automatic PTR (reverse DNS)** on under **Settings → General**, PTR queries (`in-addr.arpa` /
+`ip6.arpa`) are answered from your A and AAAA records, with no reverse zone needed. If
+`www.lab.internal` points at `10.0.0.5`, a PTR query for `5.0.0.10.in-addr.arpa` returns
+`www.lab.internal`. Nothing is written to your zones.
+
+```bash
+dnz settings auto-ptr on
+```
+
+- PTR records you add yourself in a reverse zone always win.
+- When several names share an address, all are returned, shortest first.
+- Wildcard records are skipped, since they don't name one host.
+- Auto PTR follows [views](/dns/views): a client in a view gets names from its view's records.
+
+## Rules DNZ checks
+
+- **CNAME exclusivity**: a name with a CNAME can't have other records, and the other way round.
+- **Duplicates**: the same record can't exist twice.
+
+Both checks only count enabled records, so a disabled CNAME can wait next to the A record it will
+replace. Turning a record on runs the checks, and a conflict is refused (HTTP 409).
+
+## Secondary zones are read-only
+
+Zones copied from a primary (see [Replication](/dns/replication)) show **Read-only copy from its
+primary**. You can read their records, but records, import, DNSSEC and Dynamic DNS/ACME tokens only
+work on the primary. The zone page shows the primary, the last transfer, when the copy expires, and
+any error. **Refresh** checks the primary now; **Transfer again** transfers even if the serial
+didn't change.
+
+```bash
+dnz zone refresh secondary.example --full     # secondary zones: transfer now
+```
+
+## Test a zone
+
+The **Test this zone** card on a zone page shows `dig` commands for the zone's first records,
+pointed at this server and its DNS port, ready to copy:
+
+```bash
+dig @127.0.0.1 -p 1053 www.example.com A
+```
+
+<CardGroup cols={2}>
+  <Card title="Import and export" icon="file-import" href="/dns/import-export">
+    Move zones in and out as BIND files, or to and from Cloudflare.
+  </Card>
+  <Card title="Views" icon="eye" href="/dns/views">
+    Answer one name differently inside and outside.
+  </Card>
+  <Card title="GeoDNS and health checks" icon="earth-asia" href="/dns/geodns">
+    Answer by country, by weight, and only while an address is healthy.
+  </Card>
+  <Card title="DNSSEC" icon="signature" href="/dns/dnssec">
+    Sign a zone and get the DS record for your registrar.
+  </Card>
+  <Card title="CLI reference" icon="terminal" href="/cli/zones-records">
+    Every zone and record command.
+  </Card>
+</CardGroup>

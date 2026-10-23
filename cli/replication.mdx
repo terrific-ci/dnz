@@ -1,0 +1,101 @@
+---
+title: "Replication"
+description: "Set up primaries, secondaries and join requests from the terminal."
+---
+
+These commands match **DNS → Replication** in the dashboard. They need a superadmin. For how
+replication, join codes and the catalog zone work, see [Replication](/dns/replication).
+
+`dnz repl` is a short alias for `dnz replication`.
+
+```bash
+dnz replication show            # secondaries, join requests, primaries followed, secondary zones
+```
+
+## On the primary: allow a secondary
+
+```bash
+dnz replication secondary add dns-2                 # another DNZ: prints a join code
+dnz replication secondary add bind9 --kind other --allow 192.0.2.53 --notify 192.0.2.53
+dnz replication secondary list
+dnz replication secondary join-code 1               # a new code for a DNZ secondary
+dnz replication secondary edit 2 --notify 192.0.2.54
+dnz replication secondary rm 2
+```
+
+`secondary add` allows a server to copy zones. Another DNZ (`--kind dnz`, the default) gets a **join
+code**; any other server (`--kind other`, e.g. BIND or Knot) gets TSIG details.
+
+| Option | What it does |
+| --- | --- |
+| `--kind` | `dnz` (default) or `other` |
+| `--allow` | Addresses allowed to transfer (repeat or comma-separate) |
+| `--notify` | Where to send NOTIFY (repeat or comma-separate) |
+| `--no-tsig` | Allow transfers without TSIG, from the allowed addresses only |
+| `--origin` | Where secondaries reach this server's API, for the join code (default: `--server`) |
+
+`secondary edit` takes `--name`, `--allow`, `--notify` and `--tsig on|off`. `secondary join-code`
+makes a new code; the old one stops working.
+
+## On the secondary: follow a primary
+
+There are two ways to follow a DNZ primary: with the join code it printed, or by asking to join and
+waiting for its admin to approve.
+
+<Tabs>
+  <Tab title="Join code">
+
+```bash
+dnz replication join 'dnz-join:…'                   # follow the primary's catalog
+dnz replication join 'dnz-join:…' --division it     # put the copied zones in this division
+```
+
+  </Tab>
+  <Tab title="Ask to join">
+
+```bash
+dnz replication discover                            # DNZ servers on the local network
+dnz replication pair http://10.0.0.5:8080           # ask to join; approve it on the primary
+```
+
+`pair` waits until the primary's admin approves the request. Check that the code matches on both
+screens.
+
+  </Tab>
+</Tabs>
+
+Once it follows a primary:
+
+```bash
+dnz replication sync 1                              # fetch the primary's catalog and zones now
+dnz replication leave 1                             # stop following it and delete the copied zones
+```
+
+### Copying one zone from any primary
+
+`add-zone` copies a single zone over AXFR/IXFR from any primary: BIND, Knot, PowerDNS or another DNZ.
+
+```bash
+dnz replication add-zone example.org --primary 192.0.2.1 --tsig-name xfr --tsig-secret …
+```
+
+| Option | What it does |
+| --- | --- |
+| `--primary` | Primary address(es), `ip` or `ip:port` (repeat or comma-separate). Required |
+| `--tsig-name` | TSIG key name |
+| `--tsig-secret` | Base64 TSIG secret |
+| `--tsig-algorithm` | Default `hmac-sha256` |
+| `-d`, `--division` | Division the zone goes to |
+
+Check a secondary zone for a new serial with
+[`dnz zone refresh`](/cli/zones-records#dnssec-and-secondary-zones).
+
+## Join requests
+
+Requests from `pair` (or from discovery in the dashboard) wait on the primary:
+
+```bash
+dnz replication show                                # lists them with their code
+dnz replication approve <id>                        # check the code matches on both screens
+dnz replication deny <id>
+```

@@ -1,0 +1,100 @@
+---
+title: "DNSSEC validation"
+description: "Check the signatures of the domains DNZ resolves, reject forged answers, and exempt domains whose signatures are broken."
+---
+
+[DNSSEC](/dns/dnssec) is about signing your own zones. This page is about the other side: DNZ
+checking the signatures of **other** domains it resolves for your clients, like Unbound, Knot
+Resolver or 1.1.1.1 do (RFC 4033 to 4035).
+
+- A domain whose signatures check out up to the root key is **secure**: the answer carries the
+  **AD** flag (for clients that set DO or AD).
+- An **unsigned** domain is answered as usual.
+- A **bogus** answer (wrong, expired or missing signatures) becomes **SERVFAIL** with an Extended DNS
+  Error (code 6, DNSSEC Bogus). A forged answer for a signed domain never reaches the client.
+
+## Settings
+
+| Setting | Default | |
+| --- | --- | --- |
+| **Recursive answers** | on | What DNZ resolves itself in [recursive mode](/dns/recursive) |
+| **Forwarded answers** | off | What the upstream resolvers answer |
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    **DNS → Forwarding → DNSSEC validation**: two switches, applied right away, and counters of
+    secure, unsigned and bogus answers since the start.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz forwarding dnssec                          # settings and counters
+    dnz forwarding dnssec --forwarded on
+    dnz forwarding dnssec --recursive off
+    ```
+
+  </Tab>
+</Tabs>
+
+<Note>
+Validating forwarded answers needs upstreams that pass signatures through. Public resolvers
+(Cloudflare, Google, Quad9) do; some ISP resolvers, home routers and middleboxes strip them, and then
+every signed domain would fail. Turn it on, then check with `dig @<dnz> dnssec-failed.org` (should be
+SERVFAIL) and `dig +dnssec @<dnz> example.com` (should have `ad`). Encrypted upstreams (DoT, DoH,
+DoQ) can't be stripped on the way.
+</Note>
+
+## How it works
+
+- **Trust anchors**: the root zone's KSK-2017 (key tag 20326) and KSK-2024 (key tag 38696, the key
+  of the 2026 rollover) are built in.
+- **Forwarded answers**: DNZ asks the upstream with the **DO** and **CD** flags, so it hands over the
+  records and signatures without judging them, and checks the chain itself. DNSKEY and DS records
+  from the root down are fetched **through the same upstreams** and kept for their TTL (at most an
+  hour).
+- **Recursive answers**: the DS and DNSKEY lookups go through the recursor like any other lookup.
+- Algorithms: RSA (SHA-1, SHA-256, SHA-512), ECDSA P-256 and P-384, Ed25519; NSEC, NSEC3 (with the
+  RFC 9276 iteration limits) and compact denial (RFC 9824).
+- A client that sets **CD** (it validates itself) gets the data unvalidated; such answers are not
+  cached for other clients.
+- **Forwarding rules** follow the setting of their kind: a recursive rule like recursive answers, a
+  rule with upstreams like forwarded answers.
+
+## Negative trust anchors
+
+When a domain's operator breaks its signatures (an expired signature, a botched key rollover), every
+validating resolver answers SERVFAIL for it. A **negative trust anchor** (RFC 7646) turns validation
+off for that domain and everything under it, so your clients can reach it in the meantime.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    **DNSSEC validation → Negative trust anchors**: type the domain and a reason, then **Add**.
+    Remove it once the domain is fixed.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz forwarding nta add broken.example --comment "expired signatures, ticket 123"
+    dnz forwarding nta list
+    dnz forwarding nta rm broken.example
+    ```
+
+  </Tab>
+</Tabs>
+
+<Warning>
+A negative trust anchor also turns off the protection against forged answers for that domain.
+Remove it once the domain is fixed.
+</Warning>
+
+## Check
+
+```bash
+dig +dnssec @<dnz> example.com A           # flags: … ad
+dig @<dnz> dnssec-failed.org A             # status: SERVFAIL
+dig +cd @<dnz> dnssec-failed.org A         # NOERROR: the client asked not to check
+```

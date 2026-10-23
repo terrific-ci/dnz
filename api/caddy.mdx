@@ -1,0 +1,77 @@
+---
+title: "Caddy API"
+description: "Endpoints for connecting Caddies and syncing the DNS records of their sites."
+---
+
+For what these endpoints do, see [Caddy](/integrations/caddy). They take a signed-in session (see
+[API overview](/api/overview)); API tokens can't hold `integrations.manage`, so with a token only the
+`zones.read` endpoints work.
+
+## Endpoints
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/divisions/{id}/caddies` | `zones.read` | The division's Caddies, with the hostnames of their last read |
+| `POST` | `/api/divisions/{id}/caddies` | `integrations.manage` | Connect one (paused until its first sync) |
+| `POST` | `/api/divisions/{id}/caddies/check` | `integrations.manage` | Read a Caddy's config with unsaved settings: hostnames and their zones |
+| `POST` | `/api/divisions/{id}/caddies/password-hash` | `integrations.manage` | A bcrypt hash for the `basic_auth` block: `{"password": "…"}` → `{"hash"}` |
+| `GET` | `/api/caddies/{id}` | `zones.read` | One Caddy |
+| `PATCH` | `/api/caddies/{id}` | `integrations.manage` | Change its settings; `"enabled": false` pauses it |
+| `DELETE` | `/api/caddies/{id}?keep_records=false` | `integrations.manage` | Remove it, and its records unless `keep_records=true` |
+| `GET` | `/api/caddies/{id}/plan` | `zones.read` | Read the config now and show what a sync would do |
+| `POST` | `/api/caddies/{id}/sync` | `integrations.manage` | Sync now; also starts a paused Caddy |
+
+## A Caddy
+
+```json
+{
+  "name": "edge-1",
+  "api_url": "http://10.0.0.5:2020",
+  "api_user": "dnz",
+  "api_password": "…",
+  "addresses": ["203.0.113.5", "2001:db8::5"],
+  "target": "",
+  "ttl": 300,
+  "add_only": false,
+  "interval_secs": 60
+}
+```
+
+Give either `addresses` (A/AAAA) or `target` (a CNAME), not both. On `PATCH`, fields left out keep
+their value, and an absent `api_password` keeps the stored one (`""` removes it). `interval_secs` is
+15 to 86400.
+
+Answers never include the password; they have `has_password` instead, plus `enabled`,
+`last_read_at`, `last_sync_at`, `last_error`, `record_count` (records the Caddy keeps in DNS),
+`summary` (counts per outcome) and `last_plan` (the hostnames of the last read).
+
+`check` takes the same body, plus `caddy_id` to use a saved Caddy's password when none is given.
+
+## Plans
+
+`plan` and `sync` return the hostnames with what happens to each:
+
+```json
+{
+  "host": "www.example.com",
+  "zone_id": 1,
+  "zone": "example.com",
+  "name": "www",
+  "status": "update",
+  "add": [{ "type": "A", "value": "203.0.113.9" }],
+  "remove": [{ "type": "A", "value": "203.0.113.5" }]
+}
+```
+
+`status` is `ok` (in DNS already), `add`, `update`, `remove` (left Caddy's config), `stale` (left it,
+kept because the Caddy only adds), `taken` (records made by hand or by another Caddy) or `skipped`;
+`reason` says why for the last three. `sync` also returns `added`, `removed` and the Caddy.
+
+When the Caddy can't be read, `plan`, `sync` and `check` answer `502` with
+`"code": "caddy_unreachable"` and the reason.
+
+## Records
+
+Records come back with `"caddy_id"`: the Caddy that keeps them, or `null` for records made by hand
+(see [Records](/api/records)). Changing a record with `PATCH /api/records/{id}` clears it, so the
+Caddy leaves that record alone from then on.

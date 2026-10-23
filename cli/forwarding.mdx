@@ -1,0 +1,157 @@
+---
+title: "Forwarding"
+description: "Manage upstreams, the forwarding strategy and conditional forwarding rules, and diagnose upstreams from the terminal."
+---
+
+These commands match **DNS → Forwarding** in the dashboard. They need a superadmin. For how
+forwarding, strategies and rules work, see [Forwarding](/dns/forwarding).
+
+## Upstreams and strategy
+
+```bash
+dnz forwarding show                           # strategy, upstreams and rules
+dnz forwarding add tls://dns.quad9.net --position 1
+dnz forwarding add 9.9.9.9:53 --weight 3
+dnz forwarding edit 1.1.1.1 --weight 3 --enabled off
+dnz forwarding edit 1.1.1.1 --position 1      # move it to the top
+dnz forwarding rm 8.8.8.8
+dnz forwarding strategy least_time
+```
+
+`dnz fwd` is a short alias for `dnz forwarding`.
+
+Upstreams can be plain DNS (`1.1.1.1`, `9.9.9.9:53`), DNS over TLS (`tls://dns.quad9.net`), DNS over
+HTTPS (`https://dns.google/dns-query`), DNS over QUIC (`quic://dns.adguard-dns.com`) or DoH over
+HTTP/3 (`h3://cloudflare-dns.com/dns-query`). See [Forwarding](/dns/forwarding) for the full address
+format.
+
+| Option | What it does |
+| --- | --- |
+| `--weight` | Weight for `wrr` and `hrw` (default 1) |
+| `--position` | Place in the list, 1 = first (default: last) |
+| `--enabled` | `on` or `off`: turn an upstream on or off (`edit` only) |
+
+The strategies are `failover`, `wrr`, `p2c`, `hrw` and `least_time`. Changing it takes effect without a
+restart.
+
+## Recursive resolution
+
+Instead of forwarding, DNZ can resolve names itself from the root servers, like Unbound. See
+[Recursive resolution](/dns/recursive).
+
+```bash
+dnz forwarding mode recursive        # names outside your zones; `upstreams` switches back
+dnz forwarding recursor              # alias `recursive`: priming, caches, busiest servers, warnings
+dnz forwarding trace example.com --type AAAA   # every query from the root down, like dig +trace
+dnz forwarding flush                 # empty the resolver's caches (and the answer cache)
+```
+
+`dnz forwarding show` says when the mode is recursive; the upstream list is kept for switching back.
+`trace` works whatever the mode. A rule resolves recursively with `recursive` as its upstreams:
+
+```bash
+dnz forwarding rule add example.org recursive
+dnz forwarding rule add '*' recursive --network 172.31.4.0/24 --label "Lab network"
+```
+
+## DNSSEC validation
+
+See [DNSSEC validation](/dns/dnssec-validation).
+
+```bash
+dnz forwarding dnssec                          # settings and secure / unsigned / bogus counts
+dnz forwarding dnssec --forwarded on --recursive on
+dnz forwarding nta add broken.example --comment "expired signatures"   # negative trust anchor
+dnz forwarding nta list
+dnz forwarding nta rm broken.example
+```
+
+## Conditional forwarding rules
+
+Rules send a domain and its subdomains, or every name some clients ask for, to other resolvers.
+
+```bash
+dnz forwarding rule list
+dnz forwarding rule add corp.local 10.0.0.10 10.0.0.11 --comment "AD"
+dnz forwarding rule edit corp.local --enabled off
+dnz forwarding rule rm corp.local
+```
+
+### Rules for client networks
+
+```bash
+# Everything clients in 172.31.4.0/24 ask goes to Google DNS (`*` = every name)
+dnz forwarding rule add '*' 8.8.8.8 8.8.4.4 --network 172.31.4.0/24 --label "Lab network"
+
+# corp.local only for some clients
+dnz forwarding rule add corp.local 10.4.0.10 --network 172.31.4.0/24,10.20.0.5
+
+dnz forwarding rule edit "Lab network" --network 172.31.4.0/24,172.31.5.0/24
+dnz forwarding rule edit 7 --network none              # back to every client
+dnz forwarding rule edit "Lab network" --position 1    # checked first
+```
+
+`*` as the domain needs `--network`.
+
+### Rule options
+
+| Option | `add` | `edit` | What it does |
+| --- | --- | --- | --- |
+| `--network` | yes | yes | Only for clients in these networks (repeat or comma-separate); `none` for every client |
+| `--label` | yes | yes | A short name shown in lists, e.g. "Lab network" |
+| `--comment` | yes | yes | A note |
+| `--position` | yes | yes | Place in the rule order, 1 = checked first |
+| `--domain` | – | yes | A new domain, or `*` |
+| `--upstream` | – | yes | Replace its upstreams (repeat or comma-separate) |
+| `--enabled` | – | yes | `on` or `off`: turn the rule on or off |
+
+### How rules are matched
+
+- Rules are found by id, label or domain.
+- They are checked in order (the `#` column of `dnz forwarding rule list`) and the **first match wins**.
+- A new rule goes above the first less specific rule (a shorter domain, or a wider network), unless
+  you pass `--position`.
+- A rule that an earlier rule always catches first is marked **never matches** in the list.
+
+## Diagnosing an upstream
+
+`dnz forwarding diagnose <address>` (alias `diag`) checks any upstream, configured or not, step by step
+from the server. It prints each step as it finishes:
+
+1. name lookup (DoT and DoH)
+2. local route
+3. ping
+4. the TCP port
+5. the TLS handshake
+6. a DNS query over the upstream's protocol (and over TCP for plain DNS)
+7. a check for port 53 interception
+8. a traceroute
+
+Failed or suspicious steps come with a hint at the likely cause.
+
+```bash
+dnz forwarding diagnose 10.0.0.10 --name corp.local --type SOA   # why does it not answer?
+dnz forwarding diagnose tls://dns.quad9.net
+dnz --json forwarding diagnose 1.1.1.1                           # the whole report as JSON
+```
+
+`--name` and `--type` choose the query (default `example.com A`). The dashboard has the same check
+behind the **Diagnose** button on every upstream and rule.
+
+## Serve-stale, prefetch and client subnet
+
+```bash
+dnz forwarding stale on --window 1d       # expired answers while every upstream fails
+dnz forwarding stale off
+dnz forwarding prefetch on --min-hits 3   # refresh busy names before they expire
+dnz forwarding ecs on --ipv4-prefix 24 --ipv6-prefix 56
+dnz forwarding ecs on --private on        # also send private client addresses
+dnz forwarding ecs off
+```
+
+- `--window` takes `90s`, `30m`, `12h`, `1d` and so on, up to `7d`.
+- `--min-hits` is how often a name must be asked since it was cached to be refreshed in the last
+  tenth of its TTL.
+- `dnz forwarding show` lists these options under the rules.
+
+See [Resolver options](/dns/resolver-options).

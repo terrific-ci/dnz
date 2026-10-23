@@ -1,0 +1,154 @@
+---
+title: "Caddy"
+description: "DNS records for the sites a Caddy serves, kept up to date as the Caddyfile changes."
+---
+
+DNZ can keep DNS records for the sites a [Caddy](https://caddyserver.com/) serves, like ExternalDNS
+does for Kubernetes. It reads the hostnames from Caddy's admin API and adds A/AAAA records (or a
+CNAME) for them in the division's zones, pointing at the Caddy. When the Caddyfile changes, the
+records follow.
+
+DNZ only **reads** Caddy's configuration. Sites, routes and certificates stay in the Caddyfile, and
+nothing goes through DNZ. For a proxy that DNZ configures, see [Proxied records](/proxy/overview).
+
+A Caddy belongs to a division, under **Settings → Integrations → Caddy**. Connecting one needs the
+`integrations.manage` permission (Owner by default); seeing them needs `zones.read`.
+
+## Connect a Caddy
+
+Caddy's admin API only listens on `localhost:2019` of its own machine, so DNZ needs a way in.
+**Connect a Caddy** walks through it with every block ready to copy.
+
+<Tabs>
+  <Tab title="Read-only, with a password">
+    Recommended. A small site in the Caddyfile passes only reads (GET) on to the admin API, behind
+    basic auth. The admin API itself stays on localhost, so nothing that reaches this port can change
+    Caddy. DNZ makes the password and its bcrypt hash for you, so there's no `caddy hash-password` step.
+
+    ```caddyfile
+    # Read-only access to Caddy's admin API for DNZ.
+    :2020 {
+    	basic_auth {
+    		dnz $2a$10$…
+    	}
+    	@read method GET
+    	handle @read {
+    		reverse_proxy localhost:2019 {
+    			header_up Host localhost:2019
+    		}
+    	}
+    	respond 405
+    }
+    ```
+
+    DNZ then reads `http://<caddy server>:2020` with that user and password. The password is kept on
+    the server and never sent back to the dashboard.
+  </Tab>
+  <Tab title="Open the admin API">
+    The global `admin` option opens the admin API on every address:
+
+    ```caddyfile
+    {
+    	admin 0.0.0.0:2019
+    }
+    ```
+
+    <Warning>
+      Anyone who reaches this port can change Caddy's configuration. Let only DNZ reach it.
+    </Warning>
+
+    ```bash
+    sudo ufw allow from 10.0.0.2 to any port 2019 proto tcp
+    sudo ufw deny 2019/tcp
+    ```
+
+    When the admin API listens on one address (`admin 10.0.0.5:2019`), Caddy only accepts requests
+    for that exact address. If DNZ reaches it by another name, add that to `origins`
+    (`admin 10.0.0.5:2019 { origins caddy.lan:2019 }`); DNZ says so when Caddy refuses it.
+  </Tab>
+</Tabs>
+
+<Steps>
+  <Step title="Reload Caddy">
+    `caddy reload --config /etc/caddy/Caddyfile`, or `docker exec -w /etc/caddy <container> caddy reload`.
+    With Docker, also publish the port (`-p 2020:2020`).
+  </Step>
+  <Step title="Test the connection">
+    Fill in the Caddy server's address. **Test connection** lists the hostnames DNZ can read and the
+    zone each one would go in.
+  </Step>
+  <Step title="Choose what DNS answers with">
+    **Addresses**: one or more IPv4/IPv6 addresses, usually the Caddy server's public address. Each
+    hostname gets an A record per IPv4 and an AAAA record per IPv6.
+
+    **A CNAME**: each hostname gets a CNAME to one name (e.g. `edge.example.net`), useful when the
+    Caddy's address is itself in DNS.
+
+    Plus the records' TTL (5 minutes by default) and how often DNZ reads the config (every minute;
+    15 seconds to a day).
+  </Step>
+  <Step title="Preview, then start">
+    A new Caddy starts **paused**. DNZ shows what it would do for each hostname, with the records it
+    would add (+) and remove (−). **Apply and keep syncing** writes them and starts the background
+    sync.
+  </Step>
+</Steps>
+
+## Which hostnames get records
+
+DNZ reads Caddy's running configuration (`GET /config/`) and takes the `host` matchers of its HTTP
+routes. A Caddyfile's site addresses become those matchers (`example.com, www.example.com { … }`),
+and so do named matchers inside a site (`@api host api.example.com`).
+
+Each hostname goes in the division's zone that holds it, the one with the longest matching name:
+`www.lab.example.com` goes in `lab.example.com` when the division has that zone, otherwise in
+`example.com` as `www.lab`. A site at a zone's apex gets records at `@`, and a wildcard site
+(`*.apps.example.com`) a wildcard record (`*.apps`).
+
+These are skipped, and listed with the reason:
+
+- hostnames outside the division's zones, or in a secondary zone
+- IP addresses, `localhost` and names under `.localhost`
+- placeholders Caddy didn't fill in (`{$SITE}`), and wildcards anywhere but in front
+- a site at a zone's apex when the Caddy answers with a CNAME (the apex can't hold one)
+
+## What DNZ never changes
+
+Records DNZ adds carry the Caddy's mark: the zone editor shows a **Caddy edge-1** badge on them.
+DNZ only changes or removes records with its own mark.
+
+- **A name that already has records made by hand** (A, AAAA, CNAME or ALIAS; with a CNAME, any
+  record) is *taken*: DNZ leaves it alone and lists it with the reason. Delete the hand-made record
+  to let the Caddy take over.
+- **A name another Caddy keeps** is taken too. The first Caddy to add it keeps it.
+- **A record you edit by hand** in the record form becomes yours: the Caddy stops changing or
+  removing it. Turning it off, tagging it or changing its TTL in bulk keeps the mark.
+
+## When the Caddyfile changes
+
+On each read:
+
+- A new site gets its records.
+- When the Caddy's addresses (or CNAME target) change in DNZ, its records change with them.
+- A site that left the config loses its records. With **Keep them (flagged)** (*add only*), they
+  stay and are listed as *kept* instead.
+
+When the config can't be read (Caddy down, a wrong password), nothing changes: the error shows on
+the Caddy's card until a read works again. A Caddy whose config has no HTTP servers at all, such as
+one that just started without a config, is treated the same way, so its records aren't removed by
+accident.
+
+Every change is in the [audit log](/admin/audit-log) as `record.create`, `record.update` or
+`record.delete` "via Caddy edge-1", under the Caddy's name when the background sync made it.
+
+## Pause and remove
+
+The Caddy's card shows the last sync, how many records it keeps in DNS, and its hostnames with what
+happened to each. **Sync now** shows the preview again. **Pause** stops syncing and leaves the
+records as they are.
+
+Removing a Caddy removes its records too, unless you pick **Remove, keep its records**; then they
+stay as records made by hand.
+
+Caddies also appear on the [topology map](/dashboard/topology), linked to the zones their records are
+in. For the terminal, see the [CLI reference](/cli/caddy); for scripts, the [Caddy API](/api/caddy).

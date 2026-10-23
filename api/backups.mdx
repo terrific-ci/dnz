@@ -1,0 +1,107 @@
+---
+title: "Backups"
+description: "API endpoints for backup targets, runs, archives, restores and the zip of every zone's BIND file."
+---
+
+These endpoints are behind **Settings → Backups** ([Backups and restore](/admin/backups)). They need
+a signed-in superadmin, except where noted: while first-run setup is pending, uploading an archive,
+the dry run and the restore work without signing in, since restoring a backup is the other way to
+set up a new server.
+
+## Endpoints
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/backups` | superadmin | Targets with their status, the latest runs, whether a backup runs now |
+| `POST` | `/api/backups/targets` | superadmin | Add a target |
+| `PUT` | `/api/backups/targets/{id}` | superadmin | Change a target; only the fields sent change |
+| `DELETE` | `/api/backups/targets/{id}` | superadmin | Remove a target (its archives stay) |
+| `POST` | `/api/backups/targets/test` | superadmin | Write, list and delete a test file: `{"id"?, "kind", "config"}` |
+| `GET` | `/api/backups/targets/{id}/files` | superadmin | The archives on a target, newest first |
+| `GET` | `/api/backups/targets/{id}/files/{name}` | superadmin | Download an archive |
+| `DELETE` | `/api/backups/targets/{id}/files/{name}` | superadmin | Delete an archive |
+| `POST` | `/api/backups/run` | superadmin | Back up now (202): `{"target": 3}` (id or name), or `{}` for every enabled target |
+| `GET` | `/api/backups/runs?target=&limit=` | superadmin | Backups made, newest first |
+| `GET` | `/api/backups/runs/{id}` | superadmin | One run; `status` is `running`, `ok` or `failed` |
+| `POST` | `/api/backups/uploads` | superadmin, or setup | The archive as the request body |
+| `POST` | `/api/backups/inspect` | superadmin, or setup | The dry run of a full restore |
+| `POST` | `/api/backups/restore` | superadmin, or setup | Restore everything |
+| `POST` | `/api/backups/restore-zone` | superadmin | Restore one zone, or preview it |
+| `GET` | `/api/export/zones?division=` | `zones.read` | Every zone the caller can read as BIND files in a zip |
+
+## Targets
+
+```json
+{
+  "name": "offsite",
+  "kind": "s3",
+  "config": {
+    "endpoint": "https://s3.eu-central-1.amazonaws.com", "region": "eu-central-1",
+    "bucket": "acme-dns-backups", "prefix": "dnz/prod",
+    "access_key": "AKIA…", "secret_key": "…", "path_style": false
+  },
+  "passphrase": "a long sentence nobody guesses",
+  "schedule": "daily", "schedule_at": "03:00", "schedule_day": 6,
+  "keep_daily": 7, "keep_weekly": 4, "keep_monthly": 6,
+  "include_logs": false, "enabled": true
+}
+```
+
+| Field | |
+| --- | --- |
+| `kind` | `local` (`config.path`), `s3` (as above) or `sftp` (`host`, `port`, `user`, `password` or `private_key`, `key_passphrase`, `path`, `host_key`) |
+| `passphrase` | At least 8 characters; archives are encrypted with it. Never sent back: targets show `"encrypted": true`. `""` stops encrypting |
+| `schedule` | `off`, `hourly`, `daily` or `weekly`, at `schedule_at` (`HH:MM`) on `schedule_day` (0 = Monday … 6, or a day's name) |
+| `keep_*` | Retention, 0 to 1000 each; all 0 keeps every archive |
+
+Secrets (`secret_key`, `password`, `private_key`, `key_passphrase`) come back as `••••••••`. Send
+that, or leave the field out, to keep the stored one. Each target in `GET /api/backups` also has
+`location` and a `status`:
+
+```json
+{
+  "last_ok": { "id": 41, "file": "dnz-backup-20261022-030004Z.zip.enc", "size": 14128, "finished_at": "2026-10-22T03:00:06Z", "…": "…" },
+  "last_failure": null,
+  "failures_in_a_row": 0,
+  "next_run": "2026-10-23T03:00:00Z",
+  "running": false
+}
+```
+
+## Restore
+
+Upload the archive first, or name one on a target:
+
+```bash
+curl -X POST --data-binary @dnz-backup-20261022-030000Z.zip -H "Authorization: Bearer $TOKEN" \
+  https://dns.example.com/api/backups/uploads
+# {"upload": "9f6c…", "size": 14069, "encrypted": false, "manifest": {…}}
+```
+
+`source` is then `{"upload": "9f6c…"}` (kept for a day) or `{"target": 3, "file": "dnz-backup-…zip.enc"}`.
+
+```json
+POST /api/backups/inspect
+{ "source": { "target": 3, "file": "dnz-backup-20261022-030004Z.zip.enc" }, "passphrase": "…" }
+```
+
+answers with the `manifest` (when, which DNZ and schema version, which database, zones, files), the
+`plan` (`zones_added`, `zones_removed`, `zones_changed` with record counts, `zones_same`,
+`users_added`, `users_removed`, `tables` whose row counts change), `warnings`, and `has_data` with
+the `confirm` word when the database has users or zones.
+
+```json
+POST /api/backups/restore
+{ "source": { "upload": "9f6c…" }, "confirm": "RESTORE", "files": true }
+```
+
+answers with `rows`, `tables`, `files` put back, `pre_restore` (where the data from before was
+saved) and `setup_needed`. Every session is signed out.
+
+One zone, previewed with `"apply": false` and restored with `"apply": true`, as a new version of its
+history (a change request with HTTP 202 when the zone needs approval):
+
+```json
+POST /api/backups/restore-zone
+{ "source": { "upload": "9f6c…" }, "zone": "example.com", "apply": true }
+```

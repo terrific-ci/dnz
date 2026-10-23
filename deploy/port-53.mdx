@@ -1,0 +1,82 @@
+---
+title: "Port 53 and systemd-resolved"
+sidebarTitle: "Port 53"
+description: "Free port 53 when systemd-resolved or another DNS server already uses it."
+---
+
+Ubuntu, Debian, Fedora and many other distributions run **systemd-resolved**, which already listens
+on `127.0.0.53:53`. DNZ then can't bind `0.0.0.0:53`:
+
+```text
+error: cannot bind DNS (udp) on 0.0.0.0:53: Address already in use (os error 98)
+Something already serves DNS here. On Ubuntu/Debian it is usually systemd-resolved on 127.0.0.53 ...
+```
+
+See what's using the port:
+
+```bash
+sudo ss -lunp 'sport = :53'
+```
+
+## Option 1: turn off the stub listener (recommended)
+
+<Steps>
+  <Step title="Turn off systemd-resolved's stub listener">
+    ```bash
+    sudo mkdir -p /etc/systemd/resolved.conf.d
+    printf '[Resolve]\nDNSStubListener=no\n' | sudo tee /etc/systemd/resolved.conf.d/dnz.conf
+    ```
+  </Step>
+  <Step title="Repoint /etc/resolv.conf">
+    `/etc/resolv.conf` usually points at the `127.0.0.53` stub, which no longer exists. Point it at
+    systemd-resolved's real DNS list, so this server can still resolve names itself (`apt update`,
+    `curl` and so on):
+
+    ```bash
+    sudo ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+    ```
+
+    <Warning>
+      Skip this and the server can no longer resolve any name once the stub is off.
+    </Warning>
+  </Step>
+  <Step title="Restart systemd-resolved, then DNZ">
+    ```bash
+    sudo systemctl restart systemd-resolved
+    sudo systemctl restart dnz        # or: docker compose restart
+    ```
+  </Step>
+  <Step title="Check">
+    ```bash
+    sudo ss -lunp 'sport = :53'       # only dnz now
+    dig @127.0.0.1 example.com
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Want this server to use DNZ as its own resolver? Put `DNS=127.0.0.1` in
+  `/etc/systemd/resolved.conf.d/dnz.conf` and restart systemd-resolved. If you use encrypted
+  upstreams, add `#ip` to them to avoid a loop; see [upstream addresses](/dns/forwarding#upstream-address-format).
+</Tip>
+
+## Option 2: bind DNZ to one address
+
+Leave systemd-resolved alone and listen only on the server's LAN address:
+
+```bash /etc/dnz/dnz.env
+DNZ_DNS_ADDR=192.168.1.10:53
+```
+
+With Docker, publish the port on that address instead:
+
+```yaml
+    ports:
+      - "192.168.1.10:53:53/udp"
+      - "192.168.1.10:53:53/tcp"
+```
+
+## Other programs on port 53
+
+`dnsmasq`, `bind9`, `unbound` and `pihole-FTL` use port 53 too. Stop that program, for example
+`sudo systemctl disable --now dnsmasq`, or bind DNZ to another address.

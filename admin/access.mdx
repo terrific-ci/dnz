@@ -1,0 +1,94 @@
+---
+title: "Users, divisions and roles"
+description: "Give people access to the divisions they work in, with only the permissions they need."
+---
+
+Access in DNZ has three parts:
+
+- **Divisions** own zones and have their own members. Create one for each team that manages its own
+  zones. Users only see the divisions they're assigned to.
+- **Roles** bundle permissions. Built-in: **Owner**, **Editor**, **Viewer**; you can add your own.
+- **Users** sign in to DNZ and hold one role in each division they belong to.
+
+**Superadmins** have full access to every division, and are the only ones who manage users, roles
+and divisions.
+
+## Permissions
+
+| Permission | Label in the dashboard | Allows | Owner | Editor | Viewer |
+| --- | --- | --- | :-: | :-: | :-: |
+| `zones.read` | View zones | See zones and their records | ✓ | ✓ | ✓ |
+| `zones.write` | Manage zones | Create and delete zones | ✓ | ✓ | |
+| `records.write` | Manage records | Create, edit and delete records | ✓ | ✓ | |
+| `logs.read` | View query logs | See DNS query logs and stats | ✓ | ✓ | ✓ |
+| `members.manage` | Manage members | Add members and assign their roles | ✓ | | |
+| `integrations.manage` | Manage integrations | Connect the division to Cloudflare and other services | ✓ | | |
+| `audit.read` | View audit log | See who changed what in the division | ✓ | | |
+| `filtering.manage` | Manage blocklists | Block or allow domains for the division's client networks | ✓ | | |
+| `tokens.manage` | Manage API tokens | Create and revoke API tokens and DNS update keys | ✓ | | |
+
+Server-wide features are for superadmins only: forwarding, views, replication, proxies, server-wide
+filtering, notifications and **Settings → General**.
+
+## Common tasks
+
+<AccordionGroup>
+  <Accordion title="Create a division" icon="building">
+    **Access → Divisions → Create** (or **Create New → Division**). Superadmins only.
+
+    ```bash
+    dnz division add Radiology --description "Imaging"
+    ```
+  </Accordion>
+  <Accordion title="Add a user" icon="user-plus">
+    **Access → Users → Create** (or **Create New → User**). Give them a password and pick their role
+    in each division; **No access** hides a division from them. Tick superadmin for full access.
+    They must change the password at their first sign-in.
+
+    ```bash
+    dnz user add budi --name "Budi S"             # asks for a password
+    dnz user assign budi --division radiology --role Editor
+    ```
+  </Accordion>
+  <Accordion title="Add a member to your division" icon="users">
+    Division Owners (or anyone with `members.manage`) add people under **Access → Members** and
+    assign their role in that division.
+
+    ```bash
+    dnz division add-member radiology budi --role Editor
+    dnz division rm-member radiology budi
+    ```
+  </Accordion>
+  <Accordion title="Create a custom role" icon="key">
+    **Access → Roles → Create** (or **Create New → Role**), then tick its permissions. Assign it from
+    **Users** or **Members**.
+
+    ```bash
+    dnz role list
+    dnz role permissions
+    ```
+  </Accordion>
+  <Accordion title="Lock someone out or reset a password" icon="user-lock">
+    Turn a user off, or reset their password; they must choose a new one at the next sign-in.
+
+    ```bash
+    dnz user edit budi --active off
+    dnz user edit budi --reset-password
+    dnz user rm budi
+    ```
+  </Accordion>
+</AccordionGroup>
+
+See [CLI: divisions, users, roles and tokens](/cli/access) for every option.
+
+## Automation
+
+Scripts and tools don't sign in as users. Give them an [API token](/api/overview#api-tokens) or a
+[DNS update key](/dns/dynamic-updates), both owned by a division. A token or key never has more
+rights than the person who created it, and loses rights when its creator does.
+
+## Your own account
+
+The account menu (top right) opens your account settings: your profile and divisions, your password
+(changing it signs out your other sessions), and the devices you're signed in on. Sign any of them
+out from there, or with `dnz session revoke`. See [Security](/deploy/security#account-security).

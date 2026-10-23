@@ -1,0 +1,84 @@
+---
+title: "Dashboard tour"
+description: "Find your way around the DNZ dashboard: the top bar, the menu, Find and Create New."
+---
+
+The dashboard is a single-page app built into the `dnz` binary. It works offline (no fonts or
+icons from a CDN), supports light and dark mode, and moves its menu to a bottom dock on phones.
+
+## The top bar
+
+From left to right:
+
+- **DNZ logo**: back to the Overview.
+- **Division switcher**: the division you're working in. Zones, members, tokens and logs follow it.
+  You only see the divisions you're assigned to; superadmins see them all.
+- **The menu**: Overview, Topology, DNS, Proxy, Access, Settings.
+- **Find** (`⌘K` on macOS, `Ctrl+K` elsewhere): jump to any page, zone or setting by typing.
+- **Health** (superadmins): whether the forward DNS upstreams are up, which one is resolving now
+  and which takes over next.
+- **Create New**: a zone, user, role, division or notification provider, depending on what you may
+  do.
+- **Incidents** (superadmins): upstream outages and recoveries.
+- **Account menu**: account settings (profile, password, signed-in sessions), the theme (System,
+  Light or Dark), sign out, and **About DNZ** with the version.
+
+## The menu
+
+What you see depends on your role. Sections you can't use are hidden.
+
+| Menu | Section | Who sees it |
+| --- | --- | --- |
+| **Overview** | | Everyone |
+| **Topology** | | Everyone, limited to what they may see |
+| **DNS** | Zones | `zones.read` |
+| | Query Logs | `logs.read` |
+| | Forwarding | Superadmins |
+| | Filtering | `filtering.manage` |
+| | Views | Superadmins |
+| | Replication | Superadmins |
+| **Proxy** | | Superadmins, while proxying is on and a proxy is listed |
+| **Access** | Members | `zones.read` |
+| | Users, Roles, Divisions | Superadmins |
+| | Audit log | `audit.read` |
+| **Settings** | General, Proxy, Notifications | Superadmins |
+| | Integrations | `integrations.manage` |
+| | API tokens | `tokens.manage` |
+
+## Overview
+
+The landing page sums up the current division:
+
+- **Traffic**: queries over the chosen range (24 hours to 90 days), with answered, NXDOMAIN and
+  SERVFAIL counts. A division's traffic is the names in its zones plus everything clients in its
+  [client networks](/dns/filtering) ask.
+- **Answered by**: how many of those queries were answered from your zones (**Local**), sent to an
+  upstream or a forwarding rule (**Forwarded**), served from the **Cache**, **Blocked**, or ended in
+  an **Error**, each with its share. Click one to open the query log filtered to it.
+- **Top names and clients**, each linking into the query log.
+- **Request flow**: how queries travel from clients through filtering, the cache and forwarding
+  rules to the upstreams. With proxying on, a **Proxy** tab shows visitors → each proxy → its
+  routers and middlewares → services → upstreams.
+- **Zones**: a card per zone.
+- **Recent queries**.
+- **Alerts**: recent upstream outages.
+
+Superadmins also see **forward DNS monitoring** and server usage. See
+[Monitoring](/dashboard/monitoring).
+
+## Pages in this guide
+
+<CardGroup cols={2}>
+  <Card title="Zones and records" icon="globe" href="/dns/zones">
+    DNS → Zones
+  </Card>
+  <Card title="Forwarding" icon="route" href="/dns/forwarding">
+    DNS → Forwarding
+  </Card>
+  <Card title="Users, divisions and roles" icon="users" href="/admin/access">
+    Access
+  </Card>
+  <Card title="Settings" icon="gear" href="/admin/settings">
+    Settings → General
+  </Card>
+</CardGroup>

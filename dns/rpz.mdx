@@ -1,0 +1,210 @@
+---
+title: "Response policy zones"
+description: "Subscribe to RPZ threat feeds by zone transfer or URL, and serve DNZ's own blocklists as an RPZ zone for BIND, Unbound and PowerDNS."
+---
+
+A **response policy zone** (RPZ) is a blocklist in the form of a DNS zone, the format BIND,
+Unbound, Knot Resolver and PowerDNS Recursor share. Threat-intelligence providers (and other
+resolvers) publish them. DNZ can subscribe to them, and serve its own blocklists as one.
+
+Superadmins manage them under **DNS → Filtering → Server-wide → Response policy zones**, with
+`dnz filter rpz`, or the [API](/api/filtering#response-policy-zones). RPZ applies to names outside
+local zones, for every client.
+
+## Order of decisions
+
+1. **Local zones** are answered as always.
+2. An **allow** rule or allow entry that applies to the client lets the name through: RPZ is skipped
+   too.
+3. **RPZ zones**, top to bottom: the first zone with a matching rule decides. Within a zone, a
+   client-address rule comes before a name rule, and an exact name before a wildcard.
+4. **Blocklists**, then **safe search** (see [Filtering](/dns/filtering#order-of-decisions)).
+5. Forwarding. Forwarded (and cached) answers are then checked against the zones' **answer address**
+   rules.
+
+A zone's *passthru* answer goes straight to forwarding, without the blocklists.
+
+## Subscribe to a zone
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Ask the provider for access">
+        Ask the provider to allow DNZ's address, and to give you a TSIG key if they use one.
+      </Step>
+      <Step title="Add the zone">
+        Open **DNS → Filtering**, pick the **Server-wide** scope, and add a zone under **Response
+        policy zones**: its name, the **Source** (zone transfer or URL), the primaries or the zone
+        file URL, and the TSIG key if there is one.
+      </Step>
+      <Step title="Try it as count only">
+        Set its policy to **Count only** first, watch the **hits** on real traffic, then switch to
+        **The zone's actions**.
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz filter rpz add rpz.example.net --primary 192.0.2.53 --tsig-name rpz-key --tsig-secret 'base64…'
+    dnz filter rpz add threats.example --url https://feeds.example.net/threats.rpz --policy disabled
+    dnz filter rpz list
+    dnz filter rpz set 2 --policy given --refresh 1800
+    ```
+
+    See [CLI: filtering](/cli/filtering#response-policy-zones).
+
+  </Tab>
+</Tabs>
+
+| Source | What DNZ does |
+| --- | --- |
+| **Zone transfer** | AXFR from the provider's primaries (one or more, `ip` or `ip:port`), TSIG-signed when a key is given. DNZ asks for the SOA every check and only transfers again when the serial changed. |
+| **URL** | Downloads the zone file over HTTP(S): BIND format, `$ORIGIN` and relative names allowed, up to 64 MB. |
+
+Zones are checked again every hour (`refresh_secs`, 60 seconds to 7 days), and **⟳** fetches one
+now. If a fetch fails, the previous rules stay in use and the error is shown.
+
+Zones are checked in the order shown; the arrows change it.
+
+```bash
+dnz filter rpz refresh 2
+dnz filter rpz order 2 1                       # check zone 2 first
+dnz filter rpz rm 1
+```
+
+### Policy
+
+Each zone can override its own actions:
+
+| Policy | CLI / API | Effect |
+| --- | --- | --- |
+| **The zone's actions** | `given` | What the zone says (default) |
+| **Count only** | `disabled` | Matches are counted (**hits**) but change nothing. Try a new feed this way. |
+| **Always NXDOMAIN** / **NODATA** / **pass through** / **drop** | `nxdomain`, `nodata`, `passthru`, `drop` | Every rule of the zone does this instead |
+
+## What DNZ understands
+
+The owner name of each record (below the zone's name) is the **trigger**; its records are the
+**action**.
+
+| Trigger | Example (zone `rpz.example`) | Matches |
+| --- | --- | --- |
+| Name | `bad.example.rpz.example` | The name `bad.example` |
+| Wildcard | `*.bad.example.rpz.example` | Names under `bad.example` (not itself) |
+| Client address | `24.0.2.0.192.rpz-client-ip.rpz.example` | Queries from `192.0.2.0/24` |
+| Answer address | `32.7.113.0.203.rpz-ip.rpz.example` | Forwarded answers containing `203.0.113.7` |
+
+IPv6 addresses are written word by word in reverse, with `zz` for `::`
+(`48.zz.db8.2001.rpz-ip` is `2001:db8::/48`). NSDNAME and NSIP triggers aren't supported: those
+rules are counted as *skipped*.
+
+| Action | Record | Answer |
+| --- | --- | --- |
+| NXDOMAIN | `CNAME .` | The name doesn't exist |
+| NODATA | `CNAME *.` | The name exists, with no records |
+| Passthru | `CNAME rpz-passthru.` | Answered normally |
+| Drop | `CNAME rpz-drop.` | No answer at all |
+| TCP-only | `CNAME rpz-tcp-only.` | Over UDP an empty truncated answer, so the client retries over TCP; answered normally over TCP |
+| Local data | `A 192.0.2.80`, `TXT "…"`, … | These records, under the query's name (NODATA for other types) |
+| Local CNAME | `CNAME walled-garden.example.net.` | A CNAME there, followed through the upstreams |
+| Wildcard CNAME | `CNAME *.walled.example.net.` | The query name put in front: `x.bad.example` → `x.bad.example.walled.example.net` |
+
+For example, a small zone file served over a URL:
+
+```text threats.rpz
+$ORIGIN threats.example.
+@                     SOA  ns.threats.example. admin.threats.example. 1 3600 600 86400 60
+@                     NS   ns.threats.example.
+bad.example           CNAME .
+*.bad.example         CNAME .
+tracker.example       CNAME rpz-drop.
+ok.bad.example        CNAME rpz-passthru.
+```
+
+## Check and monitor
+
+- Answers changed by RPZ appear in the [query log](/dns/query-logs) as *RPZ*, and under the
+  *Blocked* filter.
+- **Test a domain** on the Filtering page shows which zone and rule would answer a name:
+
+  ```bash
+  dnz filter check bad.example
+  ```
+
+- Each zone shows its rule count, its **hits**, its serial and the last error.
+- Every change is recorded in the [audit log](/admin/audit-log) (`rpz.*`).
+
+## Serve DNZ's blocklists as RPZ
+
+Turn on **Serve the blocklists as an RPZ zone** (default name `rpz.dnz`) and other resolvers can
+transfer DNZ's server-wide lists and rules:
+
+- each blocked domain becomes NXDOMAIN for the name and the names under it,
+- each allowed one becomes passthru.
+
+Lists and rules limited to some clients or a schedule, and division lists, stay out. The SOA serial
+changes whenever the lists do, and resolvers check it every 5 minutes (the SOA refresh).
+
+```bash
+dnz filter rpz serve on --name rpz.dnz
+```
+
+Transfers follow the same access rules as [zone replication](/dns/replication): add the resolver
+under **DNS → Replication → Secondary servers**, by its address without TSIG, or with a TSIG key.
+Then set up the resolver. The Filtering page fills these in, with copy buttons, for the address you
+enter. Here DNZ is reachable at `192.0.2.10`:
+
+<Tabs>
+  <Tab title="BIND">
+
+    ```text named.conf
+    zone "rpz.dnz" {
+        type secondary;
+        primaries { 192.0.2.10; };
+        file "rpz.dnz.db";
+    };
+
+    options {
+        response-policy { zone "rpz.dnz"; };
+    };
+    ```
+
+  </Tab>
+  <Tab title="Unbound">
+
+    ```text unbound.conf
+    server:
+        module-config: "respip validator iterator"
+
+    rpz:
+        name: "rpz.dnz"
+        primary: 192.0.2.10
+        zonefile: "rpz.dnz.zone"
+    ```
+
+  </Tab>
+  <Tab title="PowerDNS Recursor">
+
+    ```lua recursor.lua
+    rpzPrimary("192.0.2.10", "rpz.dnz", { refresh = 300 })
+    ```
+
+  </Tab>
+  <Tab title="Another DNZ">
+
+    Subscribe to it like any RPZ zone, by **Zone transfer** from `192.0.2.10`:
+
+    ```bash
+    dnz filter rpz add rpz.dnz --primary 192.0.2.10
+    ```
+
+  </Tab>
+</Tabs>
+
+<Note>
+  If DNZ answers DNS on a port other than 53, add it to the address on the resolver
+  (`192.0.2.10 port 1053` in BIND, `192.0.2.10@1053` in Unbound, `192.0.2.10:1053` in PowerDNS).
+</Note>

@@ -1,0 +1,69 @@
+---
+title: "Dynamic DNS (DynDNS2)"
+sidebarTitle: "Dynamic DNS"
+description: "Keep a hostname pointed at a changing IP address from routers, ddclient or inadyn."
+---
+
+DNZ supports the **DynDNS2** protocol (`/nic/update`) used by routers (MikroTik, OpenWrt, pfSense,
+Ubiquiti), `ddclient` and `inadyn`. Each call replaces a name's A/AAAA records with the new address.
+
+<Info>
+  DHCP servers, Kubernetes ExternalDNS and `nsupdate` should use standard DNS UPDATE messages with a
+  TSIG key instead. See [Dynamic updates (RFC 2136)](/dns/dynamic-updates).
+</Info>
+
+## Set it up
+
+<Steps>
+  <Step title="Create a token">
+    Under **Settings → API tokens**, create a token with `records.write`, preferably limited to the
+    zone that holds the hostname.
+  </Step>
+  <Step title="Point your client at DNZ">
+    The username can be anything; the token is the password.
+
+    <Tabs>
+      <Tab title="curl / cron">
+        ```bash
+        curl -fsS -u "dnz:$DNZ_TOKEN" "https://dns.example.com/nic/update?hostname=home.example.com"
+        ```
+      </Tab>
+      <Tab title="ddclient">
+        ```ini ddclient.conf
+        protocol=dyndns2
+        use=web
+        server=dns.example.com
+        ssl=yes
+        login=dnz
+        password=dnz_…
+        home.example.com
+        ```
+      </Tab>
+      <Tab title="MikroTik">
+        ```text
+        /tool fetch mode=https url="https://dns.example.com/nic/update?hostname=home.example.com" user=dnz password=dnz_… output=none
+        ```
+      </Tab>
+      <Tab title="HTTP">
+        ```text
+        GET https://dns.example.com/nic/update?hostname=home.example.com&myip=203.0.113.7
+        Authorization: Basic base64("dnz:dnz_…")
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+## How it behaves
+
+- `hostname` takes one or more names, comma-separated, in zones the token can reach.
+- `myip` takes IPv4 and/or IPv6 addresses, comma-separated. When empty, the caller's address is
+  used. Behind a reverse proxy, set `DNZ_TRUSTED_PROXIES` so that is the real address.
+- The name's A/AAAA records are replaced. New records get a TTL of 60.
+- Names that have a CNAME are refused.
+- The answer is one line per hostname: `good <ip>`, `nochg <ip>`, `nohost`, `notfqdn`, `dnserr`,
+  `badauth` or `911`.
+- `/api/ddns/update` works as well as `/nic/update`.
+- Only a zone's default records are changed, never [view](/dns/views) records.
+
+See the [endpoint reference](/api/acme-ddns#dynamic-dns-dyndns2).

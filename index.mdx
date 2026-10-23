@@ -1,0 +1,86 @@
+---
+title: "Introduction"
+description: "DNZ is a self-hosted authoritative DNS server and forwarder, managed from a web dashboard, a CLI and an API."
+---
+
+DNZ is **one binary** that answers DNS for your own zones, forwards everything else to upstream
+resolvers, filters ads and malware, replicates zones to other nameservers and can put your sites
+behind a reverse proxy. You manage it from a dashboard with a Cloudflare-like record editor, from
+the `dnz` command line, or over its HTTP API.
+
+It is built for IT teams that run DNS for internal networks: a hospital, a campus, an office with
+several departments. Each department is a **division** with its own zones, members and permissions.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/get-started/quickstart">
+    Run DNZ, answer your first query and add a record in a few minutes.
+  </Card>
+  <Card title="Deploy to a server" icon="server" href="/deploy/install">
+    Docker or systemd, port 53, HTTPS and backups.
+  </Card>
+  <Card title="Command line" icon="terminal" href="/cli/overview">
+    Everything the dashboard does, from the terminal.
+  </Card>
+  <Card title="API" icon="code" href="/api/overview">
+    API tokens for scripts, Terraform, Kubernetes ExternalDNS and ACME certificates.
+  </Card>
+</CardGroup>
+
+## What DNZ does
+
+<AccordionGroup>
+  <Accordion title="Authoritative DNS" icon="globe">
+    UDP and TCP with EDNS(0). Zones live in the database and are kept in memory: A, AAAA, CNAME, MX, TXT,
+    NS, SRV, CAA, HTTPS/SVCB, PTR, TLSA, SSHFP, NAPTR, DS, URI, DNAME, LOC and wildcards, with an automatic SOA, CNAME chasing and negative
+    answers. A local zone can also override just a few names of a public domain and forward the
+    rest. See [Zones and records](/dns/zones).
+  </Accordion>
+  <Accordion title="Forwarding with health checks" icon="route">
+    Names outside your zones go to upstreams over plain DNS, DoT, DoH, DoQ or DoH3, with a cache,
+    five load-balancing strategies, conditional forwarding per domain or client network, latency
+    monitoring and a step-by-step diagnosis when an upstream fails. See
+    [Forwarding](/dns/forwarding).
+  </Accordion>
+  <Accordion title="Filtering" icon="shield-halved">
+    Server-wide and per-division blocklists (hosts, AdGuard and domain-list formats), your own allow
+    and block rules, and a tester that tells you why a domain is blocked. Safe search, parental
+    control, schedules, rules for some clients only, and response policy zones (RPZ). See
+    [Filtering](/dns/filtering) and [Response policy zones](/dns/rpz).
+  </Accordion>
+  <Accordion title="GeoDNS and health checks" icon="earth-asia">
+    Answer plain A and AAAA records by the client's country or continent, by weight, and only while
+    an HTTP, HTTPS or TCP health check passes. See [GeoDNS and health checks](/dns/geodns).
+  </Accordion>
+  <Accordion title="Split horizon, DNSSEC and encrypted DNS" icon="lock">
+    Answer one name differently inside and outside, sign zones with DNSSEC, and serve DoT, DoH, DoQ
+    and DoH3 to your devices, with response rate limiting (RRL) against amplification. See
+    [Views](/dns/views), [DNSSEC](/dns/dnssec), [Encrypted DNS](/dns/encrypted-dns) and
+    [Rate limiting](/dns/rate-limiting).
+  </Accordion>
+  <Accordion title="Replication" icon="clone">
+    DNZ as primary and/or secondary with AXFR/IXFR, TSIG, NOTIFY and a catalog zone. DNZ servers
+    find each other on the LAN and join with a 6-digit code. See [Replication](/dns/replication).
+  </Accordion>
+  <Accordion title="Proxied records" icon="cloud">
+    Like Cloudflare's orange cloud: DNS answers with a proxy's address and the origin stays hidden.
+    Use Traefik, or DNZ's own Pingora-based **dnz-proxy** with certificates, caching, a firewall and
+    analytics. See [Proxy](/proxy/overview).
+  </Accordion>
+  <Accordion title="Automation and integrations" icon="plug">
+    API tokens, ACME DNS-01 for lego, Traefik and certbot, DynDNS2 for routers, RFC 2136 dynamic
+    updates for Kea and ExternalDNS, Cloudflare sync, and notifications to Telegram, e-mail and
+    webhooks.
+  </Accordion>
+  <Accordion title="Access control and audit" icon="users">
+    Divisions, roles with fine-grained permissions, superadmins, and an audit log of every change.
+    See [Users, divisions and roles](/admin/access).
+  </Accordion>
+</AccordionGroup>
+
+## One program
+
+DNZ is a single program with the dashboard built in. It keeps all of its data in one
+SQLite file, so a backup is one file, or in [Postgres or MySQL](/deploy/database) for large
+installations. It runs on Linux (amd64 and arm64), as a
+[Docker image](/deploy/docker) or a [systemd service](/deploy/systemd). The optional reverse
+proxy, `dnz-proxy`, comes with it.

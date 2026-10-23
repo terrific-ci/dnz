@@ -1,0 +1,288 @@
+---
+title: "Zones and records"
+description: "Create and change zones, records, traffic steering (GeoDNS, weights, health checks) and split-horizon views from the terminal."
+---
+
+These commands do what **DNS → Zones** and **DNS → Views** do in the dashboard. For what zones,
+records and views are, see [Zones and records](/dns/zones), [Import and export](/dns/import-export)
+and [Views](/dns/views).
+
+## Zones
+
+Zones are named by name or id. When you belong to several divisions, commands that create something
+need `--division` (`-d`), given as id, slug or name.
+
+```bash
+dnz zone list [--division it]
+dnz zone add example.com --division it
+dnz zone show example.com                     # details and DNSSEC state
+dnz zone rm example.com                       # the zone and all its records
+```
+
+### Default TTL
+
+Records added without a TTL get the zone's default TTL, 300 seconds unless you change it:
+
+```bash
+dnz zone add example.com --default-ttl 3600
+dnz zone set example.com --default-ttl 600
+```
+
+### Import and export
+
+```bash
+dnz zone add --file example.com.zone          # a new zone from a BIND file (name from $ORIGIN)
+dnz zone export example.com -o example.com.zone
+dnz zone import example.com extra.zone --dry-run
+dnz zone import example.com extra.zone --replace
+```
+
+`zone import` adds records from a BIND zone file and shows a preview first. `--dry-run` only shows
+what would change; `--replace` deletes the zone's current records first. Use `-` as the file name to
+read from standard input. `zone export` prints to standard output unless you give `-o`.
+
+### Turning a zone off
+
+```bash
+dnz zone disable example.com                  # keep it, but stop answering and transferring it
+dnz zone enable example.com
+```
+
+`dnz zone set example.com --enabled off` does the same as `disable`.
+
+### Forwarding names a zone doesn't have
+
+```bash
+dnz zone set example.com --forward-missing off # answer NXDOMAIN for names the zone doesn't have
+dnz zone set example.com --forward-missing on
+```
+
+`--forward-missing` is on by default. It lets a local zone override a few names of a public domain:
+names and record types the zone doesn't have are forwarded to the upstreams instead of answered
+with NXDOMAIN or NODATA. Turn it off for a zone that is the whole truth for its domain.
+
+<Note>
+  DNSSEC-signed zones can't forward: turning DNSSEC on turns forwarding off. Secondary zones never
+  forward.
+</Note>
+
+### DNSSEC and secondary zones
+
+```bash
+dnz zone dnssec example.com                   # settings, keys, a rollover in progress, the DS record
+dnz zone dnssec example.com on                # sign the zone; prints the DS record for the registrar
+dnz zone dnssec example.com --algorithm ed25519 --keys ksk-zsk   # starts a rollover to new keys
+dnz zone dnssec example.com --denial nsec3 --nsec3-iterations 0 --nsec3-salt -
+dnz zone dnssec example.com --zsk-lifetime 90 --ksk-lifetime 0 --cds on
+dnz zone dnssec example.com --roll zsk        # roll a key now: csk, or ksk / zsk with two keys
+dnz zone dnssec example.com --ds-updated      # the registrar has the new DS: the rollover goes on
+dnz zone refresh secondary.example            # secondary zones: check the primary now
+dnz zone refresh secondary.example --full     # transfer the whole zone even if the serial is unchanged
+```
+
+See [DNSSEC](/dns/dnssec) and [Replication](/dns/replication).
+
+## Records
+
+### Picking records
+
+Commands that change records pick them in one of three ways:
+
+- by **name, type and (optionally) value**: `dnz record rm example.com www A 192.0.2.11`
+- by **id**: `--id 42`, or several with `--id 4,7` (ids are in `dnz record list`)
+- by **tag**: `--tag legacy` (repeat for several; a record must carry all of them)
+
+Names may be relative (`www`, `@` for the apex) or full (`www.example.com.`). When more than one
+record matches, the command lists them and stops. Narrow it down, or pass `--all` to act on every
+match.
+
+### Listing
+
+```bash
+dnz record list example.com [--name www] [--type A]
+dnz record list example.com --tag prod
+dnz record list example.com --enabled off
+dnz record list example.com -q "main site"    # text in the name, value or comment
+dnz record tags example.com                   # tags in use and how many records carry each
+```
+
+### Adding
+
+```bash
+dnz record add example.com www A 192.0.2.10 --ttl 300
+dnz record add example.com @ MX 10 mail.example.com     # priority in front, or --priority 10
+dnz record add example.com _sip._tcp SRV 10 5 5060 sip.example.com
+dnz record add example.com @ TXT "v=spf1 mx -all"
+dnz record add example.com _443._tcp.www TLSA 3 1 1 9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08
+dnz record add example.com _ftp._tcp URI 10 1 https://ftp.example.com/   # priority in front, like MX
+dnz record add example.com old DNAME new.example.net   # every name below old.example.com → new.example.net
+dnz record add example.com @ NAPTR '100 10 "S" "SIP+D2U" "" _sip._udp.example.com.'   # quote values with ""
+dnz record add example.com intranet A 10.1.1.1 --view lan
+```
+
+| Option | What it does |
+| --- | --- |
+| `--ttl` | Seconds (default: the zone's default TTL) |
+| `--priority` | MX/SRV priority, if it isn't the first word of the value |
+| `--view` | Only for clients of this split-horizon view |
+| `--comment` | A note on the record |
+| `--tag` | Tags (repeat or comma-separate) |
+| `--proxy` | Serve it through these proxies (name or id) |
+| `--disabled` | Add it turned off |
+
+Put `--` before a value that starts with a dash.
+
+### Changing
+
+```bash
+dnz record edit example.com www A --value 192.0.2.11
+dnz record edit example.com www A 192.0.2.10 --value 192.0.2.12 --ttl 60
+dnz record edit example.com --id 42 --rename web
+dnz record edit example.com www A --comment ""          # clear the comment
+dnz record edit example.com intranet A --view none      # back to every client
+```
+
+`record edit` takes `--rename`, `--value` (alias `--to`), `--ttl`, `--priority`, `--view`,
+`--comment`, `--enabled on|off`, `--add-tag`, `--remove-tag` and `--proxy`.
+
+### Deleting
+
+```bash
+dnz record rm example.com www A 192.0.2.11
+dnz record rm example.com www --all           # every record named www
+dnz record rm example.com --tag legacy --all
+```
+
+### Proxied records
+
+`--proxy` puts an A, AAAA or CNAME record behind one or more proxies, like Cloudflare's orange
+cloud. DNS then answers the name with every proxy's address. Each proxy needs a router for the name
+(see [Proxy routing](/proxy/routing), or let [`dnz proxy route`](/cli/proxy#proxy-routes) set it up).
+
+```bash
+dnz record add example.com shop A 10.0.0.5 --proxy edge-jkt,edge-sgp   # DNS answers with both proxies
+dnz record edit example.com shop --proxy edge-jkt,edge-ams --all       # every A/AAAA/CNAME of the name at once
+dnz record edit example.com shop --proxy none --all                    # back to DNS only
+```
+
+A name's A, AAAA and CNAME records must go through the same proxies, so change them together: leave
+out the type and pass `--all`.
+
+## Traffic steering
+
+`record steer` sets GeoDNS, a weight and a health check on A and AAAA records; `record steering`
+lists a zone's steered records and their health. See [GeoDNS and health checks](/dns/geodns).
+
+```bash
+dnz record steer example.com www A 203.0.113.10 --countries ID,SG
+dnz record steer example.com www A 198.51.100.20 --continents EU
+dnz record steer example.com www A 192.0.2.30 --check https --path /health --interval 15
+dnz record steer example.com www A 192.0.2.30 --check https --test   # run the check once
+dnz record steer example.com api A 192.0.2.1 --weight 9
+dnz record steer example.com api A 192.0.2.2 --weight 1
+dnz record steer example.com api A 192.0.2.2 --off                   # answered as usual again
+dnz record steering example.com                                      # steered records and their health
+```
+
+Records are picked the same way as for other record commands (name, type and value, `--id`,
+`--tag`, `--all`).
+
+| Option | What it does |
+| --- | --- |
+| `--countries` | ISO country codes the address is for, comma-separated (`""` for none) |
+| `--continents` | `AF`, `AN`, `AS`, `EU`, `NA`, `OC`, `SA` (`""` for none) |
+| `--weight` | 0 to 1000 among the name's records; `none` for not weighted |
+| `--check` | Health check: `http`, `https`, `tcp` or `none` |
+| `--port` | Port to check (443 for HTTPS, 80 otherwise) |
+| `--path` | HTTP(S) path |
+| `--host` | Host header and TLS name (default: the record's name) |
+| `--expect` | Healthy status codes, e.g. `200-399` or `200,204` |
+| `--interval` | Seconds between checks (30) |
+| `--timeout` | Milliseconds per check (3000) |
+| `--fall` | Failures in a row before the address leaves DNS answers (3) |
+| `--rise` | Passes in a row before it comes back (2) |
+| `--test` | Run the health check once and print the result; nothing is saved |
+| `--off` | Remove the steering: the record answers as usual |
+
+`--countries`, `--continents` and `--weight none` replace what was set; flags left out keep it. The
+check options need a check, so add `--check` first (or in the same command).
+
+## GeoIP database
+
+GeoDNS places clients with a country database. These commands need a superadmin, except `lookup`.
+
+```bash
+dnz geoip show                                       # the database in use, its source, automatic updates
+dnz geoip download                                   # DB-IP IP to Country Lite unless --url was set
+dnz geoip set --url 'https://download.maxmind.com/…GeoLite2-Country…' --auto-update on
+dnz geoip set --url default                          # back to DB-IP Lite
+dnz geoip lookup 203.0.113.9                         # where an address is, as GeoDNS sees it
+```
+
+`--url` takes a `.mmdb` or `.mmdb.gz` URL; `{year}` and `{month}` are filled in. `--auto-update on`
+downloads it again every month. See [Where clients are](/dns/geodns#where-clients-are).
+
+## Many records at once
+
+`record add-many` adds many records with one value, for example many subdomains on one IP. Every name
+gets the shared value, and a line of `--file` may carry its own value after the name.
+
+```bash
+dnz record add-many example.com A 192.0.2.20 --names app,api,db
+dnz record add-many example.com A 192.0.2.20 --file hosts.txt --tag lab --dry-run
+printf 'mx1 10 mail1.example.com\nmx2 20 mail2.example.com\n' | dnz record add-many example.com MX --file -
+```
+
+A names file holds one name per line, or several separated by commas. `#` starts a comment:
+
+```text hosts.txt
+# monitoring
+grafana, prometheus, loki
+vault
+backup 192.0.2.99        # its own address
+```
+
+The shared value is optional when every line has its own. `add-many` also takes `--ttl`,
+`--priority`, `--view`, `--comment`, `--tag`, `--proxy` and `--disabled`, applied to every record.
+`--dry-run` shows the records without adding them.
+
+<Note>
+  The records are added together, or none at all if one fails: a duplicate, a CNAME clash, a bad
+  value.
+</Note>
+
+## Tags, comments and turning records off
+
+Records can carry a comment and tags, and can be turned off without deleting them. A disabled record
+is kept, but not answered, transferred or signed.
+
+```bash
+dnz record add example.com www A 192.0.2.10 --tag prod,web --comment "Main site"
+dnz record add example.com next A 192.0.2.30 --disabled
+dnz record disable example.com www A 192.0.2.10
+dnz record enable example.com --tag legacy --all
+dnz record tag example.com www --all --add v2 --remove web
+dnz record edit example.com --tag prod --all --ttl 60 --comment "Cut over"
+```
+
+## How bulk changes work
+
+A change to several records (`--all`, or several `--id`s) goes in **one request** that is checked as a
+whole and applied all or nothing, with one serial bump and one audit log entry.
+
+Only the TTL, comment, on/off and tags change in bulk. `--value`, `--rename`, `--priority` and
+`--view` change one record at a time.
+
+The API behind it is described in [Bulk changes](/api/records#bulk-changes).
+
+## Views
+
+Split-horizon views answer a name differently for some client networks. See [Views](/dns/views).
+
+```bash
+dnz view list
+dnz view add lan 10.0.0.0/8 192.168.0.0/16 [--description "Office LAN"]
+dnz view rm lan                               # deletes the view and its records
+```
+
+Add records to a view with `dnz record add … --view lan`.

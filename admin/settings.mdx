@@ -1,0 +1,169 @@
+---
+title: "Server settings"
+sidebarTitle: "Settings"
+description: "Time zone, automatic PTR, the device address, response rate limiting, the GeoIP database, zone history retention, Prometheus metrics, encrypted DNS status and factory reset under Settings → General."
+---
+
+**Settings → General** holds the settings that apply to the whole server. Only superadmins can
+open it.
+
+## Time zone
+
+Every time shown in DNZ and in notifications uses the server's time zone, detected automatically
+(from `TZ` or the system). Pick another one here. Data is stored in UTC, so you can change it at any
+time. It also sets when the [daily summary](/dashboard/monitoring#daily-summary) is sent.
+
+```bash
+dnz settings timezone Asia/Jakarta
+dnz settings timezone server       # follow the server again
+```
+
+## Automatic PTR
+
+With **Automatic PTR (reverse DNS)** on, reverse lookups (`in-addr.arpa`, `ip6.arpa`) are answered
+from your A and AAAA records, with no reverse zone needed. If `www.lab.internal` points at
+`10.0.0.5`, a PTR query for `5.0.0.10.in-addr.arpa` returns `www.lab.internal`. Nothing is written
+to your zones.
+
+- PTR records you add in a reverse zone always win.
+- When several names share an address, all are returned, shortest first.
+- Wildcard records (`*`) are skipped, since they don't name one host.
+- [Views](/dns/views) are followed: a client in a view gets names from its view's records.
+- [Proxied](/proxy/overview) names are skipped.
+
+```bash
+dnz settings auto-ptr on
+```
+
+## Device address
+
+The **Device address** card sets the address devices and DHCP servers use to reach this server's
+DNS. The [setup guides](/get-started/first-run) name it, and so does the
+[Cluster page](/deploy/cluster). Left empty, DNZ works it out from the network interfaces. In a
+Docker container those are the container's own (`172.x.x.x`), so DNZ uses the address you opened
+the UI at, and warns when it can't tell. Set it when DNZ runs in a container or behind NAT. Separate
+several addresses with commas.
+
+Each server of a cluster keeps its own address. `DNZ_ADVERTISE` (or `advertise` in the config file)
+beats what is saved here; the card then only shows it.
+
+```bash
+dnz settings advertise                  # show
+dnz settings advertise 192.168.1.10     # set
+dnz settings advertise --auto           # work it out from the network again
+```
+
+## Response rate limiting (RRL)
+
+The **Response rate limiting (RRL)** card limits identical answers to one client network over UDP,
+like BIND's RRL, against DNS amplification attacks. It is off by default.
+
+| Field | Default | What it does |
+| --- | --- | --- |
+| **Answers / s** | 10 | Identical answers per second to one client network |
+| **NODATA / s**, **NXDOMAIN / s** | 10 | Empty and non-existent answers per second, per zone |
+| **Errors / s** | 10 | SERVFAIL, REFUSED and other errors per second |
+| **Window (s)** | 15 | How long a flood stays limited after it goes quiet |
+| **Slip** | 2 | Every n-th limited answer goes out truncated, so real clients retry over TCP |
+| **IPv4 prefix**, **IPv6 prefix** | 24, 56 | The size of a client network |
+| **Exempt networks** | – | Networks that are never limited, one per line |
+| **Log only** | – | Count what would be limited, but answer everything |
+
+The card shows the counters since the server started: dropped, truncated and *would be limited*.
+Changes take effect right away.
+
+```bash
+dnz settings rrl --enabled on --log-only on
+```
+
+The per-client query limit (`DNZ_RATE_LIMIT`) is a config setting instead. See
+[Rate limiting](/dns/rate-limiting) for how both work and how to choose rates.
+
+## GeoIP database
+
+[GeoDNS](/dns/geodns) answers by the client's country or continent, with a country database in
+MaxMind's `.mmdb` format. DNZ doesn't ship one: the **GeoIP database** card downloads it.
+
+- **Download** (**Update now** once a database is loaded) fetches it now. By default it comes from
+  [DB-IP's IP to Country Lite](https://db-ip.com/db/download/ip-to-country-lite):
+  *IP Geolocation by DB-IP*, free under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Update monthly** downloads the new file each month.
+- **Download from**: any other country `.mmdb` or `.mmdb.gz` URL works instead, such as a MaxMind
+  GeoLite2 Country permalink with your license key. `{year}` and `{month}` in the URL are filled in.
+- **Look up** shows where an address is, as GeoDNS sees it.
+
+```bash
+dnz geoip download
+dnz geoip set --url default --auto-update on
+dnz geoip lookup 203.0.113.9
+```
+
+The file is kept next to the database (`geoip-country.mmdb`). Without it, GeoDNS records answer every
+client with their defaults; weights and health checks work either way.
+
+## DNS64, DNS cookies and NSID
+
+**DNS64** answers AAAA queries for IPv6-only clients behind a NAT64 gateway with addresses made
+from A records. **DNS cookies** (on by default) let clients prove their address so the UDP rate
+limit leaves them alone. **NSID** tells clients that ask which server answered. Each has its card
+here; see [Resolver options](/dns/resolver-options).
+
+```bash
+dnz settings dns64 on --network 2001:db8:aa::/48
+dnz settings cookies on
+dnz settings nsid on --value dns-1.jkt
+```
+
+## Zone history
+
+How long [zone history](/dns/history) is kept: versions older than **Days** (default 365), and
+beyond the newest **Versions per zone** (default 1000), are dropped every hour. `0` means no limit.
+Decided change requests follow the days limit.
+
+```bash
+dnz settings history --keep-days 90 --keep-versions 500
+```
+
+## Prometheus metrics
+
+The **Prometheus metrics** card turns on `/metrics` for Prometheus: on a listen address of its
+own, on the HTTP API with a token, or both. It makes the token and shows a scrape config to paste
+into Prometheus. See [Prometheus and Grafana](/dashboard/prometheus).
+
+## Encrypted DNS
+
+Shows whether DNS over TLS, HTTPS, QUIC and HTTP/3 are on, the hostname and the certificate's
+names and expiry, and any error from reloading the certificate. DoT, DoH, DoQ and DoH3 are turned
+on with a certificate in the configuration. See [Encrypted DNS](/dns/encrypted-dns).
+
+## Factory reset
+
+Erases everything on the server: zones and records, users and divisions, API tokens and update
+keys, proxies, replication, filtering, notifications, settings and logs. The server goes back to
+first-run setup.
+
+<Warning>
+  This can't be undone. [Back up the database](/deploy/backups) first.
+</Warning>
+
+You're asked to type `RESET` to confirm. The config file and the environment stay; with
+`DNZ_ADMIN_PASSWORD` set, that admin is created again.
+
+```bash
+dnz --reset --all          # or: dnz -ra; --yes skips the question
+```
+
+Your saved CLI session for that server is forgotten.
+
+## Other settings pages
+
+| Page | What it holds | See |
+| --- | --- | --- |
+| **Settings → Proxy** | Proxying on/off, the connect key, Traefik and dnz-proxy setup | [Proxy](/proxy/overview) |
+| **Settings → Integrations** | The division's Cloudflare connection, the OAuth client | [Cloudflare](/integrations/cloudflare) |
+| **Settings → API tokens** | API tokens and DNS update keys | [API](/api/overview), [Dynamic updates](/dns/dynamic-updates) |
+| **Settings → Notifications** | Providers, alert thresholds, daily summary | [Notifications](/integrations/notifications) |
+| **Settings → Cluster** | The DNZ servers sharing this database, the leader, adding a node | [Cluster](/deploy/cluster) |
+
+Server settings that can't change while DNZ runs (addresses, database, TLS files) are in the
+[configuration](/deploy/configuration).

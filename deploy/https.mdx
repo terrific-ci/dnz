@@ -1,0 +1,70 @@
+---
+title: "HTTPS and reverse proxies"
+sidebarTitle: "HTTPS"
+description: "Reach the dashboard securely from the network, behind Caddy or nginx or with DNZ's own HTTPS."
+---
+
+By default the dashboard and API listen on `127.0.0.1:8080`, reachable only from the server
+itself. To open them from elsewhere, put an HTTPS reverse proxy in front. HTTPS is **required** for
+*Sign in with Cloudflare*.
+
+<Tabs>
+  <Tab title="Caddy">
+    Caddy gets and renews certificates by itself.
+
+    ```text Caddyfile
+    dns.example.com {
+        reverse_proxy 127.0.0.1:8080
+    }
+    ```
+  </Tab>
+  <Tab title="nginx">
+    ```nginx /etc/nginx/sites-available/dnz
+    server {
+        listen 443 ssl http2;
+        server_name dns.example.com;
+        # ssl_certificate ...; ssl_certificate_key ...;
+        location / {
+            proxy_pass http://127.0.0.1:8080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+    ```
+  </Tab>
+  <Tab title="DNZ itself">
+    With a certificate, DNZ serves the dashboard and API over HTTPS on port 443 itself, together
+    with DNS over TLS, HTTPS, QUIC and HTTP/3:
+
+    ```bash /etc/dnz/dnz.env
+    DNZ_TLS_CERT=/etc/dnz/tls/dns.example.com.crt
+    DNZ_TLS_KEY=/etc/dnz/tls/dns.example.com.key
+    ```
+
+    See [Encrypted DNS](/dns/encrypted-dns) for getting the certificate and the ports.
+  </Tab>
+</Tabs>
+
+## Trust the proxy's forwarded address
+
+Tell DNZ the proxy's address, so the audit log, sign-in lockouts, views and blocklists use the real
+client IP instead of the proxy's:
+
+```bash /etc/dnz/dnz.env
+DNZ_TRUSTED_PROXIES=127.0.0.1,::1
+```
+
+It takes IPs and CIDRs, for example `127.0.0.1,10.0.0.0/8`. On a Docker network, use the network's
+range, such as `172.16.0.0/12`.
+
+## Notes
+
+- HSTS is sent when DNZ is reached over HTTPS, directly or through a proxy that sends
+  `X-Forwarded-Proto: https`.
+- Behind a proxy, `/dns-query` (DNS over HTTPS) works through the plain HTTP port too, so DoH can
+  sit behind the same reverse proxy.
+- For [dnz-proxy](/proxy/dnz-proxy) nodes, the proxy in front of DNZ must not buffer responses (DNZ
+  sends `X-Accel-Buffering: no`).
+- Other DNZ servers can only find this one on the [replication](/dns/replication) radar when its
+  HTTP port listens on the network (`DNZ_HTTP_ADDR=0.0.0.0:8080`).

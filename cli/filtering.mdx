@@ -1,0 +1,187 @@
+---
+title: "Filtering"
+description: "Manage blocklists, allow and block rules, client networks and groups, schedules, safe search, parental control and response policy zones from the terminal."
+---
+
+These commands match **DNS → Filtering** in the dashboard. For how blocklists, rules and client
+networks work together, see [Filtering](/dns/filtering).
+
+## Scope: server-wide or per division
+
+Without `--division` (`-d`), filtering commands work on the **server-wide** lists and rules, which
+needs a superadmin. With `--division`, they work on that division's lists and rules. A division's
+filtering applies to clients in its [client networks](#client-networks).
+
+```bash
+dnz filter show                               # server-wide: mode, lists, rules and networks
+dnz filter show --division it
+```
+
+## Blocklists
+
+Blocklists can be in hosts, AdGuard or domain-list format.
+
+```bash
+dnz filter list presets                       # popular lists to subscribe to
+dnz filter list list [--division it]
+dnz filter list add "HaGeZi Multi Light" https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/light.txt
+dnz filter list add "Ads" https://example.com/hosts.txt --division radiology
+dnz filter list add "Games" https://example.com/games.txt --clients "Kids tablets" --schedule "School hours"
+dnz filter list limit 3 --clients 192.168.1.0/24 --schedule none   # only these clients, always
+dnz filter list limit 3 --clients "" --schedule none               # back to every client, always
+dnz filter list set 2 off                     # turn a list off (or on)
+dnz filter list refresh 2                     # download it again now
+dnz filter list rm 2
+```
+
+## Allow and block rules
+
+A block rule covers the name and everything under it; an allow rule
+means the name is never blocked, even if a list has it.
+
+```bash
+dnz filter rule list [--division it]
+dnz filter rule block ads.example.net
+dnz filter rule allow cdn.example.net --division it --comment "Needed by the LMS"
+dnz filter rule block roblox.com --clients "Kids tablets" --schedule "School hours"
+dnz filter rule limit 7 --clients 10.0.5.0/24
+dnz filter rule rm 5
+```
+
+### Limiting to clients and a schedule
+
+`list add`, `list limit`, `rule block`, `rule allow`, `rule limit`, `parental add` and `safe-search`
+take the same two flags:
+
+| Flag | Takes |
+| --- | --- |
+| `--clients` | Addresses, networks and [client names](#client-groups), comma-separated. `""` means every client. |
+| `--schedule` | A [schedule](#schedules)'s name or id. `none` means always. |
+
+`list limit` and `rule limit` change only the flags you give. See
+[Clients](/dns/filtering#clients-rules-for-some-devices-only).
+
+## Client networks
+
+Client networks decide which division's filtering a client gets.
+
+```bash
+dnz filter network list
+dnz filter network add 10.20.0.0/16 --division radiology [--comment "Radiology VLAN"]
+dnz filter network rm 3
+```
+
+## Client groups
+
+A client group names a set of addresses, so lists and rules can be limited to it by name. Change its
+addresses later and every list and rule that uses it follows.
+
+```bash
+dnz filter client list [--division it]
+dnz filter client add "Kids tablets" 192.168.1.50 192.168.1.51
+dnz filter client add "Guest Wi-Fi" 192.168.50.0/24 --division it --comment "Lobby"
+dnz filter client set 1 --addresses 192.168.1.50,192.168.1.52   # replaces them all
+dnz filter client set 1 --name "Kids devices"
+dnz filter client rm 1
+```
+
+A group can't be deleted while a list or rule still uses it.
+
+## Schedules
+
+Days and a time range, in the server's time zone (`dnz settings timezone`).
+
+```bash
+dnz filter schedule list [--division it]
+dnz filter schedule add "School hours" --days mon-fri --from 07:00 --to 14:00
+dnz filter schedule add Bedtime --days sun-thu --from 21:00 --to 06:00   # runs past midnight
+dnz filter schedule set 2 --to 06:30
+dnz filter schedule rm 2
+```
+
+`--days` takes `mon,tue,…`, a range like `mon-fri`, `weekdays`, `weekend` or `daily` (the default).
+An end before the start runs past midnight, into the next day. A schedule can't be deleted while a
+list or rule still uses it. See [Schedules](/dns/filtering#schedules).
+
+## Safe search
+
+Without flags, `safe-search` shows the settings; with flags, it changes them.
+
+```bash
+dnz filter safe-search                          # show
+dnz filter safe-search --google on --bing on --duckduckgo on --youtube moderate
+dnz filter safe-search --division it --youtube strict --clients "Kids tablets"
+dnz filter safe-search --division it --inherit  # follow the server-wide settings again
+```
+
+| Flag | Takes |
+| --- | --- |
+| `--google`, `--bing`, `--duckduckgo` | `on` or `off` |
+| `--youtube` | `off`, `moderate` or `strict` |
+| `--clients`, `--schedule` | See [Limiting to clients and a schedule](#limiting-to-clients-and-a-schedule) |
+| `--inherit` | A division follows the server-wide safe search again |
+
+See [Safe search](/dns/filtering#safe-search).
+
+## Parental control
+
+```bash
+dnz filter parental list                        # categories and their lists
+dnz filter parental add adult --clients "Kids tablets"
+dnz filter parental add social --all --clients "Kids tablets" --schedule Bedtime
+dnz filter parental add gambling --division it
+```
+
+Categories are `adult`, `gambling`, `social`, `video`, `games`, `piracy` and `drugs`. `parental add`
+subscribes to the category's first list, or to all of them with `--all`. Each one is an ordinary
+blocklist afterwards (`dnz filter list …`). See [Parental control](/dns/filtering#parental-control).
+
+## Response policy zones
+
+RPZ feeds, server-wide only (superadmin). Zones are checked in order; the first match wins.
+
+```bash
+dnz filter rpz list
+dnz filter rpz add rpz.example.net --primary 192.0.2.53 --tsig-name rpz-key --tsig-secret 'base64…'
+dnz filter rpz add threats.example --url https://feeds.example.net/threats.rpz --policy disabled
+dnz filter rpz set 2 --policy given --refresh 1800
+dnz filter rpz set 2 --enabled off
+dnz filter rpz refresh 2                        # fetch now, even if the serial is unchanged
+dnz filter rpz order 2 1                        # check zone 2 first
+dnz filter rpz rm 1
+dnz filter rpz serve on --name rpz.dnz          # the server-wide lists as an RPZ zone
+```
+
+| Flag | What it does |
+| --- | --- |
+| `--primary` | Transfer (AXFR) from these primaries, comma-separated `ip` or `ip:port` |
+| `--url` | Or download the zone file from this URL |
+| `--tsig-name`, `--tsig-algorithm`, `--tsig-secret` | TSIG key for the transfer (`hmac-sha256` by default). The secret can also come from `DNZ_RPZ_TSIG_SECRET`. |
+| `--policy` | `given` (the zone's actions, default), `disabled` (count only), `nxdomain`, `nodata`, `passthru` or `drop` |
+| `--refresh` | How often to check for a new version, in seconds (3600 by default) |
+
+`rpz set` takes `--enabled on|off`, `--policy`, `--refresh`, `--primary` and `--url`. See
+[Response policy zones](/dns/rpz).
+
+## Testing a name
+
+`dnz filter check` tells you whether a name would be blocked, and why:
+
+```bash
+dnz filter check ads.example.net
+dnz filter check ads.example.net --client 10.20.1.5   # as this client would see it
+dnz filter check ads.example.net --division it
+dnz filter check bad.example                          # shows the RPZ rule that would answer
+dnz filter check www.google.com --client 192.168.1.50 # and whether safe search rewrites it
+```
+
+The answer also says whether the entry is only for some clients or a schedule. Schedules are checked
+at the current time.
+
+## What blocked names answer
+
+```bash
+dnz filter mode nxdomain                      # or null_ip
+```
+
+`null_ip` answers `0.0.0.0` / `::`; `nxdomain` answers that the name doesn't exist.

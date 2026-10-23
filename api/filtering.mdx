@@ -1,0 +1,130 @@
+---
+title: "Filtering"
+description: "API endpoints for blocklists, rules, client groups, schedules, safe search and response policy zones."
+---
+
+Filtering endpoints need a signed-in session, not an
+[API token](/api/overview#what-a-token-can-reach). The permissions are the same as in the dashboard:
+a **superadmin** for the server-wide scope (`division_id` absent or `null`), and *Manage blocklists*
+(`filtering.manage`) in a division for that division's scope. Response policy zones are server-wide
+only, so they always need a superadmin.
+
+For how the pieces work together, see [Filtering](/dns/filtering) and
+[Response policy zones](/dns/rpz).
+
+## Endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/filtering?division_id=` | A scope's lists, rules, client groups, schedules and safe search |
+| `PUT` | `/api/filtering/mode` | What blocked names answer: `{"mode": "null_ip"}` or `"nxdomain"` |
+| `GET` | `/api/filtering/check?domain=&client=&division_id=` | Would this name be blocked, and why |
+| `POST` | `/api/filtering/lists` | Subscribe to a list |
+| `PATCH` / `DELETE` | `/api/filtering/lists/{id}` | Change or delete a list |
+| `POST` | `/api/filtering/lists/{id}/refresh` | Download a list again now |
+| `POST` | `/api/filtering/rules` | Add an allow or block rule |
+| `PATCH` / `DELETE` | `/api/filtering/rules/{id}` | Change or delete a rule |
+| `POST` | `/api/filtering/networks` | Map a client network to a division (superadmin) |
+| `DELETE` | `/api/filtering/networks/{id}` | Remove a client network |
+| `POST` | `/api/filtering/clients` | Add a client group |
+| `PATCH` / `DELETE` | `/api/filtering/clients/{id}` | Change or delete a client group |
+| `POST` | `/api/filtering/schedules` | Add a schedule |
+| `PATCH` / `DELETE` | `/api/filtering/schedules/{id}` | Change or delete a schedule |
+| `PUT` | `/api/filtering/safe-search` | Set a scope's safe search |
+| `DELETE` | `/api/filtering/safe-search?division_id=` | A division follows the server-wide safe search again |
+
+`GET /api/filtering` returns `clients`, `schedules`, `safe_search`, `server_safe_search`,
+`categories` (the parental control categories) and the `timezone` schedules run in, next to the lists
+and rules.
+
+## Limiting to clients and a schedule
+
+Lists, rules and safe search take two more fields:
+
+<ParamField body="clients" type="string[]">
+  Addresses, networks or client group names, e.g. `["Kids tablets", "10.0.5.0/24"]`. Empty: every
+  client of the scope.
+</ParamField>
+
+<ParamField body="schedule_id" type="integer">
+  A schedule of the scope (or a server-wide one). `null`: always.
+</ParamField>
+
+| Method | Path | Fields |
+| --- | --- | --- |
+| `POST` | `/api/filtering/lists` | `division_id`, `name`, `url`, `clients`, `schedule_id`, `category` (a parental control category, for lists added from those presets) |
+| `PATCH` | `/api/filtering/lists/{id}` | Any of `enabled`, `name`, `clients`, `schedule_id` |
+| `POST` | `/api/filtering/rules` | `division_id`, `domain`, `action` (`allow` or `block`), `comment`, `clients`, `schedule_id` |
+| `PATCH` | `/api/filtering/rules/{id}` | Any of `comment`, `clients`, `schedule_id` |
+
+```json
+{ "division_id": null, "domain": "roblox.com", "action": "block", "clients": ["Kids tablets"], "schedule_id": 1 }
+```
+
+## Client groups
+
+```json
+{ "division_id": null, "name": "Kids tablets", "addresses": ["192.168.1.50", "192.168.1.51"], "comment": "" }
+```
+
+`PATCH /api/filtering/clients/{id}` takes any of `name`, `addresses` (replaces them all) and
+`comment`. A group can't be deleted while a list or rule still uses it.
+
+## Schedules
+
+```json
+{ "division_id": null, "name": "School hours", "days": ["mon-fri"], "start": "07:00", "end": "14:00" }
+```
+
+`days` takes `mon` … `sun`, ranges (`mon-fri`, `fri-mon`), `weekdays`, `weekend` or `daily`. An `end`
+before the `start` runs past midnight. `PATCH /api/filtering/schedules/{id}` takes any of `name`,
+`days`, `start` and `end`. A schedule can't be deleted while a list or rule still uses it.
+
+## Safe search
+
+`PUT /api/filtering/safe-search`:
+
+```json
+{
+  "division_id": null,
+  "google": true, "bing": false, "duckduckgo": true, "youtube": "strict",
+  "clients": [], "schedule_id": null
+}
+```
+
+`youtube` is `off`, `moderate` or `strict`. A division's settings replace the server-wide ones for
+its devices; `DELETE /api/filtering/safe-search?division_id=3` removes them again.
+
+## Response policy zones
+
+All superadmin.
+
+| Method | Path | Body |
+| --- | --- | --- |
+| `GET` | `/api/rpz` | – (zones with `rule_count`, `hits`, `serial`, `last_error`; `serve`; `served`) |
+| `POST` | `/api/rpz` | Subscribe to a zone, see below |
+| `PATCH` | `/api/rpz/{id}` | Any of `enabled`, `policy`, `refresh_secs`, `primaries`, `url`, `tsig_name`, `tsig_algorithm`, `tsig_secret` (empty keeps the stored one) |
+| `DELETE` | `/api/rpz/{id}` | – |
+| `POST` | `/api/rpz/{id}/refresh` | – (fetches even if the serial is unchanged) |
+| `PUT` | `/api/rpz/order` | `{"ids": [2, 1]}`: the order zones are checked in |
+| `PUT` | `/api/rpz/serve` | `{"enabled": true, "name": "rpz.dnz"}`: serve the server-wide lists as an RPZ zone |
+
+Subscribe by zone transfer:
+
+```json
+{
+  "name": "rpz.example.net", "source": "axfr", "primaries": "192.0.2.53",
+  "tsig_name": "", "tsig_algorithm": "hmac-sha256", "tsig_secret": "",
+  "policy": "given", "refresh_secs": 3600
+}
+```
+
+or by URL, with `"source": "url", "url": "https://…"` instead of `primaries`.
+
+`policy` is `given` (the zone's actions), `disabled` (count only), `nxdomain`, `nodata`, `passthru`
+or `drop`. `refresh_secs` runs from 60 seconds to 7 days.
+
+## Audit log
+
+Every change to lists, rules, networks, client groups, schedules, safe search and response policy
+zones is in the [audit log](/admin/audit-log). RPZ changes are under `rpz.*`.

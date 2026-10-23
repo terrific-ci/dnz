@@ -1,0 +1,100 @@
+---
+title: "Backups"
+description: "Backup targets and schedules, backups now, archives and restores from the command line."
+---
+
+These commands match **Settings → Backups** in the dashboard and need a superadmin. For what a backup
+holds and how restores work, see [Backups and restore](/admin/backups). Targets are named by name or
+id.
+
+## Status and runs
+
+```bash
+dnz backup                      # each target: schedule, retention, last good backup, next run, failures
+dnz backup run                  # every enabled target now; waits and prints each result
+dnz backup run offsite --no-wait
+dnz backup list                 # recent backups
+dnz backup list offsite         # the archives on a target
+dnz backup download offsite dnz-backup-20261022-030000Z.zip.enc
+```
+
+```
+TARGET   KIND           SCHEDULE        KEEP      LAST GOOD BACKUP              NEXT                  FAILING
+nas      sftp           daily at 03:00  7d 4w 6m  2026-10-22T03:00:04Z (13 KB)  2026-10-23T03:00:00Z  -
+offsite  s3, encrypted  daily at 03:00  7d 4w 6m  2026-10-22T03:00:06Z (14 KB)  2026-10-23T03:00:00Z  -
+```
+
+`dnz backup run` exits with an error when a backup fails.
+
+## Targets
+
+```bash
+dnz backup targets                                   # list
+dnz backup targets add usb --kind local --set path=/mnt/usb/dnz
+dnz backup targets add offsite --kind s3 --set endpoint=https://s3.eu-central-1.amazonaws.com \
+  --set region=eu-central-1 --set bucket=acme-dns-backups --set prefix=dnz \
+  --set access_key=AKIA… --set secret_key=… --encrypt
+dnz backup targets add nas --kind sftp --set host=nas.lan --set user=dnz-backup \
+  --set private_key=@dnz-backup --set path=dnz
+dnz backup targets test offsite                      # write, list and delete a test file
+dnz backup targets set offsite --set prefix=dnz/prod
+dnz backup targets set offsite --encrypt             # a new passphrase
+dnz backup targets set usb --no-encrypt --enabled off
+dnz backup targets rm usb                            # its archives stay where they are
+```
+
+| Kind | Settings (`--set KEY=VALUE`, or `--config` JSON / `@file`) |
+| --- | --- |
+| `local` | `path` |
+| `s3` | `endpoint`, `bucket`, `access_key`, `secret_key`, `region` (`us-east-1`; R2: `auto`), `prefix`, `path_style` (on) |
+| `sftp` | `host`, `port` (22), `user`, `password` or `private_key` (`@FILE` reads the key file), `key_passphrase`, `path`, `host_key` (`SHA256:…`) |
+
+`--encrypt` asks for the passphrase twice, or reads `DNZ_BACKUP_PASSPHRASE`. `targets set --set`
+changes only the settings given; stored secrets stay unless you give new ones.
+
+## Schedules and retention
+
+```bash
+dnz backup schedule                                   # every target's
+dnz backup schedule offsite --every daily --at 02:30 --keep-daily 7 --keep-weekly 4 --keep-monthly 12
+dnz backup schedule nas --every weekly --day sun --at 04:00
+dnz backup schedule usb --every hourly --at 00:15     # hourly: only the minute counts
+dnz backup schedule offsite --logs on                 # also the query log and statistics
+dnz backup schedule usb --every off                   # only by hand
+```
+
+## Restore
+
+`SOURCE` is a local file (uploaded to the server), or `TARGET:ARCHIVE` (`TARGET:latest` for the
+newest archive on it).
+
+```bash
+dnz backup restore offsite:latest --dry-run          # what would change
+dnz backup restore offsite:latest                    # asks before replacing everything
+dnz backup restore ./dnz-backup-20261022-030000Z.zip --yes
+dnz backup restore offsite:latest --zone example.com # one zone, as a new history version
+dnz backup restore nas:latest --zone old.example --division 2   # a deleted zone, into division 2
+dnz backup restore offsite:latest --no-files         # leave the GeoIP database and dnz-proxy state
+```
+
+Encrypted archives ask for the passphrase, or read `DNZ_BACKUP_PASSPHRASE`. A full restore signs
+everyone out: run `dnz login` again with an account from the backup. The server saves the data from
+before in its data folder first and prints where.
+
+### Without a server
+
+```bash
+DNZ_DATABASE_URL=sqlite:///var/lib/dnz/dnz.db dnz backup restore dnz-backup-20261022-030000Z.zip --offline
+dnz backup decrypt dnz-backup-20261022-030000Z.zip.enc -o backup.zip
+```
+
+`--offline` restores into `database.url` (from the config file or `DNZ_DATABASE_URL`) on this
+machine, for a new or broken install. Stop DNZ first. `decrypt` writes the plain zip of an
+encrypted archive.
+
+## Every zone as BIND files
+
+```bash
+dnz zone export --all                        # dnz-zones-DATE.zip, every zone you can read
+dnz zone export --all --division it -o it-zones.zip
+```

@@ -1,0 +1,121 @@
+---
+title: "Health check"
+description: "Find the usual mistakes of a DNS install, each with the evidence and a copy-paste fix: port 53, zone delegations, DS records, secondaries, certificates, the clock and weak settings."
+---
+
+The health check looks at a DNZ install for the usual mistakes: port 53 taken, a zone the registrar
+doesn't point at DNZ, a DS record that breaks DNSSEC, a secondary that stopped transferring, a
+certificate about to expire, a clock that is off, a resolver open to the whole internet. Each
+finding says what was seen and how to fix it, with commands or settings to paste.
+
+It runs in three places:
+
+- **Settings → Health check** (superadmins): the findings, **Check now**, muting and the settings. A
+  badge in the header shows how many findings need fixing.
+- **`dnz doctor`** in the terminal, `--json` for scripts. When no server answers (often because port
+  53 is taken), it checks the machine it runs on by itself.
+- **On a schedule** (hourly): findings that turn bad go to the [notification
+  providers](/integrations/notifications) subscribed to `health_check`, and again when they are fine.
+
+Each finding is **fail** (broken), **warning** (fix it), **info** (worth knowing), **skipped**
+(couldn't tell, e.g. no internet to ask) or **ok**.
+
+## Checks of this server
+
+| Check | What it looks at |
+| --- | --- |
+| DNS port (`port53`) | DNZ answers on its DNS address over UDP and TCP; a warning when that isn't port 53. Without a server, `dnz doctor` tries to bind the port and names what holds it: systemd-resolved's stub, dnsmasq, another DNS server |
+| Networks (`listen`) | DNS on `127.0.0.1` only answers this machine |
+| Disk space (`disk`) | Free space where the data folder lives: a warning below 10% or 1 GiB, a failure below 2% |
+| Clock (`clock`) | This clock against NTP (or an HTTPS `Date` header): a warning from 5 s off, a failure from 60 s. DNSSEC, TSIG and certificates depend on it |
+| Open resolver (`open_resolver`) | DNS on a public address resolves any name for anyone, unless a firewall limits who may ask |
+| Rate limiting (`rate_limit`) | Neither the per-client limit nor [RRL](/dns/rate-limiting) is on |
+| Metrics token (`metrics_token`) | `/metrics` on a public address without a token |
+| UI over HTTP (`http_public`) | The UI and API on a public address without TLS |
+
+In a [cluster](/deploy/cluster) each node checks its own machine; its findings carry its name.
+
+## Checks of the install
+
+| Check | What it looks at |
+| --- | --- |
+| DNZ version (`version`) | The latest release on GitHub, asked once a day; can be turned off |
+| Delegation (`delegation:<zone>`) | The NS records the parent zone (your registrar) has for each public zone, against the zone's own: a failure when none point to DNZ, a warning when the lists differ. A zone the parent doesn't delegate is information only |
+| Glue (`glue:<zone>`) | For nameservers inside the zone, the parent's glue against the zone's A/AAAA records |
+| Lame delegation (`lame:<zone>`) | Every nameserver the parent lists answers for the zone itself, authoritatively, with DNZ's serial |
+| DS (`ds:<zone>`) | A signed zone without a DS at the parent, a DS that matches none of DNZ's keys, or a DS left behind for a zone DNZ no longer signs |
+| Reachable (`reachable:<zone>`) | Public resolvers asked for a random name in the zone get DNZ's answer, so the internet reaches it |
+| Secondaries (`secondary:<name>`) | Each [secondary](/dns/replication) has the current SOA serial of every zone |
+| Certificates (`certificate:<id>`) | ACME, uploaded and DoT/HTTPS certificates within 14 days of the end (a failure within 3) |
+| Admin password (`admin_password`) | A superadmin still on the password from `DNZ_ADMIN_PASSWORD` |
+| Password age (`password_age`) | Superadmin passwords older than a year |
+
+Zones under `.local`, `.lan`, `.internal`, `.home.arpa`, `.test` and the like, and reverse zones of
+private ranges, are left out of the delegation checks. Those ask public resolvers to find the parent
+zone, then the parent's nameservers directly, without recursion, the way a resolver walks down from
+the root.
+
+<Note>
+  The delegation checks run from DNZ itself. Behind NAT without hairpinning, DNZ's own public address
+  can time out even though the internet reaches it; check from outside with the `dig` commands the
+  finding gives. A firewall or filtering proxy that answers DNS in the public resolvers' place makes
+  these checks skip, and the finding says so.
+</Note>
+
+## In the terminal
+
+```bash
+dnz doctor                         # check now and print what needs fixing
+dnz doctor --all                   # also what is fine
+dnz doctor --json                  # the whole report, for scripts
+dnz doctor --cached                # the last stored report
+dnz doctor --local                 # this machine only, without the server
+dnz doctor --mute version          # leave a finding out of the badge and the alerts
+```
+
+```console
+$ dnz doctor
+DNZ health check: 1 thing to fix (1 fail, 0 warn, 0 info, 0 skipped, 9 ok)
+checked 2026-10-22T09:14:03Z
+
+FAIL  example.com: DS doesn't match the DNSKEY  (ds:example.com)
+      The DS at com points at a key DNZ doesn't sign example.com with. Validating resolvers fail every answer for the zone (SERVFAIL).
+      · parent: DS 31589 13 2 1C4B…
+      · DNZ: example.com. 3600 IN DS 4242 13 2 AABB…
+      Fix: Replace the DS records at the registrar with:
+          example.com. 3600 IN DS 4242 13 2 AABB…
+```
+
+`dnz doctor` exits with status 1 when a check fails (warnings don't), so it fits a cron job or a CI
+step after a deploy. The ids of what needs fixing:
+
+```bash
+dnz doctor --json | jq -r '.findings[] | select(.status == "fail" or .status == "warn") | .id'
+```
+
+## Schedule, alerts and muting
+
+Every node runs the schedule for its own machine; the cluster's leader also checks the install and
+sends the alerts, so each goes out once. One message lists what turned bad, with the fixes; another
+follows when it's fine again. Subscribe a provider to **Health check finds a problem**.
+
+**Mute** a finding you accept (a resolver meant to be public, a zone you don't delegate yet): it
+stays listed, greyed out, but leaves the badge, the counts and the alerts.
+
+## Settings
+
+| Setting | Default | CLI |
+| --- | --- | --- |
+| Schedule | on, every 60 minutes | `dnz settings health-check --enabled on --interval 30` |
+| Release check | on | `--version-check off` (or `DNZ_VERSION_CHECK=false` before it is saved) |
+| Public resolvers | 1.1.1.1, 8.8.8.8, 9.9.9.9 | `--resolvers 10.0.0.53,1.1.1.1` |
+| Time servers | time.cloudflare.com, pool.ntp.org | `--time-servers ntp.internal` (`""` turns the clock check off) |
+| Certificates | 14 days | `--certificate-days 21` |
+| Disk space | 10% free | `--disk-percent 15` |
+| Password age | 365 days | `--password-days 0` turns it off |
+
+## Metrics
+
+With [Prometheus metrics](/dashboard/prometheus) on: `dnz_health_findings{status}` (findings by
+status, muted ones left out), `dnz_health_finding_problem{id, check, status}` (1 per finding that
+needs fixing) and `dnz_health_last_check_timestamp_seconds`.

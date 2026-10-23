@@ -1,0 +1,109 @@
+---
+title: "Docker"
+description: "Run DNZ with Docker Compose: ports, the data volume and environment settings."
+---
+
+The image is distroless and runs as a non-root user. It listens for DNS on port **53** (UDP and
+TCP) and serves the dashboard on **8080**, with data in the `/data` volume. Docker lets containers
+use ports below 1024 without root.
+
+Save this as `docker-compose.yml`:
+
+```yaml docker-compose.yml
+services:
+  dnz:
+    image: terrificci/dnz:latest
+    restart: unless-stopped
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      # Put an HTTPS reverse proxy in front for remote access (needed for
+      # Sign in with Cloudflare); then publish this on 127.0.0.1 only.
+      - "8080:8080"
+      # With a certificate (DNZ_TLS_CERT / DNZ_TLS_KEY), DNS over TLS and QUIC,
+      # HTTPS and DoH over HTTP/3:
+      # - "853:853/tcp"
+      # - "853:853/udp"
+      # - "443:443/tcp"
+      # - "443:443/udp"
+    volumes:
+      - dnz-data:/data
+    environment:
+      TZ: Asia/Jakarta
+      DNZ_INSTANCE_NAME: dnz
+      # Uncomment to create the first admin without the setup page:
+      # DNZ_ADMIN_USERNAME: admin
+      # DNZ_ADMIN_PASSWORD: change-me-please
+      # Behind a reverse proxy on the Docker network, so the audit log shows real client IPs:
+      # DNZ_TRUSTED_PROXIES: 172.16.0.0/12
+      # The host's LAN address, which the setup guides tell devices to use
+      # (inside the container DNZ only sees the container's own address;
+      # also settable under Settings → General → Device address):
+      # DNZ_ADVERTISE: 192.168.1.10
+
+volumes:
+  dnz-data:
+```
+
+Then start it:
+
+```bash
+docker compose up -d
+docker compose logs -f dnz
+```
+
+Open `http://<server>:8080` and finish the [setup page](/get-started/first-run).
+
+## Settings
+
+Settings go in the `environment` block. The ones you'll usually want:
+
+| Variable | Purpose |
+| --- | --- |
+| `TZ` | The server's default time zone, e.g. `Europe/Berlin` |
+| `DNZ_INSTANCE_NAME` | Name shown in notifications, replication and discovery |
+| `DNZ_ADMIN_USERNAME` / `DNZ_ADMIN_PASSWORD` | Create the first admin at startup (see [First run](/get-started/first-run)) |
+| `DNZ_TRUSTED_PROXIES` | Reverse proxies whose `X-Forwarded-For` is trusted |
+| `DNZ_ADVERTISE` | The host's LAN address, for the setup guides (see below; also settable in the UI) |
+| `DNZ_TLS_CERT` / `DNZ_TLS_KEY` | Turn on DoT, DoH, DoQ, DoH3 and HTTPS (see [Encrypted DNS](/dns/encrypted-dns)) |
+
+Every setting is listed in [Configuration](/deploy/configuration). The image already sets
+`DNZ_DNS_ADDR=0.0.0.0:53`, `DNZ_HTTP_ADDR=0.0.0.0:8080` and
+`DNZ_DATABASE_URL=sqlite:///data/dnz.db`. Because the environment beats the config file, change
+those in the environment, not in a mounted `dnz.toml`.
+
+On a Docker bridge network DNZ only sees the container's own address (`172.x.x.x`), which other
+devices can't reach. The setup guides (the setup wizard's last step) then use the address you opened
+the UI at, so open it at the host's LAN IP (`http://192.168.1.10:8080`, not `localhost`). Or set
+the host's LAN IP under [Settings → General → Device address](/admin/settings#device-address) (the
+wizard's last step offers it too), or with `DNZ_ADVERTISE`.
+
+To keep the data in Postgres instead, see [Docker with Postgres](/deploy/database#docker-with-postgres).
+
+## Health
+
+The image has a `HEALTHCHECK` that runs `dnz healthcheck`, so `docker ps` shows `healthy` once the
+API answers. If it shows `unhealthy`, check `docker compose logs dnz`: usually a port that couldn't
+be bound or a `/data` volume that isn't writable.
+
+## Port 53 on the host
+
+Publishing `53:53` fails when something on the host already uses port 53, most often
+systemd-resolved. Either free the port (see [Port 53 and systemd-resolved](/deploy/port-53)), or
+publish on one address only:
+
+```yaml
+    ports:
+      - "192.168.1.10:53:53/udp"
+      - "192.168.1.10:53:53/tcp"
+```
+
+## Updating
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+Database migrations run automatically at startup. Back up the volume first; see
+[Backups and updates](/deploy/backups). Pin a version tag such as `terrificci/dnz:1.0.0` instead of
+`latest` to choose when you update.

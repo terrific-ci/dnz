@@ -1,0 +1,45 @@
+---
+title: "Audit log"
+description: "Who changed what, when, and from which IP address."
+---
+
+**Access → Audit log** lists every change made in DNZ, newest first. It covers:
+
+- zones and records, with each record **before and after** the change,
+- users, roles, divisions and members,
+- forwarding, notifications, Cloudflare and replication,
+- filtering lists, rules and client networks,
+- proxies, certificates and API tokens,
+- sign-ins, including failed ones and lockouts (`user.login_failed`, `user.login_locked`).
+
+Passwords and secrets are never logged. Entries are kept for **365 days**.
+
+## Who sees what
+
+- **Superadmins** see every division's entries.
+- Other users see the divisions where they have `audit.read` (Owners do by default).
+
+## Who made a change
+
+| Changed by | Shown as |
+| --- | --- |
+| A person in the dashboard or CLI | Their username |
+| An [API token](/api/overview#api-tokens) | `<creator> via <token name>` |
+| A [DNS update key](/dns/dynamic-updates) | `<creator> via <key>`, as *changed records by DNS UPDATE* |
+| [Records from Traefik's routers](/proxy/traefik-records) | *Traefik (proxy name)*, with the routers it came from |
+
+Bulk record changes are written as one `record.bulk` entry holding every record before and after.
+
+The IP address is the client's. Behind a reverse proxy, set `DNZ_TRUSTED_PROXIES`, or every entry
+shows the proxy's address. See [HTTPS and reverse proxies](/deploy/https).
+
+## Search and filter
+
+Search by text (a name, an address, a user) and filter by category. From the terminal:
+
+```bash
+dnz audit                                   # newest first
+dnz audit --division it --category record
+dnz audit --query 192.0.2.10 --limit 200
+dnz audit --before 1234                     # the next page
+```

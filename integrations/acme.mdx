@@ -1,0 +1,92 @@
+---
+title: "ACME DNS-01 certificates"
+sidebarTitle: "ACME (lego, Traefik, certbot)"
+description: "Get Let's Encrypt certificates, including wildcards, with DNS-01 challenges answered by DNZ."
+---
+
+DNZ speaks the **httpreq** protocol of [lego](https://go-acme.github.io/lego/dns/httpreq/), which
+Traefik uses too, so these tools can create the `_acme-challenge` TXT record in DNZ and remove it
+afterwards.
+
+<Note>
+  For the CA to see the record, DNZ must be the zone's public nameserver (the zone is delegated to
+  DNZ), or `_acme-challenge` in public DNS must be a CNAME to a name DNZ serves.
+</Note>
+
+## Create a token
+
+Under **Settings → API tokens → Create token**, give the token `records.write`, preferably limited
+to the zones that need certificates. Or:
+
+```bash
+dnz token create certbot -p records.write,zones.read -z example.com --expires-in-days 90
+```
+
+See [API tokens](/api/overview#api-tokens).
+
+## Configure your client
+
+<Tabs>
+  <Tab title="lego">
+    ```bash
+    HTTPREQ_ENDPOINT=https://dns.example.com/api/acme/httpreq \
+    HTTPREQ_USERNAME=dnz \
+    HTTPREQ_PASSWORD=dnz_… \
+    lego --dns httpreq --domains example.com --domains '*.example.com' --email you@example.com run
+    ```
+  </Tab>
+  <Tab title="Traefik">
+    ```yaml traefik.yml
+    certificatesResolvers:
+      dnz:
+        acme:
+          email: you@example.com
+          storage: /letsencrypt/acme.json
+          dnsChallenge:
+            provider: httpreq
+    ```
+
+    And in Traefik's environment:
+
+    ```bash
+    HTTPREQ_ENDPOINT=https://dns.example.com/api/acme/httpreq
+    HTTPREQ_USERNAME=dnz
+    HTTPREQ_PASSWORD=dnz_…
+    ```
+  </Tab>
+  <Tab title="certbot">
+    A manual hook that calls DNZ:
+
+    ```bash
+    cat > /etc/letsencrypt/dnz-hook.sh <<'EOF'
+    #!/bin/sh
+    # certbot --manual-auth-hook / --manual-cleanup-hook
+    ACTION=present; [ -n "$CERTBOT_AUTH_OUTPUT" ] && ACTION=cleanup
+    curl -fsS -X POST "https://dns.example.com/api/acme/httpreq/$ACTION" \
+      -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+      -d "{\"fqdn\":\"_acme-challenge.$CERTBOT_DOMAIN.\",\"value\":\"$CERTBOT_VALIDATION\"}"
+    [ "$ACTION" = present ] && sleep 5
+    echo done
+    EOF
+    chmod +x /etc/letsencrypt/dnz-hook.sh
+
+    DNZ_TOKEN=dnz_… certbot certonly --manual --preferred-challenges dns \
+      --manual-auth-hook /etc/letsencrypt/dnz-hook.sh \
+      --manual-cleanup-hook /etc/letsencrypt/dnz-hook.sh \
+      -d example.com -d '*.example.com'
+    ```
+  </Tab>
+</Tabs>
+
+The httpreq username can be anything; the token is the password. DNZ creates a TXT record with a
+TTL of 60 in the matching zone and deletes it on cleanup. See the
+[endpoint reference](/api/acme-ddns).
+
+## Other ways
+
+- **RFC 2136**: certbot's `dns-rfc2136` plugin and lego/Traefik's `rfc2136` provider can use a TSIG
+  key limited to `TXT` at `_acme-challenge.*`. See [Dynamic updates](/dns/dynamic-updates).
+- **dnz-proxy** gets certificates itself, with no client to run. See
+  [Certificates](/proxy/certificates).
+- **DNZ's own certificate** for DoT/DoH can come from lego with this endpoint. See
+  [Encrypted DNS](/dns/encrypted-dns).

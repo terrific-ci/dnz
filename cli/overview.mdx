@@ -1,0 +1,192 @@
+---
+title: "Command line"
+description: "Manage a DNZ server from the terminal with the same dnz binary that runs it."
+---
+
+Everything the dashboard does can also be done from the terminal with the same `dnz` binary.
+Without a command, `dnz` runs the server. Every other command manages a running server through its
+[HTTP API](/api/overview).
+
+Because the CLI goes through the API:
+
+- it follows the **same permissions** as the dashboard,
+- it **validates input the same way**,
+- every change shows up in the [audit log](/admin/audit-log) under your name.
+
+Use it on a server without the web UI, over SSH, in scripts and cron jobs, or simply when typing is
+faster than clicking.
+
+## A quick example
+
+```bash
+dnz login
+dnz zone add example.com
+dnz record add example.com www A 192.0.2.10
+dnz record list example.com
+```
+
+`dnz login` signs you in to this machine's server and saves the session, so the next commands need
+no password. See [Authentication](/cli/authentication).
+
+## Getting help
+
+`dnz --help` lists every command, and `dnz <command> --help` lists every option of a command:
+
+```bash
+dnz --help
+dnz record --help
+dnz record add --help
+```
+
+Most command groups have a plural alias, so `dnz zones list` works as well as `dnz zone list`.
+Shorter aliases exist too: `fwd` for `forwarding`, `repl` for `replication`, `cf` for
+`cloudflare`, `ls` for `list` and `delete` for `rm`.
+
+## Options every command takes
+
+| Option | Environment | What it does |
+| --- | --- | --- |
+| `-s`, `--server <URL>` | `DNZ_SERVER` | The server to manage, e.g. `http://10.0.0.5:8080` |
+| `--token <TOKEN>` | `DNZ_TOKEN` | Use an API token (`dnz_…`) instead of the saved session |
+| `--ca-cert <FILE>` | `DNZ_CA_CERT` | PEM bundle of CA certificates for an `https://` server signed by a private CA |
+| `--json` | – | Print the API's JSON instead of tables |
+| `-y`, `--yes` | – | Don't ask before deleting or replacing |
+| `-c`, `--config <FILE>` | `DNZ_CONFIG` | Config file (default: `./dnz.toml`, then `/etc/dnz/dnz.toml`) |
+
+## Output
+
+Commands print tables. Add `--json` to get the API's JSON instead, for example to feed `jq`:
+
+```bash
+dnz --json zone list | jq -r '.[].name'
+```
+
+Commands that delete or replace something ask first. `--yes` (`-y`) skips the question.
+
+<Warning>
+  Without a terminal (cron, CI), commands that delete or replace something **refuse** unless you
+  pass `--yes`.
+</Warning>
+
+## Which server a command talks to
+
+The CLI picks the server in this order:
+
+1. `--server`
+2. `DNZ_SERVER`
+3. the last server you signed in to
+4. this machine's `http.addr` from the [config file](/deploy/configuration)
+
+So on the DNZ server itself, `dnz login` with no options is usually all you need. From your laptop,
+sign in once with `--server` and later commands go to that server.
+
+## Running without the web UI
+
+DNZ can run headless, managed only from the CLI and the API. Turn the UI off in one of three ways:
+
+<CodeGroup>
+
+```toml /etc/dnz/dnz.toml
+[http]
+ui = false
+```
+
+```bash Environment
+DNZ_UI=false
+```
+
+```bash Flag
+dnz --no-ui
+```
+
+</CodeGroup>
+
+DNS and the API keep running. The API stays at `http.addr` (default `127.0.0.1:8080`, so only this
+machine can reach it), and `/` answers that the UI is off.
+
+### First-run setup from the terminal
+
+On a new server with no users yet, create the first admin with `dnz setup`:
+
+```bash
+dnz setup
+```
+
+It asks for the admin's username and password, the first division and the upstream resolvers. You're
+signed in when it's done.
+
+To run it without questions, pass everything as options and put the password in `DNZ_PASSWORD`:
+
+```bash
+DNZ_PASSWORD='a-long-password' dnz setup --username admin --division IT \
+  --upstream 1.1.1.1,9.9.9.9 --zone example.com
+```
+
+| Option | What it sets |
+| --- | --- |
+| `-u`, `--username` | The first superadmin's username |
+| `--name`, `--email` | Their display name and email |
+| `--division` | Name of the first division |
+| `--upstream` | Upstream resolvers (repeat or comma-separate) |
+| `--strategy` | Forwarding strategy: `failover`, `wrr`, `p2c`, `hrw`, `least_time` |
+| `--zone` | Create this first zone |
+
+<Tip>
+  For Docker and other automated installs, set `DNZ_ADMIN_PASSWORD` (and optionally
+  `DNZ_ADMIN_USERNAME`, default `admin`) instead: the admin is created on start and setup is
+  skipped. See [First run](/get-started/first-run).
+</Tip>
+
+## Commands
+
+| Command | Manages | Page |
+| --- | --- | --- |
+| `login`, `logout`, `whoami`, `passwd`, `session` | Your sign-in | [Authentication](/cli/authentication) |
+| `zone`, `record`, `view` | Zones, records, split-horizon views | [Zones and records](/cli/zones-records) |
+| `division`, `user`, `role`, `token`, `update-key` | Access and credentials | [Access](/cli/access) |
+| `forwarding` | Upstreams, strategy, conditional rules, diagnosis | [Forwarding](/cli/forwarding) |
+| `filter` | Blocklists, allow/block rules, client networks | [Filtering](/cli/filtering) |
+| `replication` | Primaries, secondaries, join requests | [Replication](/cli/replication) |
+| `proxy` | Proxy routes and dnz-proxy nodes | [Proxy](/cli/proxy) |
+| `cloudflare` (`cf`) | A division's Cloudflare connection | [Cloudflare](/cli/cloudflare) |
+| `notify` | Notification providers and alerts | [Notifications](/cli/notifications) |
+| `backup` | Backup targets, schedules, backups now, archives and restores | [Backups](/cli/backups) |
+| `logs`, `stats`, `audit`, `topology`, `settings` | Monitoring and server settings | [Monitoring](/cli/monitoring) |
+| `config`, `db`, `healthcheck`, `--reset` | Configuration, moving to Postgres or MySQL, maintenance | [Maintenance](/cli/maintenance) |
+| `externaldns-webhook` | ExternalDNS's webhook provider, run as a sidecar next to ExternalDNS | [Kubernetes](/integrations/kubernetes) |
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/cli/authentication">
+    Sign in, API tokens for scripts, private CAs and sessions.
+  </Card>
+  <Card title="Zones and records" icon="globe" href="/cli/zones-records">
+    Zones, records, bulk changes, tags and views.
+  </Card>
+  <Card title="Access" icon="users" href="/cli/access">
+    Divisions, users, roles, API tokens and update keys.
+  </Card>
+  <Card title="Forwarding" icon="route" href="/cli/forwarding">
+    Upstreams, strategies, rules and diagnosis.
+  </Card>
+  <Card title="Filtering" icon="shield-halved" href="/cli/filtering">
+    Blocklists, rules and client networks.
+  </Card>
+  <Card title="Replication" icon="clone" href="/cli/replication">
+    Primary and secondary servers, join codes.
+  </Card>
+  <Card title="Proxy" icon="cloud" href="/cli/proxy">
+    Proxy routes and dnz-proxy nodes.
+  </Card>
+  <Card title="Cloudflare" icon="cloudflare" href="/cli/cloudflare">
+    Connect, import and push zones.
+  </Card>
+  <Card title="Notifications" icon="bell" href="/cli/notifications">
+    Telegram, email and webhook providers, alert thresholds.
+  </Card>
+  <Card title="Monitoring" icon="chart-line" href="/cli/monitoring">
+    Query log, stats, audit log, topology and settings.
+  </Card>
+  <Card title="Maintenance" icon="wrench" href="/cli/maintenance">
+    Configuration, health checks, version and factory reset.
+  </Card>
+</CardGroup>

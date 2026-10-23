@@ -1,0 +1,120 @@
+---
+title: "Authentication"
+description: "Sign in from the CLI, use API tokens in scripts, trust a private CA and manage your sessions."
+---
+
+The CLI talks to DNZ's API, so it needs to know who you are. Sign in once with `dnz login` and the
+session is saved for later commands. In scripts, use an API token instead.
+
+## Signing in
+
+```bash
+dnz login                                   # this machine's server (from the config file)
+dnz login --server http://10.0.0.5:8080     # another server
+dnz login -u admin                          # give the username up front
+dnz whoami                                  # who you are, and your divisions and roles
+dnz passwd                                  # change your password
+dnz logout                                  # sign out and forget the saved session
+```
+
+`dnz login` asks for your username and password. If someone else set your password (a new account, or
+an admin reset it), `dnz login` asks you for a new one right away.
+
+### Where the session is saved
+
+The session is saved in `~/.config/dnz/credentials.toml`, readable only by you. If
+`XDG_CONFIG_HOME` is set, it goes to `$XDG_CONFIG_HOME/dnz/credentials.toml` instead, and
+`DNZ_CREDENTIALS` points it at any file you choose.
+
+The last server you signed in to becomes the default. Pick another one with `--server` or
+`DNZ_SERVER`.
+
+### Which server a command talks to
+
+1. `--server`
+2. `DNZ_SERVER`
+3. the last server you signed in to
+4. this machine's `http.addr` from the [config file](/deploy/configuration)
+
+## API tokens for scripts
+
+For cron jobs, CI and other scripts, use an **API token** instead of a session. Pass it with
+`--token dnz_…` or the `DNZ_TOKEN` environment variable:
+
+```bash
+export DNZ_TOKEN=dnz_…
+dnz whoami                     # the token's name, division, permissions and zones
+dnz record list example.com
+```
+
+A token belongs to one division and only reaches zones, records and query logs. Commands for
+users, roles, settings and the rest need a normal sign-in. Create tokens with
+[`dnz token create`](/cli/access#api-tokens); the token is printed once, on its own line, so a script
+can capture it:
+
+```bash
+TOKEN=$(dnz token create ci -p zones.read)
+```
+
+See [API tokens](/api/overview#api-tokens) for what a token can and can't do.
+
+## Passwords without a terminal
+
+When there is no terminal to type a password in, the CLI reads it from the environment:
+
+| Variable | Used for |
+| --- | --- |
+| `DNZ_PASSWORD` | Your password: `dnz login`, the current password for `dnz passwd`, the admin password for `dnz setup` |
+| `DNZ_NEW_PASSWORD` | A new password: `dnz passwd`, the forced change at sign-in, `dnz user add`, `dnz user edit --reset-password` |
+
+```bash
+DNZ_PASSWORD="$ADMIN_PASSWORD" dnz login --server http://10.0.0.5:8080 -u admin
+```
+
+Passwords need at least 10 characters.
+
+## Servers with a private CA
+
+If the server is on `https://` with a certificate from a private CA (step-ca, an internal PKI), pass
+the CA certificates as a PEM bundle with `--ca-cert` (or `DNZ_CA_CERT`) when you sign in:
+
+```bash
+dnz login --server https://dnz.internal --ca-cert /etc/ssl/internal-ca.pem
+```
+
+The path is saved with the session, so later commands trust it too. The public web roots stay
+trusted as well.
+
+## Sessions
+
+You can be signed in from several places: the dashboard in a browser, the CLI on your laptop, the CLI
+on the server. List them and sign out the ones you don't need:
+
+```bash
+dnz session list                   # where you are signed in
+dnz session revoke 12              # sign out one of them
+dnz session revoke --others        # every session but this one
+```
+
+The dashboard shows the same list under **Account**. Sessions last 168 hours and are signed out after
+72 hours unused; `DNZ_SESSION_TTL_HOURS` and `DNZ_SESSION_IDLE_HOURS` change that (see
+[Configuration](/deploy/configuration)).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Not signed in: run dnz login">
+    There is no saved session for that server. Check which server the command picked (the order is
+    above), then sign in to it, or pass `--token`.
+  </Accordion>
+  <Accordion title="A command works in the shell but not in cron">
+    Cron has no terminal: pass `--yes` to commands that delete or replace something, and give
+    passwords through `DNZ_PASSWORD` / `DNZ_NEW_PASSWORD`, or better, use an API token. Also check
+    that cron runs as the same user, since the credentials file is per user (or set
+    `DNZ_CREDENTIALS`).
+  </Accordion>
+  <Accordion title="Certificate errors on an https:// server">
+    The server's certificate comes from a CA your machine doesn't trust. Sign in again with
+    `--ca-cert` pointing at the CA bundle.
+  </Accordion>
+</AccordionGroup>

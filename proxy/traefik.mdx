@@ -1,0 +1,240 @@
+---
+title: "Connecting Traefik"
+description: "Point Traefik's HTTP provider at DNZ, so each Traefik serves the routers, services and middlewares set up for it."
+---
+
+With the Traefik backend, DNZ doesn't run the proxy. Each proxy is a [Traefik](https://traefik.io/)
+v3 that polls DNZ through Traefik's
+[HTTP provider](https://doc.traefik.io/traefik/providers/http/) and serves what DNZ hands it. You can
+connect several Traefiks, for example one per site, each with its own routers.
+
+Traefik can run anywhere DNZ is reachable from: on the same machine, on another server, or one you
+already have.
+
+<Note>
+  Turn proxying on first: **Settings → Proxy → Traefik**. See
+  [Turning proxying on](/proxy/overview#turning-proxying-on).
+</Note>
+
+## Setting it up
+
+<Steps>
+  <Step title="Open the setup guide">
+    Go to **Settings → Proxy → Set up Traefik**. Everything in it is filled in, ready to copy as it
+    is.
+  </Step>
+  <Step title="Check DNZ's address">
+    **DNZ address, as Traefik reaches it** is filled in from your browser. Change it when Traefik
+    reaches DNZ another way.
+
+    A `localhost` address only works for a Traefik on the same machine. For one elsewhere, use DNZ's
+    LAN or public address and start DNZ with `DNZ_HTTP_ADDR=0.0.0.0:8080`, or put DNZ behind a
+    reverse proxy. See [HTTPS](/deploy/https).
+  </Step>
+  <Step title="Configure Traefik">
+    Pick one:
+
+    - **I already have Traefik**: a block for its static configuration, or the same as command-line
+      flags.
+    - **Install a new one (Docker)**: one command to paste on the Traefik server. It writes
+      `~/traefik/traefik.yml` and `docker-compose.yml` and starts Traefik on ports 80 and 443, and
+      8080 for its API.
+  </Step>
+  <Step title="Add the proxy in DNZ">
+    On the **Proxy** page, **Add proxy** with the Traefik's address, or approve it when DNZ detects
+    it. See [How DNZ recognizes a Traefik](#how-dnz-recognizes-a-traefik).
+  </Step>
+</Steps>
+
+Every Traefik uses the same configuration, with the server's **connect key**:
+
+```yaml traefik.yml
+providers:
+  http:
+    endpoint: "https://dnz.example.com/api/proxy/traefik"
+    pollInterval: "5s"
+    headers:
+      Authorization: "Bearer dnzp_…"
+```
+
+Traefik must be able to reach DNZ's HTTP address (`DNZ_HTTP_ADDR`, `127.0.0.1:8080` by default).
+
+The key also works as the password of HTTP Basic auth, with any user name, so this works too:
+
+```yaml traefik.yml
+providers:
+  http:
+    endpoint: "https://traefik:dnzp_…@dnz.example.com/api/proxy/traefik"
+```
+
+## How DNZ recognizes a Traefik
+
+Every Traefik calls with the same connect key. DNZ tells them apart by the **address they call
+from**.
+
+### Enter the address
+
+On the **Proxy** page, use **Add proxy** with the Traefik's IPv4 and/or IPv6 address. A Traefik that
+calls with the connect key from one of those addresses connects as that proxy right away. No
+approval and no extra token are needed.
+
+### Let DNZ detect it
+
+A Traefik that calls from any other address shows up on the **Proxy** page under **New Traefik
+detected**, with its address filled in. It gets no routes until you do one of these:
+
+- **Approve** it as a new proxy, after checking the addresses DNS should answer with. These may
+  differ from the address it calls from, for example a private address towards DNZ and a public one
+  for visitors.
+- **Link** it to a proxy you added that no Traefik connects as yet, for the same reason.
+- **Ignore** it. It is kept, so it doesn't show up as new again, and stays without routes.
+
+<Note>
+  At most 20 detected Traefiks wait at once. Beyond that, new ones are turned away with `429` until
+  some are handled.
+</Note>
+
+### Correct the address it calls from
+
+A Traefik with several networks may reach DNZ from another address than you expected, or than DNS
+should answer with. **Calls DNZ from**, in the Add, Edit and Approve dialogs, is the address it is
+recognized by. Fill it in or correct it there. The IPv4 and IPv6 addresses above it stay what DNS
+answers with.
+
+Leave **Calls DNZ from** empty to recognize the Traefik by its DNS addresses. One address (plus name)
+belongs to one proxy.
+
+### Several Traefiks behind one NAT
+
+When several Traefiks call from one address, give each a name in its endpoint URL:
+
+```yaml traefik.yml
+providers:
+  http:
+    endpoint: "https://dnz.example.com/api/proxy/traefik?name=edge-1"
+```
+
+The address plus the name tell them apart.
+
+### A token of its own
+
+A proxy can get a token of its own: **⋯ → Use a token of its own**. It is shown once. With it, the
+proxy is recognized wherever it calls from, which suits a Traefik whose address changes. **Back to
+the connect key** turns the token off.
+
+## Connection status
+
+On its card, a proxy's dot turns green (**Connected**) once it has fetched its configuration in the
+last minute. The card also shows the address it called from and how it is recognized.
+
+**Replace connect key** (**⋯** under **Settings → Proxy**) cuts off every Traefik that uses the old
+key, until its configuration has the new one.
+
+## Traefik's API
+
+A proxy can also have the address of **its Traefik's API**: **Traefik API** in the proxy dialog, for
+example `http://10.0.0.12:8080`, with an optional basic-auth user and password. DNZ reads it for
+three things:
+
+- **Entry points.** The router form and **Add route** list the Traefik's real entry points with their
+  ports, as does `dnz proxy route`. Without the API, they offer `web` (:80) and `websecure` (:443).
+  When the API can't be read, they say so and offer those.
+- **Version.** It is shown on the proxy's card.
+- **Router status.** Each router gets a dot, on the card and on the proxy's page:
+
+  | Dot | Meaning |
+  | --- | --- |
+  | Green | Traefik serves the router |
+  | Yellow | Traefik loaded it with a warning |
+  | Red | Traefik turned it off; the error is shown under it |
+  | Grey | Traefik hasn't loaded it yet |
+
+The API is also needed for [Records from Traefik's routers](/proxy/traefik-records).
+
+DNZ connects to the API, so DNZ must be able to reach that port. Turn the API on in Traefik with
+`api.insecure: true` (port 8080, which the setup guide does), or with a router to `api@internal`
+behind basic auth.
+
+<Warning>
+  Allow only DNZ to reach Traefik's API. The password is stored on the server and never sent back to
+  the UI.
+</Warning>
+
+## What Traefik gets
+
+Each Traefik gets its own enabled routers and all of its services and middlewares (a chain or error
+pages may use ones no router does). Every name is prefixed with `dnz-` (router `app` becomes
+`dnz-app`), so it never clashes with Traefik's other providers.
+
+| In DNZ | In Traefik |
+| --- | --- |
+| Router hostnames, path prefix, conditions, extra rule | `rule`: `Host(…)` / `HostRegexp(…)` OR-ed, then `PathPrefix(…)`, each condition (its values OR-ed, `!` for Not) and `(extra rule)`, AND-ed. A query parameter that just has to be there is `QueryRegexp(k, .*)` |
+| TLS options, certificate domains, observability | `tls.options`, `tls.domains` (instead of the wildcard ones), `observability` |
+| Certificates, default certificate | `tls.certificates` (the PEM pair inline), `tls.stores.default` |
+| TLS options | `tls.options` (`default` keeps its name, the rest get `dnz-`) |
+| Transports | `http.serversTransports`, `tcp.serversTransports` (client certificates as PEM pairs) |
+| TCP and UDP | `tcp.routers` (the rule built from SNI hostnames, client addresses and the extra rule), `tcp.services`, `tcp.middlewares`, `udp.routers`, `udp.services` |
+| Entry points, priority | `entryPoints`, `priority` (wildcard-only routers get priority 1) |
+| TLS, certificate resolver | `tls`, `tls.certResolver`; wildcards also get `tls.domains` |
+| Service upstreams and weights | `loadBalancer.servers` (`url`, and `weight` when it isn't 1), `passHostHeader` |
+| Load-balancing strategy | `loadBalancer.strategy` (left out for `wrr`, Traefik's default) |
+| Sticky sessions, cookie name | `loadBalancer.sticky.cookie` (`httpOnly`, `sameSite: lax`) |
+| Health check path and interval | `loadBalancer.healthCheck` (timeout 5 s) |
+| Accept any certificate (HTTPS servers) | the `dnz-insecure` servers transport with `insecureSkipVerify` |
+| Other load-balancer settings | merged into `loadBalancer` (health-check details only with a path, cookie details only when sticky) |
+| Weighted, mirroring, failover | `weighted` / `mirroring` / `failover`, with the proxy's service names prefixed `dnz-` |
+| Middleware | its Traefik object, as written by the form or as JSON; the names in a chain and an error-pages service get `dnz-` too |
+
+Each configuration also includes a `dnz-https-redirect` middleware, even when no router uses it.
+Traefik ignores an empty configuration and would otherwise keep old routes.
+
+<Info>
+  When routers were introduced, every name that was already proxied got a service (its records as
+  servers) and a router, plus a redirecting HTTP router for HTTPS servers, so it kept working.
+</Info>
+
+## Trying the endpoint by hand
+
+Run this from the Traefik's machine, so DNZ recognizes it by that address:
+
+```bash
+curl -H "Authorization: Bearer dnzp_…" https://dnz.example.com/api/proxy/traefik
+```
+
+It returns the same configuration Traefik gets.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The proxy's dot stays grey (not connected)">
+    The Traefik hasn't fetched its configuration in the last minute. Check that it can reach DNZ's
+    HTTP address (a `localhost` address only works on the same machine), that the endpoint has the
+    current connect key, and look under **New Traefik detected**: it may be calling from an address
+    DNZ doesn't know yet. Try the endpoint by hand from the Traefik's machine.
+  </Accordion>
+  <Accordion title="A Traefik shows up as detected although I added it">
+    It calls DNZ from another address than the ones you entered, for example through another
+    network. Link it to the proxy, or set **Calls DNZ from** in the proxy dialog.
+  </Accordion>
+  <Accordion title="New Traefiks get 429">
+    20 detected Traefiks are already waiting. Approve, link or ignore some of them.
+  </Accordion>
+  <Accordion title="Entry points show only web and websecure">
+    The proxy has no **Traefik API** set, or DNZ can't reach it. The dialogs say when the API can't
+    be read.
+  </Accordion>
+  <Accordion title="A router has a red dot">
+    Traefik turned it off. The error is shown under the router, often a mistake in its extra rule.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Routers, services and middlewares" icon="route" href="/proxy/routing">
+    Set up what each Traefik serves.
+  </Card>
+  <Card title="Records from Traefik's routers" icon="wand-magic-sparkles" href="/proxy/traefik-records">
+    DNS records for Docker, Swarm and Kubernetes routes.
+  </Card>
+</CardGroup>

@@ -1,0 +1,44 @@
+---
+title: "Terraform"
+description: "Manage DNZ records from Terraform with a generic REST provider."
+---
+
+There's no DNZ provider yet. A generic REST provider such as
+[`Mastercard/restapi`](https://registry.terraform.io/providers/Mastercard/restapi/latest) works with
+DNZ's [records API](/api/records).
+
+<Steps>
+  <Step title="Create a token">
+    Under **Settings → API tokens**, create a token with `records.write` (and `zones.read`), limited
+    to the zones Terraform manages. See [API tokens](/api/overview#api-tokens).
+  </Step>
+  <Step title="Find the zone's id">
+    ```bash
+    curl -H "Authorization: Bearer $DNZ_TOKEN" https://dns.example.com/api/token
+    ```
+
+    The answer lists the zones the token can reach, with their ids. Or run
+    `dnz --json zone list`.
+  </Step>
+  <Step title="Describe the records">
+    ```hcl main.tf
+    provider "restapi" {
+      uri                  = "https://dns.example.com/api"
+      headers              = { Authorization = "Bearer ${var.dnz_token}" }
+      write_returns_object = true
+    }
+
+    resource "restapi_object" "app" {
+      path          = "/zones/3/records"
+      read_path     = "/records/{id}"
+      update_path   = "/records/{id}"
+      destroy_path  = "/records/{id}"
+      update_method = "PATCH"
+      data = jsonencode({ name = "app", type = "A", value = "192.0.2.20", ttl = 300 })
+    }
+    ```
+  </Step>
+</Steps>
+
+Every change Terraform makes appears in the [audit log](/admin/audit-log) as the token's creator
+"via" the token's name.

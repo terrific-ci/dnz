@@ -1,0 +1,82 @@
+---
+title: "Quickstart"
+description: "Run DNZ, finish the setup page, add a zone and answer your first query."
+---
+
+This gets DNZ running on your machine with Docker, the quickest way to try it. For a server
+install, see [Install](/deploy/install).
+
+<Steps>
+  <Step title="Start DNZ">
+    ```bash
+    docker run -d --name dnz --restart unless-stopped \
+      -p 53:53/udp -p 53:53/tcp -p 8080:8080 \
+      -v dnz-data:/data -e TZ=Asia/Jakarta \
+      terrificci/dnz:latest
+    ```
+
+    DNS listens on port **53** (UDP and TCP) and the dashboard on **8080**. Data is kept in the
+    `dnz-data` volume. For a Compose file and every setting, see [Docker](/deploy/docker).
+
+    <Note>
+      On Ubuntu and Debian, systemd-resolved already uses port 53. If DNZ can't bind it, see
+      [Port 53 and systemd-resolved](/deploy/port-53).
+    </Note>
+  </Step>
+  <Step title="Finish the setup page">
+    Open `http://localhost:8080`. While there are no users yet, every page leads to **/setup**,
+    which asks for:
+
+    1. the **admin account** (a superadmin),
+    2. the first **division** and, optionally, the first zone,
+    3. **forward DNS**: a resolver preset (Cloudflare, Google, Quad9) or your own, and a strategy.
+
+    You're signed in when it's done. See [First run](/get-started/first-run) for the other ways to
+    create the first admin.
+  </Step>
+  <Step title="Add a zone and a record">
+    <Tabs>
+      <Tab title="Dashboard">
+        Go to **DNS → Zones**, choose **Create New → Zone**, enter `example.com`, then add an `A`
+        record named `www` with the value `192.0.2.10`.
+      </Tab>
+      <Tab title="CLI">
+        ```bash
+        dnz login --server http://localhost:8080
+        dnz zone add example.com
+        dnz record add example.com www A 192.0.2.10
+        dnz record list example.com
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step title="Query it">
+    ```bash
+    dig @127.0.0.1 www.example.com
+    ```
+
+    `www.example.com` is answered from your zone. Any other name, say `dig @127.0.0.1 github.com`,
+    is forwarded to the upstreams you picked and shows up under **DNS → Query Logs**.
+  </Step>
+  <Step title="Point a device at it">
+    Set a device's DNS server (or your router's DHCP DNS setting) to the IP address of the machine
+    running DNZ. See [Pointing clients at DNZ](/deploy/clients).
+  </Step>
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Concepts" icon="sitemap" href="/get-started/concepts">
+    Divisions, roles, local and forwarded names.
+  </Card>
+  <Card title="Deploy for real" icon="server" href="/deploy/install">
+    systemd, port 53, HTTPS and backups.
+  </Card>
+  <Card title="Forwarding" icon="route" href="/dns/forwarding">
+    Encrypted upstreams, strategies and conditional rules.
+  </Card>
+  <Card title="Filtering" icon="shield-halved" href="/dns/filtering">
+    Block ads and malware for the whole network.
+  </Card>
+</CardGroup>

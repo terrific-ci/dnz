@@ -1,0 +1,158 @@
+---
+title: "Prometheus and Grafana"
+description: "Scrape DNZ's /metrics with Prometheus, import the Grafana dashboard and load the alert rules."
+---
+
+DNZ serves its counters at `/metrics` in the Prometheus text format. Prometheus scrapes them,
+Grafana graphs them, and the alert rules that come with DNZ tell you when something is off. You run
+Prometheus and Grafana wherever you like; they only need to reach DNZ.
+
+What is in there:
+
+- queries by source (local, cache, upstream, blocked…), response code, type and transport, and a
+  latency histogram,
+- the cache: hits, misses, stale answers, prefetches, evictions,
+- every upstream's health, round-trip time and failures,
+- blocked queries, RPZ hits, the per-client rate limit and response rate limiting,
+- DNSSEC validation results and the recursive resolver,
+- zone transfers, NOTIFY, secondary zones and dynamic updates,
+- certificate expiry, dnz-proxy nodes, Traefik, GeoDNS health checks and the Caddy/Traefik syncs.
+
+Metrics are **off by default**.
+
+## Turn them on
+
+Open **Settings → General → Prometheus metrics**, switch it on and pick where it is served:
+
+| | Own listen address | HTTP API |
+| --- | --- | --- |
+| URL | `http://<address>/metrics`, e.g. port 9153 | `/metrics` next to the dashboard and API, HTTPS when DNZ has a certificate |
+| Token | Only once you make one | Always |
+| Good for | A port only Prometheus can reach | One port for everything |
+
+**Make a token** creates a bearer token Prometheus sends with every scrape. It is shown once: copy
+it. A scrape without it, or with the wrong one, gets `401`.
+
+The card then shows a scrape config for Prometheus, filled in with DNZ's address as your browser
+reaches it (change it to the address Prometheus uses), and a `curl` line to check it from the
+Prometheus host.
+
+The same from the terminal:
+
+```bash
+dnz settings metrics on --addr 0.0.0.0:9153    # own listen address
+dnz settings metrics --new-token               # printed once
+dnz settings metrics --api on                  # also at /metrics on the HTTP API
+dnz settings metrics                           # where it is served, the token
+```
+
+Or in the config file, which applies until the settings are saved in the dashboard or the CLI:
+
+```toml
+[metrics]
+enabled = true
+addr = "0.0.0.0:9153"
+api = false
+token = "a-long-random-string"
+```
+
+<Warning>
+  Without a token, anyone who reaches the own listen address can read the metrics (names of zones,
+  upstreams, proxies and certificates are in the labels). Listen where only Prometheus can reach, or
+  make a token.
+</Warning>
+
+## Scrape it
+
+Add a job to `prometheus.yml` on the Prometheus server. With a token, keep it in a file only
+Prometheus can read:
+
+```yaml
+scrape_configs:
+  - job_name: dnz
+    scheme: http                       # https for the HTTP API behind TLS
+    metrics_path: /metrics
+    authorization:
+      credentials_file: /etc/prometheus/dnz-metrics-token
+    static_configs:
+      - targets: ['dns1.example.internal:9153']
+```
+
+Several DNZ servers go into the same job, one target each. In a [cluster](/deploy/cluster), scrape every node: each
+serves its own counters (`dnz_build_info` carries its node id, `dnz_cluster_leader` and
+`dnz_cluster_generation` its place in the cluster), and metrics settings saved on one node reach the
+others within 15 seconds. Check it from the Prometheus host:
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" http://dns1.example.internal:9153/metrics | head
+```
+
+## Prometheus and Grafana with Docker Compose
+
+DNZ's repository has a compose file in `deploy/monitoring/` that runs Prometheus (with DNZ's alert
+rules) and Grafana (with the dashboard and the data source already set up) for a DNZ that runs
+elsewhere:
+
+```bash
+cd deploy/monitoring
+cp .env.example .env        # set DNZ_TARGET, DNZ_METRICS_TOKEN and GRAFANA_PASSWORD
+docker compose up -d
+```
+
+`DNZ_TARGET` is `host:port` as Prometheus reaches DNZ: the own listen address, or the dashboard's
+address with `DNZ_SCHEME=https` behind TLS. Grafana is on port 3000 (user `admin`), Prometheus on
+9090.
+
+## Grafana dashboard
+
+Import `deploy/grafana/dnz-dashboard.json` (**Dashboards → New → Import**) and pick your Prometheus
+data source. The data source and the DNZ servers to show are variables at the top. It has rows for
+the overview (queries per second, cache hit ratio, SERVFAIL ratio, p95 latency, upstreams up,
+soonest certificate expiry), queries, cache and upstreams, filtering and rate limits, DNSSEC and
+recursion, zones and transfers, certificates and proxies, and the process.
+
+## Alert rules
+
+`deploy/prometheus/dnz-alerts.yml` has rules for:
+
+| Alert | When |
+| --- | --- |
+| `DnzDown` | Prometheus cannot scrape DNZ |
+| `DnzAllUpstreamsDown`, `DnzUpstreamDown` | Every upstream of a pool, or one upstream, is down |
+| `DnzHighServfailRatio` | Over 5% of answers are SERVFAIL for 10 minutes |
+| `DnzSlowAnswers` | Forwarded answers have a p95 over 500 ms |
+| `DnzCertificateExpiringSoon`, `DnzCertificateExpiresVerySoon` | A certificate expires within 14 or 3 days |
+| `DnzAcmeCertificateFailing` | Issuing or renewing an ACME certificate keeps failing |
+| `DnzRateLimitingSpike`, `DnzResponseRateLimitingSpike` | Many queries over the per-client limit, or many answers limited by RRL |
+| `DnzDnssecValidationFailures` | Answers keep failing DNSSEC validation |
+| `DnzSecondaryZoneFailing`, `DnzSecondaryZoneExpiring` | A secondary zone cannot reach its primaries, or is about to expire |
+| `DnzProxyNodeDown`, `DnzTraefikDisconnected` | A dnz-proxy node or a Traefik stopped reporting |
+| `DnzHealthCheckFailing`, `DnzSyncFailing` | A GeoDNS health check, or a Caddy/Traefik record sync, fails |
+| `DnzClusterNodeBehind`, `DnzClusterNoLeader` | A cluster node has not loaded the latest changes, or no node holds the leader lease |
+| `DnzBackupFailing`, `DnzBackupOverdue` | [Backups](/admin/backups) to a target failed twice in a row, or a scheduled one is more than an hour overdue |
+| `DnzHealthFindingFailing`, `DnzHealthFindingsStale` | A [health check](/admin/health-check) finding fails, or the health check stopped running |
+
+Add the file to `rule_files` in `prometheus.yml`. The rules expect the job to be called `dnz`.
+
+## Metrics reference
+
+Every metric, with its labels, is listed in
+[docs/metrics.md](https://github.com/alfianlensundev/dnz/blob/main/docs/metrics.md). A few to
+start with:
+
+| Metric | What it tells |
+| --- | --- |
+| `dnz_dns_queries_total{source,rcode,qtype,transport}` | Answered queries |
+| `dnz_dns_request_duration_seconds{source}` | Latency histogram |
+| `dnz_cache_hits_total`, `dnz_cache_misses_total` | Cache effectiveness |
+| `dnz_upstream_up`, `dnz_upstream_rtt_seconds` | Upstream health and speed |
+| `dnz_filter_blocked_total` | Blocked queries |
+| `dnz_ratelimit_limited_total`, `dnz_rrl_responses_total` | Rate limiting |
+| `dnz_dnssec_validations_total{result}` | DNSSEC validation |
+| `dnz_certificate_expiry_timestamp_seconds` | Certificate expiry |
+| `dnz_health_findings{status}` | [Health check](/admin/health-check) findings by status |
+| `dnz_dhcp_leases{server}`, `dnz_dhcp_read_success{server}` | DHCP servers' live leases, and whether DNZ can read them |
+| `dnz_ipam_conflicts{division}` | What [IPAM](/integrations/dhcp#ipam) found that doesn't add up |
+
+Labels never carry query names or client addresses, so the number of series stays small; query
+types outside the common ones are counted as `other`.

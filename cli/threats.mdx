@@ -1,0 +1,77 @@
+---
+title: "Threats"
+description: "Threat detection findings, mute rules, the allow list, threat feeds, blocks and settings from the command line."
+---
+
+These commands match **DNS → Threats** in the dashboard and need a superadmin. For what each
+detector looks for, see [Threat detection](/dns/threats).
+
+## Findings
+
+```bash
+dnz threats                                     # on/off, open findings per detector, feeds
+dnz threats list                                # open findings (new and acknowledged)
+dnz threats list --status all --detector tunnel
+dnz threats list --client 10.0.0.9
+dnz threats list --domain example.net           # the domain and its subdomains
+dnz threats list --by client                    # or --by domain
+dnz threats show 12                             # evidence: scores, sample queries, first/last seen
+dnz threats ack 12 13
+dnz threats resolve 12                          # opens again if it happens again
+dnz threats reopen 12
+```
+
+```
+ID  DETECTOR    CLIENT     DOMAIN                  SCORE  HITS  STATUS        LAST SEEN
+15  feed        10.0.0.9   shadow.bad-host.net     1.00   1     new, blocked  2026-10-22T11:51:21Z
+10  tunnel      10.0.0.9   tunnel-test.example     2.40   60    new           2026-10-22T11:51:19Z
+4   dga         10.0.0.9   kxuhqivolqlgwm.com      0.88   1     new           2026-10-22T11:51:20Z
+```
+
+## Mute, allow, block
+
+```bash
+dnz threats mute 14                             # this finding
+dnz threats mute --client 10.0.0.0/24 --detector new_domain --for 7d --comment "lab"
+dnz threats mute --domain backup-vendor.example
+dnz threats mutes                               # the rules
+dnz threats unmute 3
+dnz threats allow add corp-telemetry.example --comment "agent uploads"
+dnz threats allow list
+dnz threats allow remove corp-telemetry.example
+dnz threats block 12 --for 12h                  # or --for forever
+dnz threats blocks
+dnz threats unblock t.example
+```
+
+`--for` takes `12h`, `7d`, `2w` or `forever`. Allowing a domain resolves its open findings and
+lifts its block (`--keep-findings` leaves them).
+
+## Feeds
+
+```bash
+dnz threats feeds                               # list, with hosts, age and errors
+dnz threats feeds presets
+dnz threats feeds add "HaGeZi TIF mini" https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/tif.mini.txt
+dnz threats feeds add "abuse.ch URLhaus" "<hostfile URL from your abuse.ch account>"
+dnz threats feeds add "abuse.ch ThreatFox" "<URL>" --auth-key KEY
+dnz threats feeds set 2 --auth-key KEY          # "" removes it
+dnz threats feeds refresh                       # every enabled feed, now
+dnz threats feeds disable 2
+dnz threats feeds rm 2
+```
+
+abuse.ch wants a free key per user ([auth.abuse.ch](https://auth.abuse.ch/)). `--auth-key` is sent
+as the `Auth-Key` header and can also come from `DNZ_ABUSECH_KEY`; the API never shows it again.
+
+## Settings
+
+```bash
+dnz threats settings                            # every setting
+dnz threats settings auto_block.enabled=true auto_block.hours=12
+dnz threats settings dga.threshold=0.7 tunnel.unique_names=500
+dnz threats settings new_domain.alert=on baseline.min_queries=5000
+dnz threats settings enabled=false              # detection off
+```
+
+`settings` takes `group.key=value` pairs; `dnz threats settings --help` lists the keys.

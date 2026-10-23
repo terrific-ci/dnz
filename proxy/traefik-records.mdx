@@ -1,0 +1,106 @@
+---
+title: "Records from Traefik's routers"
+sidebarTitle: "Records from Traefik"
+description: "Give the hostnames of Traefik's Docker, Swarm, Kubernetes and other routers DNS records automatically."
+---
+
+A Traefik often gets routers from its other providers too. DNZ can read them and give their
+hostnames DNS records, so a new service gets its name in DNS by itself. For example:
+
+- a new Swarm service with ``traefik.http.routers.app.rule=Host(`app.example.com`)``, or
+- a new Kubernetes Ingress for `app.example.com`
+
+DNZ reads routers from **every** provider: **Docker Swarm** service labels, **Docker** container
+labels, **Kubernetes** (Ingress, IngressRoute / IngressRouteTCP, Gateway API), the **file**
+provider, **Consul Catalog**, **Nomad**, **ECS**, another **HTTP** provider, and so on.
+
+It works whether proxying is on or not. The records it makes are DNS only: they answer with the
+Traefik's addresses directly.
+
+## Turning it on
+
+<Steps>
+  <Step title="Set the proxy's Traefik API">
+    The feature reads routers through Traefik's API. In the proxy dialog, fill in **Traefik API**.
+    See [Traefik's API](/proxy/traefik#traefiks-api).
+  </Step>
+  <Step title="Turn on the switch">
+    Open the proxy, go to **From Traefik** and turn on **Records from Traefik's routers**. It is off
+    by default.
+  </Step>
+  <Step title="Check the list">
+    DNZ reads the Traefik's HTTP and TCP routers right away, then every 30 seconds. **Sync now** reads
+    them again at once. The tab shows which providers the names came from (`swarm`, `kubernetescrd`,
+    `file`, …), and each router keeps its `@provider` suffix.
+  </Step>
+</Steps>
+
+## Which routers count
+
+- DNZ's own routers (`dnz-…`) and Traefik's internal ones (`@internal`) are left out, and so are
+  routers Traefik turned off.
+- From each rule DNZ takes the names of `Host`, `HostHeader` and `HostSNI`. A rule can give several,
+  joined with `||` or listed in one matcher.
+- `HostRegexp` gives a wildcard when it is one label of anything in front of a fixed domain:
+  `^[a-z0-9-]+\.apps\.example\.com$` becomes `*.apps.example.com`.
+- Negated matchers (`!Host(…)`) are ignored.
+- Rules without a usable name, such as ``PathPrefix(`/`)``, ``HostSNI(`*`)`` or other patterns, are
+  listed under **routers left out**, with the reason.
+
+### Names without a domain
+
+Providers that make a default rule from the service name (Docker, Swarm, Consul Catalog, Nomad,
+ECS: ``Host(`{{ normalize .Name }}`)``) give a name without a domain, which DNS can't answer for.
+Such routers are listed under **routers left out**.
+
+Give the provider a `defaultRule` with your domain, or set a rule per service:
+
+```yaml traefik.yml
+providers:
+  docker:
+    defaultRule: "Host(`{{ normalize .Name }}.example.com`)"
+```
+
+## What DNZ makes
+
+- Each name goes in the local primary zone it falls in, the longest one when zones are nested. A name
+  with no zone here is listed as **No zone**.
+- The name gets **DNS-only** A and AAAA records with the proxy's addresses, the zone's default TTL,
+  and a comment saying where they came from.
+- When the proxy's addresses change, the records follow.
+
+Every change is in the [audit log](/admin/audit-log) as `record.create` or `record.update` by
+*Traefik (proxy name)*, with the routers it came from.
+
+## What DNZ leaves alone
+
+| Status | When | What you can do |
+| --- | --- | --- |
+| **Has own records** | The name already has A, AAAA or CNAME records: yours, proxied ones, or another proxy's. DNZ never touches them. | Nothing needed |
+| **Orphaned** | No router routes the name any more. Its records stay. | **⋯ → Delete its records**. If the router comes back first, nothing changes. |
+| **Not managed** | You deleted its records by hand. They are not made again. | **⋯ → Manage again** |
+| Released | You chose **⋯ → Keep as manual records**: DNZ let go of the name and its records are ordinary ones now. | **⋯ → Manage again** |
+
+Turning the switch off, or a Traefik that can't be reached, changes no records. The error is shown on
+the tab.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="A router is listed under routers left out">
+    Its rule gives no name DNS can answer for: a path-only rule, ``HostSNI(`*`)``, a pattern that
+    isn't one label in front of a fixed domain, or a default rule without your domain. The reason is
+    shown next to it. Fix the rule in Traefik, or give the provider a `defaultRule` with your domain.
+  </Accordion>
+  <Accordion title="A name shows No zone">
+    No local primary zone in DNZ holds the name. Add the zone, or route a name inside one of DNZ's
+    zones.
+  </Accordion>
+  <Accordion title="Nothing changes and the tab shows an error">
+    DNZ can't read the Traefik's API. Check the **Traefik API** address and credentials in the proxy
+    dialog, and that DNZ can reach that port.
+  </Accordion>
+</AccordionGroup>
+
+The API for this feature is under `/api/proxies/{id}/auto-records`. See
+[Proxy API](/api/proxy#records-from-traefiks-routers).

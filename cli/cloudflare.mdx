@@ -1,0 +1,104 @@
+---
+title: "Cloudflare"
+description: "Connect a division to Cloudflare, copy zones in both directions and set up Sign in with Cloudflare from the terminal."
+---
+
+These commands match **Settings → Integrations** in the dashboard. A Cloudflare connection belongs to
+one division. For what the integration does, see [Cloudflare](/integrations/cloudflare).
+
+`dnz cf` is a short alias for `dnz cloudflare`. Commands take `--division` (`-d`) when you belong to
+more than one.
+
+## Permissions
+
+- Connecting, verifying and disconnecting need the `integrations.manage` permission.
+- Copying records also needs `records.write`, and `zones.write` when new zones are created.
+- Setting up the OAuth client needs a superadmin.
+
+## Connecting
+
+<Tabs>
+  <Tab title="API token">
+
+```bash
+dnz cloudflare connect --division it              # asks for the API token
+```
+
+Without a terminal, the token is read from `DNZ_CLOUDFLARE_TOKEN`.
+
+  </Tab>
+  <Tab title="Sign in with Cloudflare">
+
+```bash
+dnz cf sign-in --origin https://dnz.example.com   # prints the Cloudflare address to open in a browser
+```
+
+`--origin` is the address DNZ's web UI is open at (default: the server). This needs the OAuth client
+to be set up first; see [below](#the-oauth-client).
+
+  </Tab>
+</Tabs>
+
+```bash
+dnz cf status                                     # connected, and to which account
+dnz cf verify                                     # re-check the token, e.g. after changing its permissions
+dnz cf disconnect                                 # forget the connection (and end the sign-in grant)
+```
+
+## Browsing Cloudflare
+
+```bash
+dnz cf zones                                      # the zones the connection can see
+dnz cf zones --refresh                            # ask Cloudflare instead of the server's cache
+dnz cf records example.com                        # by name or id; also takes --refresh
+```
+
+## Importing into local DNS
+
+```bash
+dnz cf import example.com example.org             # Cloudflare → local DNS, previewed first
+dnz cf import --all --dry-run
+dnz cf import example.com --type A,CNAME --name www,api   # only some of the records
+```
+
+`import` copies into the local zone of the same name, creating it when it's missing, and keeps the
+local records that are already there.
+
+Without filters, `import` takes every record it can. `--type` and `--name` narrow it to the matching
+records; names are relative to the zone, with `@` for the apex. Zones with none of the matching
+records are left alone.
+
+## Pushing to Cloudflare
+
+```bash
+dnz cf push example.com                           # local records missing on Cloudflare → Cloudflare
+dnz cf push example.com --dry-run
+```
+
+`push` only adds. It never changes or deletes anything on Cloudflare.
+
+<Note>
+  Both `import` and `push` show what they would do and ask first. `--dry-run` only shows it; `--yes`
+  skips the question.
+</Note>
+
+## The OAuth client
+
+"Sign in with Cloudflare" needs an OAuth client registered in Cloudflare. A superadmin sets it once
+for the whole server:
+
+```bash
+dnz cf oauth-app show                             # also shows the callback to register
+dnz cf oauth-app set CLIENT_ID --secret           # asks for the secret
+dnz cf oauth-app set CLIENT_ID --no-secret        # a public (PKCE-only) client
+dnz cf oauth-app rm
+```
+
+| Option | What it does |
+| --- | --- |
+| `--secret` | Ask for the client secret (or read `DNZ_CLOUDFLARE_CLIENT_SECRET`). Without it, a stored secret is kept |
+| `--no-secret` | A public, PKCE-only client: remove the stored secret |
+| `--scopes` | Space-separated scopes (default: DNZ's) |
+
+The `DNZ_CLOUDFLARE_OAUTH_CLIENT_ID` and `DNZ_CLOUDFLARE_OAUTH_CLIENT_SECRET` environment variables
+override this setting. See [Configuration](/deploy/configuration).

@@ -1,0 +1,204 @@
+---
+title: "systemd"
+description: "Run the dnz binary as a sandboxed systemd service on Linux."
+---
+
+This runs the [Linux binary](/deploy/install#linux-binary) as a service with its own throwaway user
+and the systemd sandbox.
+
+<Tabs>
+  <Tab title="Automatic">
+    One command installs `dnz`, sets up the service and starts it:
+
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --service
+    ```
+
+    It asks for `sudo` when it needs to, and then:
+
+    - installs `dnz` in `/usr/local/bin` (as [Linux binary](/deploy/install#linux-binary) does),
+    - writes the unit to `/etc/systemd/system/dnz.service`, the same one as in the **Manual** tab,
+    - creates `/etc/dnz/dnz.env` with every setting commented out, readable only by root. An
+      existing one is left alone,
+    - frees port 53 when systemd-resolved's stub holds it, as in
+      [Port 53 and systemd-resolved](/deploy/port-53#option-1-turn-off-the-stub-listener-recommended),
+    - enables and starts `dnz`, checks that it stays up, and prints the dashboard address.
+
+    Open the dashboard and create the first admin; see [First run](/get-started/first-run). The
+    dashboard listens only on `127.0.0.1:8080`, so from your computer use an SSH tunnel
+    (`ssh -L 8080:127.0.0.1:8080 you@server`) or put a [reverse proxy](/deploy/https) in front.
+
+    Run the same command again to upgrade: it replaces the binary and restarts `dnz`. If the unit
+    changed, the old one is kept as `dnz.service.bak`.
+
+    <Tip>
+      To leave systemd-resolved alone, create `/etc/dnz/dnz.env` with
+      `DNZ_DNS_ADDR=<this server's IP>:53` before running the command. The script keeps that file
+      and doesn't touch systemd-resolved when DNZ listens on one address.
+    </Tip>
+
+    <Note>
+      When another program (dnsmasq, bind9, unbound and so on) holds port 53, the script sets up
+      the service but doesn't start it, and says which program it is. Stop that program or bind
+      DNZ to one address, then run `sudo systemctl start dnz`.
+    </Note>
+  </Tab>
+  <Tab title="Manual">
+    <Steps>
+      <Step title="Install the binary">
+        ```bash
+        curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --only dnz
+        ```
+
+        See [Linux binary](/deploy/install#linux-binary) for the options.
+      </Step>
+      <Step title="Create the unit">
+        Save this as `/etc/systemd/system/dnz.service`:
+
+        ```ini /etc/systemd/system/dnz.service
+        [Unit]
+        Description=DNZ DNS server
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        ExecStart=/usr/local/bin/dnz
+        Restart=on-failure
+        RestartSec=2
+
+        # Its own throwaway user; data lives in /var/lib/dnz.
+        DynamicUser=yes
+        StateDirectory=dnz
+        WorkingDirectory=/var/lib/dnz
+        Environment=DNZ_DATABASE_URL=sqlite:///var/lib/dnz/dnz.db
+        Environment=DNZ_DNS_ADDR=0.0.0.0:53
+        Environment=DNZ_HTTP_ADDR=127.0.0.1:8080
+        # Settings here override the ones above.
+        EnvironmentFile=-/etc/dnz/dnz.env
+        # DoT/HTTPS: let the service read TLS keys owned by group ssl-cert (Debian/Ubuntu).
+        #SupplementaryGroups=ssl-cert
+
+        # Ports 53 (and 853/443 for DoT/HTTPS) without root.
+        AmbientCapabilities=CAP_NET_BIND_SERVICE
+        CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+        LimitNOFILE=65536
+
+        # Hardening
+        NoNewPrivileges=yes
+        ProtectSystem=strict
+        ProtectHome=yes
+        PrivateTmp=yes
+        PrivateDevices=yes
+        ProtectKernelTunables=yes
+        ProtectKernelModules=yes
+        ProtectKernelLogs=yes
+        ProtectControlGroups=yes
+        ProtectClock=yes
+        ProtectHostname=yes
+        RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+        RestrictNamespaces=yes
+        RestrictRealtime=yes
+        RestrictSUIDSGID=yes
+        LockPersonality=yes
+        MemoryDenyWriteExecute=yes
+        SystemCallArchitectures=native
+        SystemCallFilter=@system-service
+        SystemCallFilter=~@privileged
+
+        [Install]
+        WantedBy=multi-user.target
+        ```
+      </Step>
+      <Step title="Create the settings file">
+        Every setting is optional. Save this as `/etc/dnz/dnz.env`:
+
+        ```bash /etc/dnz/dnz.env
+        # Where DNS listens. 0.0.0.0:53 clashes with systemd-resolved's stub on
+        # Ubuntu/Debian; see "Port 53 and systemd-resolved".
+        #DNZ_DNS_ADDR=0.0.0.0:53
+
+        # The web UI and API. Keep it on 127.0.0.1 behind an HTTPS reverse proxy.
+        #DNZ_HTTP_ADDR=127.0.0.1:8080
+
+        # The reverse proxy's address, so the audit log shows real client IPs.
+        #DNZ_TRUSTED_PROXIES=127.0.0.1,::1
+
+        # Name shown in notifications.
+        #DNZ_INSTANCE_NAME=dns-1
+
+        # Create the first admin at startup instead of using the setup page.
+        #DNZ_ADMIN_USERNAME=admin
+        #DNZ_ADMIN_PASSWORD=
+
+        # Default upstreams and strategy on first start (changeable in the UI).
+        #DNZ_UPSTREAM=1.1.1.1:53,8.8.8.8:53
+        #DNZ_FORWARD_STRATEGY=failover
+
+        # DNS over TLS / QUIC, HTTPS and DoH over HTTP/3. PEM files, re-read when they change.
+        #DNZ_TLS_CERT=/etc/dnz/tls/certificates/dns.example.com.crt
+        #DNZ_TLS_KEY=/etc/dnz/tls/certificates/dns.example.com.key
+        ```
+
+        It may hold secrets, so only root should read it:
+
+        ```bash
+        sudo chmod 600 /etc/dnz/dnz.env
+        ```
+      </Step>
+      <Step title="Start it">
+        ```bash
+        sudo systemctl daemon-reload
+        sudo systemctl enable --now dnz
+        ```
+      </Step>
+      <Step title="Check it">
+        ```bash
+        systemctl status dnz
+        journalctl -u dnz -f
+        ```
+
+        If it fails with `Address already in use` on port 53, see
+        [Port 53 and systemd-resolved](/deploy/port-53).
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## What the unit does
+
+- `DynamicUser=yes`: a temporary user just for DNZ. Data lives in `/var/lib/dnz/dnz.db`.
+- `AmbientCapabilities=CAP_NET_BIND_SERVICE`: ports 53, 443 and 853 without root.
+- The systemd sandbox: `ProtectSystem=strict`, `NoNewPrivileges`, a syscall filter and more.
+- The dashboard only on `127.0.0.1:8080`. To reach it from the network, put a
+  [reverse proxy](/deploy/https) in front, or change `DNZ_HTTP_ADDR`.
+
+## Changing settings
+
+Edit `/etc/dnz/dnz.env`, then restart:
+
+```bash
+sudo systemctl restart dnz
+```
+
+Settings can also go in `/etc/dnz/dnz.toml` (`dnz config example` prints one with every setting).
+
+<Note>
+  The environment wins over the file. The unit's three `Environment=` lines (database, DNS address
+  and HTTP address) therefore beat the same keys in `dnz.toml`. Delete those lines from the unit to
+  set them in the file. `dnz config show` prints where each value comes from. See
+  [Configuration](/deploy/configuration).
+</Note>
+
+## Running without the web UI
+
+Set `DNZ_UI=false` (or `ui = false` under `[http]` in `dnz.toml`), create the first admin with
+`dnz setup` on the server, and manage everything with the [CLI](/cli/overview).
+
+## Without systemd
+
+Give the binary permission to bind low ports once:
+
+```bash
+sudo setcap cap_net_bind_service=+ep /usr/local/bin/dnz
+```

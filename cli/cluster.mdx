@@ -1,0 +1,31 @@
+---
+title: "Cluster"
+description: "See the DNZ servers that share a database: nodes, leader and the change feed."
+---
+
+These commands match **Settings → Cluster** in the dashboard and need a superadmin. For how a
+cluster works and how to set one up, see [Cluster](/deploy/cluster).
+
+```bash
+dnz cluster                     # nodes, leader, the changes each has loaded
+dnz cluster --json              # the same as GET /api/cluster
+dnz cluster forget ns3          # remove a node that is gone for good
+```
+
+```
+Postgres cluster · change feed at 42 · leader ns1 (lease generation 1)
+
+ID   NAME           STATE  ADDRESS                DNS           VERSION  HEARTBEAT  CHANGES
+ns1  ns1 * (this)   up     http://10.0.0.11:8080  10.0.0.11:53  1.2.0    2s ago     42/42
+ns2  ns2            up     http://10.0.0.12:8080  10.0.0.12:53  1.2.0    1s ago     42/42
+```
+
+| Column | Meaning |
+| --- | --- |
+| `NAME` | The node's `instance_name`; `*` marks the leader, `(this)` the node you asked |
+| `STATE` | `up`, `behind` (hasn't loaded a change that is 30 seconds old) or `down` (no heartbeat for 30 seconds) |
+| `ADDRESS` / `DNS` | Where its dashboard/API and its DNS listen (`DNZ_CLUSTER_ADDRESS`) |
+| `CHANGES` | The last change it has loaded, of the feed's last one |
+
+`forget` only removes the node from the list: a node that still runs puts itself back with its next
+heartbeat. On SQLite, `dnz cluster` says the server runs on its own.

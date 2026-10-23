@@ -1,0 +1,73 @@
+---
+title: "dnz-proxy API"
+description: "Endpoints for dnz-proxy nodes, entry points, cache purges and analytics."
+---
+
+<Note>
+  The management endpoints need a **superadmin** session; see [API overview](/api/overview) for how to
+  authenticate. The node endpoints (`join`, `stream`, `report`) are called by the `dnz-proxy` binary
+  itself, with the connect key or the node's own token.
+</Note>
+
+For what nodes, entry points and analytics do, see [dnz-proxy](/proxy/dnz-proxy). Proxies, routers,
+services and middlewares are shared with Traefik and are in the [Proxy API](/api/proxy). Certificates
+are in the [Certificates API](/api/certificates).
+
+## Node endpoints
+
+| Method and path | What it does |
+| --- | --- |
+| `POST /api/proxy/dnz/join` | A node asks to join (connect key) |
+| `GET /api/proxy/dnz/stream` | A node's configuration stream (node token) |
+| `POST /api/proxy/dnz/report` | A node's report (node token) |
+
+The stream stays open and must not be buffered by a reverse proxy in front of DNZ. DNZ sends
+`X-Accel-Buffering: no`.
+
+## Nodes
+
+| Method and path | What it does |
+| --- | --- |
+| `GET /api/proxy/dnz` | All nodes, the connect key |
+| `POST /api/proxy/dnz/nodes` | Add a node |
+| `PUT /api/proxy/dnz/nodes/{id}` | Edit a node |
+| `DELETE /api/proxy/dnz/nodes/{id}` | Remove a node (revokes its token) |
+| `POST /api/proxy/dnz/nodes/{id}/approve` | Approve a waiting node |
+| `POST /api/proxy/dnz/nodes/{id}/ignore` | Ignore a waiting node |
+| `POST /api/proxy/dnz/nodes/{id}/drain` | Drain a node: out of DNS answers, still serving |
+| `GET /api/proxy/dnz/local` | The node DNZ runs itself |
+| `PUT /api/proxy/dnz/local` | Change the node DNZ runs itself |
+
+## A proxy's nodes, settings and entry points
+
+| Method and path | What it does |
+| --- | --- |
+| `GET /api/proxies/{id}/dnz` | A proxy's nodes, entry points and settings |
+| `PUT /api/proxies/{id}/dnz/settings` | Change a proxy's settings |
+| `POST /api/proxies/{id}/entrypoints` | Add an entry point |
+| `PUT /api/proxies/{id}/entrypoints/{eid}` | Change an entry point |
+| `DELETE /api/proxies/{id}/entrypoints/{eid}` | Delete an entry point |
+| `POST /api/proxies/{id}/purge` | Purge the cache on every node |
+
+## Analytics
+
+| Method and path | What it does |
+| --- | --- |
+| `GET /api/proxy/analytics` | Traffic |
+| `GET /api/proxy/logs` | Request logs |
+| `GET /api/proxy/analytics/settings` | Log retention |
+| `PUT /api/proxy/analytics/settings` | Change log retention |
+
+## From the CLI
+
+Most of these have a `dnz` command:
+
+```bash
+dnz proxy show                                    # backend, proxies, connect key
+dnz proxy nodes                                   # every node: proxy, state, addresses, config
+dnz proxy approve jkt-1 --proxy "Edge JKT" --ipv4 203.0.113.10
+dnz proxy drain jkt-1
+dnz proxy purge "Edge JKT" --host app.example.com --prefix /assets
+```
+
+See [Proxy commands](/cli/proxy).

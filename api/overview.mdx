@@ -1,0 +1,137 @@
+---
+title: "API overview"
+sidebarTitle: "Overview"
+description: "DNZ's HTTP API, API tokens for automation, authentication and errors."
+---
+
+Everything the dashboard does goes through DNZ's HTTP API under `/api`. The [CLI](/cli/overview) uses
+the same API. For automation (Terraform, scripts, CI, ACME DNS-01 certificates), use an
+**API token**.
+
+## API tokens
+
+### Creating a token
+
+<Tabs>
+  <Tab title="Dashboard">
+
+Go to **Settings → API tokens → Create token**. This needs the *Manage API tokens* permission
+(`tokens.manage`), which the Owner role has.
+
+  </Tab>
+  <Tab title="CLI">
+
+```bash
+dnz token create certbot -p records.write,zones.read -z example.com --expires-in-days 90
+```
+
+See [API tokens](/cli/access#api-tokens) in the CLI reference.
+
+  </Tab>
+</Tabs>
+
+A token has:
+
+- **A division.** It can only reach zones in the division it was created in.
+- **Permissions**: any of `zones.read`, `records.write`, `zones.write` and `logs.read`.
+- **Zones**: every zone in the division, or only some. A token limited to some zones can't create new
+  zones.
+- **An expiry**: 30 days, 90 days, 1 year, or never.
+
+The token (`dnz_…`) is shown **once**, when it is created. DNZ only stores its hash. If you lose it,
+revoke it and create a new one.
+
+### A token never has more rights than its creator
+
+You can only give a token permissions you have yourself in that division. The rights are checked again
+every time the token is used, so when the creator loses a right, the token loses it too.
+
+Every change made with a token appears in the [audit log](/admin/audit-log) as
+`<creator> via <token name>`.
+
+### What a token can reach
+
+Tokens can only call the **zone, record, query log and ACME** endpoints, the Dynamic DNS
+endpoint, and pushing a DHCP server's lease file and reading leases and IPAM ([DHCP](/api/dhcp)). Account, user, role and settings endpoints always need a normal sign-in.
+
+| Permission | Lets the token |
+| --- | --- |
+| `zones.read` | List zones, read records, tags and zone files, refresh secondary zones |
+| `zones.write` | Create, change and delete zones |
+| `records.write` | Create, change and delete records, ACME challenges and Dynamic DNS |
+| `logs.read` | Read the query log of the division's zones |
+
+## Authentication
+
+Send the token as a **Bearer** token:
+
+```bash
+curl -H "Authorization: Bearer dnz_…" https://dns.example.com/api/token
+```
+
+HTTP **Basic** works too, with the token as the **password** and any username. This is what lego and
+Traefik use:
+
+```bash
+curl -u "any:dnz_…" https://dns.example.com/api/token
+```
+
+`GET /api/token` answers with the token's name, division, permissions and the zones it can reach,
+which makes it a handy check in scripts. See [Token info](/api/zones#token-info).
+
+## Errors
+
+Errors come back as JSON with an HTTP status:
+
+```json
+{ "error": "…" }
+```
+
+| Status | Meaning |
+| --- | --- |
+| `400` | The request is invalid: a bad value, a field missing, an id outside the zone |
+| `401` | No valid token or session |
+| `403` | The token or user lacks the permission |
+| `404` | The zone or record doesn't exist |
+| `409` | A conflict: a duplicate record, a CNAME next to other data |
+
+## Example: adding a record
+
+```bash
+curl -X POST https://dns.example.com/api/zones/3/records \
+  -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"app","type":"A","value":"192.0.2.20","ttl":300}'
+```
+
+Find a zone's id with `GET /api/divisions/{id}/zones`, or with `dnz --json zone list`.
+
+<Tip>
+  There is no DNZ Terraform provider yet. A generic REST provider works with these endpoints; see
+  [Terraform](/integrations/terraform).
+</Tip>
+
+## Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Zones" icon="globe" href="/api/zones">
+    List, create, change, delete, export and refresh zones; the query log; token info.
+  </Card>
+  <Card title="Records" icon="list" href="/api/records">
+    The record format, filtering and bulk changes.
+  </Card>
+  <Card title="ACME and Dynamic DNS" icon="certificate" href="/api/acme-ddns">
+    DNS-01 challenges for lego, Traefik and certbot; DynDNS2 for routers.
+  </Card>
+  <Card title="Filtering" icon="filter" href="/api/filtering">
+    Blocklists, rules, client groups, schedules, safe search and response policy zones.
+  </Card>
+  <Card title="DHCP and IPAM" icon="network-wired" href="/api/dhcp">
+    DHCP servers, lease file pushes, leases, subnets and conflicts.
+  </Card>
+  <Card title="Settings" icon="gear" href="/api/settings">
+    Response rate limiting and the GeoIP database.
+  </Card>
+  <Card title="Proxy" icon="cloud" href="/api/proxy">
+    Proxies, routers, services and middlewares.
+  </Card>
+</CardGroup>

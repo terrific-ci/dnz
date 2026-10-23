@@ -1,0 +1,52 @@
+---
+title: "Topology map"
+description: "Your whole DNS setup on one interactive canvas, with live health drawn on it."
+---
+
+**Topology** in the menu draws everything DNZ knows on one canvas:
+
+- **Divisions** with their members, roles and API tokens.
+- **Zones** with records by type, DNSSEC and Cloudflare connections.
+- **Caddies** linked to the zones their sites' records are in.
+- **Client networks, views and blocklists**, and **client groups** (the named devices that some
+  lists and rules are limited to), linked to the filtering they have their own rules in.
+- **Steered records**: an **Origin** node per steered A/AAAA address, with its place (GeoDNS) or
+  weight, and its health check state (*healthy* or *down*, with the error). See
+  [GeoDNS and health checks](/dns/geodns).
+- **The query path**: clients → filtering → the cache → forwarding rules → upstreams. The filtering
+  node shows safe search and how many lists or rules are only for some clients or hours; the cache
+  node shows the per-client rate limit and [RRL](/dns/rate-limiting).
+- **Response policy zones**: each subscribed **RPZ** zone feeds into filtering (checked first), with
+  its rule count, policy and last error; a **Served as RPZ** node shows the zone resolvers transfer
+  DNZ's lists from. See [Response policy zones](/dns/rpz).
+- **Replication**: primaries, secondaries and catalog zones.
+- **Cluster nodes**: the other DNZ servers on the same database, with their state (up, behind or
+  down) and the leader. See [Cluster](/deploy/cluster).
+- **Proxies**: proxied names, origins and certificates.
+- **Notification providers**.
+- **Backup targets**, red while their backups fail.
+
+Live state is drawn on the nodes and edges: upstream health and outages, query counts, blocked
+queries, origin health checks, RPZ errors and certificate expiry.
+
+## Using the map
+
+- **Filter** by division or by layer, and **search** for a node.
+- **Drag** nodes around. Positions are remembered.
+- **Click** a node to open its page.
+- **Export** the map as PNG or SVG.
+
+Everyone sees only what their permissions allow. A division member sees their divisions; the
+server-wide parts (query path, forwarding, replication, proxies, notifications) are for superadmins.
+
+## In the terminal
+
+`dnz topology` prints the same as an outline:
+
+```bash
+dnz topology
+dnz topology --division it
+dnz --json topology
+```
+
+See [CLI: monitoring](/cli/monitoring).

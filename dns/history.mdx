@@ -1,0 +1,147 @@
+---
+title: "History and change approval"
+description: "Every change to a zone kept as a version you can compare and roll back to, and edits that wait for someone else's approval."
+---
+
+DNZ keeps every change to a zone as a **version**: which records were added, removed or changed
+(each as it was before and after), who made it, when, and from where. You can compare any two
+versions and roll a zone back to any version still kept. **Change approval**, off by default, can
+hold edits by chosen roles or API tokens as a **change request** until someone else approves it.
+
+## Zone history
+
+Open a zone under **DNS → Zones** and switch to the **History** tab, or use
+`dnz zone history` ([CLI](/cli/changes)) and `GET /api/zones/{id}/versions` ([API](/api/changes)).
+
+Each version holds:
+
+- **The records** that changed, with every field: name, type, value, TTL, priority, view, on/off,
+  comment, tags, proxies and origin. A zone transfer that rewrites records unchanged is not counted.
+- **The zone settings** that change its answers: serving the zone, the default TTL, forwarding of
+  missing names, and DNSSEC on or off.
+- **Who**: a user (`alice`), an API token (`alice via externaldns`), an update key
+  (`alice via kea-ddns`), or DNZ itself (`Caddy web-1`, `zone transfer (serial 2026102201)`). An
+  approved change reads `eve (approved by olivia)` and links to its change request.
+- **From where** and the IP address it came from:
+
+| Source | What makes it |
+| --- | --- |
+| UI | The web dashboard |
+| CLI | The `dnz` command line |
+| API | An API token: the ExternalDNS webhook, scripts, CI jobs |
+| DNS UPDATE | RFC 2136 updates signed with an [update key](/dns/dynamic-updates) |
+| Dynamic DNS | `/nic/update` from routers and ddclient |
+| ACME | DNS-01 challenge records |
+| Caddy | Records a connected [Caddy](/integrations/caddy) keeps for its sites |
+| Traefik | Records from a [Traefik's own routers](/proxy/traefik-records) |
+| Proxy | Records added from a proxy route |
+| Zone transfer | A [secondary zone](/dns/replication) copying its primary |
+
+A version is written in the same database transaction as the change, so neither can exist without
+the other.
+
+### Compare versions
+
+In the History tab, open a version to see its own changes, or tick two versions to see everything
+that changed between them. Version *N* is the zone as it was right after that change.
+
+### Roll back
+
+**Roll back here** on a version shows what going back changes, then makes the zone's records,
+default TTL and forwarding of missing names what they were right after that version. The rollback is
+a new version, so you can undo it the same way.
+
+A rollback is checked like any edit: values must still be valid, views and proxies must still exist,
+and the result must keep the zone's rules (no CNAME next to other records, no duplicates, a name's
+A/AAAA/CNAME records behind the same proxies, nothing below a DNAME). It needs the
+`records.write` permission, plus `zones.write` when it changes zone settings, and it waits for
+approval when change approval covers you.
+
+<Note>
+  Turning a zone off or on and DNSSEC show in history but are never rolled back: DNSSEC goes on and
+  off with its keys and the DS at your registrar. Restored records get new ids, count as made by
+  hand (no longer a Caddy's or Traefik's), and lose the GeoDNS, weights and health checks of the
+  deleted record. Secondary zones can't be rolled back; change their primary.
+</Note>
+
+### How long history is kept
+
+Superadmins set this under **Settings → General → Zone history**, or with `dnz settings history`:
+
+- **Days**: versions older than this are dropped (default 365).
+- **Versions per zone**: only the newest this many are kept (default 1000).
+
+`0` means no limit. Old versions go every hour, oldest first, so every version still listed can be
+compared and rolled back to. Decided change requests follow the days limit; pending ones stay.
+
+## Change approval
+
+When change approval is on, edits by members holding the chosen **roles**, or made with the chosen
+**API tokens**, are not applied. They become a change request that someone else approves or
+rejects.
+
+### Turn it on
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    - **For a division**, covering every zone without a policy of its own: open **DNS → Changes**
+      and use **Change approval** at the bottom. Pick the roles (for example Editor) and the API
+      tokens (all of them, or some) whose edits wait.
+    - **For one zone**: on the zone's page, under the zone settings, choose *Like the division*,
+      *On* with its own roles and tokens, or *Off*.
+
+    Changing the policy needs the `members.manage` permission (Owner by default).
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz change policy --division it --role Editor                  # Editors wait in every zone of "it"
+    dnz change policy --division it --role Editor --all-tokens on  # and every API token
+    dnz change policy --zone example.com --mode on --api-token externaldns
+    dnz change policy --zone lab.example.com --mode off            # never waits in this zone
+    dnz change policy --zone example.com --mode inherit            # back to the division's policy
+    ```
+
+  </Tab>
+</Tabs>
+
+Superadmins' own edits never wait. An API token follows the token setting only, never its creator's
+role.
+
+### What waits
+
+| Waits for approval | Never waits |
+| --- | --- |
+| Adding, changing and deleting records, one at a time or in bulk, from the dashboard, CLI or API | DNS UPDATE (RFC 2136) and dynamic DNS: the protocols can't say "applied later", so clients would retry or fail. Limit what an update key may change instead |
+| Importing a BIND file or copying a Cloudflare zone into an existing zone | ACME challenges, which must be live within seconds |
+| Zone settings: serving the zone, default TTL, forwarding of missing names | Caddy, Traefik and proxy records and zone transfers, which follow a source DNZ copies from |
+| Rollbacks | DNSSEC, creating and deleting zones, and zones created by an import |
+
+### Review a change request
+
+A held edit says **Waiting for approval** in the dashboard, and the CLI prints
+`waiting for approval: … is change request #42`. Nothing in the zone changes yet.
+
+Approvers hear about it through the [notification providers](/integrations/notifications)
+subscribed to `change_requested`; `change_decided` tells about decisions. The header shows how many
+requests wait for you.
+
+**DNS → Changes** lists the requests: *Waiting for you*, *Mine*, and *All* in any status. Open one
+to see exactly what it changes and to comment on it.
+
+- **Approve and apply** needs the `changes.approve` permission in the division (Owner by default;
+  add it to other roles under **Access → Roles**) and must be someone other than who asked, also
+  when they asked through their own API token. The change is applied as a whole and checked again
+  against the zone as it is now. If a record it starts from changed since, or the result would
+  break the zone's rules, nothing is applied, the request stays pending and shows why.
+- **Reject** needs a comment saying why.
+- **Cancel** lets who asked take a pending request back.
+
+API tokens can read their requests and cancel them, but only a person can approve or reject.
+
+## Audit log
+
+Change requests and rollbacks also show in the [audit log](/admin/audit-log) as `change.request`,
+`change.approve`, `change.reject`, `change.cancel`, `zone.rollback` and `approval.update`.

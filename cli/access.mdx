@@ -1,0 +1,134 @@
+---
+title: "Access"
+description: "Manage divisions, users, roles, API tokens and dynamic update keys from the terminal."
+---
+
+These commands match the **Access** pages and **Settings → API tokens** in the dashboard. For how
+divisions, roles and permissions fit together, see [Users, divisions and roles](/admin/access).
+
+Divisions and users are named by id, slug or name. Commands that act on a division's tokens or keys
+take `--division` (`-d`) when you belong to more than one.
+
+## Divisions
+
+```bash
+dnz division list
+dnz division add Radiology --description "Imaging"      # superadmin
+dnz division add Radiology --slug radiology
+dnz division edit radiology --name "Radiology & Imaging" --description "X-ray, CT, MRI"
+dnz division rm radiology                               # superadmin
+```
+
+### Members
+
+```bash
+dnz division members radiology
+dnz division add-member radiology budi --role Editor    # add a member, or change their role
+dnz division rm-member radiology budi
+```
+
+## Users
+
+User accounts are managed by superadmins.
+
+```bash
+dnz user list
+dnz user add budi --name "Budi S"             # asks for a password; they change it at first sign-in
+dnz user add rina --name "Rina" --email rina@example.com --superadmin
+dnz user assign budi --division radiology --role Editor
+dnz user unassign budi --division radiology
+dnz user edit budi --active off               # block sign-in without deleting the account
+dnz user edit budi --reset-password           # they must change it at their next sign-in
+dnz user edit budi --superadmin on
+dnz user rm budi
+```
+
+`dnz user add` and `dnz user edit --reset-password` ask for the password, or read it from
+`DNZ_NEW_PASSWORD` when there is no terminal.
+
+## Roles
+
+```bash
+dnz role list                                 # roles and their permissions
+dnz role permissions                          # every permission a role can have
+```
+
+Built-in roles are Owner, Editor and Viewer. The permissions are `zones.read`, `zones.write`,
+`records.write`, `logs.read`, `members.manage`, `integrations.manage`, `audit.read`,
+`tokens.manage` and `filtering.manage`.
+
+## API tokens
+
+API tokens let scripts, Terraform, CI and ACME clients use the API without a password. Managing them
+needs the `tokens.manage` permission (the Owner role has it).
+
+```bash
+dnz token create certbot -p records.write,zones.read -z example.com --expires-in-days 90
+dnz token list [--division it]
+dnz token rm 3                                # revoke
+```
+
+| Option | What it does |
+| --- | --- |
+| `-p`, `--permission` | `zones.read`, `records.write`, `zones.write`, `logs.read` (repeat or comma-separate). Required |
+| `-z`, `--zone` | Only these zones (default: every zone in the division) |
+| `--expires-in-days` | Expire after this many days (default: never) |
+| `-d`, `--division` | The division the token belongs to |
+
+`dnz token create` prints the token **once**, on its own line, so a script can capture it:
+
+```bash
+TOKEN=$(dnz token create ci -p zones.read)
+```
+
+A token never has more rights than you. See [API tokens](/api/overview#api-tokens) for the rules,
+and [Authentication](/cli/authentication#api-tokens-for-scripts) for using one with the CLI.
+
+## Update keys
+
+Update keys are TSIG keys for dynamic DNS updates (RFC 2136) from `nsupdate`, Kea DHCP-DDNS,
+ExternalDNS and certbot. They live next to API tokens and need the same `tokens.manage` permission.
+See [Dynamic updates](/dns/dynamic-updates) for what a key may do and how to set up each client.
+
+```bash
+dnz update-key create kea-ddns -t A,AAAA,PTR,DHCID -m '*.dhcp.example.com' --allow-from 10.0.0.0/8 > kea.key
+dnz update-key create external-dns -z example.com -t A,AAAA,CNAME,TXT --axfr
+dnz update-key create acme -t TXT -m '_acme-challenge.*'
+dnz update-key list
+dnz update-key set 2 --allow-from 10.0.0.0/8 --expires-in-days 365
+dnz update-key set 3 --type A,TXT --any-name --axfr off
+dnz update-key rm 2                           # revoke
+```
+
+`dnz update-key create` prints a BIND-style key file on standard output **once**, ready for
+`nsupdate -k kea.key`.
+
+### Options of update-key create
+
+| Option | What it does |
+| --- | --- |
+| `--algorithm` | `hmac-sha256` (default), `hmac-sha384` or `hmac-sha512` |
+| `--secret` | A base64 secret to reuse (default: a new random one) |
+| `-z`, `--zone` | Only these zones (default: every zone in the division) |
+| `-m`, `--match` | Names it may change; `*` matches anything, dots included (default: any name) |
+| `-t`, `--type` | Record types it may change (default: any type) |
+| `--allow-from` | Addresses or networks updates may come from (default: anywhere) |
+| `--axfr` | Also allow zone transfers with the key, which ExternalDNS needs |
+| `--expires-in-days` | Expire after this many days (default: never) |
+
+### Changing a key's scope
+
+`dnz update-key set` changes only the options you give. The name and secret stay the same.
+
+| Option | Undo with |
+| --- | --- |
+| `-z`, `--zone` | `--all-zones` |
+| `-m`, `--match` | `--any-name` |
+| `-t`, `--type` | `--any-type` |
+| `--allow-from` | `--anywhere` |
+| `--axfr on` | `--axfr off` |
+| `--expires-in-days N` | `--expires-in-days 0` (never expires) |
+
+<Note>
+  If a key's secret gets lost, revoke the key and create a new one. The secret can't be shown again.
+</Note>

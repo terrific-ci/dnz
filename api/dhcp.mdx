@@ -1,0 +1,65 @@
+---
+title: "DHCP and IPAM API"
+description: "Endpoints for DHCP servers, lease files, leases and the IPAM view."
+---
+
+For what these endpoints do, see [DHCP and IPAM](/integrations/dhcp). Connecting a server needs a
+signed-in session; an **API token** with `records.write` can push lease files (`import`) and sync,
+and one with `zones.read` can read leases and IPAM.
+
+## Endpoints
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/divisions/{id}/dhcp-servers` | `zones.read` | DHCP servers, with their leases by state, records, subnets and last sync |
+| `POST` | `/api/divisions/{id}/dhcp-servers` | `integrations.manage` | Add one; Kea (or one with a URL) is read at once |
+| `GET` | `/api/dhcp-servers/{id}` | `zones.read` | One server |
+| `PATCH` | `/api/dhcp-servers/{id}` | `integrations.manage` | Change its settings; `"enabled": false` pauses it |
+| `DELETE` | `/api/dhcp-servers/{id}?keep_records=false` | `integrations.manage` | Remove it, and its records unless `keep_records=true` |
+| `POST` | `/api/dhcp-servers/{id}/sync` | `records.write` | Read it now and sync its records |
+| `POST` | `/api/dhcp-servers/{id}/import?format=auto` | `records.write` | A lease file (dhcpd.leases, CSV) as the body, or `{"content": "…", "format": "auto"}`; up to 64 MB |
+| `GET` | `/api/dhcp-servers/{id}/leases?q=&live=true` | `zones.read` | Its leases, with the records DHCP keeps for each |
+| `GET` | `/api/divisions/{id}/dhcp-leases?q=&live=true` | `zones.read` | Every server's leases |
+| `GET` | `/api/zones/{id}/dhcp-records` | `zones.read` | The zone's DHCP-managed records, by record id |
+| `GET` | `/api/divisions/{id}/ipam` | `zones.read` | Subnets with their use and conflicts, and the counts |
+| `GET` | `/api/divisions/{id}/ipam/subnet?cidr=10.0.0.0/24` | `zones.read` | A network's addresses, free ranges and conflicts |
+| `GET` | `/api/divisions/{id}/ipam/conflicts` | `zones.read` | Every conflict |
+| `GET` | `/api/divisions/{id}/ipam/outside` | `zones.read` | Addresses in no known subnet |
+| `POST` | `/api/divisions/{id}/ipam/subnets` | `zones.write` | Add a subnet: `{"cidr": "10.0.9.0/24", "name": "Servers", "comment": ""}` |
+| `PATCH` / `DELETE` | `/api/ipam-subnets/{id}` | `zones.write` | Rename or remove one added by hand |
+
+## A DHCP server
+
+```json
+{
+  "name": "kea1",
+  "kind": "kea",
+  "url": "http://10.0.0.2:8000",
+  "api_user": "dnz",
+  "api_password": "…",
+  "services": ["dhcp4"],
+  "domain": "lan.example.com",
+  "make_records": true,
+  "make_ptr": true,
+  "ttl": 300,
+  "ddns_from": [],
+  "interval_secs": 60,
+  "enabled": true
+}
+```
+
+`kind` is `kea`, `dhcpd` or `windows`; Kea needs `url`. The password is never sent back
+(`has_password` says whether one is stored); leaving it out on `PATCH` keeps it. Answers add
+`live_leases`, `leases` (by state), `records`, `subnets`, `notes` (leases that got no records, and
+why), `last_read_at`, `last_sync_at` and `last_error`.
+
+## Pushing a lease file
+
+```bash
+curl -fsS -X POST -H "Authorization: Bearer $DNZ_TOKEN" -H 'Content-Type: text/plain' \
+  --data-binary @/var/lib/dhcp/dhcpd.leases https://dnz.example.com/api/dhcp-servers/3/import
+```
+
+```json
+{ "leases": 112, "subnets": null, "result": { "added": 4, "removed": 1, "changed": 0, "notes": 2 } }
+```

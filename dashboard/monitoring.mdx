@@ -1,0 +1,61 @@
+---
+title: "Monitoring"
+description: "Upstream health, incidents, traffic alerts and the daily summary."
+---
+
+DNZ watches its upstreams and its own traffic, shows problems in the dashboard, and can send them
+to Telegram, e-mail or a webhook.
+
+## Forward DNS monitoring
+
+On the Overview, superadmins see every upstream with:
+
+- latency: last, average, p95, a sparkline,
+- packet loss,
+- share of queries it received,
+- errors by kind: **request timeout** (no answer in time), **unreachable** (connection refused or
+  no route), and **TLS** (a failed handshake or certificate, often something intercepting the
+  connection to a DoT or DoH upstream).
+
+Each upstream and conditional forwarding rule is probed every 15 seconds. When one goes down:
+
+- a warning banner appears on every page,
+- a toast pops up when it goes down and when it recovers,
+- an entry is added to the **incident log** (the bell in the top bar), kept for 90 days.
+
+When an upstream misbehaves, **Diagnose** next to it checks the path step by step. See
+[Diagnosing an upstream](/dns/forwarding#diagnose-an-upstream).
+
+## Traffic alerts
+
+Checked every minute, and sent at most once an hour each:
+
+| Alert | When |
+| --- | --- |
+| **NXDOMAIN spike** | The NXDOMAIN share of the last 5 minutes is over a threshold and twice the usual share. Includes the names and clients behind it |
+| **Rate limiting** | Queries over the per-client limit in 5 minutes go over a threshold. Includes the clients |
+| **Full cache** | Answers are pushed out of the cache before their TTL runs out, meaning `cache_size` is too small |
+
+Thresholds live under **Settings → Notifications → Alerts**.
+
+## Daily summary
+
+At the hour you choose, DNZ sends yesterday's numbers: queries and the change on the day before,
+local / forwarded / cache / blocked shares, NXDOMAIN and SERVFAIL, outages, and the top names and
+clients.
+
+## Getting alerts
+
+Alerts go to the notification providers that subscribe to them. See
+[Notifications](/integrations/notifications).
+
+```bash
+dnz notify alerts --nxdomain-percent 40 --rate-limited 500 --summary-hour 7
+dnz notify incidents        # upstream outages and recoveries
+dnz stats --range 30d       # the dashboard's traffic summary in the terminal
+```
+
+## Prometheus and Grafana
+
+For the monitoring you already run, DNZ also serves its counters at `/metrics`, with a Grafana
+dashboard and alert rules. See [Prometheus and Grafana](/dashboard/prometheus).

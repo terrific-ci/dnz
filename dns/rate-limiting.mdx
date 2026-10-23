@@ -1,0 +1,137 @@
+---
+title: "Rate limiting"
+description: "A per-client query limit and response rate limiting (RRL) against floods and DNS amplification attacks over UDP."
+---
+
+DNZ has two limits for queries over UDP. Both are about spoofed traffic: a UDP query can carry a
+forged source address, so an open DNS server can be used to flood a victim with answers it never
+asked for (an *amplification* or *reflection* attack). TCP, DoT, DoH and DoQ are never limited,
+since their source addresses can't be forged.
+
+| | Per-client limit | Response rate limiting (RRL) |
+| --- | --- | --- |
+| Counts | Every query from one address | Identical answers to one client network |
+| Set in | Config file or environment (`dns.rate_limit`, `DNZ_RATE_LIMIT`) | **Settings → General → Response rate limiting**, `dnz settings rrl`, the API |
+| Default | 200 queries per second | Off |
+| Best for | Resolvers on a LAN (one noisy device) | Authoritative servers reachable from the internet |
+
+## Per-client limit
+
+Each client address gets `DNZ_RATE_LIMIT` queries per second, with bursts up to twice that. Over the
+limit, queries are dropped, and every other one gets an empty truncated answer so a real client
+retries over TCP. `0` turns it off.
+
+```toml /etc/dnz/dnz.toml
+[dns]
+rate_limit = 200
+```
+
+See [Configuration](/deploy/configuration). [Notifications](/integrations/notifications) can warn
+you when clients go over it.
+
+## Response rate limiting (RRL)
+
+RRL works like BIND's and Knot's: instead of counting queries, it counts **identical responses** to
+one client network. A reflection attack asks the same thing again and again from the victim's
+address, so its answers are limited quickly, while a busy resolver that asks for many different
+names is not.
+
+### Turn it on
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Start in log-only mode">
+        As a superadmin, open **Settings → General → Response rate limiting**, turn it on with
+        **Log only** on, and save.
+      </Step>
+      <Step title="Watch the counters">
+        Let it run on real traffic. The card shows how many answers *would be limited* since the
+        server started, and the server logs the first time each account goes over.
+      </Step>
+      <Step title="Enforce it">
+        Add your own resolvers and monitoring to **Exempt networks**, adjust the rates if needed,
+        then turn **Log only** off.
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz settings rrl                                            # show the settings and counters
+    dnz settings rrl --enabled on --log-only on                 # try it first
+    dnz settings rrl --responses 20 --nxdomains 5 --slip 2 --window 15
+    dnz settings rrl --exempt 10.0.0.0/8,192.168.0.0/16         # replaces the list; "" clears it
+    dnz settings rrl --log-only off
+    ```
+
+    See [CLI: monitoring and settings](/cli/monitoring#response-rate-limiting).
+
+  </Tab>
+</Tabs>
+
+### Accounts
+
+Responses are counted in *accounts*:
+
+| Response | Account | Setting |
+| --- | --- | --- |
+| An answer with records | Client network + query name + type | **Answers / s** (`responses_per_second`) |
+| NOERROR without records (NODATA) | Client network + zone | **NODATA / s** (`nodata_per_second`) |
+| NXDOMAIN | Client network + zone | **NXDOMAIN / s** (`nxdomains_per_second`) |
+| SERVFAIL, REFUSED, FORMERR… | Client network | **Errors / s** (`errors_per_second`) |
+
+NODATA and NXDOMAIN are counted per zone, so a flood of random names (`a1.example.com`,
+`b2.example.com`…) shares one account. For names outside DNZ's zones, the last two labels stand for
+the zone (`x.y.example.net` → `example.net`).
+
+The client network is the address shortened to the **IPv4 prefix** (default `/24`) or **IPv6
+prefix** (default `/56`), since an attacker can spread the victim's address over a whole network.
+
+### Slip and window
+
+Each account earns its rate in credits every second (up to one second's worth) and spends one per
+response. Once an account is in debt:
+
+- its responses are **dropped**,
+- except every **slip**-th one (default 2: every other one), which goes out as an empty truncated
+  answer (TC), so a real client behind that network retries over TCP and gets its answer. `0` drops
+  everything, `1` truncates everything.
+
+The debt can grow to **window** seconds of credits (default 15), so a flood stays limited until it
+has been quiet for about that long.
+
+### Exempt networks and cookies
+
+**Exempt networks** are never limited: your own resolvers, monitoring. Clients that send a valid DNS
+cookie (RFC 7873) are not limited either, since a cookie proves their address is real.
+
+### Log only
+
+**Log only** counts what would be limited (shown as *would be limited*) and logs the first time each
+account goes over, but answers everything. Use it to check the rates on real traffic first.
+
+Settings take effect right away, and accounts start over. The counters (dropped, truncated, would
+be limited) count since the server started. Every change is in the
+[audit log](/admin/audit-log) (`settings.rrl`).
+
+## Choosing rates
+
+The defaults (10 per second for each kind) are a common starting point for an authoritative server.
+A rate of `0` doesn't limit that kind.
+
+| DNZ is | Suggestion |
+| --- | --- |
+| A public authoritative nameserver | Turn RRL on with the defaults, in log-only mode first |
+| A resolver for your own networks only | RRL is rarely needed; keep the per-client limit |
+| A resolver also reachable from outside | Add your client networks to **Exempt networks** and keep the rest |
+| Behind a large public resolver | Raise the rates, or exempt the resolver |
+
+<Note>
+  Rate limits don't replace a firewall. Unless DNZ is a public nameserver, limit port 53 to your own
+  networks; see [Security](/deploy/security).
+</Note>
+
+The API is described in [Settings: response rate limiting](/api/settings#response-rate-limiting).

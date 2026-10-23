@@ -1,0 +1,214 @@
+---
+title: "Database"
+description: "Keep DNZ's data in SQLite, Postgres or MySQL, and move an existing install from SQLite."
+---
+
+DNZ keeps zones, records, users, settings and logs in one database. Which one is picked by the
+scheme of `database.url` (`DNZ_DATABASE_URL`):
+
+| Database | URL | Good for |
+| --- | --- | --- |
+| **SQLite** (default) | `sqlite:///var/lib/dnz/dnz.db` | Most installations: one file, nothing else to run or back up separately |
+| **Postgres** 13 or newer | `postgres://dnz:secret@db.internal:5432/dnz` | Large installations: many zones and records, busy query logs, a database team with its own backups, replicas and monitoring |
+| **MySQL** 8.0.13 or newer | `mysql://dnz:secret@db.internal:3306/dnz` | The same, where MySQL is what you run. MariaDB is not supported |
+
+DNZ works the same on all three; only where the data is kept changes. It creates and upgrades its
+own tables at startup, so give it an empty database and a user that may create tables in it.
+
+<Note>
+  Several DNZ servers can share one Postgres or MySQL database and work as a
+  [cluster](/deploy/cluster): a change on any of them reaches the others within a second. SQLite is
+  one server. For nameservers that keep their own database (or aren't DNZ), use
+  [replication](/dns/replication).
+</Note>
+
+## Postgres
+
+<Steps>
+  <Step title="Create the database">
+    ```sql
+    CREATE USER dnz WITH PASSWORD 'secret';
+    CREATE DATABASE dnz OWNER dnz;
+    ```
+  </Step>
+  <Step title="Point DNZ at it">
+    ```bash
+    DNZ_DATABASE_URL=postgres://dnz:secret@db.internal:5432/dnz
+    ```
+
+    Or in `dnz.toml`:
+
+    ```toml
+    [database]
+    url = "postgres://dnz:secret@db.internal:5432/dnz"
+    ```
+  </Step>
+  <Step title="Check and start">
+    ```bash
+    dnz config check
+    ```
+
+    It prints `database: Postgres at postgres://dnz:***@db.internal:5432/dnz`. Start DNZ; it creates its
+    tables and logs the same line.
+  </Step>
+</Steps>
+
+- **TLS**: add `?sslmode=require`, or `?sslmode=verify-full&sslrootcert=/etc/dnz/db-ca.pem` to check the
+  server's certificate.
+- **Unix socket**: `postgres://dnz@localhost/dnz?host=/var/run/postgresql`.
+- DNZ creates a case-insensitive ICU collation named `nocase`. Standard Postgres builds have ICU,
+  including the Docker images and managed services.
+
+## MySQL
+
+<Steps>
+  <Step title="Create the database">
+    ```sql
+    CREATE DATABASE dnz CHARACTER SET utf8mb4;
+    CREATE USER 'dnz'@'%' IDENTIFIED BY 'secret';
+    GRANT ALL ON dnz.* TO 'dnz'@'%';
+    ```
+  </Step>
+  <Step title="Point DNZ at it">
+    ```bash
+    DNZ_DATABASE_URL=mysql://dnz:secret@db.internal:3306/dnz
+    ```
+  </Step>
+  <Step title="Check and start">
+    ```bash
+    dnz config check
+    ```
+
+    It prints `database: MySQL at mysql://dnz:***@db.internal:3306/dnz`. Start DNZ; it creates its tables.
+  </Step>
+</Steps>
+
+- **TLS**: add `?ssl-mode=required`, or `?ssl-mode=verify_identity&ssl-ca=/etc/dnz/db-ca.pem`.
+- DNZ's connections use `ANSI_QUOTES`, `PIPES_AS_CONCAT` and `NO_BACKSLASH_ESCAPES`, set per
+  connection; the server's own `sql_mode` can stay as it is. Tables are InnoDB with `utf8mb4`.
+
+## Connections and files
+
+- Characters such as `@`, `:` or `/` in the password go percent-encoded: `p%40ss` for `p@ss`.
+- DNZ keeps up to 16 connections to Postgres or MySQL open.
+- The password never shows up in `dnz config show`, `dnz config check` or the log.
+- Files DNZ keeps besides the database, the GeoIP database and the local dnz-proxy's state, go in
+  `database.data_dir` (`DNZ_DATA_DIR`). With SQLite that's the database file's folder. With Postgres
+  or MySQL it's the working directory: `/var/lib/dnz` with the [systemd unit](/deploy/systemd), `/data`
+  in the Docker image.
+- The dashboard's **Server** tab shows which database DNZ uses and how big it is.
+
+## Docker with Postgres
+
+Save this as `docker-compose.yml`:
+
+```yaml docker-compose.yml
+services:
+  dnz:
+    image: terrificci/dnz:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "8080:8080"
+    volumes:
+      # The GeoIP database and the local dnz-proxy's state (DNZ_DATA_DIR).
+      - dnz-data:/data
+    environment:
+      TZ: Asia/Jakarta
+      DNZ_INSTANCE_NAME: dnz
+      DNZ_DATABASE_URL: postgres://dnz:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/dnz
+
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dnz
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: dnz
+    volumes:
+      - dnz-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "dnz", "-d", "dnz"]
+      interval: 5s
+      retries: 30
+
+volumes:
+  dnz-data:
+  dnz-postgres:
+```
+
+Then start it with a password of your own:
+
+```bash
+POSTGRES_PASSWORD=change-me docker compose up -d
+```
+
+## Move an existing install from SQLite
+
+`dnz db migrate-from-sqlite` copies a SQLite install into an empty Postgres or MySQL database. It
+copies every table in an order that keeps the foreign keys intact, sets the id sequences past the
+copied ids, and compares the row counts at the end.
+
+<Tabs>
+  <Tab title="systemd">
+    ```bash
+    sudo systemctl stop dnz
+    sudo cp /var/lib/dnz/dnz.db /root/dnz-before-postgres.db
+    sudo dnz db migrate-from-sqlite /var/lib/dnz/dnz.db --to 'postgres://dnz:secret@db.internal:5432/dnz'
+    ```
+
+    Then set the new database in `/etc/dnz/dnz.env` and start DNZ:
+
+    ```bash /etc/dnz/dnz.env
+    DNZ_DATABASE_URL=postgres://dnz:secret@db.internal:5432/dnz
+    ```
+
+    ```bash
+    sudo systemctl start dnz
+    ```
+  </Tab>
+  <Tab title="Docker">
+    Add the `postgres` service and `DNZ_DATABASE_URL` from [Docker with Postgres](#docker-with-postgres)
+    to your `docker-compose.yml`, keeping the `dnz-data` volume, which holds the SQLite file. Then:
+
+    ```bash
+    export POSTGRES_PASSWORD=change-me
+    docker compose stop dnz
+    docker compose up -d postgres
+    docker compose run --rm dnz db migrate-from-sqlite /data/dnz.db
+    docker compose up -d
+    ```
+  </Tab>
+</Tabs>
+
+The copy prints each table with its rows, then:
+
+```text
+ok: copied 1819 rows in 61 tables
+Start DNZ with database.url (DNZ_DATABASE_URL) set to postgres://dnz:***@db.internal:5432/dnz; keep /var/lib/dnz/dnz.db as a backup.
+```
+
+<Warning>
+  Stop DNZ before copying: changes made during the copy would be lost.
+</Warning>
+
+- Without `--to`, the target is `database.url` / `DNZ_DATABASE_URL`.
+- The target must have no users or zones yet. The rows are copied in one transaction, so a copy that
+  fails leaves the target empty to try again.
+- The SQLite file is first brought up to this version's schema, as starting this version of DNZ on
+  it would, and otherwise left alone. Going back is a matter of pointing `DNZ_DATABASE_URL` at it again.
+
+## Backups
+
+With Postgres or MySQL, back up the database with its own tools:
+
+```bash
+pg_dump -Fc dnz > dnz-$(date +%F).dump
+mysqldump --single-transaction dnz > dnz-$(date +%F).sql
+```
+
+For SQLite, see [Backups and updates](/deploy/backups).

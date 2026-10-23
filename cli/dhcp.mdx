@@ -1,0 +1,69 @@
+---
+title: "DHCP and IPAM"
+description: "Connect DHCP servers, push lease files and look at the address space from the terminal."
+---
+
+These commands match **DNS → DHCP & IPAM** in the dashboard. A DHCP server belongs to one division.
+For what the integration does, see [DHCP and IPAM](/integrations/dhcp). Commands take
+`--division` (`-d`) when you belong to more than one, and name a server by its name or id.
+
+## Permissions
+
+- Adding, changing and removing a server need `integrations.manage`.
+- `sync` and `import` need `records.write`.
+- Listing servers and leases, and every `dnz ipam` command but `add` / `rm`, need `zones.read`;
+  `ipam add` and `rm` need `zones.write`.
+
+## DHCP servers
+
+```bash
+dnz dhcp add kea1 --kind kea --url http://10.0.0.2:8000 --user dnz --password --domain lan.example.com
+dnz dhcp add kea6 --kind kea --url http://10.0.0.2:8000 --service dhcp4,dhcp6 --no-ptr
+dnz dhcp add dhcpd1 --kind dhcpd --domain lan.example.com          # lease file pushed or uploaded
+dnz dhcp add dc01 --kind windows --domain corp.example.com --ddns-from 10.0.0.4
+dnz dhcp servers                            # ls: kind, live leases, records, last sync
+dnz dhcp show kea1                          # settings, subnets, leases that got no records and why
+dnz dhcp sync kea1                          # read it now
+dnz dhcp edit kea1 --no-records             # leases only (IPAM), e.g. when Kea's DHCP-DDNS keeps the names
+dnz dhcp edit kea1 --pause                  # stop reading it; --resume
+dnz dhcp rm kea1                            # and the records its leases made (--keep-records to keep them)
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--kind` | `kea`, `dhcpd` or `windows` |
+| `--url` | Kea: the control agent. dhcpd / Windows: a URL DNZ fetches the lease file from (optional) |
+| `--user`, `--password`, `--no-password` | Basic auth for the URL; `--password` asks (or reads `DNZ_DHCP_PASSWORD`) |
+| `--service` | Kea daemons to read: `dhcp4`, `dhcp6` |
+| `--domain` | Domain for hostnames that fall in no zone (`pc1` → `pc1.lan.example.com`) |
+| `--no-records` / `--records` | Only read the leases, or make A/AAAA records (the default) |
+| `--no-ptr` / `--ptr` | Make no PTR records, or make them (the default) |
+| `--ttl` | TTL of the records |
+| `--ddns-from` | Addresses that may send unsigned DNS UPDATEs as this server (Windows DHCP); `''` for none |
+| `--interval` | How often to read the URL, in seconds |
+
+## Leases and lease files
+
+```bash
+dnz dhcp leases                             # every server's leases, with their records
+dnz dhcp leases kea1 --search laptop        # one server's; --search matches address, hostname or MAC
+dnz dhcp leases --live                      # only the live ones
+dnz dhcp import dhcpd1 /var/lib/dhcp/dhcpd.leases
+dnz dhcp import dc01 leases.csv             # Windows' Export-Csv of its leases (or of its scopes)
+cat dhcpd.leases | dnz dhcp import dhcpd1 -
+```
+
+`import` detects the format; `--format dhcpd|csv` skips that. A lease file replaces the server's
+leases, a scopes CSV its subnets.
+
+## IPAM
+
+```bash
+dnz ipam subnets                            # ls: subnets, where from, used, free, conflicts
+dnz ipam show 10.0.0.0/24 --free            # its addresses (hostname, MAC, source, last seen), free ranges
+dnz ipam conflicts
+dnz ipam add 10.0.9.0/24 --name Servers
+dnz ipam rm 10.0.9.0/24
+```
+
+`--json` prints the API's answers.

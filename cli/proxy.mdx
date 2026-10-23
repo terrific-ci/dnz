@@ -1,0 +1,105 @@
+---
+title: "Proxy"
+description: "Add proxy routes and manage dnz-proxy nodes from the terminal."
+---
+
+`dnz proxy` covers two things: adding a **route** (one hostname through a proxy) and managing the
+**nodes** of DNZ's own reverse proxy, dnz-proxy. All `dnz proxy` commands need a superadmin.
+
+For the concepts, see [Proxy overview](/proxy/overview), [Routing](/proxy/routing) and
+[dnz-proxy](/proxy/dnz-proxy).
+
+## Proxy routes
+
+`dnz proxy route` does what **Add route** on a proxy's page does: it sets up one hostname through a
+proxy, with its service (upstreams), router(s) and DNS record, in one go.
+
+### Find a hostname
+
+```bash
+dnz proxy hosts local                             # names with A/AAAA/CNAME records, and whether local routes them
+dnz proxy hosts local portal                      # what Add route offers for "portal": existing names, and new ones per zone
+```
+
+The first argument is the proxy, by name or id. In the output, **DNS** shows a name's record types, or
+**new** when the name has no record yet.
+
+### Add a route
+
+```bash
+dnz proxy route local app.example.com -u http://10.0.0.10:8080
+dnz proxy route local app.example.com -u http://10.0.0.10:8080=3 -u http://10.0.0.11:8080 \
+  --cert-resolver letsencrypt -m compress         # weights 3:1, a middleware by name
+dnz proxy route local intranet.example.com -u http://10.0.0.20 --http     # HTTP only
+dnz proxy route local app.example.com -u http://10.0.0.10:8080 --no-dns   # leave DNS alone
+```
+
+What happens to DNS:
+
+- A name with no record yet gets an A (or AAAA) record pointing at the proxy.
+- A name that already has records keeps them, now proxied.
+- With `--no-dns`, DNS is left alone: no new record, and existing ones are not proxied.
+
+The hostname must be in one of DNZ's zones; `*.example.com` covers one label. A hostname outside
+every zone, or one the proxy already routes, is refused, and the closest names are offered.
+
+| Option | What it does |
+| --- | --- |
+| `-u`, `--upstream` | Upstream URL with scheme and port; repeat for more. Append `=WEIGHT` to share visits unevenly, e.g. `http://10.0.0.10:8080=3`. Required |
+| `--http` | Plain HTTP only: no HTTPS router and no redirect |
+| `--no-redirect` | Keep `http://` as it is instead of redirecting to `https://` |
+| `--cert-resolver` | Certificate resolver for HTTPS, e.g. `letsencrypt` |
+| `-m`, `--middleware` | Middleware by name or id, in order; repeat for more |
+| `--no-dns` | Leave the DNS record alone |
+| `--strategy` | How the upstreams share visits: `wrr` (default), `p2c`, `hrw` or `leasttime` |
+| `--sticky` | Keep each visitor on the upstream it first reached (a cookie) |
+| `--http-entry` | Entry point for `http://` |
+| `--https-entry` | Entry point for `https://` |
+
+HTTPS with a redirect from `http://` is the default.
+
+### Entry points
+
+The server picks the entry points, the same ones the dashboard's **Add route** uses:
+
+- under **dnz-proxy**, the proxy's own HTTP and HTTPS entry points;
+- under **Traefik**, the ones its API lists, when the proxy has **Traefik API** set.
+
+The one on port 80 serves `http://` and the one on 443 serves `https://`; the command prints which it
+picked. Without either, or when no entry point is on that port, it uses `web` and `websecure`.
+`--http-entry` and `--https-entry` name them yourself.
+
+## dnz-proxy nodes
+
+```bash
+dnz proxy show                                    # backend, proxies, connect key
+dnz proxy nodes                                   # every node: proxy, state, addresses, config
+dnz proxy approve jkt-1 --proxy "Edge JKT" --ipv4 203.0.113.10
+dnz proxy ignore node-10-0-0-9                    # turn a waiting node away
+dnz proxy drain jkt-1                             # out of DNS answers, still serving
+dnz proxy drain jkt-1 --undo
+dnz proxy remove jkt-1                            # it can't connect any more
+```
+
+`dnz proxy show` prints the proxying backend, the proxies and the **connect key** new nodes join with.
+New nodes wait for approval. `approve` takes:
+
+| Option | What it does |
+| --- | --- |
+| `-p`, `--proxy` | The proxy it serves, by name or id. Required |
+| `--ipv4`, `--ipv6` | Where visitors reach it; DNS answers with these (default: what the node asked for) |
+| `--name` | A new name for the node |
+
+Nodes are named by name or id.
+
+### Purging the cache
+
+`dnz proxy purge` clears cached answers on every node of a proxy:
+
+```bash
+dnz proxy purge "Edge JKT"                        # every cached answer
+dnz proxy purge "Edge JKT" --host app.example.com --prefix /assets
+dnz proxy purge "Edge JKT" --url https://app.example.com/logo.png
+```
+
+`--prefix` needs `--host`.

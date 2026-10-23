@@ -1,0 +1,214 @@
+---
+title: "Kubernetes (ExternalDNS)"
+description: "Publish a cluster's Services and Ingresses into DNZ with ExternalDNS, over DNZ's API with an API token."
+---
+
+[ExternalDNS](https://kubernetes-sigs.github.io/external-dns/) publishes DNS records for a cluster's
+Services and Ingresses. It can write them into DNZ in two ways:
+
+| | Webhook provider | RFC 2136 (built into ExternalDNS) |
+| --- | --- | --- |
+| Credential | A DNZ **API token** | A **TSIG key** ([DNS update key](/dns/dynamic-updates)) |
+| Talks to DNZ over | HTTPS (the API) | DNS: UPDATE and AXFR on port 53 (TCP) |
+| In the pod | A sidecar running DNZ's own image | Nothing extra |
+| Record types | A, AAAA, CNAME, TXT, MX, SRV, NS, PTR, NAPTR, CAA, HTTPS, SVCB, TLSA, SSHFP, URI, DS | What ExternalDNS sends over RFC 2136 |
+| In DNZ's UI | Records tagged `external-dns`, commented with the Kubernetes object | Audit log names the key |
+| Several zones | Every zone the token reaches | One `--rfc2136-zone` per zone |
+
+**Prefer the webhook** when DNZ's API is easier to reach from the cluster than its DNS port (behind a
+reverse proxy, HTTPS only), when you'd rather hand out an API token than a TSIG key with zone transfers,
+or when you want ExternalDNS's records marked in DNZ. **Prefer RFC 2136** when you'd rather not run a
+sidecar and DNZ's DNS port is reachable from the pods; see
+[Dynamic updates](/dns/dynamic-updates).
+
+## How the webhook runs
+
+ExternalDNS's webhook protocol has no authentication, so the webhook runs as a **sidecar** in
+ExternalDNS's pod: it listens on `127.0.0.1:8888` (where ExternalDNS calls by default) and holds the API
+token; `/healthz` on port 8080 serves the pod's probes. The sidecar is DNZ's own image (`terrificci/dnz`)
+started as `dnz externaldns-webhook`, a client of DNZ's API like the rest of the `dnz` command line, so
+DNZ's server needs no setting for it.
+
+- **Zones**: every primary zone the token reaches, narrowed by `DNZ_DOMAIN_FILTER`.
+- **Changes**: one bulk request per zone, all or nothing.
+- **Ownership**: ExternalDNS's TXT registry records (`a-<name>`) are stored as they are, so ExternalDNS
+  only touches records it created. Records you made in DNZ stay yours.
+- **Change approval**: a change waiting for approval is logged with the request's number and not sent
+  again while it waits.
+- Records in [views](/dns/views), disabled records and ALIAS records are left out; routing policies
+  (`setIdentifier`) aren't supported.
+
+## Set it up
+
+<Steps>
+  <Step title="Create an API token">
+    **Settings → API tokens → Create token** with `zones.read` and `records.write`, limited to the zones
+    ExternalDNS may manage. Or:
+
+    ```bash
+    dnz token create external-dns -p zones.read,records.write -z example.com
+    ```
+  </Step>
+  <Step title="Store the token">
+    ```bash
+    kubectl create namespace external-dns
+    kubectl -n external-dns create secret generic dnz-externaldns --from-literal=token='dnz_…'
+    ```
+  </Step>
+  <Step title="Install ExternalDNS with Helm">
+    ```yaml external-dns-values.yaml
+    provider:
+      name: webhook
+      webhook:
+        image:
+          repository: terrificci/dnz
+          tag: latest # better: the version your DNZ server runs
+        args:
+          - externaldns-webhook
+        env:
+          - name: DNZ_SERVER
+            value: https://dns.example.com
+          - name: DNZ_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: dnz-externaldns
+                key: token
+          - name: DNZ_DOMAIN_FILTER
+            value: example.com
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http-webhook
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: http-webhook
+
+    sources:
+      - service
+      - ingress
+    domainFilters:
+      - example.com
+    policy: sync
+    registry: txt
+    txtOwnerId: my-cluster
+    interval: 1m
+    managedRecordTypes:
+      - A
+      - AAAA
+      - CNAME
+    ```
+
+    ```bash
+    helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/
+    helm upgrade --install external-dns external-dns/external-dns -n external-dns -f external-dns-values.yaml
+    ```
+  </Step>
+  <Step title="Check the webhook's log">
+    ```bash
+    kubectl -n external-dns logs deploy/external-dns -c webhook
+    ```
+
+    It starts with the token, division and zones it found:
+
+    ```
+    INFO dnz::cli::externaldns: connected to DNZ server="https://dns.example.com" token="external-dns" division="IT" permissions="zones.read,records.write" zones="example.com"
+    ```
+  </Step>
+</Steps>
+
+`policy: sync` also deletes records whose Service or Ingress is gone; `upsert-only` never deletes.
+`txtOwnerId` must differ per cluster when several clusters share a zone.
+
+## Webhook settings
+
+Each setting is an environment variable or a flag of `dnz externaldns-webhook` (`--help` lists them).
+Outside Kubernetes the same command runs next to an ExternalDNS started any other way:
+
+```bash
+DNZ_SERVER=https://dns.example.com DNZ_TOKEN=dnz_… dnz externaldns-webhook --domain-filter example.com
+```
+
+| Environment | Default | |
+| --- | --- | --- |
+| `DNZ_SERVER` | | DNZ's URL (required) |
+| `DNZ_TOKEN` | | API token (required) |
+| `DNZ_CA_CERT` | | PEM file of a private CA that signed DNZ's certificate |
+| `DNZ_DOMAIN_FILTER` | every zone the token reaches | Comma-separated domains |
+| `DNZ_EXCLUDE_DOMAINS` | | Comma-separated domains to leave alone |
+| `DNZ_RECORD_TAG` | `external-dns` | Tag on the records it creates (empty: none) |
+| `DNZ_DRY_RUN` | `false` | `true` logs the changes instead of making them |
+| `DNZ_PENDING_RETRY` | `1h` | When a rejected change request is sent again (`90s`, `30m`, `1h`) |
+| `DNZ_LOG_LEVEL` | `info` | `debug` also logs ExternalDNS's requests |
+| `WEBHOOK_LISTEN` | `127.0.0.1:8888` | The webhook API |
+| `WEBHOOK_HEALTH_LISTEN` | `0.0.0.0:8080` | `/healthz` (empty: none) |
+
+## Try it on kind
+
+A throwaway [kind](https://kind.sigs.k8s.io/) cluster publishing a Service into a DNZ zone. The pods only
+need to reach `DNZ_URL` (on Docker Desktop, `http://host.docker.internal:8080` reaches a DNZ on the same
+machine).
+
+```bash
+export DNZ_URL=https://dns.example.com     # DNZ as the pods reach it
+export ZONE=example.com                    # a zone in DNZ
+export DNZ_TOKEN=dnz_…                     # zones.read + records.write for $ZONE
+
+kind create cluster --name dnz-demo
+
+kubectl create namespace external-dns
+kubectl -n external-dns create secret generic dnz-externaldns --from-literal=token="$DNZ_TOKEN"
+
+cat > /tmp/dnz-kind-values.yaml <<EOF
+provider:
+  name: webhook
+  webhook:
+    image:
+      repository: terrificci/dnz
+      tag: latest
+    args: [externaldns-webhook]
+    env:
+      - name: DNZ_SERVER
+        value: $DNZ_URL
+      - name: DNZ_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: dnz-externaldns
+            key: token
+      - name: DNZ_DOMAIN_FILTER
+        value: $ZONE
+sources: [service]
+domainFilters: [$ZONE]
+policy: sync
+registry: txt
+txtOwnerId: dnz-demo
+interval: 20s
+extraArgs:
+  - --publish-internal-services
+EOF
+helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/
+helm upgrade --install external-dns external-dns/external-dns -n external-dns -f /tmp/dnz-kind-values.yaml
+
+kubectl create deployment hello --image=nginx
+kubectl expose deployment hello --port=80
+kubectl annotate service hello "external-dns.alpha.kubernetes.io/hostname=hello.$ZONE"
+
+# Within a loop or two:
+dnz record list "$ZONE" --name hello
+dnz record list "$ZONE" --name a-hello
+```
+
+`hello` gets an A record with the Service's IP, tagged `external-dns`, and `a-hello` the TXT that marks it
+as owned by `dnz-demo`. Delete the Service and the next loop removes both. Clean up with
+`kind delete cluster --name dnz-demo`.
+
+## Troubleshooting
+
+- **`checking DNZ_TOKEN against DNZ` and the pod restarts**: the token is wrong or expired, or
+  `DNZ_SERVER` isn't reachable from the pod.
+- **`the token reaches no zone the domain filter allows`**: the token is limited to other zones, or the
+  zone is a secondary (change it on its primary).
+- **ExternalDNS logs an error with DNZ's message** (a CNAME next to other records, a name with an
+  ALIAS): ExternalDNS retries every loop until the conflict is gone.
+- **`change request #… waits for approval in DNZ`**: change approval is on for the zone; an approver accepts it under **DNS → Changes**
+  or with `dnz change approve <id>`.

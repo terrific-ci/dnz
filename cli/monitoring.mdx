@@ -1,0 +1,145 @@
+---
+title: "Monitoring"
+description: "Read the query log, traffic stats, audit log and topology, and change server-wide settings from the terminal."
+---
+
+These commands show what the dashboard's Overview, **Query Logs**, **Audit log** and **Topology**
+pages show, and change the server-wide settings under **Settings → General**. See
+[Monitoring](/dashboard/monitoring), [Query logs](/dns/query-logs), [Audit log](/admin/audit-log),
+[Topology](/dashboard/topology) and [Settings](/admin/settings).
+
+## Query log
+
+```bash
+dnz logs -n 100
+dnz logs --query example.com --source forwarded
+dnz logs --client 192.168.1.20
+dnz logs --division it
+```
+
+| Option | What it does |
+| --- | --- |
+| `-n`, `--limit` | How many, newest first (default 50) |
+| `-q`, `--query` | Name or client contains this |
+| `--client` | Only this client address |
+| `--source` | `local`, `forwarded`, `cached`, `blocked`, `error`, or one source such as `conditional` |
+| `-d`, `--division` | Only this division's queries: its zones and its client networks (default for superadmins: every query) |
+
+## Traffic stats
+
+`dnz stats` sums up a division's traffic like the dashboard does:
+
+- queries, NXDOMAIN ratio, SERVFAILs and average answer time;
+- counts per hour (`24h`), per 6 hours (`7d`) or per day (`30d`, `90d`);
+- **Answered by**: queries answered locally, forwarded, from the cache, blocked or failed, with each
+  kind's share and the sources inside it (for example `upstream 120, conditional 8`);
+- the top five names and clients, with each client's NXDOMAIN share.
+
+```bash
+dnz stats --division it
+dnz stats --range 30d                         # 24h (default), 7d, 30d or 90d
+dnz stats --json
+```
+
+<Note>
+  Counts come from hourly totals kept for 400 days. The top lists come from the query log, so they
+  cover at most `log_retention_days` (7 days by default).
+</Note>
+
+## Audit log
+
+Who changed what, newest first:
+
+```bash
+dnz audit
+dnz audit --division it --category record
+dnz audit --query 192.0.2.10 --limit 200
+dnz audit --before 1234                       # the next page
+```
+
+| Option | What it does |
+| --- | --- |
+| `-d`, `--division` | Only this division |
+| `-q`, `--query` | Text in the user, action, target, details or address |
+| `--category` | Action prefix, e.g. `record`, `zone`, `user`, `settings` |
+| `-l`, `--limit` | How many (default 50) |
+| `--before` | Entries older than this id: the next page |
+
+Superadmins see every division's entries. Others see the divisions where they have `audit.read`:
+the one given with `--division`, or their only one.
+
+## Topology
+
+`dnz topology` prints the topology map as an outline:
+
+- server-wide (superadmin): the query path, filtering, forwarding, views, replication, proxies,
+  certificates and notifications;
+- then each division with its members, tokens, zones, Cloudflare connection, client networks and
+  filtering.
+
+Like the map in the dashboard, it shows only what your permissions allow.
+
+```bash
+dnz topology
+dnz topology --division it
+dnz --json topology
+```
+
+## Settings
+
+Server-wide settings need a superadmin.
+
+```bash
+dnz settings show                             # time zone and DNS settings
+dnz settings timezone Asia/Jakarta            # schedules and reports; "server" follows the server
+dnz settings auto-ptr on                      # PTR answers for addresses of A/AAAA records
+dnz settings advertise 192.168.1.10           # the address devices use (setup guides); --auto works it out
+dnz settings rrl                              # response rate limiting: settings and counters
+dnz settings dns64 on --network 2001:db8:aa::/48   # AAAA from A for IPv6-only clients (NAT64)
+dnz settings dns64 --prefix 2001:db8:64::/96       # your NAT64 gateway's prefix
+dnz settings cookies on                       # DNS cookies; valid ones skip the UDP rate limit
+dnz settings nsid on --value dns-1.jkt        # tell `dig +nsid` which server answered
+dnz settings metrics on --addr 0.0.0.0:9153   # Prometheus /metrics on a listen address of its own
+dnz settings metrics --new-token              # bearer token for scrapers (printed once)
+dnz settings metrics --api on                 # also at /metrics on the HTTP API
+```
+
+- **Time zone**: an IANA name, or `server` to follow the server's own time zone. It is used for
+  schedules and reports, such as the daily summary. Data is stored in UTC.
+- **Auto PTR**: answers PTR queries (`in-addr.arpa`, `ip6.arpa`) from existing A and AAAA records,
+  with no reverse zone needed. PTR records you write yourself still win.
+- **DNS64**: `--prefix` is the NAT64 prefix (default `64:ff9b::/96`), `--network` the client
+  networks it applies to (repeat or comma-separate; `all` for every client).
+- **Cookies** and **NSID**: `dnz settings nsid on` uses the hostname unless you pass `--value`.
+- **Metrics**: `on`/`off`, `--addr` a listen address of their own (`off` for none), `--api on|off`
+  for `/metrics` on the HTTP API, `--new-token` (printed once) and `--remove-token`. See
+  [Prometheus and Grafana](/dashboard/prometheus).
+
+See [Resolver options](/dns/resolver-options).
+
+### Response rate limiting
+
+`dnz settings rrl` without flags shows the RRL settings and the counters since the server started
+(dropped, truncated, would be limited). With flags, it changes only the flags given.
+
+```bash
+dnz settings rrl --enabled on --log-only on                 # try it on real traffic first
+dnz settings rrl --responses 20 --nxdomains 5 --slip 2 --window 15
+dnz settings rrl --exempt 10.0.0.0/8,192.168.0.0/16         # replaces the list; "" clears it
+dnz settings rrl --log-only off
+```
+
+| Flag | What it sets |
+| --- | --- |
+| `--enabled` | `on` or `off` |
+| `--log-only` | Count what would be limited, but answer everything |
+| `--responses` | Identical answers per second to one client network (`0` = no limit) |
+| `--nodata` | NOERROR answers without records per second, per zone |
+| `--nxdomains` | NXDOMAIN answers per second, per zone |
+| `--errors` | SERVFAIL, REFUSED and other errors per second |
+| `--window` | Seconds a limited client stays limited after it goes quiet |
+| `--slip` | Every n-th limited answer goes out truncated (`0` = drop all) |
+| `--ipv4-prefix`, `--ipv6-prefix` | Client network size, e.g. `24` and `56` |
+| `--exempt` | Comma-separated networks that are never limited |
+
+See [Rate limiting](/dns/rate-limiting).

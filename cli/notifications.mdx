@@ -1,0 +1,94 @@
+---
+title: "Notifications"
+description: "Manage notification providers, alert thresholds and upstream incidents from the terminal."
+---
+
+These commands match **Settings → Notifications** in the dashboard. They need a superadmin. For what
+each event means and what the messages contain, see [Notifications](/integrations/notifications).
+
+`dnz notifications` is an alias for `dnz notify`.
+
+## Providers
+
+A provider is one place notifications go: a Telegram chat, an email address list through Resend or
+your own SMTP server, or a webhook. Each provider sends the events you pick.
+
+```bash
+dnz notify add Ops --kind telegram --set bot_token=123456:ABC… --set chat_id=-1002003004 \
+  --event down --event recovered --event daily_summary
+dnz notify add Mail --kind smtp --set host=smtp.example.com --set port=587 --set security=starttls \
+  --set username=dnz --set password=… --set from=dnz@example.com --set to=ops@example.com,it@example.com
+dnz notify add Hook --kind webhook --config @webhook.json
+dnz notify list                                   # secrets are shown masked
+dnz notify test 1                                 # send a test message now
+dnz notify set 1 --set chat_id=-100999 --enabled off
+dnz notify rm 1
+```
+
+### Options
+
+| Option | `add` | `set` | What it does |
+| --- | --- | --- | --- |
+| `-k`, `--kind` | yes | – | `telegram`, `resend`, `smtp` or `webhook`. Required |
+| `--set KEY=VALUE` | yes | yes | One setting (repeatable) |
+| `--config` | yes | yes | All settings as JSON, or `@FILE` to read them from a file |
+| `--event` | yes | yes | An event to send (repeatable). Default on `add`: `down` and `recovered`. On `set`, replaces the events |
+| `--disabled` | yes | – | Add it switched off |
+| `--enabled` | – | yes | `on` or `off` |
+| `--name` | – | yes | Rename it |
+
+`notify set --set` changes only the settings you give and keeps the stored secrets. `--config`
+replaces them all.
+
+### Settings per kind
+
+| Kind | Settings |
+| --- | --- |
+| `telegram` | `bot_token`, `chat_id` |
+| `resend` | `api_key`, `from`, `to` |
+| `smtp` | `host`, `port`, `security` (`tls` or `starttls`), `username`, `password`, `from`, `to` |
+| `webhook` | `url`, `secret` |
+
+`to` takes a comma-separated list.
+
+### Events
+
+| Event | Sent when |
+| --- | --- |
+| `down` | Forward DNS goes down (timeout, unreachable, TLS error), or every upstream is down |
+| `recovered` | An upstream recovers |
+| `nxdomain_spike` | The NXDOMAIN share of the last 5 minutes is over the threshold and twice the usual share |
+| `rate_limited` | Queries over the per-client rate limit in 5 minutes pass the threshold |
+| `cache_full` | Answers are pushed out of the cache before their TTL (`cache_size` is too small) |
+| `daily_summary` | Once a day, at the summary hour: yesterday's traffic, outages, top names and clients |
+| `certificate_failed` | A dnz-proxy certificate failed 3 times in a row |
+| `certificate_expiring` | A dnz-proxy certificate in use ends within 14 days (once per certificate) |
+| `cluster_node` | A [cluster](/deploy/cluster) node stops heartbeating or falls behind, and when it is back |
+| `threat` | A new [threat finding](/dns/threats), at most one per client every 30 minutes |
+
+## Alerts and the daily summary
+
+```bash
+dnz notify alerts                                 # show the thresholds
+dnz notify alerts --nxdomain-percent 40 --rate-limited 500 --summary-hour 7
+dnz notify summary                                # send yesterday's summary now
+```
+
+| Option | What it sets |
+| --- | --- |
+| `--nxdomain-percent` | NXDOMAIN share (percent) of 5 minutes that counts as a spike |
+| `--nxdomain-min-queries` | Fewer queries than this in 5 minutes never count as a spike |
+| `--rate-limited` | Rate-limited queries in 5 minutes that raise an alert |
+| `--cache-evictions-percent` | Live answers evicted in 15 minutes, as a percent of the cache size |
+| `--summary-hour` | Local hour (0-23) the daily summary is sent at |
+
+Traffic alerts are checked every minute and sent at most once an hour each. The summary hour follows
+the server's time zone; see
+[`dnz settings timezone`](/cli/monitoring#settings).
+
+## Incidents
+
+```bash
+dnz notify incidents                              # upstream outages and recoveries
+dnz notify incidents --limit 200                  # default 50
+```

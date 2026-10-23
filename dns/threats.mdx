@@ -1,0 +1,182 @@
+---
+title: "Threat detection"
+description: "Spot malware and data theft in your DNS traffic: generated domains, DNS tunnels, known-bad domains from threat feeds, unusual clients and newly seen domains, with alerts and optional blocking."
+---
+
+Malware has to use DNS. It looks up its command server, often among hundreds of random-looking
+names; it hides stolen data in the names it asks for; it calls hosts that researchers already know
+are bad. DNZ watches the queries it answers for these signs. What it finds is a **finding** for a
+client and a domain, with the evidence behind it, and you decide what to do: look into it, mute it,
+allow the domain, or block it.
+
+Threat detection lives under **DNS → Threats** (superadmins), and in the CLI under `dnz threats`.
+
+<Note>
+  Detection never slows answers down. The detectors get a copy of the query log as it is written,
+  on their own task; when they fall behind, queries are skipped and counted instead of waiting.
+  Queries for your own zones are never suspicious.
+</Note>
+
+## The detectors
+
+Each detector has a **score**, a **threshold** (from which the score counts) and a **time window**.
+Windows are fixed: a 10-minute window runs from :00 to :10, :10 to :20, and so on.
+
+| Detector | Looks for | Score | Threshold | Window | Alerts | May block |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Threat feeds** (`feed`) | Hosts on a threat feed, and their subdomains | Queries to listed hosts from one client | 1 | 10 min | yes | yes |
+| **DNS tunneling** (`tunnel`) | Data carried in names | The strongest sign over its limit | 1.0 | 5 min | yes | yes |
+| **Generated domains** (`dga`) | Machine-made names | 0 (a name people pick) to 1 (random letters) | 0.65 | 10 min | yes | yes |
+| **Unusual clients** (`baseline`) | Clients far busier than usual | Times the client's usual upper level | 5 | 10 min | yes | no |
+| **Newly seen domains** (`new_domain`) | Domains no client asked for before | Queries in the window after the first | 1 | 60 min | no | no |
+
+<AccordionGroup>
+  <Accordion title="Threat feeds">
+    A query for a host on one of your feeds, or a subdomain of it, is a finding for that host. Feeds
+    are lists by URL (hosts files, AdGuard lists or one domain per line). The cluster leader
+    downloads them every 2 hours, and every node loads them from the database.
+
+    - **abuse.ch URLhaus** (hosts serving malware now) and **ThreatFox** (command servers and
+      botnets) want a free key per user: their old public download links answer `410 Gone`. Sign
+      in at [auth.abuse.ch](https://auth.abuse.ch/), then paste the hostfile download URL from the
+      URLhaus or ThreatFox download page (it carries your key), or the URL and your **Auth-Key**.
+    - **HaGeZi Threat Intelligence (mini)** needs no key and combines many feeds (about 200,000
+      hosts).
+    - Any other list you trust, by URL.
+
+    Feeds only *detect*. To block every listed host outright, add the same list under
+    [Filtering](/dns/filtering) as a blocklist.
+  </Accordion>
+  <Accordion title="DNS tunneling">
+    Tools like iodine and dnscat2 carry data in the names they ask for
+    (`aGVsbG8gd29y.t.example.com`) and get it back in the answers, so every query is a new name
+    under one domain. Per client and domain, the detector counts in the window, for **different
+    names only**:
+
+    | Sign | Limit |
+    | --- | --- |
+    | Different names | 150 |
+    | Encoded-looking names (a label of 24+ characters with 3.4+ bits of entropy per character, or 60+ characters of subdomain) | 25 |
+    | Different TXT, NULL or CNAME names | 60 |
+    | Answer bytes of different names | 256 KiB |
+
+    The score is the highest count over its limit: 2.4 means one sign is 2.4 times its limit. The
+    same long name asked over and over (a load balancer, an API host) counts once.
+  </Accordion>
+  <Accordion title="Generated domains (DGA)">
+    Malware with a domain generation algorithm looks up many random-looking names until one answers.
+    DNZ scores the label of the registered domain (`kqsbtbelblncoy` of `www.kqsbtbelblncoy.com`):
+    60% how unlikely its letters are under a trigram model trained on the 10,000 most popular
+    domains, 25% its longest run of consonants, 5% its entropy and 10% digits mixed into letters.
+
+    A client is flagged when it asks for **3 or more** names scoring 0.65 or more in the window, so
+    one odd name never alerts. Short labels, IDNs and popular domains are not scored. On 20,000 real
+    domains outside the training set, 0.7% score 0.65 or more; of random 10–20 letter labels, about
+    80% do.
+  </Accordion>
+  <Accordion title="Unusual clients">
+    For every client DNZ learns its usual number of queries per window, and how many domains new to
+    it it usually asks for. After 36 active windows, a window counts when the client sent at least
+    1,000 queries and that is 5 times its usual upper level (mean + 3 standard deviations), or asked
+    for at least 200 new domains, 5 times its usual. Windows without queries don't count, so a laptop
+    that sleeps at night isn't judged against its nights.
+  </Accordion>
+  <Accordion title="Newly seen domains">
+    A registered domain (by the Public Suffix List, bundled) that no client of this server, or of
+    any node of the cluster, asked for before. For the first 72 hours domains are only learnt. New
+    domains are common, so this detector doesn't alert or block by default; raise its threshold (say
+    20 queries within the hour) to catch only domains asked for over and over.
+  </Accordion>
+</AccordionGroup>
+
+## Get started
+
+<Tabs>
+  <Tab title="Dashboard">
+    <Steps>
+      <Step title="Add a threat feed">
+        Open **DNS → Threats**. In **Threat feeds**, click **HaGeZi Threat Intelligence**, or
+        **abuse.ch URLhaus** / **ThreatFox** and paste the download URL from your abuse.ch account.
+      </Step>
+      <Step title="Get alerts">
+        Under **Settings → Notifications**, tick **Threat found** on a provider. New providers have
+        it on already.
+      </Step>
+      <Step title="Check that it works">
+        **Check that it works** on the Threats page has commands to paste on a client, with your
+        server's address filled in. Within a few seconds a finding shows up.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    dnz threats feeds add "HaGeZi TIF mini" https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/tif.mini.txt
+    dnz notify set 1 --event down --event recovered --event threat
+    dnz threats list
+    ```
+  </Tab>
+</Tabs>
+
+To see a finding right away, run this on a machine that uses DNZ (with your server's address):
+
+```bash
+for i in $(seq 1 60); do
+  dig @192.0.2.53 +short TXT "$(head -c 30 /dev/urandom | od -An -tx1 | tr -d ' \n').tunnel-test.example"
+done
+```
+
+## Findings
+
+A finding is one detector, one client and one domain (none for unusual clients). It keeps
+counting while it happens: hits, the highest and the last score, first and last seen, the latest
+sample queries (name, type, response code, time) and the detector's numbers. Every node of a
+[cluster](/deploy/cluster) adds to the same findings. The page groups them **per client** (which
+machines to look at) or **per domain** (which domains several machines ask for).
+
+| Status | Meaning |
+| --- | --- |
+| **new** | Not looked at yet; alerts when it is created |
+| **acknowledged** | Someone is on it |
+| **muted** | Keeps counting, never alerts or blocks |
+| **resolved** | Dealt with; becomes **new** again (and alerts) if it happens again |
+
+- **Mute rules** match a detector, a client (address or network) and a domain, for a while or for
+  good. New findings that match are created muted.
+- The **allow list** holds domains no detector should ever flag. Adding one resolves its open
+  findings and lifts its block. Reverse lookups, local names, mail blocklists (Spamhaus and
+  others) and antivirus lookups are left alone out of the box.
+- Findings not seen for 30 days are deleted.
+
+## Alerts
+
+New and reopened findings go to the notification providers that subscribe to **Threat found**
+(`threat`), with the evidence and sample queries; webhooks get everything as JSON. So one noisy
+client doesn't flood them, each server sends at most **one alert per client every 30 minutes** and
+**20 an hour** in all; the client's next alert says how many were held back.
+
+## Automatic blocking
+
+Off by default. Turned on, a new finding of the feed, tunnel or DGA detector blocks its domain for
+24 hours, through a list DNZ manages that [filtering](/dns/filtering) loads server-wide. Popular and
+allowed domains are never blocked automatically, and your own allow rules still win. You can also
+block a finding's domain by hand with **Block domain**.
+
+## Tuning
+
+| Problem | What to do |
+| --- | --- |
+| Tunnel findings for a backup agent or telemetry | Allow its domain |
+| A load test or crawler looks like a tunnel | Mute the client, or raise the different-names limit |
+| DGA findings for real sites | Allow the domain; with many, raise the threshold to 0.75 or the domain count to 5 |
+| Unusual-client findings at the start of the day | Raise the minimum queries, or the threshold to 8 |
+| Nothing from the feed detector | Check the feeds for errors (an abuse.ch feed without its key) |
+
+The settings are on the Threats page, with `dnz threats settings`, or through the
+[API](/api/threats). Every node reads them again within 15 seconds.
+
+## Metrics
+
+`/metrics` has `dnz_threat_*`: queries looked at and dropped, hits and new findings per detector,
+alerts sent and held back, findings by detector and status, feed age and size, and blocked domains.
+The bundled Prometheus rules alert on new feed, tunnel and DGA findings, a feed older than a day,
+and detection falling behind. See [Prometheus](/dashboard/prometheus).

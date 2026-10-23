@@ -1,0 +1,62 @@
+---
+title: "Certificates API"
+description: "Endpoints for the ACME accounts, DNS credentials, resolvers and certificates DNZ uses for dnz-proxy."
+---
+
+<Note>
+  Every endpoint here needs a **superadmin** session; see [API overview](/api/overview) for how to
+  authenticate. Every change is in the [audit log](/admin/audit-log).
+</Note>
+
+For what accounts, credentials, resolvers and certificates do, see
+[Certificates for dnz-proxy](/proxy/certificates). This is not the ACME DNS-01 endpoint that lego,
+Traefik and certbot use to solve challenges in DNZ's zones; that one is under
+[ACME and Dynamic DNS](/api/acme-ddns).
+
+## Overview
+
+| Method | Path | Body / answer |
+| --- | --- | --- |
+| `GET` | `/api/acme` | Accounts, credentials, resolvers, certificates, Cloudflare connections, CAs |
+
+## Accounts
+
+| Method | Path | Body / answer |
+| --- | --- | --- |
+| `POST` | `/api/acme/accounts` | `{name, ca, directory_url?, email?, eab_kid?, eab_hmac?}` |
+| `PUT` | `/api/acme/accounts/{id}` | The same. A new CA or EAB registers again; a new e-mail updates the CA. |
+| `DELETE` | `/api/acme/accounts/{id}` | 409 while resolvers use it |
+
+`ca` is `letsencrypt`, `letsencrypt-staging`, `zerossl` or `custom` (with `directory_url`).
+
+## DNS credentials
+
+| Method | Path | Body / answer |
+| --- | --- | --- |
+| `POST` | `/api/acme/credentials` | `{name, provider, config}` |
+| `PUT` | `/api/acme/credentials/{id}` | The same; secrets left out are kept |
+| `DELETE` | `/api/acme/credentials/{id}` | 409 while resolvers use it |
+| `POST` | `/api/acme/credentials/{id}/test` | `{domain}` → `{ok, fqdn, value, steps, error}` |
+
+`provider` is `dnz`, `cloudflare`, `rfc2136`, `webhook` or `manual`. The `config` for each is in
+[DNS credentials](/proxy/certificates#dns-credentials). Secrets are never returned: answers show
+`token_set` / `secret_set` instead.
+
+## Resolvers
+
+| Method | Path | Body / answer |
+| --- | --- | --- |
+| `POST` | `/api/acme/resolvers` | `{name, account_id, challenge, credential_id?, rules?, propagation_timeout_secs?, propagation_delay_secs?}` |
+| `PUT` | `/api/acme/resolvers/{id}` | The same |
+| `DELETE` | `/api/acme/resolvers/{id}` | 409 listing the routers using it |
+
+## Certificates
+
+| Method | Path | Body / answer |
+| --- | --- | --- |
+| `POST` | `/api/acme/certificates` | `{domains, resolver_id}`, issued in the background |
+| `POST` | `/api/acme/certificates/upload` | `{cert_pem, key_pem}` |
+| `POST` | `/api/acme/certificates/{id}/renew` | 202; 409 while it is being issued |
+| `DELETE` | `/api/acme/certificates/{id}` | |
+| `GET` | `/api/acme/certificates/{id}/events` | `[{id, certificate_id, at, level, message}]` |
+| `GET` | `/api/acme/certificates/{id}/pem` | The certificate chain (never the key) |

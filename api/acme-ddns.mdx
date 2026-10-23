@@ -1,0 +1,135 @@
+---
+title: "ACME and Dynamic DNS endpoints"
+sidebarTitle: "ACME and Dynamic DNS"
+description: "Reference for the httpreq ACME DNS-01 endpoints and the DynDNS2 update endpoint."
+---
+
+Two small HTTP protocols that clients already speak, so they can change records in DNZ with an
+[API token](/api/overview#api-tokens):
+
+- **httpreq**, lego's protocol for ACME DNS-01 challenges, also used by Traefik and easy to call
+  from a certbot hook;
+- **DynDNS2**, the dynamic DNS protocol of routers (MikroTik, OpenWrt, pfSense, Ubiquiti), `ddclient`
+  and `inadyn`.
+
+This page is the reference. For step-by-step client setup, see [ACME certificates](/integrations/acme)
+and [Dynamic DNS](/integrations/dynamic-dns).
+
+<Info>
+  DHCP servers, ExternalDNS and `nsupdate` can use standard DNS UPDATE messages (RFC 2136) with a TSIG
+  key instead of a token. See [Dynamic updates](/dns/dynamic-updates).
+</Info>
+
+## ACME DNS-01 (httpreq)
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `POST` | `/api/acme/httpreq/present` | `records.write` | Create an ACME challenge TXT record |
+| `POST` | `/api/acme/httpreq/cleanup` | `records.write` | Delete an ACME challenge TXT record |
+
+Both endpoints need an API token with `records.write`, preferably limited to the zones that need
+certificates. A signed-in session isn't accepted. Authenticate with a Bearer token, or with HTTP
+Basic and the token as the password (any username), which is what lego and Traefik send.
+
+### Request body
+
+<ParamField body="fqdn" type="string" required>
+  The challenge name, e.g. `_acme-challenge.example.com.`. It must start with `_acme-challenge.`.
+</ParamField>
+
+<ParamField body="value" type="string" required>
+  The challenge value (the key authorization digest).
+</ParamField>
+
+```bash
+curl -fsS -X POST https://dns.example.com/api/acme/httpreq/present \
+  -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+  -d '{"fqdn": "_acme-challenge.example.com.", "value": "…"}'
+```
+
+The answer is `{"ok": true}`.
+
+### What DNZ does
+
+- **present** creates a TXT record with a **TTL of 60** in the matching zone: the most specific zone
+  of the token's division that the token can reach. Sending the same value twice doesn't add a second
+  record.
+- **cleanup** deletes that TXT record again.
+- Both changes are written to the audit log as `<creator> via <token name>`.
+
+A name outside every zone the token can reach answers 400.
+
+<Warning>
+  For the CA to verify the challenge, the zone must be **delegated to DNZ** (DNZ is its public
+  nameserver), or `_acme-challenge` in public DNS must be a **CNAME** to a name DNZ serves. A record
+  that only exists in an internal DNZ is invisible to Let's Encrypt.
+</Warning>
+
+### Client settings
+
+lego and Traefik take the endpoint and token from their environment:
+
+```bash
+HTTPREQ_ENDPOINT=https://dns.example.com/api/acme/httpreq
+HTTPREQ_USERNAME=dnz
+HTTPREQ_PASSWORD=dnz_…
+```
+
+Full examples for lego, Traefik and certbot are in [ACME certificates](/integrations/acme).
+
+## Dynamic DNS (DynDNS2)
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `GET` | `/nic/update` | `records.write` | Point hostnames at new addresses |
+| `GET` | `/api/ddns/update` | `records.write` | The same endpoint under `/api` |
+
+Create a token with `records.write`, preferably limited to the zone that holds the hostname, and send
+it as the HTTP Basic **password** (any username):
+
+```text
+GET https://dns.example.com/nic/update?hostname=home.example.com&myip=203.0.113.7
+Authorization: Basic base64("dnz:dnz_…")
+```
+
+### Query parameters
+
+<ParamField query="hostname" type="string" required>
+  One or more names, comma-separated, in zones the token can reach. At most 20 per request.
+</ParamField>
+
+<ParamField query="myip" type="string">
+  IPv4 and/or IPv6 addresses, comma-separated. When empty, the caller's address is used. Behind a
+  reverse proxy, set `DNZ_TRUSTED_PROXIES` so DNZ sees the real address.
+</ParamField>
+
+### What DNZ does
+
+- The name's A and AAAA records are replaced with the new addresses. Only the address families you
+  send change: an IPv4 address replaces the A records and leaves AAAA alone.
+- New records get a TTL of 60.
+- Names that have a CNAME are refused.
+- A proxied name stays behind its proxies; the new address becomes the origin.
+
+### Answers
+
+The answer is plain text, one line per hostname:
+
+| Answer | Meaning |
+| --- | --- |
+| `good <ip>` | The records were changed |
+| `nochg <ip>` | The records already had these addresses |
+| `nohost` | The name isn't in a zone the token can change |
+| `notfqdn` | No hostname, or not a full name |
+| `numhost` | More than 20 hostnames |
+| `dnserr` | `myip` isn't a valid address, the caller's address is unknown, or the change was refused (e.g. the name has a CNAME) |
+| `badauth` | No API token, or an invalid one (HTTP 401) |
+| `911` | A server error; try again later |
+
+### Example
+
+```bash
+curl -fsS -u "dnz:$DNZ_TOKEN" "https://dns.example.com/nic/update?hostname=home.example.com"
+```
+
+Configurations for `ddclient`, MikroTik and other clients are in [Dynamic DNS](/integrations/dynamic-dns).

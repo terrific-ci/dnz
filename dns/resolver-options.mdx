@@ -1,0 +1,188 @@
+---
+title: "Resolver options"
+description: "Serve stale answers while upstreams are down, refresh busy names early, pass the client's subnet to CDNs, DNS64 for IPv6-only networks, DNS cookies and NSID."
+---
+
+How DNZ answers beyond picking an upstream. Superadmins set these in the dashboard (**DNS →
+Forwarding** for serve-stale, prefetch and client subnet; **Settings → General** for DNS64,
+cookies and NSID), with `dnz forwarding …` and `dnz settings …`, or through
+`PUT /api/settings/resolver`. Changes apply right away, without a restart.
+
+Until an option is saved in the dashboard or with `dnz`, its value comes from the
+[config file](/deploy/configuration) or the environment:
+
+```toml /etc/dnz/dnz.toml
+[forwarding]
+serve_stale = true
+stale_window_secs = 86400
+prefetch = true
+prefetch_min_hits = 3
+ecs = false
+ecs_ipv4_prefix = 24
+ecs_ipv6_prefix = 56
+ecs_private = false
+
+[dns]
+dns64 = false
+dns64_prefix = "64:ff9b::/96"
+dns64_clients = ["2001:db8:aa::/48"]
+cookies = true
+nsid = "dns-1"        # true: the hostname; empty or false: off
+```
+
+## Serve-stale
+
+**On by default** (RFC 8767). When every upstream fails (times out, is unreachable, or answers
+SERVFAIL or REFUSED), DNZ answers from the expired cache entry instead of SERVFAIL, as long as it
+expired less than the **stale window** ago (default 1 day, at most 7 days).
+
+- Stale answers carry a TTL of 30 seconds, so clients ask again soon, and the extended DNS error
+  *Stale Answer* (RFC 8914) for clients that send EDNS.
+- After the upstreams failed for a name, the next 30 seconds of queries for it get the stale answer
+  straight away instead of each waiting for the upstreams to time out again.
+- ALIAS records whose target is outside your zones are served stale the same way.
+- They show up in the [query log](/dns/query-logs) with the source **stale**.
+- Expired entries count toward `dns.cache_size`; a full cache drops them before live ones.
+
+<Tabs>
+  <Tab title="Dashboard">
+    In **DNS → Forwarding**, turn **Serve stale answers** on or off and pick how long after expiry,
+    then **Save**.
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    dnz forwarding stale on --window 3d
+    dnz forwarding stale off
+    ```
+  </Tab>
+</Tabs>
+
+## Prefetch
+
+**On by default.** A name asked at least **N times** (default 3) since it was cached is refreshed in
+the background when a client asks for it in the last tenth of its TTL: the client gets the cached
+answer right away, and the cache gets a fresh copy before the old one expires. There is one
+refresh per name at a time, answers with a TTL under 10 seconds are left alone, and the count
+starts over with every fresh copy.
+
+```bash
+dnz forwarding prefetch on --min-hits 5
+dnz forwarding prefetch off
+```
+
+## EDNS Client Subnet
+
+**Off by default** (RFC 7871). Without it, upstreams only see DNZ's address, so CDNs pick servers
+near DNZ rather than near the client. When DNZ serves clients in other places (branch offices over
+a VPN, several regions), turn it on: upstreams then get the first **24 bits** of an IPv4 client's
+address or the first **56 bits** of an IPv6 one, never the whole address.
+
+- **Private and loopback clients** are left out unless you ask for them: their addresses mean
+  nothing on the internet. A network whose clients all sit behind NAT gains nothing from ECS.
+- A client that sends its own ECS option (another resolver in front of DNZ) is honored, cut to the
+  lengths above; a source prefix of 0 opts out. Its reply carries the option back with the scope.
+- Answers are cached **by the scope the upstream returns**: an answer for `198.51.0.0/16` is reused
+  for every client in it, one with scope 0 for every client.
+- An upstream that rejects the option (FORMERR) is asked again without it.
+- It applies to the default upstreams and every forwarding rule. Changing it empties the cache.
+
+<Note>
+  Privacy-focused resolvers such as Cloudflare `1.1.1.1` ignore ECS on purpose; Google Public DNS
+  uses it.
+</Note>
+
+<Tabs>
+  <Tab title="Dashboard">
+    In **DNS → Forwarding**, turn **Client subnet (ECS)** on, set the prefix lengths, and **Save**.
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    dnz forwarding ecs on --ipv4-prefix 24 --ipv6-prefix 56
+    dnz forwarding ecs on --private on      # also private client addresses
+    dnz forwarding ecs off
+    ```
+  </Tab>
+</Tabs>
+
+Check it with `dig @dns.example.com www.google.com +subnet=198.51.100.0/24`: the `CLIENT-SUBNET`
+line of the reply shows the scope.
+
+## DNS64
+
+**Off by default** (RFC 6147). For IPv6-only networks whose way to the IPv4 internet is a NAT64
+gateway (Jool, Tayga, a router or firewall with NAT64): when a client asks for the AAAA of a name
+that only has IPv4 addresses, DNZ answers with IPv6 addresses made from them under the NAT64
+prefix, and the gateway turns connections to them into IPv4.
+
+- **Prefix**: the one your gateway translates, by default the well-known `64:ff9b::/96`. Lengths
+  32, 40, 48, 56, 64 and 96 are allowed (RFC 6052). The well-known prefix only stands for public
+  IPv4 addresses, so give the gateway a prefix of your own (e.g. `2001:db8:64::/96`) to reach
+  private ones.
+- **Client networks**: only these clients get synthesized answers; empty means every client.
+- It works for names in your zones and forwarded names. Names with a real AAAA record are left
+  alone; synthesized records keep the A record's TTL, capped by the negative answer's SOA minimum.
+- Reverse lookups of a synthesized address are answered with a CNAME to the IPv4 address's
+  `in-addr.arpa` name and its PTR, so `dig -x` works.
+- Clients that check DNSSEC themselves (DO and CD set) get the real answer.
+
+<Tabs>
+  <Tab title="Dashboard">
+    In **Settings → General**, turn **DNS64** on, enter the prefix and the client networks, and
+    **Save**.
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    dnz settings dns64 on --network 2001:db8:aa::/48
+    dnz settings dns64 --prefix 2001:db8:64::/96
+    dnz settings dns64 --network all      # every client
+    dnz settings dns64 off
+    ```
+  </Tab>
+</Tabs>
+
+From a client in the network, `dig AAAA ipv4only.arpa` returns `64:ff9b::c000:aa` and
+`64:ff9b::c000:ab` with the well-known prefix.
+
+## DNS cookies
+
+**On by default** (RFC 7873, RFC 9018). A client that sends a cookie (BIND's `dig`, Unbound, Knot
+Resolver and recent stub resolvers do) gets a server cookie back, made with a secret that changes
+every hour.
+
+- A query that returns a **valid server cookie** has proven its address, so the per-client **UDP
+  rate limit** (`dns.rate_limit`) never slows or drops it.
+- When the rate limit would send a truncated reply to a client with a cookie, it gets
+  **BADCOOKIE** with a fresh server cookie instead, and its retry goes through.
+- DNZ doesn't send cookies to its upstreams; use encrypted upstreams to protect that side.
+
+```bash
+dnz settings cookies off
+dnz settings cookies on
+```
+
+## NSID
+
+**Off by default** (RFC 5001). With NSID on, a client that asks learns which server answered, which
+helps behind anycast, a load balancer, or with several DNZ servers sharing a name. The default text
+is the hostname; any text up to 128 bytes works.
+
+```bash
+dnz settings nsid on --value dns-1.jkt
+dig @dns-1.example.com example.com +nsid     # ; NSID: … ("dns-1.jkt")
+```
+
+## API
+
+`GET /api/settings/resolver` returns every group; `PUT` takes the groups to change, each replaced
+whole. A superadmin sign-in is needed, and every change is in the [audit log](/admin/audit-log) as
+`settings.resolver`.
+
+```json
+{
+  "stale": { "serve_stale": true, "stale_window_secs": 86400, "prefetch": true, "prefetch_min_hits": 3 },
+  "ecs": { "enabled": false, "ipv4_prefix": 24, "ipv6_prefix": 56, "private_clients": false },
+  "dns64": { "enabled": false, "prefix": "64:ff9b::/96", "clients": [] },
+  "cookies": { "enabled": true },
+  "nsid": { "enabled": false, "value": "dns-1" }
+}
+```

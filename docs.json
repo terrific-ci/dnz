@@ -1,0 +1,210 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "DNZ",
+  "description": "Self-hosted authoritative DNS server and forwarder with a web dashboard, a CLI and an API.",
+  "colors": {
+    "primary": "#3959da",
+    "light": "#8cadff",
+    "dark": "#3959da"
+  },
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "appearance": {
+    "default": "dark"
+  },
+  "background": {
+    "color": {
+      "light": "#f0f2f7",
+      "dark": "#090c12"
+    }
+  },
+  "fonts": {
+    "family": "Manrope"
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Install",
+      "href": "/deploy/install"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guide",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "index",
+              "get-started/quickstart",
+              "get-started/first-run",
+              "get-started/concepts"
+            ]
+          },
+          {
+            "group": "Install and deploy",
+            "pages": [
+              "deploy/install",
+              "deploy/docker",
+              "deploy/systemd",
+              "deploy/database",
+              "deploy/cluster",
+              "deploy/port-53",
+              "deploy/https",
+              "deploy/configuration",
+              "deploy/security",
+              "deploy/clients",
+              "deploy/backups",
+              "deploy/troubleshooting",
+              "deploy/benchmarks"
+            ]
+          },
+          {
+            "group": "Dashboard",
+            "pages": [
+              "dashboard/tour",
+              "dashboard/monitoring",
+              "dashboard/prometheus",
+              "dashboard/topology"
+            ]
+          },
+          {
+            "group": "DNS",
+            "pages": [
+              "dns/zones",
+              "dns/geodns",
+              "dns/import-export",
+              "dns/history",
+              "dns/forwarding",
+              "dns/recursive",
+              "dns/resolver-options",
+              "dns/query-logs",
+              "dns/filtering",
+              "dns/rpz",
+              "dns/threats",
+              "dns/views",
+              "dns/dnssec",
+              "dns/dnssec-validation",
+              "dns/encrypted-dns",
+              "dns/rate-limiting",
+              "dns/replication",
+              "dns/dynamic-updates"
+            ]
+          },
+          {
+            "group": "Proxy",
+            "pages": [
+              "proxy/overview",
+              "proxy/traefik",
+              "proxy/routing",
+              "proxy/traefik-records",
+              "proxy/dnz-proxy",
+              "proxy/certificates"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/cloudflare",
+              "integrations/caddy",
+              "integrations/dhcp",
+              "integrations/notifications",
+              "integrations/acme",
+              "integrations/dynamic-dns",
+              "integrations/terraform",
+              "integrations/kubernetes"
+            ]
+          },
+          {
+            "group": "Administration",
+            "pages": [
+              "admin/access",
+              "admin/audit-log",
+              "admin/backups",
+              "admin/settings",
+              "admin/health-check"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI",
+        "groups": [
+          {
+            "group": "Basics",
+            "pages": [
+              "cli/overview",
+              "cli/authentication"
+            ]
+          },
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/zones-records",
+              "cli/changes",
+              "cli/access",
+              "cli/forwarding",
+              "cli/filtering",
+              "cli/threats",
+              "cli/replication",
+              "cli/cluster",
+              "cli/proxy",
+              "cli/cloudflare",
+              "cli/caddy",
+              "cli/dhcp",
+              "cli/notifications",
+              "cli/backups",
+              "cli/monitoring",
+              "cli/maintenance"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API",
+        "groups": [
+          {
+            "group": "Basics",
+            "pages": [
+              "api/overview"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/zones",
+              "api/records",
+              "api/changes",
+              "api/filtering",
+              "api/threats",
+              "api/settings",
+              "api/caddy",
+              "api/dhcp",
+              "api/acme-ddns",
+              "api/proxy",
+              "api/dnz-proxy",
+              "api/certificates",
+              "api/backups"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "groups": [
+          {
+            "group": "Releases",
+            "pages": [
+              "changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

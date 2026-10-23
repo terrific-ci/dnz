@@ -1,0 +1,267 @@
+---
+title: "Routers, services and middlewares"
+sidebarTitle: "Routers and services"
+description: "Set up what a proxy serves: the hostnames it takes, where visits go, and what happens to them on the way."
+---
+
+Everything a proxy serves is set up in DNZ the way Traefik sees it:
+
+- **Routers** pick hostnames from DNZ's zones and send them to one service.
+- **Services** are where a visit goes: your upstream servers, or other services.
+- **Middlewares** change or check a visit on its way.
+
+This page applies to both backends. A Traefik gets these objects in its configuration
+([What Traefik gets](/proxy/traefik#what-traefik-gets)); dnz-proxy reads the same objects as
+Traefik v3 does, with a few differences listed under [Routing](/proxy/dnz-proxy#routing).
+
+<Tip>
+  For a single hostname, **Add route** on the proxy's page adds the service, router and DNS record in
+  one step. See [Adding a route](/proxy/overview#adding-a-route). Use the tabs below to fine-tune
+  afterwards.
+</Tip>
+
+## Where to find them
+
+On the **Proxy** page, open a proxy (**Routers, services, middlewares**). Its page groups everything
+the way Traefik does:
+
+| Group | What it holds |
+| --- | --- |
+| **HTTP** | Routers, services, middlewares, transports |
+| **TCP** | Routers, services, middlewares, transports |
+| **UDP** | Routers, services |
+| **TLS** | Certificates, options |
+| **From Traefik** | [Records from Traefik's routers](/proxy/traefik-records) |
+
+## Services
+
+A service is where a visit goes. It holds one or more **upstreams**, each a URL such as
+`http://10.0.0.10:8080` with a **weight**.
+
+By default the visits are shared by weight (weighted round robin): weights 3 and 1 send 75% and 25%.
+With a health check, an upstream that fails it gets no visits.
+
+| Strategy | How it picks an upstream |
+| --- | --- |
+| Weighted round robin (`wrr`) | By weight. The default. |
+| Power of two choices (`p2c`) | The less busy of two random upstreams |
+| Highest random weight (`hrw`) | The same client keeps reaching the same upstream |
+| Least time (`leasttime`) | The fastest upstream |
+
+**Sticky sessions** add a cookie that keeps each visitor on the upstream it first reached.
+
+The service form has tabs:
+
+- **Upstreams**: the URLs, weights and strategy.
+- **Health**: the health check path and interval, and how to check: HTTP or gRPC, method, expected
+  status, scheme, port, `Host` header, timeout, a separate interval for upstreams that are down,
+  headers and redirects. Plus **passive** checks that skip an upstream after failed visits.
+- **Sticky**: the cookie's name, SameSite, lifetime, domain, path, Secure and HttpOnly.
+- **Advanced**:
+  - accept any certificate from HTTPS servers (the default, since servers are often reached by IP)
+  - pass the visitor's `Host` header on
+  - keep the upstream URLs' paths
+  - how often answers are flushed
+  - a servers transport (see [HTTP transports](#http-transports))
+
+### Services of services
+
+A service can also send visits to **other services** instead of upstreams:
+
+- **Weighted** splits them by weight, for canary releases, optionally with sticky sessions.
+- **Mirroring** sends them to one service and copies a percentage to others, whose answers are
+  dropped.
+- **Failover** sends them to one service, and to a fallback while it is down or answers with the
+  status codes you list.
+
+These name the proxy's own services. A service of another Traefik provider goes as `name@provider`
+(for example `whoami@docker`) and is passed on as it is.
+
+## Middlewares
+
+A middleware is what happens to a visit on its way. **Add middleware** lists every HTTP middleware of
+Traefik 3, grouped and searchable, and each has its own form.
+
+| Group | Middlewares |
+| --- | --- |
+| Paths & redirects | Redirect scheme, redirect regex, add prefix, strip prefix (and regex), replace path (and regex), and **chain**, which runs other middlewares of the proxy as one |
+| Access & security | Basic auth, digest auth, forward auth, IP allow list, encoded characters, pass client certificate |
+| Headers & content | Headers (custom, CORS, security and host headers), compress, content type, **error pages** (from one of the proxy's services), gRPC-Web |
+| Limits & reliability | Rate limit (in memory or shared through Redis), in-flight requests, circuit breaker, retry, buffering |
+
+With the dnz-proxy backend, **Add middleware** also has a **dnz-proxy** group: cache, firewall and
+under attack. See [dnz-proxy's middlewares](/proxy/dnz-proxy#dnz-proxys-middlewares).
+
+How the forms work:
+
+- Large forms are split into tabs. Headers, for example, has *Custom*, *CORS*, *Security* and
+  *Hosts*.
+- Every form has a **JSON** tab showing what Traefik gets. Edits there come back into the form, and
+  settings the form has no field for are kept.
+- **Custom JSON** takes any other middleware, such as a plugin's.
+- For basic and digest auth, **Add user** turns a name and password into a user line: bcrypt as
+  `htpasswd -B` writes it, or htdigest's MD5. The password itself isn't stored.
+- For rate limits and in-flight requests, *One client is* picks how clients are told apart: by
+  address (optionally read from `X-Forwarded-For`), by a request header, or by hostname.
+
+## Routers
+
+A router decides what the proxy serves. Its form has tabs:
+
+- **Basics**:
+  - the **hostnames**, from DNZ's zones. `*.example.com` covers one label.
+  - the **entry points**. A new router starts on the one on port 443. An entry point the router has
+    that the proxy no longer lists is shown as such.
+  - one **service**
+  - the **middlewares** to run, in order
+- **Rules**: an optional path prefix and **conditions** that must all hold:
+  - path is, starts with or matches
+  - method
+  - header is or matches
+  - query parameter is, matches or is there
+  - client address in a list of addresses or ranges
+
+  A condition matches any of its values and can be turned around with **Not**. An **extra rule** in
+  Traefik's own syntax is AND-ed on; a mistake there only stops that router, and Traefik's status
+  says why. The tab shows the rule Traefik gets.
+- **TLS**: HTTPS, a certificate resolver, **TLS options** by name, and the **certificate domains**
+  (a main name and alternative names) to ask the resolver for.
+- **Advanced**: a **priority**, on or off, and leaving the router out of access logs, metrics or
+  tracing (and how detailed its traces are).
+
+A router can be turned off without deleting it.
+
+<Info>
+  With dnz-proxy, the certificate resolver can be one of DNZ's own resolvers, and DNZ issues the
+  certificate. See [Certificates](/proxy/certificates).
+</Info>
+
+### HTTPS with a redirect
+
+Use two routers on the same hostnames:
+
+1. one on the HTTPS entry point, with TLS;
+2. one on the HTTP entry point, with a *Redirect to HTTPS* middleware.
+
+**Add route** sets this up for you when you choose HTTPS with a redirect.
+
+## HTTP transports
+
+A **servers transport** sets how the proxy connects to a service's upstreams:
+
+- the server name (SNI) and certificate checks: trusted CAs as PEM text or paths, expected URI,
+  SPIFFE
+- **client certificates** for mTLS, picked from the proxy's certificates
+- TLS versions and ciphers
+- idle connections, HTTP/2 and timeouts
+
+A load-balancer service picks a transport under **Advanced**. Without one, its *Accept any
+certificate* switch decides.
+
+## TLS
+
+- **Certificates**: a certificate (with its chain) and private key as PEM, pasted or read from a
+  file. DNZ checks that the key belongs to the certificate, shows the names in it and how long it is
+  valid, and never sends the key back to the browser. The proxy gets the pair in its configuration
+  and serves it for those names. Replacing a certificate without a new key keeps the stored one.
+- **Default certificate**: what the proxy serves when nothing matches: Traefik's own, one of the
+  certificates, or one a resolver gets for a domain.
+- **Options**: TLS versions, cipher suites, curves, ALPN, strict SNI, session tickets and **client
+  certificates** (whether they are asked for and checked, and the CAs that sign them). Routers
+  (HTTP and TCP) pick options by name. Options called `default` change the defaults for every
+  router.
+
+## TCP and UDP
+
+- **TCP routers** take connections on TCP entry points and send them to a TCP service through TCP
+  middlewares. They match by **hostname (SNI)** with TLS (or every connection), client address, and
+  an extra rule in Traefik's TCP syntax. TLS can be ended by the proxy (resolver, options, domains)
+  or **passed through** to the upstream. Hostnames taken by SNI count like an HTTP router's: records
+  with those names can be proxied through the proxy.
+- **TCP services** are a load balancer over `host:port` servers (TLS to the server, a TCP transport,
+  PROXY protocol, health checks that can send and expect text), or **weighted** over other TCP
+  services.
+- **TCP middlewares**: an IP allow list, or a limit on open connections per client.
+- **TCP transports**: connect timeout, keep-alive, termination delay, PROXY protocol, and TLS to the
+  upstream (SNI, CAs, client certificates, SPIFFE).
+- **UDP routers** send datagrams from UDP entry points to a **UDP service**: a load balancer over
+  `host:port` servers, or weighted over other UDP services.
+
+For Traefik, entry points are part of its static configuration. Add TCP and UDP ones there, for
+example:
+
+```bash
+--entrypoints.postgres.address=:5432
+--entrypoints.dns.address=:53/udp
+```
+
+dnz-proxy has its entry points in DNZ. See [Entry points](/proxy/dnz-proxy#entry-points).
+
+## What can't be deleted
+
+DNZ keeps a proxy's configuration consistent:
+
+- A router that proxied records rely on can't be deleted, turned off, or have that hostname taken
+  out.
+- A service a router or an error-pages middleware uses can't be deleted, and neither can a service
+  another service sends to.
+- A middleware a router or a chain uses can't be deleted.
+- The same goes for certificates, TLS options, transports and TCP/UDP services and middlewares that
+  something names.
+- Renaming a middleware or service updates the chains, error pages and services that name it.
+- A chain can't run itself, and a service can't send visits back to itself, directly or through
+  others.
+
+## Does it work?
+
+Next to each router, a mark says whether its name works for visitors:
+
+| Mark | Meaning |
+| --- | --- |
+| Lock | HTTPS answers, with a certificate browsers trust for the name |
+| Check | Plain HTTP answers (a redirect counts) |
+| Clock | A certificate resolver (Let's Encrypt) hasn't issued yet; the proxy still serves its own default certificate |
+| Warning | A certificate browsers warn about (self-signed, expired, another name), no answer, a 404 (no router took the visit) or 502–504 (its service didn't answer) |
+
+DNZ checks the way a browser would. It connects to the proxy's address on the ports visitors use,
+with the router's first exact hostname, and verifies the certificate against public CAs. The ports
+are 443 and 80; change them under the routers table when the proxy is published on others.
+
+Every enabled router is checked every 10 minutes. The same marks show on the proxy's card on the
+**Proxy** page.
+
+Click a mark, or **Check now**, to watch a check step by step:
+
+1. the DNS record
+2. whether Traefik loaded the router (when the proxy has its Traefik API set)
+3. the certificate
+4. HTTPS
+5. HTTP
+
+While a resolver is still getting the certificate, the check asks again every few seconds for up to
+three minutes and shows how long it has waited. The check opens by itself after **Add route** and
+after adding a router.
+
+<Note>
+  The check never issues certificates. It only looks at what the proxy serves.
+</Note>
+
+### DNS for a router's names
+
+Each hostname in the routers table also shows whether a DNS record answers with the proxy
+(**DNS ✓**). **Add DNS record** adds an A record (or AAAA) with the proxy's address, or puts the
+name's existing records behind this proxy too, next to any proxies they already go through.
+
+Records can still be added and proxied from the DNS pages. See
+[Proxying a record from the zone](/proxy/overview#proxying-a-record-from-the-zone).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Proxy API" icon="code" href="/api/proxy">
+    Routers, services, middlewares and objects over HTTP.
+  </Card>
+  <Card title="Certificates" icon="certificate" href="/proxy/certificates">
+    Let DNZ issue certificates for dnz-proxy.
+  </Card>
+</CardGroup>

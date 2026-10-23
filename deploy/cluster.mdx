@@ -1,0 +1,252 @@
+---
+title: "Cluster"
+description: "Run two or more DNZ servers on one Postgres or MySQL database, behind NS records or anycast."
+---
+
+Several DNZ servers can share one **Postgres or MySQL** database and answer with the same zones and
+settings. A change made on any of them (dashboard, API, `dnz` CLI, DNS UPDATE, a Caddy or Traefik
+sync, an ACME challenge) reaches the others within a second. Clients reach them through plain NS
+records or one anycast address, and any of them serves the dashboard and the API.
+
+There is nothing to switch on: every DNZ server that uses the same `database.url` joins. SQLite stays
+one server; move to [Postgres or MySQL](/deploy/database) first.
+
+<Note>
+  A cluster shares everything: zones, users, filtering, forwarding, proxies, settings and query logs.
+  [Replication](/dns/replication) is the other way to run more nameservers: each server keeps its own
+  database and copies zones over AXFR/IXFR, and the secondaries may be any DNS server.
+</Note>
+
+## How it works
+
+- **Change feed.** Each server keeps zones, forwarding, blocklists and its other answer data in
+  memory. Whenever one of them changes it, the server also writes a row to the database's change
+  feed, and the others load that part again. On Postgres they are woken at once with
+  `LISTEN/NOTIFY`; on MySQL they poll four times a second (Postgres also polls every 2 seconds, in
+  case its `LISTEN` connection drops). A node that was away for more than a day loads everything.
+- **Leader.** Jobs that write shared state run on one node at a time, the holder of a lease in the
+  database. The leader renews it every 5 seconds; when it stops (crash, lost network), another node
+  takes over after 15 to 20 seconds. A node that shuts down cleanly hands the lease over at once.
+  Every new leader raises the lease's generation, so a node that was cut off and comes back finds it
+  has lost the lease.
+- **Nodes.** Each server has a stable node id (made on first start and kept in the data folder as
+  `node-id`, or set with `DNZ_NODE_ID`) and reports its address, version and the last change it
+  loaded every 5 seconds.
+
+| On the leader only | On every node |
+| --- | --- |
+| ACME certificate issuance and renewal | DNS answers, the dashboard and the API |
+| Traefik and Caddy record syncs, proxy reachability checks | Forward DNS health probes and their incidents |
+| Secondary zone transfers and catalog syncs | Rate limiting, the answer cache, query logging |
+| DNSSEC key rollovers | The GeoIP database download (each node keeps its own file) |
+| RPZ and blocklist downloads | dnz-proxy configuration streams, the local dnz-proxy |
+| GeoDNS health checks (the others load each up/down flip) | |
+| Query log, session and analytics cleanup; the daily summary and NXDOMAIN alert | |
+| Cluster alerts | |
+
+## Set it up
+
+You need a Postgres 13+ or MySQL 8.0.13+ database every node can reach, with its own backups (a
+managed database or a Postgres primary with a replica is a good fit: the cluster can't run without
+it), the same DNZ version on every node, and clocks in sync (NTP). Each node keeps up to 16
+connections open, 17 on Postgres.
+
+<Steps>
+  <Step title="Create the database">
+    On the database server (Postgres):
+
+    ```sql
+    CREATE USER dnz WITH PASSWORD 'change-me';
+    CREATE DATABASE dnz OWNER dnz;
+    ```
+
+    Let the nodes connect: in `pg_hba.conf`, for nodes in `10.0.0.0/24`:
+
+    ```
+    host  dnz  dnz  10.0.0.0/24  scram-sha-256
+    ```
+
+    For MySQL, create the user for the nodes' addresses (`'dnz'@'10.0.0.%'`); see
+    [Database](/deploy/database).
+  </Step>
+  <Step title="Start the first node">
+    On the first machine (here `10.0.0.11`). To bring an existing SQLite install along, run
+    [`dnz db migrate-from-sqlite`](/deploy/database) first.
+
+    <Tabs>
+      <Tab title="Docker">
+        ```bash
+        docker run -d --name dnz --restart unless-stopped \
+          -p 53:53/udp -p 53:53/tcp -p 8080:8080 \
+          -v dnz-data:/data \
+          -e DNZ_INSTANCE_NAME=ns1 \
+          -e DNZ_NODE_ID=ns1 \
+          -e DNZ_CLUSTER_ADDRESS=http://10.0.0.11:8080 \
+          -e DNZ_DATABASE_URL='postgres://dnz:change-me@db.internal:5432/dnz' \
+          terrificci/dnz:latest
+        ```
+      </Tab>
+      <Tab title="systemd">
+        With DNZ installed as a [systemd service](/deploy/systemd):
+
+        ```bash
+        sudo tee -a /etc/dnz/dnz.env >/dev/null <<'EOF'
+
+        # Cluster node (docs/cluster.md)
+        DNZ_INSTANCE_NAME=ns1
+        DNZ_NODE_ID=ns1
+        DNZ_CLUSTER_ADDRESS=http://10.0.0.11:8080
+        DNZ_DNS_ADDR=0.0.0.0:53
+        DNZ_DATABASE_URL=postgres://dnz:change-me@db.internal:5432/dnz
+        EOF
+        sudo systemctl restart dnz
+        ```
+
+        Port 53 may need systemd-resolved's stub listener turned off first; see
+        [Port 53](/deploy/port-53).
+      </Tab>
+    </Tabs>
+
+    Open the dashboard and create the first admin ([First run](/get-started/first-run)).
+    `DNZ_CLUSTER_ADDRESS` is what the Cluster page shows as the node's address, and the host of its
+    DNS address when DNS listens on `0.0.0.0`.
+  </Step>
+  <Step title="Add more nodes">
+    On each other machine, the same with its own name and address. On `10.0.0.12`:
+
+    ```bash
+    docker run -d --name dnz --restart unless-stopped \
+      -p 53:53/udp -p 53:53/tcp -p 8080:8080 \
+      -v dnz-data:/data \
+      -e DNZ_INSTANCE_NAME=ns2 \
+      -e DNZ_NODE_ID=ns2 \
+      -e DNZ_CLUSTER_ADDRESS=http://10.0.0.12:8080 \
+      -e DNZ_DATABASE_URL='postgres://dnz:change-me@db.internal:5432/dnz' \
+      terrificci/dnz:latest
+    ```
+
+    **Settings → Cluster** has these commands filled in under *Add a node*.
+  </Step>
+  <Step title="Check">
+    ```bash
+    dnz cluster --server http://10.0.0.11:8080
+    dig @10.0.0.11 www.example.com +short
+    dig @10.0.0.12 www.example.com +short
+    ```
+
+    ```
+    Postgres cluster · change feed at 42 · leader ns1 (lease generation 1)
+
+    ID   NAME           STATE  ADDRESS                DNS           VERSION  HEARTBEAT  CHANGES
+    ns1  ns1 * (this)   up     http://10.0.0.11:8080  10.0.0.11:53  1.2.0    2s ago     42/42
+    ns2  ns2            up     http://10.0.0.12:8080  10.0.0.12:53  1.2.0    1s ago     42/42
+    ```
+  </Step>
+</Steps>
+
+## Clients: NS records or anycast
+
+<Tabs>
+  <Tab title="NS records">
+    For authoritative zones, give each node a name and list them all as the zone's nameservers, at
+    your registrar (with glue when the names are inside the zone) and in the zone itself:
+
+    ```
+    example.com.      3600  IN  NS  ns1.example.com.
+    example.com.      3600  IN  NS  ns2.example.com.
+    ns1.example.com.  3600  IN  A   203.0.113.11
+    ns2.example.com.  3600  IN  A   203.0.113.12
+    ```
+
+    Resolvers try another nameserver when one doesn't answer, so a node that is down costs a retry,
+    not an outage. Set `DNZ_NAMESERVER=ns1.example.com` so DNZ's SOA records name it. For a resolver
+    on a LAN (forwarding, filtering), hand out both addresses over DHCP
+    (`option domain-name-servers 10.0.0.11, 10.0.0.12;`).
+  </Tab>
+  <Tab title="Anycast">
+    Every node announces the same address (say `198.51.100.53/32`) over BGP, and the network sends
+    each client to the nearest node announcing it. Put the address on each node's loopback and let
+    DNS listen on it:
+
+    ```bash
+    sudo ip addr add 198.51.100.53/32 dev lo
+    # in /etc/dnz/dnz.env (or -e with Docker and --network host):
+    # DNZ_DNS_ADDR=198.51.100.53:53
+    ```
+
+    Announce it with BIRD 2 (`/etc/bird/bird.conf`):
+
+    ```
+    protocol static dnz_anycast {
+      ipv4;
+      route 198.51.100.53/32 via "lo";
+    }
+
+    protocol bgp upstream {
+      local as 65053;
+      neighbor 10.0.0.1 as 65000;
+      ipv4 { import none; export where proto = "dnz_anycast"; };
+    }
+    ```
+
+    And withdraw it when DNZ stops answering, from a systemd timer or cron every few seconds:
+
+    ```bash
+    #!/bin/sh
+    # /usr/local/bin/dnz-anycast-check
+    if dig @198.51.100.53 www.example.com +time=1 +tries=2 +short >/dev/null 2>&1; then
+      birdc enable dnz_anycast >/dev/null
+    else
+      birdc disable dnz_anycast >/dev/null
+    fi
+    ```
+  </Tab>
+</Tabs>
+
+Every node serves the dashboard and the API, and sessions are in the database, so a load balancer in
+front of the nodes (or each node's own [HTTPS reverse proxy](/deploy/https)) needs no sticky
+sessions. The `dnz` CLI can talk to any node.
+
+## Watching it
+
+- **Settings → Cluster** (superadmin): each node's address, DNS address, version, last heartbeat,
+  whether it leads, and the change it has loaded against the feed's last one. A node is **down** after
+  30 seconds without a heartbeat and **behind** when it hasn't loaded a change that is 30 seconds old.
+  Nodes gone for good can be removed from the list.
+- [`dnz cluster`](/cli/cluster) shows the same in the terminal.
+- **Alerts**: the leader sends one when a node goes down or falls behind, and again when it is back,
+  to the [notification providers](/integrations/notifications) subscribed to `cluster_node`.
+- The [topology map](/dashboard/topology) shows the other nodes next to the DNZ box, colored by state.
+- `GET /api/cluster` returns it as JSON; `GET /api/health` on each node is the liveness check for
+  load balancers and Docker.
+
+## Upgrading
+
+Upgrade one node at a time. The first one on the new version upgrades the database's tables when it
+starts; the others keep running meanwhile. A change from a newer node that an older one doesn't know
+makes the older one load everything again, so mixed versions stay correct, but finish the upgrade
+soon after.
+
+## Good to know
+
+- **Query logs and statistics** are in the shared database: the Overview and the logs show the
+  traffic of all nodes together.
+- **GeoIP**: each node keeps its own GeoIP database in its data folder; automatic updates download
+  it on every node.
+- **dnz-proxy**: each dnz-proxy node streams its configuration from the DNZ node it connects to.
+  ACME HTTP-01 challenges are handed out by the leader, which runs the issuance: point dnz-proxy nodes
+  at the leader's address, or use DNS-01 through DNZ's own zones, which works from any node.
+- **NOTIFY from a primary** may arrive at any node; the leader transfers the zone within seconds.
+- **Removing a node**: stop it, then remove it under **Settings → Cluster** (or
+  `dnz cluster forget`). Nodes not seen for 7 days are removed by themselves.
+- **Containers without a data volume** get a new node id on every start unless `DNZ_NODE_ID` is set.
+
+## Troubleshooting
+
+| What you see | What to do |
+| --- | --- |
+| A node is **behind** | It can't read the change feed: check its log (`cluster: couldn't load changes`) and its connection to the database. It catches up by itself once it can |
+| A node is **down** but answers DNS | It can't write its heartbeat. It keeps answering with what it loaded last; fix its database connection |
+| No leader for more than 20 seconds | No node can write to the database; check the database |
+| Two nodes with the same id | Each node needs its own `DNZ_NODE_ID` or data folder. A copied data folder has the same `node-id` file: delete it on the copy |
+| A change shows on one node only | Both must use the same `database.url` (`dnz config check` on each) |

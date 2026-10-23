@@ -1,0 +1,208 @@
+---
+title: "Proxy API"
+description: "Endpoints for proxying settings, proxies, routers, services, middlewares and the Traefik provider."
+---
+
+<Note>
+  Every endpoint here needs a **superadmin** session, with two exceptions: `GET /api/proxies` works
+  for any signed-in user (the record editor uses it), and the Traefik endpoint takes the connect key
+  or a proxy's own token. See [API overview](/api/overview) for how to authenticate.
+</Note>
+
+For what these objects do, see [Proxied records](/proxy/overview),
+[Connecting Traefik](/proxy/traefik), [Routers, services and middlewares](/proxy/routing) and
+[Records from Traefik's routers](/proxy/traefik-records). dnz-proxy nodes, entry points and analytics
+are in the [dnz-proxy API](/api/dnz-proxy).
+
+## Settings and proxies
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/settings/proxy` | Proxying on or off, the connect key, every proxy with its status and proxied hosts |
+| `PUT` | `/api/settings/proxy` | `{"backend": "traefik"}`, `{"backend": "dnz"}` or `{"backend": "off"}` |
+| `POST` | `/api/settings/proxy/connect-key` | Replace the connect key |
+| `GET` | `/api/proxies` | `{"enabled": true, "proxies": [{"id", "name", "ipv4", "ipv6", "routes": [...]}]}`: approved proxies only, with their enabled routers |
+| `POST` | `/api/proxies` | Add a proxy by its addresses |
+| `PUT` | `/api/proxies/{id}` | Change a proxy |
+| `DELETE` | `/api/proxies/{id}` | Delete a proxy (409 while records use it) |
+| `POST` | `/api/proxies/{id}/approve` | Approve a detected (or ignored) Traefik, with a proxy body |
+| `POST` | `/api/proxies/{id}/ignore` | Ignore a detected Traefik |
+| `POST` | `/api/proxies/{id}/link` | `{"proxy_id": 3}`: a detected Traefik connects as that proxy from now on |
+| `POST` | `/api/proxies/{id}/token` | Give the proxy a token of its own (shown once; replaces an earlier one) |
+| `DELETE` | `/api/proxies/{id}/token` | Back to the connect key |
+| `GET` | `/api/proxies/{id}/traefik` | Version, entry points and router status, from the proxy's Traefik API |
+| `POST` | `/api/proxies/traefik-check` | Try a Traefik API before saving: `{"url", "user", "password"}` |
+
+## Routes, routers, services and middlewares
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/proxies/{id}/setup` | The proxy's routers, services and middlewares, and its proxied names |
+| `GET` | `/api/proxies/{id}/routes/hosts` | What Add route offers: `{"zones": [...], "records": [{"host", "types", "routed"}]}`. DNZ's primary zones and the names with A/AAAA/CNAME records (`routed` when this proxy has a router for one) |
+| `GET` | `/api/proxies/{id}/routes/entry-points` | The proxy's HTTP entry points for the router and Add route dialogs: `{"list": [{"name", "address"}], "http", "https", "from", "http_found", "https_found", "error"}` |
+| `POST` | `/api/proxies/{id}/routes` | One step: `{"host", "servers", "tls", "cert_resolver", "redirect_http", "middlewares", "dns_record"}` adds the service, router(s) and proxied DNS record |
+| `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/routers[/{router}]` | Add, change, delete a router |
+| `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/services[/{service}]` | Add, change, delete a service |
+| `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/middlewares[/{middleware}]` | Add, change, delete a middleware |
+| `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/objects[/{object}]` | Add, change, delete a certificate, TLS options, the default store, a transport, or a TCP/UDP router, service or middleware |
+| `POST` | `/api/proxy/auth-user` | A basic or digest auth user line from `{"user", "password"}` |
+
+**Entry points.** Under dnz-proxy, `routes/entry-points` lists the proxy's own entry points. Under
+Traefik it lists the ones its API lists. `from` says which (`dnz-proxy` / `traefik`). Without either,
+it offers `web` (:80) and `websecure` (:443). `http` and `https` are the ones on port 80 and 443 that
+a new route uses.
+
+**One-step routes.** In `POST /api/proxies/{id}/routes`, `http_entry_point` and `https_entry_point`
+default to the `http` and `https` entry points above.
+
+**Auth users.** `POST /api/proxy/auth-user` with `{"user", "password"}` returns `{"line"}` for basic
+auth. Add `"digest": true` and an optional `"realm"` for digest auth.
+
+## Checks and DNS
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/api/proxies/{id}/routers/{router}/check` | Check a router like a visitor, as server-sent events: `plan`, `step`, `wait` (a certificate on its way), `done` with the report |
+| `PUT` | `/api/proxies/{id}/check-ports` | `{"http_port", "https_port"}` visitors reach the proxy on |
+| `POST` | `/api/proxies/{id}/dns` | `{"host"}`: a proxied DNS record for one of the proxy's routed names |
+
+## Records from Traefik's routers
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/proxies/{id}/auto-records` | `enabled`, `last_run_at`, `last_error`, `skipped` and the `hosts` found |
+| `PUT` | `/api/proxies/{id}/auto-records` | `{"enabled": true}`. Needs the Traefik API; reads it right away. |
+| `POST` | `/api/proxies/{id}/auto-records/sync` | Read the Traefik's routers now |
+| `POST` | `/api/proxies/{id}/auto-records/hosts/{host}/release` | Keep a name's records as manual ones; DNZ makes none for it again |
+| `POST` | `/api/proxies/{id}/auto-records/hosts/{host}/manage` | Manage a released name again |
+| `DELETE` | `/api/proxies/{id}/auto-records/hosts/{host}` | Delete an orphaned name's records (409 while a router routes it) |
+
+A host has `host`, `zone_id`, `zone`, `routers`, `records` (how many DNZ keeps) and `status`:
+
+| `status` | Meaning |
+| --- | --- |
+| `created` | DNZ made and keeps its records |
+| `exists` | The name has records of its own |
+| `no_zone` | No local primary zone holds the name |
+| `orphaned` | No router routes it any more |
+| `released` | Kept as manual records |
+
+## Traefik's HTTP provider
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/proxy/traefik[?name=]` | Traefik's HTTP provider. Bearer token, or HTTP Basic with the key as the password. |
+
+```bash
+curl -H "Authorization: Bearer dnzp_…" https://dnz.example.com/api/proxy/traefik
+```
+
+Run it from the Traefik's machine, so DNZ recognizes it by that address. See
+[Connecting Traefik](/proxy/traefik).
+
+## Objects
+
+### A proxy
+
+```json
+{
+  "name": "Edge A", "ipv4": "203.0.113.10", "ipv6": "2001:db8::10",
+  "traefik_api_url": "http://10.0.0.12:8080", "traefik_api_user": "", "traefik_api_password": "…"
+}
+```
+
+- Leave `traefik_api_password` out to keep the stored one; `null` removes it.
+- Add `"connects_from": "10.0.0.12"` to set the address the Traefik calls DNZ from. Leave it out to
+  keep the current one, or send `null` to recognize the Traefik by `ipv4` / `ipv6` again.
+
+Responses also carry:
+
+| Field | Meaning |
+| --- | --- |
+| `status` | `pending`, `approved` or `ignored` |
+| `detected_ip`, `detected_name` | How a Traefik with the connect key is recognized |
+| `has_token` | Whether the proxy has a token of its own |
+| `last_seen_at`, `last_seen_ip` | When and from where it last fetched its configuration |
+
+### A router
+
+```json
+{
+  "name": "app", "hosts": ["app.example.com"], "path_prefix": "", "entry_points": ["websecure"],
+  "tls": true, "cert_resolver": "letsencrypt", "service_id": 1, "middlewares": [2],
+  "priority": null, "enabled": true
+}
+```
+
+- `matchers` are conditions such as
+  `{"kind": "Header", "name": "X-Env", "values": ["prod"], "not": false}`. `kind` is `Path`,
+  `PathPrefix`, `PathRegexp`, `Method`, `Header`, `HeaderRegexp`, `Query`, `QueryRegexp` or
+  `ClientIP`; `name` is the header or query parameter.
+- `extra_rule` is Traefik rule syntax.
+- `options` holds `tls.options`, `tls.domains` and `observability`, in Traefik's shape.
+
+### A service
+
+```json
+{
+  "name": "app",
+  "servers": [{ "url": "http://10.0.0.10:8080", "weight": 3 }, { "url": "http://10.0.0.11:8080", "weight": 1 }],
+  "pass_host_header": true, "skip_tls_verify": true, "health_check_path": "", "health_check_interval_secs": 10,
+  "strategy": "wrr", "sticky": false, "sticky_cookie": ""
+}
+```
+
+- `servers` may also be plain URLs (weight 1). A server can add `"preserve_path": true`.
+- `kind` is `loadBalancer` (the default), `weighted`, `mirroring` or `failover`.
+- `options` hold the rest in Traefik's shape. For a load balancer: `healthCheck` (besides `path` and
+  `interval`), `sticky.cookie` (besides `name`), `passiveHealthCheck` and `responseForwarding`. For
+  the others, the whole service:
+
+```json
+{"kind": "failover", "options": {"service": "app", "fallback": "maintenance", "errors": {"status": ["502-504"]}}}
+```
+
+<Warning>
+  Unknown fields are refused, since Traefik would reject the proxy's whole configuration over one.
+</Warning>
+
+### A middleware
+
+```json
+{ "name": "redirect-to-https", "kind": "redirectScheme", "config": { "redirectScheme": { "scheme": "https", "permanent": true } } }
+```
+
+- `kind` is its Traefik type (`redirectScheme`, `headers`, `chain`, …; the setup's `kinds` lists
+  them), or `raw` for any other. `config` holds exactly that one type.
+- The first kinds (`redirect_https`, `basic_auth`, `strip_prefix`, `ip_allow_list`, `rate_limit`) are
+  still accepted.
+- A chain's `middlewares` and an error-pages `service` are names in the same proxy.
+
+### Objects: TLS, transports, TCP and UDP
+
+TLS, transports, TCP and UDP are **objects** under `/api/proxies/{id}/objects`:
+`{"kind", "name", "config"}`, with `config` in Traefik's shape.
+
+| `kind` | Notes |
+| --- | --- |
+| `certificate` | `certFile`, `keyFile` as PEM |
+| `tlsStore` | Only `default`: `defaultCertificate` names a certificate, or `defaultGeneratedCert` |
+| `tlsOptions` | |
+| `serversTransport` | `certificates` names certificates |
+| `tcpRouter` | `hostSNI` and `clientIP` lists and an extra `rule`, instead of Traefik's rule |
+| `tcpService` | |
+| `tcpMiddleware` | |
+| `tcpServersTransport` | |
+| `udpRouter` | |
+| `udpService` | |
+
+Names of other objects go as they are (`name@provider` for another provider's). Unknown fields are
+refused.
+
+The setup lists certificates without `keyFile`, with `has_key` and `info` (names, validity, issuer).
+
+## Proxying records
+
+On records, `proxies` puts an A, AAAA or CNAME record behind one or more proxies (`[1, 3]`); `[]` is
+DNS only. Each proxy needs a router for the record's name. The bulk API's `set_proxies` moves a name's
+records at once. See [Records API](/api/records#proxied-records).

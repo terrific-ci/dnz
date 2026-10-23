@@ -1,0 +1,83 @@
+---
+title: "History and changes"
+description: "Zone history, diffs and rollbacks, change requests waiting for approval, and approval policies from the terminal."
+---
+
+These commands do what the **History** tab of a zone and **DNS → Changes** do in the dashboard. For
+how history and change approval work, see [History and change approval](/dns/history).
+
+## Zone history
+
+```bash
+dnz zone history example.com                  # newest versions: when, from where, who, what
+dnz zone history example.com -n 100           # more of them
+dnz zone history example.com 12               # what version 12 changed
+dnz zone diff example.com 10 14               # from version 10 to version 14
+dnz zone diff example.com 10                  # from version 10 to the zone as it is now
+dnz zone rollback example.com 10              # shows what changes, asks, then rolls back
+```
+
+`rollback` asks before it changes anything; pass `--yes` in scripts.
+
+Diffs mark added records with `+`, removed ones with `-`, and changed ones with `~` and an arrow to
+what they became:
+
+```text
+example.com from version 10 to 14: changed www A 192.0.2.1 → 192.0.2.7; default TTL 300 → 900
+
++ api A 192.0.2.5 (TTL 300)
+~ www A 192.0.2.1 (TTL 300)
+  → www A 192.0.2.7 (TTL 300)
+~ zone default_ttl: 300 → 900
+```
+
+How long history is kept (superadmin; `0` is no limit):
+
+```bash
+dnz settings history
+dnz settings history --keep-days 90 --keep-versions 500
+```
+
+## Edits that wait for approval
+
+When change approval covers you, an edit doesn't fail: it ends with a note and exits 0.
+
+```text
+$ dnz record add example.com api A 192.0.2.5
+waiting for approval: added api A 192.0.2.5 is change request #4; it's applied once someone approves it (`dnz change show 4`)
+```
+
+With `--json`, the command prints the API's `202` answer instead.
+
+## Change requests
+
+```bash
+dnz change list                               # pending ones you can see
+dnz change list --to-approve                  # the ones you can decide
+dnz change list --mine --status all
+dnz change list --zone example.com --status approved
+dnz change show 42                            # what it changes, comments, who decided
+dnz change comment 42 "after the release, please"
+dnz change approve 42 --comment ok            # someone else's, with changes.approve
+dnz change reject 42 --comment "use the new load balancer"
+dnz change cancel 42                          # your own pending one
+```
+
+An approval that conflicts with the zone as it is now fails with the reason, and the request stays
+pending.
+
+## Approval policies
+
+Whose edits wait, for a division (every zone without a policy of its own) or one zone. Flags you
+leave out keep what the policy has; without flags the command shows the policy.
+
+```bash
+dnz change policy                                              # the division's
+dnz change policy --division it --role Editor --all-tokens on
+dnz change policy --division it --mode off
+dnz change policy --zone example.com                           # the zone's, the division's, and which applies
+dnz change policy --zone example.com --mode on --role Editor --api-token externaldns
+dnz change policy --zone example.com --mode inherit
+```
+
+Roles and API tokens are given by name or id; repeat the flag or separate them with commas.

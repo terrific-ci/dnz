@@ -1,0 +1,46 @@
+---
+title: "Pointing clients at DNZ"
+sidebarTitle: "Pointing clients"
+description: "Make devices on your network use DNZ as their DNS server."
+---
+
+The [setup wizard](/get-started/first-run#the-setup-wizard) shows these steps with this server's
+address filled in, ready to copy, for routers and DHCP servers (ISC dhcpd, Kea, dnsmasq, MikroTik,
+Windows Server), Windows, macOS, Linux and phones; `dnz setup --guide all` prints them in the
+terminal.
+
+<Tabs>
+  <Tab title="Router / DHCP">
+    Set the DNS server handed out by DHCP to the DNZ server's IP address. Every device on the network
+    then uses DNZ when it renews its lease.
+
+    If you run two DNZ servers (see [Replication](/dns/replication)), hand out both.
+  </Tab>
+  <Tab title="One device">
+    Set the device's DNS server manually to the DNZ server's IP address in its network settings.
+  </Tab>
+  <Tab title="Encrypted">
+    Phones, laptops and browsers can use DNZ over DNS over TLS, HTTPS or QUIC once DNZ has a
+    certificate. See [Encrypted DNS](/dns/encrypted-dns#connect-devices).
+  </Tab>
+</Tabs>
+
+## Test from a client
+
+```bash
+dig @192.168.1.10 example.com
+nslookup example.com 192.168.1.10
+```
+
+The query should show up under **DNS → Query Logs** with the client's address. Names in your zones
+appear in the division's log; forwarded names appear in the **All queries** view, which
+superadmins see.
+
+## Per-network behavior
+
+What a client gets can depend on its address:
+
+- [Views](/dns/views) answer a name differently for internal and external networks.
+- [Filtering](/dns/filtering) picks a division's blocklists by client network.
+- [Conditional forwarding](/dns/forwarding#conditional-forwarding) can send everything some clients
+  ask to other servers.

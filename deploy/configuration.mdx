@@ -1,0 +1,156 @@
+---
+title: "Configuration"
+description: "Every setting, as a config file key, an environment variable and a flag."
+---
+
+DNZ reads its settings from three places. A later one wins:
+
+1. a **TOML file**: `--config FILE` or `DNZ_CONFIG`, otherwise `./dnz.toml` or `/etc/dnz/dnz.toml`
+   (the first that exists);
+2. the **environment**;
+3. **flags**: `--dns-addr`, `--http-addr`, `--database-url`, `--upstream`, `--no-ui`,
+   `--tls-cert`, `--tls-key`, and `--set KEY=VALUE` for anything else, e.g.
+   `--set dns.rate_limit=100`.
+
+Every setting is optional. Unknown keys in the file are errors, so typos don't go unnoticed.
+
+```bash
+dnz config example > /etc/dnz/dnz.toml   # a commented file with every setting
+dnz config show                          # effective values and where each comes from
+dnz config check                         # only validate
+```
+
+```toml /etc/dnz/dnz.toml
+[dns]
+addr = "0.0.0.0:53"
+
+[http]
+addr = "0.0.0.0:8080"
+ui = false            # headless: manage with the dnz CLI
+
+[database]
+url = "sqlite:///var/lib/dnz/dnz.db"
+```
+
+<Note>
+  Settings in the database (upstreams, strategy, zones, users and everything else you change in the
+  dashboard) are not part of this file. `DNZ_UPSTREAM` and `DNZ_FORWARD_STRATEGY` are only used on
+  the first start; after that, manage them under **Forwarding**.
+</Note>
+
+## Reference
+
+### General
+
+| File key | Environment | Default | Description |
+| --- | --- | --- | --- |
+| `instance_name` | `DNZ_INSTANCE_NAME` | machine hostname | Server name in notifications, replication and discovery |
+| `advertise` | `DNZ_ADVERTISE` | – | Addresses devices use to reach DNZ, shown in the setup guides (comma-separated). Set it in a container or behind NAT; empty = the one saved under Settings → General → Device address, else the network interfaces' addresses |
+| – | `DNZ_CONFIG` | – | Config file to read |
+| – | `TZ` | system time zone | The server's default time zone, e.g. `Europe/Berlin` |
+
+### DNS
+
+| File key | Environment | Default | Description |
+| --- | --- | --- | --- |
+| `dns.addr` | `DNZ_DNS_ADDR` | `0.0.0.0:1053` | DNS address (UDP and TCP). Use `:53` in production |
+| `dns.nameserver` | `DNZ_NAMESERVER` | `ns1.dnz.local` | Nameserver in the generated SOA and NS records |
+| `dns.cache_size` | `DNZ_CACHE_SIZE` | `10000` | Upstream answers kept in the cache (`0` = off) |
+| `dns.rate_limit` | `DNZ_RATE_LIMIT` | `200` | Queries per second per client IP over UDP (`0` = off); see [Rate limiting](/dns/rate-limiting) |
+| `dns.log_retention_days` | `DNZ_LOG_RETENTION_DAYS` | `7` | Query logs older than this are deleted. Hourly counts are kept 400 days |
+| `dns.dns64` | `DNZ_DNS64` | `false` | [DNS64](/dns/resolver-options#dns64) for IPv6-only clients behind NAT64 |
+| `dns.dns64_prefix` | `DNZ_DNS64_PREFIX` | `64:ff9b::/96` | The NAT64 prefix |
+| `dns.dns64_clients` | `DNZ_DNS64_CLIENTS` | – | Client networks DNS64 applies to (empty: every client) |
+| `dns.cookies` | `DNZ_COOKIES` | `true` | [DNS cookies](/dns/resolver-options#dns-cookies); valid ones skip the UDP rate limit |
+| `dns.nsid` | `DNZ_NSID` | – | [NSID](/dns/resolver-options#nsid): `true` for the hostname, or a text; empty is off |
+
+### Forwarding
+
+| File key | Environment | Default | Description |
+| --- | --- | --- | --- |
+| `forwarding.upstreams` | `DNZ_UPSTREAM` | `1.1.1.1:53,8.8.8.8:53` | Initial upstreams, first start only; `recursive` to [resolve from the root](/dns/recursive) instead |
+| `forwarding.strategy` | `DNZ_FORWARD_STRATEGY` | `failover` | Initial strategy: `failover`, `wrr`, `p2c`, `hrw`, `least_time` |
+| `forwarding.timeout_ms` | `DNZ_UPSTREAM_TIMEOUT_MS` | `2000` | Timeout per upstream |
+| `forwarding.serve_stale` | `DNZ_SERVE_STALE` | `true` | [Serve expired answers](/dns/resolver-options#serve-stale) while every upstream fails |
+| `forwarding.stale_window_secs` | `DNZ_STALE_WINDOW_SECS` | `86400` | How long after expiry an answer may be served stale (at most 7 days) |
+| `forwarding.prefetch` | `DNZ_PREFETCH` | `true` | [Refresh popular names](/dns/resolver-options#prefetch) before they expire |
+| `forwarding.prefetch_min_hits` | `DNZ_PREFETCH_MIN_HITS` | `3` | Hits that make a name popular |
+| `forwarding.ecs` | `DNZ_ECS` | `false` | [EDNS Client Subnet](/dns/resolver-options#edns-client-subnet) towards upstreams |
+| `forwarding.ecs_ipv4_prefix` | `DNZ_ECS_IPV4_PREFIX` | `24` | Bits of an IPv4 client's address sent |
+| `forwarding.ecs_ipv6_prefix` | `DNZ_ECS_IPV6_PREFIX` | `56` | Bits of an IPv6 client's address sent |
+| `forwarding.ecs_private` | `DNZ_ECS_PRIVATE` | `false` | Also send private and loopback client addresses |
+
+The resolver options above (serve-stale to NSID) are also set in the dashboard and with `dnz`; once
+saved there, the saved value wins over the file.
+
+### HTTP and dashboard
+
+| File key | Environment | Default | Description |
+| --- | --- | --- | --- |
+| `http.addr` | `DNZ_HTTP_ADDR` | `127.0.0.1:8080` | API and dashboard address. Use `0.0.0.0:8080` so other DNZ servers can find this one |
+| `http.ui` | `DNZ_UI` | `true` | `false` runs without the dashboard (API, DNS and the CLI only) |
+| `http.ui_dir` | `DNZ_UI_DIR` | – | Serve the dashboard from this folder instead of the binary |
+| `http.cors_origin` | `DNZ_CORS_ORIGIN` | `http://localhost:3111` | Origin allowed to call the API from another site |
+| `http.trusted_proxies` | `DNZ_TRUSTED_PROXIES` | – | Reverse proxy IPs or CIDRs whose `X-Forwarded-For` is trusted |
+
+### TLS and encrypted DNS
+
+| File key | Environment | Default | Description |
+| --- | --- | --- | --- |
+| `tls.cert` / `tls.key` | `DNZ_TLS_CERT` / `DNZ_TLS_KEY` | – | PEM certificate chain and key. Turn on DoT, DoH, DoQ, DoH3 and HTTPS |
+| `tls.dot_addr` | `DNZ_DOT_ADDR` | `0.0.0.0:853` | DNS over TLS address |
+| `tls.https_addr` | `DNZ_HTTPS_ADDR` | `0.0.0.0:443` | HTTPS address: dashboard, API, DoH |
+| `tls.doq_addr` | `DNZ_DOQ_ADDR` | the DoT address | DNS over QUIC (UDP); `off` turns it off |
+| `tls.h3_addr` | `DNZ_H3_ADDR` | the HTTPS address | DoH over HTTP/3 (UDP); `off` turns it off |
+
+See [Encrypted DNS](/dns/encrypted-dns).
+
+### Proxy
+
+| File key | Environment | Default | Description |
+| --- | --- | --- | --- |
+| `proxy.backend` | `DNZ_PROXY_BACKEND` | – | `traefik`, `dnz` or `off`. When set, the switch in the dashboard is read-only |
+| – | `DNZ_PROXY_BIN` | next to `dnz`, then the `PATH` | The `dnz-proxy` binary DNZ runs itself |
+| – | `DNZ_ACME_CA_ROOTS` | – | PEM bundle of extra CA roots to trust for ACME directories (Pebble, step-ca) |
+
+See [Proxied records](/proxy/overview) and [Certificates](/proxy/certificates).
+
+### Metrics
+
+| File key | Environment | Default | Description |
+| --- | --- | --- | --- |
+| `metrics.enabled` | `DNZ_METRICS` | `false` | Prometheus `/metrics` on or off |
+| `metrics.addr` | `DNZ_METRICS_ADDR` | – | A listen address of its own, e.g. `0.0.0.0:9153` |
+| `metrics.api` | `DNZ_METRICS_API` | `false` | Also at `/metrics` on the HTTP API (needs a token) |
+| `metrics.token` | `DNZ_METRICS_TOKEN` | – | Bearer token scrapers send; always accepted |
+
+They apply until metrics are saved in the dashboard or with `dnz settings metrics`. See
+[Prometheus and Grafana](/dashboard/prometheus).
+
+### Database and sessions
+
+| File key | Environment | Default | Description |
+| --- | --- | --- | --- |
+| `database.url` | `DNZ_DATABASE_URL` | `sqlite://dnz.db` | The database: `sqlite://FILE`, `postgres://…` or `mysql://…`. See [Database](/deploy/database) |
+| `database.data_dir` | `DNZ_DATA_DIR` | next to the SQLite file | Files kept besides the database (the GeoIP database, the local dnz-proxy's state). With Postgres or MySQL: the working directory |
+| `sessions.ttl_hours` | `DNZ_SESSION_TTL_HOURS` | `168` | How long a sign-in lasts |
+| `sessions.idle_hours` | `DNZ_SESSION_IDLE_HOURS` | `72` | Sessions unused this long are signed out (`0` = never) |
+
+### First admin
+
+| File key | Environment | Default | Description |
+| --- | --- | --- | --- |
+| `admin.username` | `DNZ_ADMIN_USERNAME` | `admin` | Admin username for setup without the dashboard |
+| `admin.password` | `DNZ_ADMIN_PASSWORD` | – | When set and there are no users yet, this admin is created at startup |
+
+### Cloudflare
+
+| File key | Environment | Default | Description |
+| --- | --- | --- | --- |
+| `cloudflare.api` | `DNZ_CLOUDFLARE_API` | `https://api.cloudflare.com/client/v4` | API base URL (for testing) |
+| `cloudflare.dash` | `DNZ_CLOUDFLARE_DASH` | `https://dash.cloudflare.com` | Dashboard and OAuth base URL (for testing) |
+| `cloudflare.oauth_client_id` | `DNZ_CLOUDFLARE_OAUTH_CLIENT_ID` | – | OAuth client for *Sign in with Cloudflare*. When set, the dashboard can't change it |
+| `cloudflare.oauth_client_secret` | `DNZ_CLOUDFLARE_OAUTH_CLIENT_SECRET` | – | That client's secret (empty for a PKCE-only client) |
+| `cloudflare.oauth_scopes` | `DNZ_CLOUDFLARE_OAUTH_SCOPES` | `zone.read dns.read dns.write offline_access` | Scopes requested |
+
+See [Cloudflare](/integrations/cloudflare).

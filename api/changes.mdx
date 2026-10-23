@@ -1,0 +1,159 @@
+---
+title: "History and changes"
+description: "API endpoints for zone history, diffs and rollbacks, and for change requests: the 202 answer of an edit that waits for approval."
+---
+
+For how history and change approval work, see [History and change approval](/dns/history).
+
+## Endpoints
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/zones/{id}/versions?before=&limit=` | `zones.read` | The zone's history, newest first |
+| `GET` | `/api/zones/{id}/versions/{version}` | `zones.read` | One version and what it changed |
+| `GET` | `/api/zones/{id}/versions/{version}/records` | `zones.read` | The records as they were right after that version |
+| `GET` | `/api/zones/{id}/diff?from=&to=` | `zones.read` | What changed between two versions |
+| `POST` | `/api/zones/{id}/rollback` | `records.write` | Roll back to a version |
+| `GET` | `/api/changes/{id}` | `zones.read` | A change request |
+| `DELETE` | `/api/changes/{id}` | `zones.read` | Cancel your own pending change request |
+| `GET` | `/api/changes` | `zones.read` | Change requests (session only) |
+| `GET` | `/api/changes/count` | – | Waiting for you, and your own (session only) |
+| `POST` | `/api/changes/{id}/approve` | `changes.approve` | Apply someone else's change request (session only) |
+| `POST` | `/api/changes/{id}/reject` | `changes.approve` | Reject it with a comment (session only) |
+| `POST` | `/api/changes/{id}/comments` | `zones.read` | Comment on it |
+| `GET` / `PUT` | `/api/divisions/{id}/approval` | `zones.read` / `members.manage` | The division's approval policy (session only) |
+| `GET` / `PUT` | `/api/zones/{id}/approval` | `zones.read` / `members.manage` | One zone's approval policy (session only) |
+| `GET` / `PUT` | `/api/settings/history` | superadmin | How long history is kept |
+
+## History
+
+`GET /api/zones/{id}/versions`
+
+```json
+{
+  "zone": "example.com", "latest": 14, "oldest": 1, "pending": 1,
+  "versions": [
+    { "version": 14, "created_at": "2026-10-22T07:03:34Z", "source": "api", "action": "record.update",
+      "user_id": 2, "actor": "alice via externaldns", "ip": "203.0.113.7",
+      "summary": "changed www A 192.0.2.1 → 192.0.2.7", "added": 0, "removed": 0, "changed": 1,
+      "rollback_of": null, "change_request_id": null }
+  ]
+}
+```
+
+<ResponseField name="source" type="string">
+  `ui`, `cli`, `api`, `dns_update`, `ddns`, `acme`, `caddy`, `traefik`, `proxy` or `transfer`.
+</ResponseField>
+
+<ResponseField name="pending" type="integer">
+  Change requests of this zone waiting for approval.
+</ResponseField>
+
+Page back with `?before=<version>` (and `limit`, up to 500). `GET …/versions/{version}` adds what the
+version changed:
+
+```json
+{
+  "version": 14,
+  "changes": [
+    { "before": { "id": 7, "name": "www", "type": "A", "value": "192.0.2.1", "ttl": 300, "enabled": true },
+      "after":  { "id": 7, "name": "www", "type": "A", "value": "192.0.2.7", "ttl": 300, "enabled": true } }
+  ],
+  "settings": null
+}
+```
+
+A change has no `before` when the record was added and no `after` when it was removed. Records carry
+every field of the [record format](/api/records). `settings` is `{"before": {...}, "after": {...}}`
+of `enabled`, `default_ttl`, `forward_missing` and `dnssec` when those changed.
+
+`GET /api/zones/{id}/diff?from=10&to=14` answers the same `changes` and `settings` between two
+versions, with `summary` and the `added`, `removed` and `changed` counts. Leave out `to` to compare
+with the zone as it is now. A version that isn't kept any more answers 400.
+
+## Roll back
+
+`POST /api/zones/{id}/rollback`
+
+<ParamField body="version" type="integer" required>
+  The zone becomes as it was right after this version.
+</ParamField>
+
+```json
+{ "version": 15, "rollback_of": 10, "summary": "1 added, 1 changed", "changes": [ ] }
+```
+
+The rollback is checked like any edit (400 or 409 with the reason) and waits for approval like one.
+
+## Edits that wait for approval
+
+When an approval policy covers the caller, these writes are **not applied**:
+
+- `POST /api/zones/{id}/records`, `PATCH` and `DELETE /api/records/{id}`
+- `POST /api/zones/{id}/records/bulk`
+- `PATCH /api/zones/{id}`
+- `POST /api/zones/{id}/import` with `apply`
+- `POST /api/zones/{id}/rollback`
+
+They answer `202 Accepted` with a `Location` header:
+
+```http
+HTTP/1.1 202 Accepted
+Location: /api/changes/42
+```
+
+```json
+{
+  "status": "pending",
+  "change_request_id": 42,
+  "message": "This change needs approval. It was saved as change request #42 and will be applied when an approver accepts it.",
+  "change_request": {
+    "id": 42, "division_id": 1, "zone_id": 3, "zone": "example.com", "status": "pending",
+    "action": "record.create", "summary": "added www A 192.0.2.10", "source": "api",
+    "requested_by": "alice via externaldns", "requested_by_id": 2, "token_id": 5, "ip": "203.0.113.7",
+    "created_at": "2026-10-22T07:03:28Z",
+    "decided_by": null, "decided_by_id": null, "decided_at": null, "comment": null,
+    "error": null, "version": null, "rollback_of": null,
+    "changes": [ { "before": null, "after": { "id": 0, "name": "www", "type": "A", "value": "192.0.2.10", "ttl": 300 } } ],
+    "settings": null, "can_approve": false, "can_cancel": true
+  }
+}
+```
+
+Without a policy covering the caller, every endpoint answers as usual (200, 201 or 204), so a client
+only needs to handle `202` when approval is in use.
+
+### Follow a change request
+
+`GET /api/changes/{id}` returns the `change_request` object, plus `comments`. API tokens may call
+it. Poll it until `status` is no longer `pending`:
+
+| Status | Meaning |
+| --- | --- |
+| `pending` | Waiting. `error` holds why the last approval attempt failed, if one did |
+| `approved` | Applied. `version` is the zone version it made, and `changes[].after` carries the real record ids (a new record's `id` is `0` while pending) |
+| `rejected` | Not applied. `comment` says why |
+| `cancelled` | Taken back by who asked, with `DELETE /api/changes/{id}` |
+
+A Cloudflare copy into an existing zone, which can take several zones at once, answers `200` with
+`"status": "pending"` and `change_request_id` for each zone instead.
+
+### Decide
+
+`POST /api/changes/{id}/approve` with an optional `{"comment": "…"}` applies the change as a whole,
+checked against the zone as it is now. On a conflict it answers 409 with the reason, applies
+nothing, and the request stays pending. `POST /api/changes/{id}/reject` needs `{"comment": "why"}`.
+Both need a signed-in person with `changes.approve`, other than who asked; API tokens get 400.
+
+### Policies
+
+```json
+PUT /api/divisions/1/approval
+{ "enabled": true, "role_ids": [2], "all_tokens": false, "token_ids": [5] }
+
+PUT /api/zones/3/approval
+{ "mode": "on", "role_ids": [2], "all_tokens": true, "token_ids": [] }
+```
+
+A zone's `mode` is `inherit` (the division's policy), `on` with its own roles and tokens, or `off`.
+`GET` on either path also lists the `roles` and the division's `tokens` to pick from.

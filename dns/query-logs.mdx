@@ -1,0 +1,138 @@
+---
+title: "Query logs"
+description: "See which names clients ask for, who answered them, and how long the logs and traffic counts are kept."
+---
+
+DNZ logs every DNS query it answers: the name and type, the status, who answered it (a local zone,
+an upstream, the cache, a blocklist), the client's address and how long it took. Use the log to
+check that a record is being used, to find a client that keeps asking for a missing name, or to see
+why a site is blocked.
+
+## Open the query log
+
+Open **DNS → Query Logs**. Viewing it needs the `logs.read` permission.
+
+| Column | Shows |
+| --- | --- |
+| **Time** | When the query came in, in the server's time zone (see [Settings](/admin/settings)) |
+| **Name** | The queried name |
+| **Type** | The record type asked for |
+| **Status** | The answer's result code, such as NOERROR, NXDOMAIN or SERVFAIL |
+| **Answered by** | `local`, `forwarded`, `conditional` (a [forwarding rule](/dns/forwarding#conditional-forwarding)), `cache`, `blocked`, `rpz` (a [response policy zone](/dns/rpz)), `safe_search` ([safe search](/dns/filtering#safe-search)) or `error` |
+| **Client** | The client's IP address |
+| **Latency** | Time to answer, in milliseconds |
+
+- Type in **Filter by name or client** to search.
+- Turn on **Live** to refresh the list every 5 seconds, or click **Refresh**.
+
+### This division and All queries
+
+By default the page shows **this division's queries**. Each query belongs to one division:
+
+- a name in a local zone belongs to the zone's division, whoever asked;
+- any other query (forwarded, cached or blocked) belongs to the division whose
+  [client network](/dns/filtering) holds the client, for example `10.10.0.0/16 → SIMRS`.
+
+A query from a client in no client network belongs to no division, so only **All queries** shows it.
+Add your networks under **DNS → Filtering → Client networks** so a division's log and Overview count
+its own devices' traffic.
+
+<Note>
+  Queries logged before DNZ placed forwarded queries by client network keep no division, so a
+  division's history before the upgrade only has the names in its zones.
+</Note>
+
+**Superadmins** also get a **Scope** switch. **All queries** shows every query the server
+answered, including clients in no client network.
+
+Both scopes have a source filter, also opened from the Overview's **Answered by**:
+
+- **All sources**
+- **Local zones**: answered from your zones (and DNS64)
+- **Forwarded**: sent to an upstream, a forwarding rule or safe search
+- **Cache**: answered from the cache (fresh or stale)
+- **Blocked**: every blocked query (blocklists and RPZ), with the client's IP (see [Filtering](/dns/filtering))
+- **Errors**
+
+## From the command line
+
+<Tabs>
+  <Tab title="Recent queries">
+
+    ```bash
+    dnz logs -n 100
+    dnz logs --query example.com --source forwarded
+    dnz logs --client 192.168.1.20
+    dnz logs --division it
+    ```
+
+    | Option | Meaning |
+    | --- | --- |
+    | `-n`, `--limit` | How many queries, newest first (default 50) |
+    | `-q`, `--query` | The name or client contains this text |
+    | `--client` | Only this client address |
+    | `--source` | `local`, `forwarded`, `cached`, `blocked`, `error`, or one source such as `conditional` |
+    | `-d`, `--division` | Only this division's queries: its zones and its client networks. Superadmins see every query without it. |
+
+  </Tab>
+  <Tab title="Traffic summary">
+
+    `dnz stats` sums up a division's traffic like the dashboard does: the number of queries, the
+    NXDOMAIN ratio, SERVFAILs, the average answer time, counts per time bucket, how many were
+    answered locally, forwarded, from the cache, blocked or failed, then the top five names and
+    clients with each client's NXDOMAIN share.
+
+    ```bash
+    dnz stats --division it
+    dnz stats --range 30d
+    dnz stats --json
+    ```
+
+    | `--range` | Buckets |
+    | --- | --- |
+    | `24h` (default) | One per hour |
+    | `7d` | One per 6 hours |
+    | `30d`, `90d` | One per day |
+
+  </Tab>
+</Tabs>
+
+See [CLI: monitoring](/cli/monitoring) for every option. Scripts can also read a division's log
+over the API with a token that has `logs.read`: `GET /api/divisions/{id}/logs?q=&source=&limit=` (see
+[API overview](/api/overview)).
+
+## How long data is kept
+
+DNZ keeps two kinds of data:
+
+| Data | Kept for | Used by |
+| --- | --- | --- |
+| The query log (one row per query) | `DNZ_LOG_RETENTION_DAYS`, **7 days** by default | The Query Logs page, `dnz logs`, top names and clients |
+| Hourly query counts | **400 days** | Dashboard charts (back to 90 days) and the counts in `dnz stats` |
+
+Queries are written to the log in batches, and rows older than the retention period are deleted.
+Change the period in the config file or the environment:
+
+```toml /etc/dnz/dnz.toml
+[dns]
+log_retention_days = 30
+```
+
+```ini /etc/dnz/dnz.env
+DNZ_LOG_RETENTION_DAYS=30
+```
+
+<Note>
+  The top names and clients in `dnz stats` come from the query log, so they cover at most
+  `log_retention_days`, even when you ask for `--range 90d`. The counts come from the hourly totals
+  and cover the whole range.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Monitoring" icon="chart-line" href="/dashboard/monitoring">
+    Usage charts, upstream health and alerts on the Overview.
+  </Card>
+  <Card title="Notifications" icon="bell" href="/integrations/notifications">
+    NXDOMAIN spikes, rate limiting and a daily summary.
+  </Card>
+</CardGroup>

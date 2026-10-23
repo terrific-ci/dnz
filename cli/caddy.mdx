@@ -1,0 +1,66 @@
+---
+title: "Caddy"
+description: "Connect a Caddy, preview its records and keep them in sync from the terminal."
+---
+
+These commands match **Settings → Integrations → Caddy** in the dashboard. A Caddy belongs to one
+division. For what the integration does, see [Caddy](/integrations/caddy).
+
+`dnz caddies` is an alias for `dnz caddy`. Commands take `--division` (`-d`) when you belong to more
+than one, and name a Caddy by its name or id.
+
+## Permissions
+
+- Connecting, changing, syncing, pausing and removing a Caddy need `integrations.manage`.
+- Listing Caddies and previewing a sync need `zones.read`.
+
+## Connecting
+
+```bash
+dnz caddy check --api http://10.0.0.5:2020 --user dnz --password   # read its config, save nothing
+dnz caddy add edge-1 --api http://10.0.0.5:2020 --user dnz --password --address 203.0.113.5,2001:db8::5
+dnz caddy add edge-2 --api 10.0.0.6:2019 --cname edge.example.net --add-only --paused
+```
+
+`check` lists the hostnames DNZ can read and the zone each one would go in. `add` saves the Caddy,
+shows what a sync would add and remove, and asks before it starts syncing; `--paused` only saves it.
+
+| Flag | Meaning |
+| --- | --- |
+| `--api` | The admin API, e.g. `http://10.0.0.5:2019` (`http://` when left out) |
+| `--user` | Basic-auth user, for an admin API behind a reverse proxy |
+| `--password` | Ask for the basic-auth password (without a terminal: `DNZ_CADDY_PASSWORD`) |
+| `--no-password` | Remove a stored password |
+| `--address` | Addresses DNS answers each hostname with (A/AAAA), comma-separated |
+| `--cname` | Answer with a CNAME to this hostname instead |
+| `--ttl` | TTL of the records, in seconds (default 300) |
+| `--add-only` | Keep the records of sites that leave Caddy's config (`--remove-missing` goes back) |
+| `--interval` | How often to read Caddy's config, in seconds (default 60) |
+
+For the Caddyfile side (a read-only site with basic auth, or the open admin API), see
+[Connect a Caddy](/integrations/caddy#connect-a-caddy).
+
+## Watching and syncing
+
+```bash
+dnz caddy ls
+dnz caddy show edge-1                       # settings, and the hostnames of the last read
+dnz caddy plan edge-1                       # what a sync would add and remove now
+dnz caddy sync edge-1                       # previewed first; also starts a paused Caddy
+```
+
+Each hostname shows one of `add`, `update`, `remove`, `stale` (kept by an add-only Caddy), `taken`
+(records made by hand or by another Caddy), `skipped` (with the reason) or `ok` (in DNS already).
+
+## Changing and removing
+
+```bash
+dnz caddy edit edge-1 --address 203.0.113.9 --ttl 600 --interval 30
+dnz caddy edit edge-1 --name edge-jkt
+dnz caddy pause edge-1                      # its records stay; `dnz caddy sync` starts it again
+dnz caddy rm edge-1                         # and the records it added
+dnz caddy rm edge-1 --keep-records          # they stay, as records made by hand
+```
+
+A changed address or TTL shows in DNS right away when the Caddy is syncing. `--json` prints the
+API's answers, and `--yes` skips the questions (needed without a terminal).

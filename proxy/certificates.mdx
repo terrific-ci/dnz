@@ -1,0 +1,202 @@
+---
+title: "Certificates for dnz-proxy"
+sidebarTitle: "Certificates"
+description: "Let DNZ get TLS certificates over ACME and hand them to every dnz-proxy node, or upload your own."
+---
+
+With the **dnz-proxy** backend, DNZ gets TLS certificates itself over ACME and hands them to the
+proxy's nodes with their configuration. Nodes never talk to a CA, and every node serves the same
+certificate. Certificates can also be uploaded by hand.
+
+Everything here is for superadmins, under **Proxy → Certificates**.
+
+<Note>
+  This page is about certificates DNZ gets **for its own proxy**. To let lego, Traefik or certbot
+  solve DNS-01 challenges in DNZ's zones for certificates they get themselves, see
+  [ACME DNS-01](/integrations/acme).
+</Note>
+
+## Setting it up
+
+<Steps>
+  <Step title="Add an ACME account">
+    On the **ACME accounts** tab, add an account at a certificate authority. See
+    [Certificate authorities](#certificate-authorities).
+  </Step>
+  <Step title="Add DNS credentials (DNS-01 only)">
+    On the **DNS credentials** tab, add a credential for the DNS host of your names. Not needed for
+    HTTP-01, or for names in DNZ's own zones. See [DNS credentials](#dns-credentials).
+  </Step>
+  <Step title="Add a certificate resolver">
+    On the **Resolvers** tab, add a resolver: an account plus a challenge. Its name is what routers
+    give as their *certificate resolver*. See [Resolvers](#resolvers).
+  </Step>
+  <Step title="Point routers at it">
+    In a router's **TLS** tab, pick the resolver as its certificate resolver. DNZ then gets the
+    certificate by itself. You can also request or upload certificates on the **Certificates** tab.
+    See [Certificates](#certificates).
+  </Step>
+</Steps>
+
+## Certificate authorities
+
+| CA | Directory |
+| --- | --- |
+| `letsencrypt` | `https://acme-v02.api.letsencrypt.org/directory` |
+| `letsencrypt-staging` | `https://acme-staging-v02.api.letsencrypt.org/directory` |
+| `zerossl` | `https://acme.zerossl.com/v2/DV90` |
+| `custom` | Any ACME directory: step-ca, Pebble, a commercial CA, … |
+
+DNZ registers the account when you create it and keeps its key in the database. When the CA refuses,
+its own message is shown.
+
+**External account binding (EAB).** ZeroSSL needs it. Leave the key id and HMAC key empty and DNZ
+fetches them from ZeroSSL with the account's e-mail address, or paste the ones from the ZeroSSL
+dashboard. Other CAs that need EAB take the key id and HMAC key too.
+
+**Private CAs.** To trust a private CA's TLS certificate (its ACME directory, not the certificates it
+issues), point `DNZ_ACME_CA_ROOTS` at a PEM bundle. Otherwise DNZ trusts the usual web PKI roots built
+into it.
+
+```bash
+DNZ_ACME_CA_ROOTS=/etc/dnz/step-ca-root.pem
+```
+
+## Challenges
+
+| | HTTP-01 | DNS-01 |
+| --- | --- | --- |
+| How | DNZ sends the token to every node of every dnz-proxy proxy with a router for the name. It waits up to 60 s until each healthy node confirms it answers `/.well-known/acme-challenge/` on its HTTP entry points, then lets the CA check. | DNZ adds `_acme-challenge.<name>` TXT records, waits until they are visible, lets the CA check, and removes them. |
+| Needs | The name must point at the nodes, and port 80 must be reachable. | A DNS credential, or the name in one of DNZ's zones |
+| Wildcards | No | Yes |
+| Names not reachable from the internet | No | Yes |
+
+## DNS credentials
+
+| Provider | Settings |
+| --- | --- |
+| `dnz` | None: the record goes into the DNZ primary zone holding the name |
+| `cloudflare` | `{"token": "…"}` (Zone:Read + DNS:Edit) or `{"connection_id": <division id>}` |
+| `rfc2136` | `{"server": "192.0.2.53:53", "key_name": "acme.", "algorithm": "hmac-sha256", "secret": "…", "zone": ""}` |
+| `webhook` | `{"url": "https://…", "secret": "…"}` |
+| `manual` | None: the name and value appear in the certificate's log, and DNZ waits until it is visible |
+
+<AccordionGroup>
+  <Accordion title="Cloudflare" icon="cloud">
+    A credential either carries an API token of its own, or uses the Cloudflare connection of a
+    division (**Settings → Integrations**, OAuth sign-ins included). See
+    [Cloudflare](/integrations/cloudflare). The zone is the token's zone with the longest matching
+    name.
+  </Accordion>
+  <Accordion title="RFC 2136" icon="server">
+    A DNS UPDATE signed with TSIG, to BIND, Knot, PowerDNS or another DNZ. A key limited to
+    `_acme-challenge.*` and `TXT` is enough; see [Dynamic updates](/dns/dynamic-updates). Leave
+    `zone` empty and DNZ asks the server which zone holds the name.
+  </Accordion>
+  <Accordion title="Webhook" icon="link">
+    DNZ POSTs JSON and expects a 2xx answer:
+
+    ```json
+    {"action": "present", "fqdn": "_acme-challenge.example.com", "value": "…", "domain": "*.example.com"}
+    ```
+
+    `action` is `present` or `cleanup`. With a secret, the header `X-DNZ-Signature: sha256=<hex>`
+    carries the HMAC-SHA256 of the body.
+  </Accordion>
+  <Accordion title="Manual" icon="hand">
+    For a DNS host without an API. Raise the resolver's propagation timeout; DNZ waits at least 5
+    minutes.
+  </Accordion>
+</AccordionGroup>
+
+Secrets are never returned by the API. It shows `token_set` / `secret_set` instead, and an edit that
+leaves a secret out keeps the stored one.
+
+**Test** adds and removes a TXT record for `_acme-challenge.<domain>` and reports each step.
+
+## Resolvers
+
+A resolver names an account and a challenge. For DNS-01 it picks the credential for each name:
+
+1. the **rule** with the longest matching suffix (`example.com` covers `example.com` and every name
+   under it), so each domain can use its own Cloudflare token;
+2. else the resolver's **default credential**;
+3. else **auto**: a name in one of DNZ's primary zones uses DNZ, and a name in a zone of a division's
+   Cloudflare connection uses that connection. Anything else fails with a message saying so.
+
+Wildcards count as their base name (`*.example.com` → `example.com`).
+
+**Propagation.** Before the CA checks, DNZ asks the zone's authoritative name servers (found through
+the system's resolvers, following a `_acme-challenge` CNAME) and, for its own zones, itself, until
+every server that answers has the record.
+
+- The **timeout** caps the wait: 120 s by default, 0 for no check. The CA is asked anyway when it
+  runs out.
+- The **delay** adds a fixed wait after that.
+
+A resolver that routers use can't be renamed or deleted.
+
+## Certificates
+
+There are three kinds:
+
+- **For routers.** Every 30 seconds DNZ looks at the enabled TLS routers of the approved proxies whose
+  certificate resolver is one of DNZ's. A router wants one certificate per `tls.domains` entry (main
+  name + SANs), or one for all its hostnames. DNZ makes sure an `auto` certificate with exactly those
+  names exists. When no router asks for one any more, it is kept (marked unused) but not renewed.
+- **Requested by hand.** Names and a resolver; issued right away.
+- **Uploaded.** A PEM chain and its private key (PKCS#8, RSA or EC). The key must match the
+  certificate. Uploaded certificates aren't renewed.
+
+Nodes get every valid certificate covering a hostname of one of their proxy's TLS routers: an exact
+name, or a wildcard covering one label.
+
+Issuance runs at most two at a time. Each certificate gets a fresh ECDSA P-256 key. Its log shows
+every step (order, records, propagation, validation, errors) and keeps the latest 200 lines.
+
+### Renewal
+
+Renewal starts when less than a third of the lifetime is left: day 60 of 90. The old certificate keeps
+being served (`renewing`) until the new one is stored. **Renew** forces it.
+
+### Failures
+
+Failed issuance is retried after 1 minute, 5 minutes, 30 minutes, 2 hours, then every 6 hours. DNZ
+waits longer when the CA asks (`Retry-After`) or reports a rate limit (at least an hour).
+
+### Alerts
+
+Alerts go to the [notification providers](/integrations/notifications) subscribed to:
+
+| Event | When |
+| --- | --- |
+| `certificate_failed` | 3 failures in a row |
+| `certificate_expiring` | A certificate in use ends within 14 days (once per certificate) |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The CA refuses the account">
+    DNZ shows the CA's own message. For ZeroSSL and other CAs that need EAB, check the key id and HMAC
+    key, or leave them empty for ZeroSSL so DNZ fetches them. For a private CA, set
+    `DNZ_ACME_CA_ROOTS` to a bundle with its root.
+  </Accordion>
+  <Accordion title="HTTP-01 fails">
+    The name must point at the nodes and port 80 must reach them. DNZ waits up to 60 s for each
+    healthy node to confirm it answers the challenge. Wildcards can't use HTTP-01; use DNS-01.
+  </Accordion>
+  <Accordion title="DNS-01 fails with no credential for the name">
+    The resolver found no rule, no default credential, and the name is neither in one of DNZ's
+    primary zones nor in a division's Cloudflare zone. Add a rule or a default credential. Use
+    **Test** on the credential to see each step.
+  </Accordion>
+  <Accordion title="The CA can't see the TXT record">
+    Raise the resolver's propagation timeout or add a delay, especially for the `manual` provider.
+  </Accordion>
+  <Accordion title="A certificate is not renewed">
+    Uploaded certificates and ones no router asks for any more (marked unused) aren't renewed.
+    Otherwise, open its log to see the last error.
+  </Accordion>
+</AccordionGroup>
+
+The API for all of this is under `/api/acme`. See [Certificates API](/api/certificates).

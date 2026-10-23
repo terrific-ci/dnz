@@ -1,0 +1,184 @@
+---
+title: "GeoDNS and health checks"
+description: "Answer plain A and AAAA records by the client's country or continent, by weight, and only while a health check of the address passes."
+---
+
+**Traffic steering** decides which of a name's A and AAAA records a client gets, for plain records
+(no proxy needed):
+
+- **GeoDNS**: by where the client is, its country or continent.
+- **Weights**: one record picked at random by weight, for canaries and uneven load.
+- **Health checks**: an address leaves the answers while its HTTP, HTTPS or TCP check fails
+  (failover).
+
+Each record has its own steering. Records of a name without steering are answered as usual.
+
+## Set it up
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Download the GeoIP database (for GeoDNS)">
+        As a superadmin, open **Settings → General → GeoIP database** and click **Download**. Leave
+        **Update monthly** on. Weights and health checks work without it.
+      </Step>
+      <Step title="Steer a record">
+        Open **DNS → Zones**, a zone, then an A or AAAA record, and click **Traffic steering…**. Pick
+        the countries or continents it is for, a weight, and a health check.
+      </Step>
+      <Step title="Test the check">
+        **Test now** runs the health check once without saving. After saving, a green or red dot on
+        the record's steering badge shows its health.
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz geoip download                                                   # superadmin
+    dnz record steer example.com www A 203.0.113.10 --countries ID,SG
+    dnz record steer example.com www A 198.51.100.20 --continents EU
+    dnz record steer example.com www A 192.0.2.30 --check https --path /health
+    dnz record steer example.com www A 192.0.2.30 --check https --test   # run the check once
+    dnz record steering example.com                                      # steered records and their health
+    ```
+
+    See [CLI: zones and records](/cli/zones-records#traffic-steering).
+
+  </Tab>
+</Tabs>
+
+## How an answer is picked
+
+For a name whose records have steering:
+
+1. **Health**: records whose health check is failing are left out. If every checked record of the
+   name is failing, all of them are answered, so an outage of the checker doesn't take the name off
+   DNS.
+2. **Place**: records for the client's **country** are answered. If there are none, those for its
+   **continent**. If there are none, the records for no place in particular (the *default*). Without
+   a default, every record left after step 1 is answered.
+3. **Weight**: when the remaining records have weights, one of them is answered, picked at random by
+   weight. A record without a weight counts as 1; weight 0 only answers when all are 0.
+
+Records of the name without steering count as defaults with no check and no weight.
+
+Steering applies to local answers. CNAME chains, [views](/dns/views) and [DNSSEC](/dns/dnssec)
+signing work as before (the signature covers the records actually answered), and a wildcard's
+steering applies to the names it answers for. [Proxied](/proxy/overview) records are answered by
+their proxies instead, so they can't be steered.
+
+<Note>
+  Keep TTLs short on steered names, 30 to 60 seconds. Resolvers cache answers for the TTL, so a
+  failover or a weight change reaches clients only as fast as the TTL allows.
+</Note>
+
+### Examples
+
+| Goal | Records of `www` |
+| --- | --- |
+| Visitors in Indonesia to the Jakarta server, Europe to Frankfurt, the rest to the US | `A 203.0.113.10` for *ID* · `A 198.51.100.20` for *Europe* · `A 192.0.2.30` (default) |
+| Failover: the backup only while the primary is down | `A 192.0.2.1` with an HTTPS check · `A 192.0.2.2` weight 0 and `A 192.0.2.1` weight 1 (the weight-0 record answers only when the other is left out by its check) |
+| Canary: 10 % of answers to the new server | `A 192.0.2.1` weight 9 · `A 192.0.2.2` weight 1 |
+| Round robin over healthy servers only | three A records, each with a check, no place and no weight |
+
+The canary from the table, from the CLI:
+
+```bash
+dnz record steer example.com api A 192.0.2.1 --weight 9
+dnz record steer example.com api A 192.0.2.2 --weight 1
+```
+
+## Where clients are
+
+GeoDNS needs a country database in MaxMind's `.mmdb` format. DNZ doesn't ship one: download it under
+**Settings → General → GeoIP database**, or with `dnz geoip download`.
+
+By default that is [DB-IP's IP to Country Lite](https://db-ip.com/db/download/ip-to-country-lite),
+free under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (*IP Geolocation by DB-IP*),
+refreshed monthly while **Update monthly** is on. DB-IP publishes a new file each month; DNZ fills
+`{year}` and `{month}` into the URL and falls back to the month before early in a month.
+
+Any country `.mmdb` works instead, for example a MaxMind GeoLite2 Country permalink with your license
+key:
+
+```bash
+dnz geoip set --url 'https://download.maxmind.com/…GeoLite2-Country…' --auto-update on
+dnz geoip download
+dnz geoip set --url default            # back to DB-IP Lite
+```
+
+The file is kept next to the database (`geoip-country.mmdb`), read at startup and replaced in place
+on every download.
+
+A client is placed by its own address, or by the **EDNS Client Subnet** (RFC 7871) a resolver sends
+on its behalf. The answer then carries the subnet back with that scope, so the resolver caches it for
+that network only. Without a database, or for private addresses, every client gets the default
+records.
+
+**Look up** on the GeoIP card shows where an address is, as GeoDNS sees it:
+
+```bash
+dnz geoip lookup 203.0.113.9
+```
+
+Countries are ISO 3166 two-letter codes (`ID`, `SG`, `US`, `DE`). Continents are:
+
+| Code | Continent |
+| --- | --- |
+| `AF` | Africa |
+| `AN` | Antarctica |
+| `AS` | Asia |
+| `EU` | Europe |
+| `NA` | North America |
+| `OC` | Oceania |
+| `SA` | South America |
+
+## Health checks
+
+| Kind | Healthy when |
+| --- | --- |
+| **HTTPS** | `GET https://host:port/path` to the record's address answers with an expected status, over TLS with a certificate valid for the host |
+| **HTTP** | The same over plain HTTP |
+| **TCP** | A TCP connection to the port opens |
+
+| Setting | Default |
+| --- | --- |
+| **Port** | 443 for HTTPS, 80 otherwise |
+| **Host** (Host header and TLS name) | The record's own name. Wildcard records use the address. |
+| **Healthy status** | `200-399`. Ranges and lists like `200,204` work. Redirects aren't followed. |
+| **Every** | 30 seconds |
+| **Timeout** | 3000 ms |
+| **Down after** | 3 failures in a row: the address leaves the answers |
+| **Up after** | 2 passes in a row: it comes back |
+
+```bash
+dnz record steer example.com www A 192.0.2.30 --check https --path /health --interval 15
+dnz record steer example.com www A 192.0.2.30 --check tcp --port 8443
+dnz record steer example.com www A 192.0.2.30 --check none            # remove the check
+```
+
+Checks run from the DNZ server itself, so the address must be reachable from there. **Test now** (or
+`--test`) runs one check without saving.
+
+The state shows:
+
+- next to the record in the zone, as a green or red dot on its steering badge,
+- on the [topology map](/dashboard/topology), as an *Origin* node per steered address,
+- in `dnz record steering example.com`.
+
+Changes are logged by the server (`health check failing: left out of DNS answers`).
+
+## Removing the steering
+
+```bash
+dnz record steer example.com api A 192.0.2.2 --off      # answered as usual again
+```
+
+In the dashboard, open **Traffic steering…** on the record and click **Remove steering**. The record
+itself stays.
+
+The API is described in [Records: traffic steering](/api/records#traffic-steering) and
+[Settings: GeoIP database](/api/settings#geoip-database).

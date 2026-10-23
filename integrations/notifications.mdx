@@ -1,0 +1,65 @@
+---
+title: "Notifications"
+description: "Send outages, traffic alerts, certificate problems and a daily summary to Telegram, e-mail or webhooks."
+---
+
+Under **Settings → Notifications** (superadmins), add one or more **providers**. Each provider
+picks the events it receives.
+
+## Providers
+
+| Kind | Settings |
+| --- | --- |
+| **Telegram** | `bot_token`, `chat_id` |
+| **Resend** | `api_key`, `from`, `to` |
+| **SMTP** (your own mail server) | `host`, `port`, `security` (`tls` or `starttls`), `username`, `password`, `from`, `to` |
+| **Webhook** | `url`, `secret` |
+
+`to` takes a comma-separated list of addresses. Secrets are shown masked, failed sends are retried
+automatically, and **Send test** checks a provider right away.
+
+## Events
+
+| Event | Sent when |
+| --- | --- |
+| `down` | An upstream stops answering: timeout, unreachable or TLS error. Also when every upstream is down |
+| `recovered` | An upstream answers again |
+| `nxdomain_spike` | The NXDOMAIN share jumps (see [Monitoring](/dashboard/monitoring#traffic-alerts)) |
+| `rate_limited` | Clients go over the per-client rate limit |
+| `cache_full` | The cache drops answers before their TTL; `cache_size` is too small |
+| `daily_summary` | Yesterday's numbers, at the hour you choose |
+| `certificate_failed` | A [dnz-proxy certificate](/proxy/certificates) failed 3 times in a row |
+| `certificate_expiring` | A certificate in use ends within 14 days |
+| `change_requested` | An edit waits for approval as a [change request](/dns/history#change-approval) |
+| `change_decided` | A change request was approved or rejected |
+| `cluster_node` | A [cluster](/deploy/cluster) node stops heartbeating or falls behind, and when it is back |
+| `backup_failed` | A [backup](/admin/backups) failed, and the first good one after failures |
+| `health_check` | The [health check](/admin/health-check) finds a problem (with the fix), and when it is fixed |
+| `threat` | A new [threat finding](/dns/threats): a known-bad domain, a DNS tunnel, generated names, an unusual client (rate limited per client) |
+
+Traffic alerts are checked every minute and sent at most once an hour each. Thresholds and the
+summary hour live under **Settings → Notifications → Alerts**. Incident history is kept for 90
+days.
+
+## Webhooks
+
+DNZ POSTs JSON to the URL. With a secret, the `X-DNZ-Signature` header carries an HMAC-SHA256 of
+the body, so you can check that the call came from DNZ. Alerts carry their numbers in `details`.
+
+## From the terminal
+
+```bash
+dnz notify add Ops --kind telegram --set bot_token=123456:ABC… --set chat_id=-1002003004 \
+  --event down --event recovered --event daily_summary
+dnz notify add Mail --kind smtp --set host=smtp.example.com --set port=587 --set security=starttls \
+  --set username=dnz --set password=… --set from=dnz@example.com --set to=ops@example.com,it@example.com
+dnz notify add Hook --kind webhook --config @webhook.json
+dnz notify test 1
+dnz notify alerts --nxdomain-percent 40 --rate-limited 500 --summary-hour 7
+```
+
+See [CLI: notifications](/cli/notifications).
+
+<Tip>
+  Set `DNZ_INSTANCE_NAME` on each server, so messages say which DNZ sent them.
+</Tip>
