@@ -1,0 +1,21 @@
+/* Wide comparison tables: keep the first column (the server) in view while scrolling sideways. */
+.sticky-first-column table th:first-child,
+.sticky-first-column table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  white-space: nowrap;
+  background: #f0f2f7;
+  box-shadow: inset -1px 0 0 rgb(0 0 0 / 0.1);
+}
+
+html.dark .sticky-first-column table th:first-child,
+html.dark .sticky-first-column table td:first-child {
+  background: #090c12;
+  box-shadow: inset -1px 0 0 rgb(255 255 255 / 0.1);
+}
+
+.sticky-first-column table td,
+.sticky-first-column table th {
+  white-space: nowrap;
+}
