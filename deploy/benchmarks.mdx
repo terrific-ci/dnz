@@ -116,6 +116,30 @@ Both builds side by side, the settings above, taking turns:
 
 Ahead in every round (5 of 5 for authoritative and cached, 3 of 3 for the misses).
 
+### Later: UDP in batches
+
+Three more changes, again found with `perf` on the benchmark server:
+
+- **Less state per query**: answering a query carried 22 KB of state, sized for its rarest
+  paths, allocated and copied every time. Those paths keep their own now, and a query's is 2 KB.
+- **The name once**: a local answer wrote the query name out four times; now once, with a
+  third fewer allocations.
+- **Batches**: on Linux each socket reads the queries waiting on it with one `recvmmsg` (up to
+  32) and sends the answers with one `sendmmsg`, instead of a system call per query each way. A
+  busy socket hands its thread over after 128 queries, so the others aren't kept waiting.
+
+The build before and after, side by side, the settings above, taking turns:
+
+| | Before | After |
+| --- | ---: | ---: |
+| Authoritative, queries/s | 99,790 | 136,002 |
+| Cached forwarding, queries/s | 103,984 | 132,411 |
+| Average latency | 1.6-1.9 ms | 1.1-1.5 ms |
+| CPU per query at a steady 80,000/s | 23.9-24.3 µs | 20.9 µs |
+
+Ahead in every round (5 of 5 for each scenario). That is the top group above, at what dnsperf
+sends from its 2 CPUs, with DNZ's query log still on.
+
 ## Features compared
 
 Speed is half the picture: the servers ahead of DNZ answer DNS and little else, and the ones
