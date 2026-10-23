@@ -51,7 +51,10 @@ The landing page sums up the current division:
 
 - **Traffic**: queries over the chosen range (24 hours to 90 days), with answered, NXDOMAIN and
   SERVFAIL counts. A division's traffic is the names in its zones plus everything clients in its
-  [client networks](/dns/filtering) ask.
+  [client networks](/dns/filtering) ask. Superadmins get a **Scope** switch: **All queries** (their
+  default) counts the whole server, including names forwarded for clients in no client network,
+  such as google.com from a laptop no division claims. The other choice shows just the division.
+  Answered by, the top lists, Recent queries and the links into the query log follow the scope.
 - **Answered by**: how many of those queries were answered from your zones (**Local**), sent to an
   upstream or a forwarding rule (**Forwarded**), served from the **Cache**, **Blocked**, or ended in
   an **Error**, each with its share. Click one to open the query log filtered to it.

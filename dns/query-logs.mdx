@@ -33,9 +33,9 @@ By default the page shows **this division's queries**. Each query belongs to one
 - any other query (forwarded, cached or blocked) belongs to the division whose
   [client network](/dns/filtering) holds the client, for example `10.10.0.0/16 → SIMRS`.
 
-A query from a client in no client network belongs to no division, so only **All queries** shows it.
-Add your networks under **DNS → Filtering → Client networks** so a division's log and Overview count
-its own devices' traffic.
+A query from a client in no client network belongs to no division, so only **All queries** (here and
+on the Overview) shows it. Add your networks under **DNS → Filtering → Client networks** so a
+division's log and Overview count its own devices' traffic.
 
 <Note>
   Queries logged before DNZ placed forwarded queries by client network keep no division, so a
@@ -80,11 +80,13 @@ Both scopes have a source filter, also opened from the Overview's **Answered by*
     `dnz stats` sums up a division's traffic like the dashboard does: the number of queries, the
     NXDOMAIN ratio, SERVFAILs, the average answer time, counts per time bucket, how many were
     answered locally, forwarded, from the cache, blocked or failed, then the top five names and
-    clients with each client's NXDOMAIN share.
+    clients with each client's NXDOMAIN share. `--all` (superadmins) sums up the whole server
+    instead, like **All queries** on the Overview.
 
     ```bash
     dnz stats --division it
     dnz stats --range 30d
+    dnz stats --all
     dnz stats --json
     ```
 
@@ -98,7 +100,8 @@ Both scopes have a source filter, also opened from the Overview's **Answered by*
 </Tabs>
 
 See [CLI: monitoring](/cli/monitoring) for every option. Scripts can also read a division's log
-over the API with a token that has `logs.read`: `GET /api/divisions/{id}/logs?q=&source=&limit=` (see
+over the API with a token that has `logs.read`: `GET /api/divisions/{id}/logs?q=&source=&limit=`, and
+its traffic summary from `GET /api/divisions/{id}/stats?range=24h` (see
 [API overview](/api/overview)).
 
 ## How long data is kept

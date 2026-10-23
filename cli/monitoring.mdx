@@ -27,7 +27,8 @@ dnz logs --division it
 
 ## Traffic stats
 
-`dnz stats` sums up a division's traffic like the dashboard does:
+`dnz stats` sums up a division's traffic like the dashboard does (`--all`, for superadmins: the whole
+server, like **All queries** on the Overview):
 
 - queries, NXDOMAIN ratio, SERVFAILs and average answer time;
 - counts per hour (`24h`), per 6 hours (`7d`) or per day (`30d`, `90d`);
@@ -38,6 +39,7 @@ dnz logs --division it
 ```bash
 dnz stats --division it
 dnz stats --range 30d                         # 24h (default), 7d, 30d or 90d
+dnz stats --all                               # every division, plus clients in no client network
 dnz stats --json
 ```
 
