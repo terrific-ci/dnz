@@ -73,8 +73,9 @@ What the numbers say:
   Authoritative and YADIFA set aside 59 to 90 MiB. DNZ holds 55 to 65 MiB with its web API, query
   log and cache: about what AdGuard Home and Blocky hold, less than Technitium.
 - An earlier run on a MacBook (Apple silicon, Docker Desktop's VM with 4 CPUs) had DNZ at about 60%
-  of Knot DNS, Unbound and Knot Resolver. DNZ receives UDP on one socket in one loop, where the
-  fast group uses a socket per thread; slower cores probably make that loop count for more.
+  of Knot DNS, Unbound and Knot Resolver. v1.5.0 received UDP on one socket in one loop, where the
+  fast group uses a socket per thread; the next release does too, for 50-60% more queries a second
+  (below).
 
 ### Cache hits, before and after
 
@@ -89,6 +90,31 @@ patches the id, the question and the TTLs. Both builds side by side, taking turn
 | After | 261,893 | 0.53 ms |
 
 About 44% more cached answers per second on the same two CPUs, ahead in every round.
+
+### After v1.5.0: UDP, a full cache and the query log
+
+The tables above are v1.5.0. Profiling it on the benchmark server turned up three things, fixed for
+the next release:
+
+- **UDP**: one loop received every query and handed each to another thread. DNZ now binds the DNS
+  port several times per CPU (SO_REUSEPORT, Linux) and answers local names and cache hits on the
+  thread that received them.
+- **A full cache**: every answer from upstream swept the whole cache for one to drop, 3 ms per
+  insert with 100,000 entries, so names not yet cached ran at under 300 a second. Now 1.5 µs.
+- **Memory that kept climbing**: the query log's batches were written as one statement per batch
+  size, and the database driver kept up to 100 of them prepared per connection. Under steady load
+  the heap grew from 52 to 240 MB over 20 minutes; it now levels off within minutes.
+
+Both builds side by side, the settings above, taking turns:
+
+| | v1.5.0 | Next release |
+| --- | ---: | ---: |
+| Authoritative, queries/s | 69,381 | 104,169 |
+| Cached forwarding, queries/s | 64,311 | 103,045 |
+| Names not in a full cache, queries/s | 290 | 14,000 |
+| Their average latency | 665 ms | 14 ms |
+
+Ahead in every round (5 of 5 for authoritative and cached, 3 of 3 for the misses).
 
 ## Features compared
 
@@ -247,6 +273,9 @@ On 4 CPUs: 30.3 MB at idle instead of 48.5 MB, and 59.6 MB a minute after the lo
 - The web server's routes no longer compile into full regexes once per CPU.
 - On Linux, DNZ uses one malloc arena per CPU and returns freed memory to the system every minute,
   so the minute after a large import or a burst of queries is the high point, not the new normal.
+- The query log keeps every query for 7 days by default (`DNZ_LOG_RETENTION_DAYS`), so the database
+  file grows until then. Tools that report a container's memory including the kernel's page cache
+  show that file too; the kernel gives that memory back when something else needs it.
 - Zones kept in memory no longer reserve room for four records under every name.
 
 ## Threat detection on and off
