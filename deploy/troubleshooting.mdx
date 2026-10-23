@@ -11,6 +11,7 @@ the fix. See [Health check](/admin/health-check).
 | `Address already in use` on port 53 | systemd-resolved or another DNS server holds the port. See [Port 53 and systemd-resolved](/deploy/port-53) |
 | `Permission denied` on port 53 | Run it with the [systemd unit](/deploy/systemd), or `sudo setcap cap_net_bind_service=+ep /usr/local/bin/dnz` |
 | The server can't resolve names after turning off the stub | `/etc/resolv.conf` still points at `127.0.0.53`. Run `sudo ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf` |
+| `nameserver 127.0.0.1` in `/etc/resolv.conf` keeps disappearing | Something rewrites the file. Set `DNS=127.0.0.1` in systemd-resolved instead; see [Use DNZ as this server's resolver](/deploy/port-53#use-dnz-as-this-servers-resolver) |
 | Queries don't show up in Query Logs | Forwarded queries only appear in the **All queries** view, which superadmins see. See [Query logs](/dns/query-logs) |
 | Sign in with Cloudflare doesn't redirect back | Open DNZ over `https://`. See [HTTPS and reverse proxies](/deploy/https) |
 | `connecting to Postgres` or `connecting to MySQL` at startup | The database isn't reachable with `DNZ_DATABASE_URL`. `dnz config check` shows the URL DNZ uses, without the password. See [Database](/deploy/database) |

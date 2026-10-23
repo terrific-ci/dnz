@@ -37,7 +37,8 @@ sudo ss -lunp 'sport = :53'
     ```
 
     <Warning>
-      Skip this and the server can no longer resolve any name once the stub is off.
+      Skip this and the rest of the server (`apt`, `curl` and so on) can no longer resolve any name
+      once the stub is off. DNZ itself keeps working: see [DNZ's own lookups](#dnzs-own-lookups).
     </Warning>
   </Step>
   <Step title="Restart systemd-resolved, then DNZ">
@@ -54,10 +55,33 @@ sudo ss -lunp 'sport = :53'
   </Step>
 </Steps>
 
+### DNZ's own lookups
+
+DNZ's own connections (Cloudflare, ACME, S3 backups, webhooks, block lists, the release check)
+don't depend on `/etc/resolv.conf`. When the system resolver fails, DNZ looks the name up through
+its own DNS server on loopback, then through public resolvers (`1.1.1.1`, `8.8.8.8`, `9.9.9.9`).
+Connecting Cloudflare works even while `/etc/resolv.conf` still points at the dead stub.
+
+### Use DNZ as this server's resolver
+
+Writing `nameserver 127.0.0.1` into `/etc/resolv.conf` by hand doesn't last: systemd-resolved,
+NetworkManager, netplan or DHCP rewrite the file. Tell systemd-resolved instead, and keep
+`/etc/resolv.conf` linked to the file it maintains:
+
+```bash
+sudo mkdir -p /etc/systemd/resolved.conf.d
+printf '[Resolve]\nDNS=127.0.0.1\nDNSStubListener=no\n' | sudo tee /etc/systemd/resolved.conf.d/dnz.conf
+sudo ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+sudo systemctl restart systemd-resolved
+grep nameserver /etc/resolv.conf   # 127.0.0.1 first, then the network's DNS
+```
+
+`127.0.0.1` comes first and the DNS servers from DHCP stay behind it, so the machine still
+resolves names while DNZ is stopped.
+
 <Tip>
-  Want this server to use DNZ as its own resolver? Put `DNS=127.0.0.1` in
-  `/etc/systemd/resolved.conf.d/dnz.conf` and restart systemd-resolved. If you use encrypted
-  upstreams, add `#ip` to them to avoid a loop; see [upstream addresses](/dns/forwarding#upstream-address-format).
+  If you use encrypted upstreams by name, add `#ip` to them to avoid a loop; see
+  [upstream addresses](/dns/forwarding#upstream-address-format).
 </Tip>
 
 ## Option 2: bind DNZ to one address
