@@ -6,18 +6,18 @@ rss: true
 
 {/* Written by .github/scripts/docs-changelog.sh in the DNZ source repository on every release. Edits here are overwritten. */}
 
-The latest release is **v1.3.0**, released October 22, 2026. To install or upgrade to it:
+The latest release is **v1.5.0**, released October 23, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.3.0
-docker pull terrificci/dnz-proxy:1.3.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.3.0
+docker pull terrificci/dnz:1.5.0
+docker pull terrificci/dnz-proxy:1.5.0   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.5.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.3.0" description="October 22, 2026" tags={["Latest"]}>
+<Update label="v1.5.0" description="October 23, 2026" tags={["Latest"]}>
 
 - first commit (alfianlensundev)
 - DNS phase 1: TCP, EDNS, SOA, CNAME chasing and zone cache (alfianlensundev)
@@ -280,6 +280,16 @@ The `latest` image tag and the install script without `--version` always get thi
 - Release notes: every commit since the previous tag with its author (alfianlensundev)
 - Release title is just the tag (v1.2.0), not DNZ v1.2.0 (alfianlensundev)
 - release.sh --prune: delete releases, their tags and Docker Hub images (alfianlensundev)
+- Release: rewrite the docs site's changelog page after each release (alfianlensundev)
+- Setup guides: the host's address when DNZ runs in Docker (alfianlensundev)
+- Device address in the UI: Settings → General, the wizard and dnz settings advertise (alfianlensundev)
+- Overview: queries per client network and an "Answered by" breakdown (alfianlensundev)
+- Benchmarks: BIND 9 and Technitium DNS Server, and each server's memory (alfianlensundev)
+- Stats: sort answer sources with sort_by_key (clippy) (alfianlensundev)
+- Release: binaries on the public terrific-ci/dnz, not the private source repository (alfianlensundev)
+- Release: no Docker images without the binaries (alfianlensundev)
+- Benchmarks: NSD, PowerDNS, YADIFA, gdnsd, Hickory DNS, dnsmasq, dnsdist, AdGuard Home, Pi-hole and Blocky (alfianlensundev)
+- release.sh: compare the new version with the tags left, not Cargo.toml (alfianlensundev)
 
 </Update>
 
