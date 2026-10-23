@@ -6,18 +6,29 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.6.0**, released October 23, 2026. To install or upgrade to it:
+The latest release is **v1.6.1**, released October 23, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.6.0
-docker pull terrificci/dnz-proxy:1.6.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.6.0
+docker pull terrificci/dnz:1.6.1
+docker pull terrificci/dnz-proxy:1.6.1   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.6.1
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.6.0" description="October 23, 2026" tags={["Latest"]}>
+<Update label="v1.6.1" description="October 23, 2026" tags={["Latest"]}>
+
+- DNS over UDP: batch buffers split with as_chunks
+- Overview: a skeleton while the traffic panel loads
+- Toasts: top right, just under the top bar
+- Outgoing lookups: fall back past a broken /etc/resolv.conf
+- DNS over UDP: answer from the address that was asked
+- Overview: top names and clients from hourly rollups
+
+</Update>
+
+<Update label="v1.6.0" description="October 23, 2026">
 
 - Public files for the docs: monitoring, benchmark harness, Swarm stack
 - Upstream toasts: one per poll instead of one per incident
