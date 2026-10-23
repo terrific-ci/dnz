@@ -1,10 +1,10 @@
 ---
 title: "Benchmarks"
-description: "How fast DNZ answers compared with 18 other DNS servers, from Knot DNS, NSD, BIND 9 and PowerDNS to Technitium, AdGuard Home and Pi-hole, how much memory it uses, and how to measure it yourself."
+description: "How fast DNZ answers compared with 18 other DNS servers, from Knot DNS, NSD, BIND 9 and PowerDNS to Technitium, AdGuard Home and Pi-hole, which features each one has built in, how much memory DNZ uses, and how to measure it yourself."
 ---
 
 DNZ was measured against 18 other DNS servers, from the classic authoritative servers to the
-home-network filters, each in the scenarios it supports:
+home-network filters, each in the scenarios it supports, and compared feature by feature below:
 
 | Scenario | Servers |
 | --- | --- |
@@ -89,6 +89,67 @@ patches the id, the question and the TTLs. Both builds side by side, taking turn
 | After | 261,893 | 0.53 ms |
 
 About 44% more cached answers per second on the same two CPUs, ahead in every round.
+
+## Features compared
+
+Speed is half the picture: the servers ahead of DNZ answer DNS and little else, and the ones
+with a comparable feature set (Technitium, AdGuard Home, Pi-hole, Blocky) answer 2 to 4 times
+fewer queries. What each server has built in, for the versions measured above, from each
+project's own documentation. A dash means not built in; much of it is possible with a separate
+tool (PowerDNS-Admin for a PowerDNS UI, an exporter for Prometheus, dnsdist in front for
+encrypted DNS).
+
+### DNS
+
+| Server | Authoritative | Forwarding + cache | Recursive | DNSSEC signing | DNSSEC validation | Encrypted DNS | Zone transfers | Dynamic updates | GeoDNS / views | Filtering |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **DNZ** | ✓ | ✓ | ✓ | ✓ | ✓ | DoT, DoH, DoQ, DoH3 | ✓, catalog zones | ✓ | geo + views | lists + RPZ |
+| NSD | ✓ | – | – | pre-signed zones | – | DoT | ✓ | – | – | – |
+| Knot DNS | ✓ | – | – | ✓ | – | DoT, DoQ | ✓, catalog zones | ✓ | geo + views | – |
+| BIND 9 | ✓ | ✓ | ✓ | ✓ | ✓ | DoT, DoH | ✓, catalog zones | ✓ | geo + views | RPZ |
+| gdnsd | ✓ | – | – | – | – | – | – | – | geo | – |
+| PowerDNS Authoritative | ✓ | – | – | ✓ | – | – | ✓, catalog zones | ✓ | geo (LUA records) | – |
+| YADIFA | ✓ | – | – | ✓ | – | DoT (experimental) | ✓ | ✓ | – | – |
+| Unbound | local zones | ✓ | ✓ | – | ✓ | DoT, DoH, DoQ | as secondary | – | views | RPZ |
+| Knot Resolver | – | ✓ | ✓ | – | ✓ | DoT, DoH | – | – | views | RPZ |
+| PowerDNS Recursor | local zones | ✓ | ✓ | – | ✓ | – | – | – | – | RPZ |
+| dnsdist | – | ✓ | – | – | – | DoT, DoH, DoQ, DoH3 | – | – | rules | rules |
+| dnsmasq | limited | ✓ | – | – | ✓ | – | limited | – | – | hosts files |
+| CoreDNS | ✓ | ✓ | – | ✓ | – | DoT, DoH, DoQ | ✓ | – | views | – |
+| Hickory DNS | ✓ | ✓ | experimental | ✓ | ✓ | DoT, DoH, DoQ, DoH3 | AXFR out | ✓ | – | lists |
+| Technitium | ✓ | ✓ | ✓ | ✓ | ✓ | DoT, DoH, DoQ | ✓, catalog zones | ✓ | geo + views (apps) | lists |
+| AdGuard Home | rewrites only | ✓ | – | – | – | DoT, DoH, DoQ | – | – | – | lists |
+| Pi-hole | local records | ✓ | – | – | ✓ | – | – | – | – | lists |
+| Blocky | custom mappings | ✓ | – | – | ✓ | DoT, DoH | – | – | – | lists |
+
+### Running it
+
+| Server | Web UI | Query log | HTTP API | Users and roles | Prometheus | Several servers, one config | DHCP |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **DNZ** | ✓ | searchable, in the database | ✓ | per division (RBAC) | ✓ | shared Postgres or MySQL | names and IPAM from leases |
+| NSD | – | – | – | – | exporter | – | – |
+| Knot DNS | – | dnstap | – | – | exporter | – | – |
+| BIND 9 | – | to a file | statistics only | – | exporter | – | – |
+| gdnsd | – | – | – | – | – | – | – |
+| PowerDNS Authoritative | statistics page | to the log | ✓ | – | ✓ | shared SQL backend | – |
+| YADIFA | – | – | – | – | – | – | – |
+| Unbound | – | to the log | – | – | exporter | – | – |
+| Knot Resolver | statistics page | dnstap | – | – | ✓ | – | – |
+| PowerDNS Recursor | statistics page | protobuf, dnstap | ✓ | – | ✓ | – | – |
+| dnsdist | statistics page | protobuf, dnstap | ✓ | – | ✓ | – | – |
+| dnsmasq | – | to the log | – | – | – | – | ✓ |
+| CoreDNS | – | to the log | – | – | ✓ | etcd, Kubernetes | – |
+| Hickory DNS | – | to the log | – | – | build option | – | – |
+| Technitium | ✓ | ✓ (app) | ✓ | ✓ | ✓ | ✓ (cluster) | ✓ |
+| AdGuard Home | ✓ | ✓ | ✓ | admins only | – | – | ✓ |
+| Pi-hole | ✓ | ✓ | ✓ | one password | – | – | ✓ |
+| Blocky | – | database or CSV | ✓ | – | ✓ | Redis sync | – |
+
+Built into DNZ and into none of the others: proxied records through Traefik or DNZ's own reverse
+proxy, Cloudflare zones edited and synced in the same editor, records kept in step with Caddy,
+ExternalDNS and DHCP leases, threat detection on the query stream, zone history with rollback and
+change approval, encrypted backups to S3 or SFTP, a health check with copy-paste fixes, and a
+topology map of the whole setup.
 
 ## Method
 
