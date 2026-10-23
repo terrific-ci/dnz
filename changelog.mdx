@@ -6,18 +6,35 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.5.0**, released October 23, 2026. To install or upgrade to it:
+The latest release is **v1.6.0**, released October 23, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.5.0
-docker pull terrificci/dnz-proxy:1.5.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.5.0
+docker pull terrificci/dnz:1.6.0
+docker pull terrificci/dnz-proxy:1.6.0   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.6.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.5.0" description="October 23, 2026" tags={["Latest"]}>
+<Update label="v1.6.0" description="October 23, 2026" tags={["Latest"]}>
+
+- Public files for the docs: monitoring, benchmark harness, Swarm stack
+- Upstream toasts: one per poll instead of one per incident
+- Record form: searchable view picker
+- Launch config: Mintlify docs preview
+- Query logs: fixed statement sizes, so memory stops climbing
+- DNS over UDP: a socket per CPU, answered where received
+- Cache: a full cache no longer sweeps itself on every insert
+- DNS over UDP: four sockets per CPU
+- Overview: All queries scope for superadmins
+- DNS: a 2 KB future per query instead of 22 KB
+- DNS: a query's name is normalized once
+- DNS over UDP: batches with recvmmsg and sendmmsg
+
+</Update>
+
+<Update label="v1.5.0" description="October 23, 2026">
 
 - DNS phase 1: TCP, EDNS, SOA, CNAME chasing and zone cache
 - DNS phase 2: upstream cache, failover and forward DNS monitoring
