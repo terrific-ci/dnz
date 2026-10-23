@@ -145,11 +145,55 @@ encrypted DNS).
 | Pi-hole | ✓ | ✓ | ✓ | one password | – | – | ✓ |
 | Blocky | – | database or CSV | ✓ | – | ✓ | Redis sync | – |
 
-Built into DNZ and into none of the others: proxied records through Traefik or DNZ's own reverse
-proxy, Cloudflare zones edited and synced in the same editor, records kept in step with Caddy,
-ExternalDNS and DHCP leases, threat detection on the query stream, zone history with rollback and
-change approval, encrypted backups to S3 or SFTP, a health check with copy-paste fixes, and a
-topology map of the whole setup.
+### Operations
+
+| Server | Health-checked answers | Zone history + rollback | Audit log | Alerts | Scheduled backups | Threat detection | Reverse proxy | Cloudflare sync |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **DNZ** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| NSD | – | – | – | – | – | – | – | – |
+| Knot DNS | – | – | – | – | – | – | – | – |
+| BIND 9 | – | – | – | – | – | – | – | – |
+| gdnsd | ✓ | – | – | – | – | – | – | – |
+| PowerDNS Authoritative | ✓ (LUA records) | – | – | – | – | – | – | – |
+| YADIFA | – | – | – | – | – | – | – | – |
+| Unbound | – | – | – | – | – | – | – | – |
+| Knot Resolver | – | – | – | – | – | – | – | – |
+| PowerDNS Recursor | – | – | – | – | – | – | – | – |
+| dnsdist | – | – | – | – | – | – | – | – |
+| dnsmasq | – | – | – | – | – | – | – | – |
+| CoreDNS | – | – | – | – | – | – | – | – |
+| Hickory DNS | – | – | – | – | – | – | – | – |
+| Technitium | ✓ (Failover app) | – | in the server log | – | manual only | – | – | – |
+| AdGuard Home | – | – | – | – | – | – | – | – |
+| Pi-hole | – | – | – | – | manual only (Teleporter) | – | – | – |
+| Blocky | – | – | – | – | – | – | – | – |
+
+### Counted up
+
+Every cell above that isn't a dash counts, limited ones included (local zones, AXFR out, a statistics page, a query log written to the log); an external exporter, pre-signed zones and a manual backup don't.
+
+| Server | Built in, of 25 |
+| --- | ---: |
+| **DNZ** | **25** |
+| Technitium | 19 |
+| BIND 9 | 12 |
+| PowerDNS Authoritative | 11 |
+| Hickory DNS | 11 |
+| Unbound | 9 |
+| Knot Resolver | 9 |
+| PowerDNS Recursor | 9 |
+| CoreDNS | 9 |
+| AdGuard Home | 9 |
+| Pi-hole | 9 |
+| Blocky | 9 |
+| dnsdist | 8 |
+| Knot DNS | 7 |
+| dnsmasq | 7 |
+| YADIFA | 5 |
+| NSD | 3 |
+| gdnsd | 3 |
+
+Technitium comes closest, and it has a DHCP server of its own, which DNZ doesn't: DNZ takes names from the DHCP server you already run. The servers that beat DNZ on queries a second have 3 to 12 of the 25.
 
 ## Method
 
