@@ -1,36 +1,80 @@
 ---
 title: "Benchmarks"
-description: "How fast DNZ answers compared with Knot DNS, Knot Resolver, Unbound and CoreDNS, how much memory it uses, and how to measure it yourself."
+description: "How fast DNZ answers compared with 18 other DNS servers, from Knot DNS, NSD, BIND 9 and PowerDNS to Technitium, AdGuard Home and Pi-hole, how much memory it uses, and how to measure it yourself."
 ---
 
-DNZ was measured against the servers it is often compared to: Knot DNS and CoreDNS as authoritative
-servers, Unbound, Knot Resolver and CoreDNS as caching resolvers.
+DNZ was measured against 18 other DNS servers, from the classic authoritative servers to the
+home-network filters, each in the scenarios it supports:
+
+| Scenario | Servers |
+| --- | --- |
+| Authoritative | DNZ, NSD, Knot DNS, BIND 9, gdnsd, PowerDNS Authoritative, Unbound, YADIFA, CoreDNS, Technitium, Hickory DNS |
+| Cached forwarding | DNZ, PowerDNS Recursor, BIND 9, dnsdist, Knot Resolver, Unbound, CoreDNS, dnsmasq, Technitium, AdGuard Home, Pi-hole, Hickory DNS, Blocky |
 
 ## Results
 
-Measured on 2026-10-22 on a MacBook (Apple silicon) in Docker Desktop's VM: 2 CPUs and 1 GiB per
-server, dnsperf on 2 CPUs over UDP, 32 clients, 500 queries outstanding, median of 3 runs of 20 s.
+Measured on 2026-10-23 on a dedicated server: a KVM virtual machine with 4 CPUs (Intel Xeon Silver
+4114, 2.2 GHz), x86_64, nothing else running. 2 CPUs and 1 GiB per server, dnsperf on the other 2
+CPUs over UDP, 32 clients, 500 queries outstanding, median of 3 runs of 20 s.
 
-| Scenario | Server | Queries/s | Avg latency |
-| --- | --- | ---: | ---: |
-| Authoritative | DNZ | 231,268 | 0.61 ms |
-| Authoritative | Knot DNS 3.4.6 | 351,827 | 0.18 ms |
-| Authoritative | Unbound 1.26.1 (`auth-zone`) | 398,678 | 0.11 ms |
-| Authoritative | CoreDNS 1.12.1 (`file`) | 131,751 | 1.68 ms |
-| Cached forwarding | DNZ | 268,590 | 0.51 ms |
-| Cached forwarding | Unbound 1.26.1 | 427,128 | 0.09 ms |
-| Cached forwarding | Knot Resolver 5.7.5 | 447,558 | 0.18 ms |
-| Cached forwarding | CoreDNS 1.12.1 | 213,092 | 0.95 ms |
+### Authoritative
 
-- **Authoritative**: DNZ answers about 60% of what Knot DNS and Unbound do on the same CPUs, and
-  1.75 times what CoreDNS does, while also logging every query.
-- **Cached forwarding**: about 60% of Unbound and Knot Resolver, and about 1.25 times CoreDNS. DNZ's
-  cache keeps answers in wire format in a sharded map; what remains is the work around it: DNZ
-  parses every query, logs every query, and receives UDP in one loop where Unbound and Knot Resolver
-  use a socket per thread or process.
-- On a laptop, the same run varies a lot from one try to the next for every server. Real servers
-  with more cores are much faster for every one of them; compare the servers within one run, not
-  the absolute numbers.
+| Server | Queries/s | Avg latency | Memory |
+| --- | ---: | ---: | ---: |
+| NSD 4.12.0 | 143,103 | 0.73 ms | 74.5 MiB |
+| Knot DNS 3.4.6 | 137,874 | 0.62 ms | 8.6 MiB |
+| BIND 9.20.30 | 134,190 | 1.14 ms | 11.8 MiB |
+| gdnsd 3.8.3 | 133,738 | 0.58 ms | 2.2 MiB |
+| PowerDNS Authoritative 4.9.17 | 127,261 | 0.87 ms | 59.3 MiB |
+| Unbound 1.26.1 (`auth-zone`) | 126,825 | 0.70 ms | 14.8 MiB |
+| YADIFA 3.0.2 ¹ | 80,683 | 1.70 ms | 89.9 MiB |
+| **DNZ** | **66,772** | **2.28 ms** | **55.1 MiB** |
+| CoreDNS 1.12.1 (`file`) | 53,581 | 3.90 ms | 30.0 MiB |
+| Technitium 15.6.2 | 38,046 | 11.43 ms | 79.8 MiB |
+| Hickory DNS 0.26.3 | 12,189 | 14.58 ms | 16.4 MiB |
+
+### Cached forwarding
+
+| Server | Queries/s | Avg latency | Memory |
+| --- | ---: | ---: | ---: |
+| PowerDNS Recursor 5.2.13 | 140,039 | 1.56 ms | 19.3 MiB |
+| BIND 9.20.30 | 137,794 | 1.05 ms | 18.0 MiB |
+| dnsdist 1.9.16 (packet cache) | 132,142 | 2.95 ms | 36.7 MiB |
+| Knot Resolver 5.7.5 | 131,070 | 1.08 ms | 10.2 MiB |
+| Unbound 1.26.1 | 122,793 | 0.76 ms | 22.2 MiB |
+| CoreDNS 1.12.1 | 68,868 | 2.92 ms | 42.6 MiB |
+| dnsmasq 2.91 | 67,330 | 2.42 ms | 3.0 MiB |
+| **DNZ** | **65,581** | **2.26 ms** | **64.8 MiB** |
+| Technitium 15.6.2 | 38,144 | 11.29 ms | 103.8 MiB |
+| AdGuard Home 0.107.79 | 31,956 | 6.80 ms | 57.3 MiB |
+| Pi-hole 2026.10.0 | 22,098 | 7.50 ms | about 44 MiB ² |
+| Hickory DNS 0.26.3 | 20,379 | 8.48 ms | 33.8 MiB |
+| Blocky 0.35.0 | 16,154 | 13.54 ms | 48.7 MiB |
+
+1. YADIFA 3.0.2 (the Debian 13 package) sends malformed NXDOMAIN answers (the SOA in the wrong
+   section), one query in ten here, so its number is not quite comparable.
+2. Not captured in this run; a 3-second trial run of the same harness showed 43.7 MiB.
+
+What the numbers say:
+
+- **The top group is the load generator's limit.** NSD, Knot DNS, BIND 9, gdnsd, PowerDNS,
+  dnsdist, Knot Resolver and Unbound all land between 123k and 143k queries a second, within 17%
+  of each other. That is what dnsperf sends from its 2 CPUs; their real capacity is higher, and
+  this run doesn't rank them among themselves.
+- **DNZ answers about half of that group** in both scenarios, while writing every query to its
+  query log. It is level with CoreDNS and dnsmasq for cached answers, and 1.25 times CoreDNS
+  authoritative.
+- **Against the servers with a web UI, a query log and filtering**, the ones people often pick
+  instead of DNZ: Technitium answers 57% of what DNZ does, AdGuard Home 49%, Pi-hole 34% and Blocky
+  25%, with 3 to 6 times DNZ's latency.
+- **Hickory DNS**, the other DNS server written in Rust, answers 18% of DNZ's authoritative and 31%
+  of its cached queries (with its default `info` logging of every request).
+- **Memory**: the C servers that only answer DNS mostly hold 2 to 22 MiB; NSD, PowerDNS
+  Authoritative and YADIFA set aside 59 to 90 MiB. DNZ holds 55 to 65 MiB with its web API, query
+  log and cache: about what AdGuard Home and Blocky hold, less than Technitium.
+- An earlier run on a MacBook (Apple silicon, Docker Desktop's VM with 4 CPUs) had DNZ at about 60%
+  of Knot DNS, Unbound and Knot Resolver. DNZ receives UDP on one socket in one loop, where the
+  fast group uses a socket per thread; slower cores probably make that loop count for more.
 
 ### Cache hits, before and after
 
@@ -49,15 +93,21 @@ About 44% more cached answers per second on the same two CPUs, ahead in every ro
 ## Method
 
 - Every server runs in its own container on one Docker network, with the **same CPU and memory
-  limits**. The load generator is [dnsperf](https://www.dns-oarc.net/tools/dnsperf) in another
-  container.
+  limits**; only the server being measured is busy. The load generator is
+  [dnsperf](https://www.dns-oarc.net/tools/dnsperf) in another container.
+- The classic servers are the Debian 13 packages; CoreDNS, Technitium, AdGuard Home, Pi-hole and
+  Blocky the official images; Hickory DNS a release build from crates.io; DNZ a release build.
 - **Authoritative**: a zone of 10,000 A records, each queried in turn, with one query in ten for a
-  name that does not exist. DNZ gets the zone through its import API like a user would.
+  name that does not exist. DNZ and Technitium get the zone through their import APIs like a user
+  would; the others read the zone file.
 - **Cached forwarding**: 10,000 names of another zone, which the resolvers forward to a Knot DNS
   container. One warm-up pass fills the caches, so the measured runs are all cache hits. Nobody
   validates DNSSEC here (DNZ's default for forwarding).
-- Defaults otherwise: DNZ writes every query to its query log; its per-client rate limit is off
-  because all queries come from one address.
+- Defaults otherwise, with three exceptions, because all queries come from one address: rate
+  limits are off (DNZ's, Technitium's, AdGuard Home's, Pi-hole's, and response rate limiting in NSD
+  and YADIFA); caches have room for every name; servers that take a thread count get one per CPU.
+  Each server keeps its default logging: DNZ writes every query to its query log, as Pi-hole,
+  AdGuard Home and Blocky do; Technitium keeps statistics.
 
 ## Memory
 
