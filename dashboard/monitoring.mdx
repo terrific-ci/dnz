@@ -20,7 +20,7 @@ On the Overview, superadmins see every upstream with:
 Each upstream and conditional forwarding rule is probed every 15 seconds. When one goes down:
 
 - a warning banner appears on every page,
-- a toast pops up when it goes down and when it recovers,
+- a toast pops up when it goes down and when it recovers (when several change at once, one toast sums them up),
 - an entry is added to the **incident log** (the bell in the top bar), kept for 90 days.
 
 When an upstream misbehaves, **Diagnose** next to it checks the path step by step. See
