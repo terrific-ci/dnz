@@ -19,277 +19,204 @@ The `latest` image tag and the install script without `--version` always get thi
 
 <Update label="v1.5.0" description="October 23, 2026" tags={["Latest"]}>
 
-- first commit (alfianlensundev)
-- DNS phase 1: TCP, EDNS, SOA, CNAME chasing and zone cache (alfianlensundev)
-- DNS phase 2: upstream cache, failover and forward DNS monitoring (alfianlensundev)
-- Forwarding strategies and first-run setup page (alfianlensundev)
-- Encrypted upstreams: DNS-over-TLS and DNS-over-HTTPS (alfianlensundev)
-- Vercel-style sidebar layout and incident notification providers (alfianlensundev)
-- Vercel-style account menu and centered collapsed sidebar (alfianlensundev)
-- Cloudflare integration per division (alfianlensundev)
-- Zone import and export (alfianlensundev)
-- Find on Cmd+K and pre-filled Cloudflare token link (alfianlensundev)
-- Server time zone setting and SPA loading screen (alfianlensundev)
-- Conditional forwarding and audit log (alfianlensundev)
-- Auto PTR, domain autocomplete for forwarding rules, compact layout (alfianlensundev)
-- Sign in with Cloudflare and bulk import into local DNS (alfianlensundev)
-- Deploy-ready build, all-queries log view, readable toasts (alfianlensundev)
-- Blocklists per division, API tokens with ACME DNS-01, deploy guide (alfianlensundev)
-- CI and tagged releases on GitHub Actions (alfianlensundev)
-- Dynamic DNS over DynDNS2 (alfianlensundev)
-- Split-horizon DNS with views (alfianlensundev)
-- Serve DNS over TLS and DNS over HTTPS (alfianlensundev)
-- DNSSEC signing for local zones (alfianlensundev)
-- release.sh for cutting releases (alfianlensundev)
-- Roadmap: tick DoT/DoH serving and CI, done earlier (alfianlensundev)
-- Publish the release image to Docker Hub instead of ghcr.io (alfianlensundev)
-- About DNZ instead of the status line in the account menu (alfianlensundev)
-- Readable, consistent form text (alfianlensundev)
-- Roadmap: topology map with vue-flow as the last phase (alfianlensundev)
-- Harden sign-in, sessions and HTTP headers (alfianlensundev)
-- Redesign the Filtering page (alfianlensundev)
-- Filtering: plain placeholder on the list URL field (alfianlensundev)
-- Use bun for the web UI instead of pnpm (alfianlensundev)
-- Run the Nuxt dev server on port 3111 (alfianlensundev)
-- Replication: zone transfers, NOTIFY, catalog zones and DNZ secondaries (alfianlensundev)
-- Fix confirm dialogs always answering no (alfianlensundev)
-- Redesign the Integrations page (alfianlensundev)
-- Replication: one entry per discovered server, list manual secondary zones (alfianlensundev)
-- Switch UI icons from Lucide to Iconify Phosphor (alfianlensundev)
-- Replication page with network discovery (alfianlensundev)
-- Docs: replication (alfianlensundev)
-- Docs in English (alfianlensundev)
-- Overview: hourly query chart, top names and stat tiles (alfianlensundev)
-- Record on/off, default TTL per zone, bulk record edits, comments and tags (alfianlensundev)
-- Redesign the dashboard: glass top bar, section tabs, Iris theme (alfianlensundev)
-- TOML config file and CLI-only mode (alfianlensundev)
-- Redesign polish: record type lens filter, zone state header, solid auth forms (alfianlensundev)
-- Records toolbar: keep search and Add record on one row on phones (alfianlensundev)
-- CLI: record on/off, tags, comments, bulk edits and zone default TTL (alfianlensundev)
-- Document the design system in DESIGN.md; fix the toast gray token (alfianlensundev)
-- Top bar health pill opens an upstream popover instead of Forwarding (alfianlensundev)
-- Dashboard tabs: DNS, Forward DNS and a Server tab with host usage (alfianlensundev)
-- Dashboard: Request flow tab drawn with vue-flow (alfianlensundev)
-- Account settings in a dialog instead of a page (alfianlensundev)
-- Spacing fixes for Find and the top bar; DD-MM-YYYY HH:mm:ss times (alfianlensundev)
-- Forwarding by client network, with rule labels (alfianlensundev)
-- Forward rule form: DNS servers and client networks as tag chips (alfianlensundev)
-- Tag chips for every list field (alfianlensundev)
-- Record controls UI and bulk add of records (alfianlensundev)
-- CLI: dnz record add-many (alfianlensundev)
-- Add record in a dialog, with several names as chips (alfianlensundev)
-- Edit record in a dialog (alfianlensundev)
-- Upstream diagnosis streamed over SSE, and dnz forwarding diagnose (alfianlensundev)
-- Diagnose dialog for upstreams with live step progress (alfianlensundev)
-- Forward rules in a drag-and-drop order, first match wins (alfianlensundev)
-- Diagnose action on forwarding rules; document the upstream diagnosis (alfianlensundev)
-- Dynamic DNS UPDATE (RFC 2136) with per-division TSIG update keys (alfianlensundev)
-- DNS update keys in the UI and dnz update-key in the CLI (alfianlensundev)
-- Document dynamic DNS updates (RFC 2136) (alfianlensundev)
-- Ignore Impeccable review screenshots and mocks (alfianlensundev)
-- Dashboard: top clients beside top names, and dnz stats (alfianlensundev)
-- Hourly query rollups and 24h/7d/30d/90d traffic ranges (alfianlensundev)
-- Roadmap: group finished Phase 2 items, mark Phase 4 done (alfianlensundev)
-- Traffic alerts and a daily summary (alfianlensundev)
-- Clippy: then_some for the load average (alfianlensundev)
-- HTTPS/SVCB records, CAA iodef, BADVERS and end-to-end DNS tests (alfianlensundev)
-- Cloudflare: cache zone and record lists, explain API errors (alfianlensundev)
-- Roadmap: proxy is a built-in feature, off by default (alfianlensundev)
-- Roadmap: proxy backend is Pingora (built in) or Traefik (HTTP provider API) (alfianlensundev)
-- DNS over QUIC and DoH over HTTP/3, as upstreams and served (alfianlensundev)
-- Proxied records through Traefik (alfianlensundev)
-- Proxy: one Traefik config, recognized by address, detected and approved (alfianlensundev)
-- Proxy: correct the address a Traefik calls DNZ from (alfianlensundev)
-- Proxy in the menu next to DNS, settings for turning it on and connecting (alfianlensundev)
-- Traefik v3.7 compose for testing proxied records (alfianlensundev)
-- Traefik test compose: settings in traefik.yml instead of .env (alfianlensundev)
-- Traefik test compose: drop the whoami origins (alfianlensundev)
-- Proxy: leave empty routers and services out of Traefik's config (alfianlensundev)
-- Proxy menu: show up without a page refresh (alfianlensundev)
-- Proxy: pick the Traefik entry points from a list (alfianlensundev)
-- Proxy: read Traefik's API, and a copy-paste guide to set Traefik up (alfianlensundev)
-- Select: inner padding and item radius like the other menus (alfianlensundev)
-- Proxy: open the edit and approve dialogs against an older server (alfianlensundev)
-- Proxy dialog: at most 80% of the screen tall (alfianlensundev)
-- Menus never wrap their items; short Traefik API errors (alfianlensundev)
-- Record form: show a proxied visit step by step (alfianlensundev)
-- Record form: the visitor's URL follows the proxy's entry points (alfianlensundev)
-- Proxy: "uses HTTPS" decides both sides of a proxied name (alfianlensundev)
-- Dev servers listen on every interface (alfianlensundev)
-- Dev server: DNS on port 53 (alfianlensundev)
-- Dev server: DNS on port 5300 (alfianlensundev)
-- Dev server: DNS back on port 53 (alfianlensundev)
-- Proxy: routers, services and middlewares per proxy (alfianlensundev)
-- Proxy: records from a Traefik's own routers (alfianlensundev)
-- Proxy: From Traefik tab and docs for records from Traefik's routers (alfianlensundev)
-- Proxy: several upstreams per service, shared by weight (alfianlensundev)
-- Proxy: records from routers of every Traefik provider (alfianlensundev)
-- Traefik test compose: routers from container labels (alfianlensundev)
-- Record form: proxied path as a vertical step list (alfianlensundev)
-- Proxy: the whole card opens the proxy, with a clear call to action (alfianlensundev)
-- Proxy: add a route in one step (alfianlensundev)
-- Proxy: Traefik API hint names the Proxy menu and links to it (alfianlensundev)
-- Proxy: pull zones for Traefik's hostnames that no zone holds (alfianlensundev)
-- Proxy: load-balancing strategy and sticky sessions per service (alfianlensundev)
-- Proxy: records from Traefik's routers are proxied through the proxy (alfianlensundev)
-- Drop links to the source repository from the app (alfianlensundev)
-- Factory reset from the web UI and the CLI (alfianlensundev)
-- Proxy: a form for every Traefik HTTP middleware (alfianlensundev)
-- Request flow: a Proxy tab while proxying is on (alfianlensundev)
-- Proxy: weighted, mirroring and failover services, full load-balancer settings (alfianlensundev)
-- Proxy: full router rules, TLS options and domains, router observability (alfianlensundev)
-- Proxy: TLS certificates and options, servers transports, TCP and UDP (alfianlensundev)
-- Proxy: reachability marks, certificate progress, DNS records from the proxy (alfianlensundev)
-- dnz-proxy: design and build plan (alfianlensundev)
-- dnz-proxy: workspace, node binary skeleton, nodes joining a proxy and the configuration stream (alfianlensundev)
-- dnz-proxy: the HTTP data plane on Pingora and Traefik's HTTP middlewares (alfianlensundev)
-- dnz-proxy: traffic analytics from the nodes' reports (alfianlensundev)
-- Proxy: dnz-proxy's own middleware types, kept from Traefik (alfianlensundev)
-- Settings → Proxy: pick dnz-proxy, with a copy-paste node setup guide (alfianlensundev)
-- dnz-proxy: caching, firewall rules and the "under attack" challenge (alfianlensundev)
-- dnz-proxy: TCP and UDP (L4) routers and services (alfianlensundev)
-- dnz-proxy: DNZ runs a node on its own server; packaging (alfianlensundev)
-- dnz-proxy: clippy clean-up; compress honors its encodings; transport and mirroring limits reported (alfianlensundev)
-- Proxy: dnz-proxy nodes, entry points, cache and settings (alfianlensundev)
-- Docs: dnz-proxy (nodes, entry points, routing, its middlewares, analytics, API); roadmap and README (alfianlensundev)
-- Middlewares: dnz-proxy's cache, firewall and challenge forms (alfianlensundev)
-- dnz-proxy: Docker build needs CMake (Pingora's zlib-ng); CI checks the whole workspace; a two-node docker compose to try it (alfianlensundev)
-- Proxy analytics: traffic, latency, cache and the request log (alfianlensundev)
-- dnz proxy CLI: nodes, approve, ignore, drain, remove, purge; nodes that stop reporting count as disconnected (alfianlensundev)
-- Docs: dnz proxy commands (alfianlensundev)
-- dnz-proxy: certificates over ACME, issued and renewed by DNZ (alfianlensundev)
-- dnz-proxy UI: fixes from trying it against a running node (alfianlensundev)
-- dnz-proxy: DNS follows what it would answer, so a node's new address reaches DNS too (alfianlensundev)
-- README: DNZ_ACME_CA_ROOTS (alfianlensundev)
-- Docs: dnz-proxy wording matches the UI (alfianlensundev)
-- dnz-proxy setup: Docker from the DNZ image, and a node on DNZ's own server (alfianlensundev)
-- Certificates: ACME accounts, DNS credentials, resolvers and certificates (alfianlensundev)
-- dnz-proxy: name the DNS answers type (alfianlensundev)
-- CLI: notifications, Cloudflare, settings, audit log, sessions and a private CA (alfianlensundev)
-- Proxied records: one record through several proxies (alfianlensundev)
-- Proxy routers: line every cell up on one row height (alfianlensundev)
-- Proxy routers: open the app behind each hostname (alfianlensundev)
-- Topology map: the whole setup on one canvas (alfianlensundev)
-- Add route: suggest hostnames from zones and records (alfianlensundev)
-- Add route: hold back "no zone" while suggestions are open (alfianlensundev)
-- Ignore the local /testing folder (alfianlensundev)
-- CLI: dnz proxy hosts and dnz proxy route (alfianlensundev)
-- CLI: dnz proxy route finds the proxy's entry points (alfianlensundev)
-- Add route: one place picks the entry points, for the UI and the CLI (alfianlensundev)
-- Test importing a hand-kept BIND file (alfianlensundev)
-- Router dialog: the same entry points as Add route and the CLI (alfianlensundev)
-- dnz-proxy: encodedCharacters middleware (alfianlensundev)
-- dnz-proxy: client certificates and passTLSClientCert (alfianlensundev)
-- dnz-proxy: grpcWeb middleware (alfianlensundev)
-- dnz-proxy: rate limits shared through Redis (alfianlensundev)
-- dnz-proxy: 421 for client certificates on reused connections, docs (alfianlensundev)
-- Cloudflare import: all records, or only the ones ticked (alfianlensundev)
-- Import a zone: Raw zone file and From Cloudflare tabs (alfianlensundev)
-- Zones: forward names they don't have to the upstreams (alfianlensundev)
-- Roadmap: Phase 8, gaps with other DNS servers (alfianlensundev)
-- Roadmap: Phase 9, DNS records for the sites a Caddy serves (alfianlensundev)
-- traefiktest (alfianlensundev)
-- Docs: Mintlify documentation site (alfianlensundev)
-- Docs site: link to github.com/terrific-ci/dnz (alfianlensundev)
-- Move the documentation site to its own repository (alfianlensundev)
-- ALIAS records: CNAME flattening at the apex (alfianlensundev)
-- Caddy: DNS records for the sites a Caddy serves (alfianlensundev)
-- Caddy: Settings → Integrations, zone badges, topology and docs (alfianlensundev)
-- Build release binaries against glibc 2.35; proxy setup uses the install script (alfianlensundev)
-- More record types: TLSA, SSHFP, NAPTR, DS, URI, DNAME and LOC (alfianlensundev)
-- DNSSEC: NSEC3, Ed25519 and RSA, KSK/ZSK split, automatic key rollover with CDS/CDNSKEY (alfianlensundev)
-- Recursive resolution: DNZ resolves from the root servers itself (alfianlensundev)
-- DNSSEC validation of forwarded and recursive answers (alfianlensundev)
-- Recursor: concurrent identical questions share one resolution (alfianlensundev)
-- Benchmarks: DNZ against Knot DNS, Knot Resolver, Unbound and CoreDNS (alfianlensundev)
-- Response rate limiting (RRL) per response, besides the per-client limit (alfianlensundev)
-- Filtering: safe search, parental control, schedules and per-client rules (alfianlensundev)
-- RPZ: subscribe to response policy zones and serve the blocklists as one (alfianlensundev)
-- GeoDNS, weighted answers and health checks for plain A/AAAA records (alfianlensundev)
-- Serve-stale (RFC 8767) and prefetch in the forwarder cache (alfianlensundev)
-- EDNS Client Subnet (RFC 7871) towards the upstreams (alfianlensundev)
-- DNS64 (RFC 6147) for IPv6-only networks (alfianlensundev)
-- DNS cookies (RFC 7873, RFC 9018) and NSID (RFC 5001) (alfianlensundev)
-- ECS: ecs_of() for the client subnet a query carries (alfianlensundev)
-- Forwarder: prefetch refreshes ask without CD (alfianlensundev)
-- Database: Postgres and MySQL besides SQLite (alfianlensundev)
-- dnz db migrate-from-sqlite, data_dir, the backend in config check (alfianlensundev)
-- Docs: choosing a database, moving from SQLite; Postgres compose file (alfianlensundev)
-- Faster cache hits: wire-format answers in a sharded cache (alfianlensundev)
-- Benchmarks: cache hits before and after the sharded wire-format cache (alfianlensundev)
-- Roadmap: Phase 10, cluster, metrics, DNZ as code, change review (alfianlensundev)
-- Docker: dnz-proxy image of its own, published with each release (alfianlensundev)
-- dnz-proxy on Docker Swarm: stack file and docs (alfianlensundev)
-- Setup guide: a Docker Swarm tab for dnz-proxy (alfianlensundev)
-- Docs: the setup guide's Docker Swarm tab (alfianlensundev)
-- Cluster: several DNZ servers on one Postgres or MySQL database (alfianlensundev)
-- Nodes starting together on an empty database seed it once (alfianlensundev)
-- Docs: running a DNZ cluster (NS records or anycast), dnz cluster (alfianlensundev)
-- Cluster page: new nodes run the DNZ image, not dnz-proxy's (alfianlensundev)
-- Terraform provider: zones, records, forwarding, filtering, API tokens (alfianlensundev)
-- ExternalDNS webhook provider, Kubernetes guide (alfianlensundev)
-- Change approval: read DNZ's 202 answer, check the request's status (alfianlensundev)
-- Terraform: read records from DNZ 1.1 servers too (alfianlensundev)
-- Zone history and change approval: versions, diff, rollback, change requests (alfianlensundev)
-- CLI: dnz zone history|diff|rollback, dnz change, dnz settings history (alfianlensundev)
-- UI: zone history tab, pending changes inbox, approval policies (alfianlensundev)
-- History: a changed value reads 'www A 192.0.2.1 → 192.0.2.2' (alfianlensundev)
-- Docs: zone history and change approval (docs/history.md, API, CLI, README, roadmap) (alfianlensundev)
-- History after the cluster: prune on the leader only; change events in new providers' defaults (alfianlensundev)
-- ExternalDNS webhook in Rust (dnz externaldns-webhook); drop the Go code (alfianlensundev)
-- Kubernetes guide: where change requests are approved (alfianlensundev)
-- History docs: ExternalDNS instead of Terraform in the examples (alfianlensundev)
-- Prometheus /metrics: own listen address or HTTP API with a token (alfianlensundev)
-- Settings: Prometheus metrics card with token and scrape config (alfianlensundev)
-- Grafana dashboard, Prometheus alert rules and a monitoring compose file (alfianlensundev)
-- Docs: metrics.md, dnz settings metrics; tick the Phase 10 metrics items (alfianlensundev)
-- Metrics: cluster node id, leader and change-feed lag in the docs, alerts and dashboard (alfianlensundev)
-- Metrics: query counters in 16 stripes picked by the client's port, so DNS workers rarely share a cache line (alfianlensundev)
-- Metrics: API tests for the settings, the token and the scrape (alfianlensundev)
-- Docs: what counting queries costs (alfianlensundev)
-- Roadmap: Phase 11, backups, DHCP and IPAM, threat detection, onboarding (alfianlensundev)
-- Zones in memory: no spare room per name, no copy on reload (alfianlensundev)
-- Web server: route with regex-lite instead of regex (alfianlensundev)
-- Server: one malloc arena per CPU, trimmed every minute (alfianlensundev)
-- Benchmarks: memory through a day's work, before and after (alfianlensundev)
-- Health check: install and machine checks with copy-paste fixes, a schedule on the leader that alerts, API and metrics (alfianlensundev)
-- Onboarding: the setup wizard's state and guides (API), dnz setup asks the same questions, dnz doctor (alfianlensundev)
-- Onboarding UI: the setup wizard page, the health check page and its header badge (alfianlensundev)
-- Docs: health check, the setup wizard, dnz doctor and dnz setup's questions; alert rules; Phase 11 onboarding ticked (alfianlensundev)
-- Alerts: health check rules named apart from the GeoDNS health check's (alfianlensundev)
-- DHCP and IPAM: leases from Kea, dhcpd and Windows DHCP become records; DHCID rules for DNS UPDATEs; IPAM view (alfianlensundev)
-- CLI: dnz dhcp servers|show|add|edit|sync|leases|import|rm and dnz ipam subnets|show|conflicts|add|rm (alfianlensundev)
-- UI: DNS → DHCP & IPAM (servers with copy-paste Kea/dhcpd/Windows setup, leases, IPAM subnets and conflicts); DHCP badge on records (alfianlensundev)
-- Docs: docs/dhcp.md (Kea, dhcpd, Windows DHCP, the DHCID rules, IPAM), CLI, API, metrics; README; ROADMAP Phase 11 DHCP and IPAM done (alfianlensundev)
-- API tokens may push DHCP lease files (import, sync, leases) and read IPAM (alfianlensundev)
-- Docs: dnz dhcp leases lists every lease unless --live (alfianlensundev)
-- DHCP: a paused server keeps its records (alfianlensundev)
-- Backups: archives of the whole install, targets (folder, S3, SFTP), schedules, retention, restore (alfianlensundev)
-- Backups: fixes from a live run (alfianlensundev)
-- Backups: Settings &gt; Backups page, restore dialogs, restore on the setup page, topology (alfianlensundev)
-- Docs: backups and disaster recovery (alfianlensundev)
-- CLI: health_check in dnz notify's list of events (alfianlensundev)
-- Threats: detectors over the query stream, findings, feeds, alerts, auto-blocking, API, CLI and metrics (alfianlensundev)
-- Threats: feeds take an Auth-Key; abuse.ch and HaGeZi as presets instead of seeded feeds (alfianlensundev)
-- Threats page: findings per client and per domain with evidence, status, mute, allow, block; feeds, lists, settings and a self-test (alfianlensundev)
-- Threats: e2e test with real queries over UDP (tunnel, DGA, new domains, auto-blocking) (alfianlensundev)
-- Docs: threat detection (docs/threats.md), dnz threats in docs/cli.md, README; tick Phase 11 threat detection (alfianlensundev)
-- Threats e2e test: wait for filtering to load the block before asking (alfianlensundev)
-- Threats: tunnel counts stop at the name cap instead of counting every query; benchmark with detection on and off (alfianlensundev)
-- DHCP e2e test: Shared has a threats field now (alfianlensundev)
-- Release notes: every commit since the previous tag with its author (alfianlensundev)
-- Release title is just the tag (v1.2.0), not DNZ v1.2.0 (alfianlensundev)
-- release.sh --prune: delete releases, their tags and Docker Hub images (alfianlensundev)
-- Release: rewrite the docs site's changelog page after each release (alfianlensundev)
-- Setup guides: the host's address when DNZ runs in Docker (alfianlensundev)
-- Device address in the UI: Settings → General, the wizard and dnz settings advertise (alfianlensundev)
-- Overview: queries per client network and an "Answered by" breakdown (alfianlensundev)
-- Benchmarks: BIND 9 and Technitium DNS Server, and each server's memory (alfianlensundev)
-- Stats: sort answer sources with sort_by_key (clippy) (alfianlensundev)
-- Release: binaries on the public terrific-ci/dnz, not the private source repository (alfianlensundev)
-- Release: no Docker images without the binaries (alfianlensundev)
-- Benchmarks: NSD, PowerDNS, YADIFA, gdnsd, Hickory DNS, dnsmasq, dnsdist, AdGuard Home, Pi-hole and Blocky (alfianlensundev)
-- release.sh: compare the new version with the tags left, not Cargo.toml (alfianlensundev)
+- DNS phase 1: TCP, EDNS, SOA, CNAME chasing and zone cache
+- DNS phase 2: upstream cache, failover and forward DNS monitoring
+- Forwarding strategies and first-run setup page
+- Encrypted upstreams: DNS-over-TLS and DNS-over-HTTPS
+- Vercel-style sidebar layout and incident notification providers
+- Vercel-style account menu and centered collapsed sidebar
+- Cloudflare integration per division
+- Zone import and export
+- Find on Cmd+K and pre-filled Cloudflare token link
+- Server time zone setting and SPA loading screen
+- Conditional forwarding and audit log
+- Auto PTR, domain autocomplete for forwarding rules, compact layout
+- Sign in with Cloudflare and bulk import into local DNS
+- Deploy-ready build, all-queries log view, readable toasts
+- Blocklists per division, API tokens with ACME DNS-01, deploy guide
+- Dynamic DNS over DynDNS2
+- Split-horizon DNS with views
+- Serve DNS over TLS and DNS over HTTPS
+- DNSSEC signing for local zones
+- Publish the release image to Docker Hub instead of ghcr.io
+- About DNZ instead of the status line in the account menu
+- Readable, consistent form text
+- Harden sign-in, sessions and HTTP headers
+- Redesign the Filtering page
+- Filtering: plain placeholder on the list URL field
+- Replication: zone transfers, NOTIFY, catalog zones and DNZ secondaries
+- Fix confirm dialogs always answering no
+- Redesign the Integrations page
+- Replication: one entry per discovered server, list manual secondary zones
+- Switch UI icons from Lucide to Iconify Phosphor
+- Replication page with network discovery
+- Overview: hourly query chart, top names and stat tiles
+- Record on/off, default TTL per zone, bulk record edits, comments and tags
+- Redesign the dashboard: glass top bar, section tabs, Iris theme
+- TOML config file and CLI-only mode
+- Redesign polish: record type lens filter, zone state header, solid auth forms
+- Records toolbar: keep search and Add record on one row on phones
+- CLI: record on/off, tags, comments, bulk edits and zone default TTL
+- Top bar health pill opens an upstream popover instead of Forwarding
+- Dashboard tabs: DNS, Forward DNS and a Server tab with host usage
+- Dashboard: Request flow tab drawn with vue-flow
+- Account settings in a dialog instead of a page
+- Spacing fixes for Find and the top bar; DD-MM-YYYY HH:mm:ss times
+- Forwarding by client network, with rule labels
+- Forward rule form: DNS servers and client networks as tag chips
+- Tag chips for every list field
+- Record controls UI and bulk add of records
+- CLI: dnz record add-many
+- Add record in a dialog, with several names as chips
+- Edit record in a dialog
+- Upstream diagnosis streamed over SSE, and dnz forwarding diagnose
+- Diagnose dialog for upstreams with live step progress
+- Forward rules in a drag-and-drop order, first match wins
+- Diagnose action on forwarding rules; document the upstream diagnosis
+- Dynamic DNS UPDATE (RFC 2136) with per-division TSIG update keys
+- DNS update keys in the UI and dnz update-key in the CLI
+- Dashboard: top clients beside top names, and dnz stats
+- Hourly query rollups and 24h/7d/30d/90d traffic ranges
+- Traffic alerts and a daily summary
+- HTTPS/SVCB records, CAA iodef, BADVERS and end-to-end DNS tests
+- Cloudflare: cache zone and record lists, explain API errors
+- DNS over QUIC and DoH over HTTP/3, as upstreams and served
+- Proxied records through Traefik
+- Proxy: one Traefik config, recognized by address, detected and approved
+- Proxy: correct the address a Traefik calls DNZ from
+- Proxy in the menu next to DNS, settings for turning it on and connecting
+- Proxy: leave empty routers and services out of Traefik's config
+- Proxy menu: show up without a page refresh
+- Proxy: pick the Traefik entry points from a list
+- Proxy: read Traefik's API, and a copy-paste guide to set Traefik up
+- Select: inner padding and item radius like the other menus
+- Proxy: open the edit and approve dialogs against an older server
+- Proxy dialog: at most 80% of the screen tall
+- Menus never wrap their items; short Traefik API errors
+- Record form: show a proxied visit step by step
+- Record form: the visitor's URL follows the proxy's entry points
+- Proxy: "uses HTTPS" decides both sides of a proxied name
+- Proxy: routers, services and middlewares per proxy
+- Proxy: records from a Traefik's own routers
+- Proxy: From Traefik tab and docs for records from Traefik's routers
+- Proxy: several upstreams per service, shared by weight
+- Proxy: records from routers of every Traefik provider
+- Record form: proxied path as a vertical step list
+- Proxy: the whole card opens the proxy, with a clear call to action
+- Proxy: add a route in one step
+- Proxy: Traefik API hint names the Proxy menu and links to it
+- Proxy: pull zones for Traefik's hostnames that no zone holds
+- Proxy: load-balancing strategy and sticky sessions per service
+- Proxy: records from Traefik's routers are proxied through the proxy
+- Factory reset from the web UI and the CLI
+- Proxy: a form for every Traefik HTTP middleware
+- Request flow: a Proxy tab while proxying is on
+- Proxy: weighted, mirroring and failover services, full load-balancer settings
+- Proxy: full router rules, TLS options and domains, router observability
+- Proxy: TLS certificates and options, servers transports, TCP and UDP
+- Proxy: reachability marks, certificate progress, DNS records from the proxy
+- dnz-proxy: workspace, node binary skeleton, nodes joining a proxy and the configuration stream
+- dnz-proxy: the HTTP data plane on Pingora and Traefik's HTTP middlewares
+- dnz-proxy: traffic analytics from the nodes' reports
+- Proxy: dnz-proxy's own middleware types, kept from Traefik
+- Settings → Proxy: pick dnz-proxy, with a copy-paste node setup guide
+- dnz-proxy: caching, firewall rules and the "under attack" challenge
+- dnz-proxy: TCP and UDP (L4) routers and services
+- dnz-proxy: DNZ runs a node on its own server; packaging
+- dnz-proxy: clippy clean-up; compress honors its encodings; transport and mirroring limits reported
+- Proxy: dnz-proxy nodes, entry points, cache and settings
+- Middlewares: dnz-proxy's cache, firewall and challenge forms
+- Proxy analytics: traffic, latency, cache and the request log
+- dnz proxy CLI: nodes, approve, ignore, drain, remove, purge; nodes that stop reporting count as disconnected
+- dnz-proxy: certificates over ACME, issued and renewed by DNZ
+- dnz-proxy UI: fixes from trying it against a running node
+- dnz-proxy: DNS follows what it would answer, so a node's new address reaches DNS too
+- dnz-proxy setup: Docker from the DNZ image, and a node on DNZ's own server
+- Certificates: ACME accounts, DNS credentials, resolvers and certificates
+- dnz-proxy: name the DNS answers type
+- CLI: notifications, Cloudflare, settings, audit log, sessions and a private CA
+- Proxied records: one record through several proxies
+- Proxy routers: line every cell up on one row height
+- Proxy routers: open the app behind each hostname
+- Topology map: the whole setup on one canvas
+- Add route: suggest hostnames from zones and records
+- Add route: hold back "no zone" while suggestions are open
+- CLI: dnz proxy hosts and dnz proxy route
+- CLI: dnz proxy route finds the proxy's entry points
+- Add route: one place picks the entry points, for the UI and the CLI
+- Router dialog: the same entry points as Add route and the CLI
+- dnz-proxy: encodedCharacters middleware
+- dnz-proxy: client certificates and passTLSClientCert
+- dnz-proxy: grpcWeb middleware
+- dnz-proxy: rate limits shared through Redis
+- dnz-proxy: 421 for client certificates on reused connections, docs
+- Cloudflare import: all records, or only the ones ticked
+- Import a zone: Raw zone file and From Cloudflare tabs
+- Zones: forward names they don't have to the upstreams
+- ALIAS records: CNAME flattening at the apex
+- Caddy: DNS records for the sites a Caddy serves
+- Caddy: Settings → Integrations, zone badges, topology and docs
+- Build release binaries against glibc 2.35; proxy setup uses the install script
+- More record types: TLSA, SSHFP, NAPTR, DS, URI, DNAME and LOC
+- DNSSEC: NSEC3, Ed25519 and RSA, KSK/ZSK split, automatic key rollover with CDS/CDNSKEY
+- Recursive resolution: DNZ resolves from the root servers itself
+- DNSSEC validation of forwarded and recursive answers
+- Recursor: concurrent identical questions share one resolution
+- Response rate limiting (RRL) per response, besides the per-client limit
+- Filtering: safe search, parental control, schedules and per-client rules
+- RPZ: subscribe to response policy zones and serve the blocklists as one
+- GeoDNS, weighted answers and health checks for plain A/AAAA records
+- Serve-stale (RFC 8767) and prefetch in the forwarder cache
+- EDNS Client Subnet (RFC 7871) towards the upstreams
+- DNS64 (RFC 6147) for IPv6-only networks
+- DNS cookies (RFC 7873, RFC 9018) and NSID (RFC 5001)
+- ECS: ecs_of() for the client subnet a query carries
+- Forwarder: prefetch refreshes ask without CD
+- Database: Postgres and MySQL besides SQLite
+- dnz db migrate-from-sqlite, data_dir, the backend in config check
+- Faster cache hits: wire-format answers in a sharded cache
+- Docker: dnz-proxy image of its own, published with each release
+- dnz-proxy on Docker Swarm: stack file and docs
+- Setup guide: a Docker Swarm tab for dnz-proxy
+- Cluster: several DNZ servers on one Postgres or MySQL database
+- Nodes starting together on an empty database seed it once
+- Cluster page: new nodes run the DNZ image, not dnz-proxy's
+- ExternalDNS webhook provider, Kubernetes guide
+- Change approval: read DNZ's 202 answer, check the request's status
+- Zone history and change approval: versions, diff, rollback, change requests
+- CLI: dnz zone history|diff|rollback, dnz change, dnz settings history
+- UI: zone history tab, pending changes inbox, approval policies
+- History: a changed value reads 'www A 192.0.2.1 → 192.0.2.2'
+- History after the cluster: prune on the leader only; change events in new providers' defaults
+- ExternalDNS webhook in Rust (dnz externaldns-webhook); drop the Go code
+- Kubernetes guide: where change requests are approved
+- Prometheus /metrics: own listen address or HTTP API with a token
+- Settings: Prometheus metrics card with token and scrape config
+- Grafana dashboard, Prometheus alert rules and a monitoring compose file
+- Metrics: cluster node id, leader and change-feed lag in the docs, alerts and dashboard
+- Metrics: query counters in 16 stripes picked by the client's port, so DNS workers rarely share a cache line
+- Zones in memory: no spare room per name, no copy on reload
+- Server: one malloc arena per CPU, trimmed every minute
+- Health check: install and machine checks with copy-paste fixes, a schedule on the leader that alerts, API and metrics
+- Onboarding: the setup wizard's state and guides (API), dnz setup asks the same questions, dnz doctor
+- Onboarding UI: the setup wizard page, the health check page and its header badge
+- Alerts: health check rules named apart from the GeoDNS health check's
+- DHCP and IPAM: leases from Kea, dhcpd and Windows DHCP become records; DHCID rules for DNS UPDATEs; IPAM view
+- CLI: dnz dhcp servers|show|add|edit|sync|leases|import|rm and dnz ipam subnets|show|conflicts|add|rm
+- UI: DNS → DHCP & IPAM (servers with copy-paste Kea/dhcpd/Windows setup, leases, IPAM subnets and conflicts); DHCP badge on records
+- API tokens may push DHCP lease files (import, sync, leases) and read IPAM
+- DHCP: a paused server keeps its records
+- Backups: archives of the whole install, targets (folder, S3, SFTP), schedules, retention, restore
+- Backups: fixes from a live run
+- Backups: Settings &gt; Backups page, restore dialogs, restore on the setup page, topology
+- CLI: health_check in dnz notify's list of events
+- Threats: detectors over the query stream, findings, feeds, alerts, auto-blocking, API, CLI and metrics
+- Threats: feeds take an Auth-Key; abuse.ch and HaGeZi as presets instead of seeded feeds
+- Threats page: findings per client and per domain with evidence, status, mute, allow, block; feeds, lists, settings and a self-test
+- Threats: tunnel counts stop at the name cap instead of counting every query; benchmark with detection on and off
+- Setup guides: the host's address when DNZ runs in Docker
+- Device address in the UI: Settings → General, the wizard and dnz settings advertise
+- Overview: queries per client network and an "Answered by" breakdown
 
 </Update>
 
