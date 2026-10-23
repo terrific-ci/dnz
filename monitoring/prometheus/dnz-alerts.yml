@@ -1,0 +1,268 @@
+# Prometheus alert rules for DNZ (see the Prometheus metrics page of the DNZ
+# docs).
+#
+# Load them with `rule_files: [dnz-alerts.yml]` in prometheus.yml. They
+# assume the scrape job is called "dnz"; change `job="dnz"` below if yours
+# isn't. Thresholds are starting points: tune them to your traffic.
+
+groups:
+  - name: dnz
+    rules:
+      - alert: DnzDown
+        expr: up{job="dnz"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DNZ {{ $labels.instance }} cannot be scraped"
+          description: "Prometheus has not reached /metrics on {{ $labels.instance }} for 2 minutes: DNZ is down, or the address or token changed."
+
+      - alert: DnzAllUpstreamsDown
+        expr: max by (instance, pool, domain) (dnz_upstream_up) == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Every upstream of DNZ {{ $labels.instance }} ({{ $labels.pool }}) is down"
+          description: "Forwarded names {{ if $labels.domain }}under {{ $labels.domain }} {{ end }}get SERVFAIL (or stale answers) until an upstream answers again."
+
+      - alert: DnzUpstreamDown
+        expr: dnz_upstream_up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Upstream {{ $labels.upstream }} is down on DNZ {{ $labels.instance }}"
+          description: "{{ $labels.upstream }} ({{ $labels.protocol }}, pool {{ $labels.pool }}) failed several queries in a row and is out of rotation."
+
+      - alert: DnzHighServfailRatio
+        expr: |
+          (
+            sum by (instance) (rate(dnz_dns_queries_total{rcode="SERVFAIL"}[5m]))
+              / sum by (instance) (rate(dnz_dns_queries_total[5m]))
+          ) > 0.05
+          and sum by (instance) (rate(dnz_dns_queries_total[5m])) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DNZ {{ $labels.instance }} answers {{ $value | humanizePercentage }} of queries with SERVFAIL"
+          description: "More than 5% SERVFAIL for 10 minutes. Look at the upstreams, DNSSEC validation failures and expired secondary zones."
+
+      - alert: DnzSlowAnswers
+        expr: |
+          histogram_quantile(0.95, sum by (instance, le) (rate(dnz_dns_request_duration_seconds_bucket{source=~"upstream|conditional"}[5m]))) > 0.5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Forwarded answers on DNZ {{ $labels.instance }} are slow (p95 {{ $value | humanizeDuration }})"
+          description: "The 95th percentile of answers from the upstreams has been above 500 ms for 15 minutes."
+
+      - alert: DnzCertificateExpiringSoon
+        expr: (dnz_certificate_expiry_timestamp_seconds - time()) < 14 * 86400
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Certificate {{ $labels.certificate }} expires in {{ $value | humanizeDuration }}"
+          description: "Certificate {{ $labels.certificate }} (source {{ $labels.source }}) on DNZ {{ $labels.instance }} expires within 14 days. ACME certificates renew 30 days ahead, so this one is not renewing."
+
+      - alert: DnzCertificateExpiresVerySoon
+        expr: (dnz_certificate_expiry_timestamp_seconds - time()) < 3 * 86400
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Certificate {{ $labels.certificate }} expires in {{ $value | humanizeDuration }}"
+          description: "Clients will see certificate errors for {{ $labels.certificate }} within 3 days."
+
+      - alert: DnzAcmeCertificateFailing
+        expr: dnz_acme_certificate_failing == 1
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Issuing or renewing {{ $labels.certificate }} keeps failing"
+          description: "The ACME certificate {{ $labels.certificate }} on DNZ {{ $labels.instance }} is in state {{ $labels.state }}; the error is on the Proxy → Certificates page."
+
+      - alert: DnzRateLimitingSpike
+        expr: sum by (instance) (rate(dnz_ratelimit_limited_total[5m])) > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DNZ {{ $labels.instance }} rate-limits {{ $value | humanize }} queries/s"
+          description: "Clients go over the per-client UDP limit (dns.rate_limit): a flood, a reflection attempt, or a limit too low for a busy resolver behind NAT."
+
+      - alert: DnzResponseRateLimitingSpike
+        expr: sum by (instance) (rate(dnz_rrl_responses_total{action=~"dropped|slipped|would_limit"}[5m])) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Response rate limiting acts on {{ $value | humanize }} answers/s on DNZ {{ $labels.instance }}"
+          description: "Many identical answers to the same networks: likely an amplification attack using DNZ."
+
+      - alert: DnzDnssecValidationFailures
+        expr: sum by (instance) (rate(dnz_dnssec_validations_total{result=~"bogus|error"}[10m])) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DNSSEC validation fails on DNZ {{ $labels.instance }} ({{ $value | humanize }}/s)"
+          description: "Bogus answers are SERVFAIL. A broken zone upstream, a clock that is off, or a middlebox stripping DNSSEC records; a negative trust anchor works around one broken zone."
+
+      - alert: DnzSecondaryZoneFailing
+        expr: dnz_secondary_failing == 1
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Secondary zone {{ $labels.zone }} cannot reach its primaries"
+          description: "DNZ {{ $labels.instance }} keeps answering from its copy until the zone expires."
+
+      - alert: DnzSecondaryZoneExpiring
+        expr: (dnz_secondary_expiry_timestamp_seconds - time()) < 86400
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Secondary zone {{ $labels.zone }} expires in {{ $value | humanizeDuration }}"
+          description: "After it expires DNZ {{ $labels.instance }} answers SERVFAIL for the zone."
+
+      - alert: DnzProxyNodeDown
+        expr: dnz_proxy_node_up == 0 and on (instance, proxy, node) dnz_proxy_node_drained == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "dnz-proxy node {{ $labels.node }} ({{ $labels.proxy }}) is down"
+          description: "The node stopped reporting or cannot be reached; DNS no longer answers with its addresses."
+
+      - alert: DnzTraefikDisconnected
+        expr: dnz_traefik_connected == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Traefik for proxy {{ $labels.proxy }} stopped fetching its configuration"
+          description: "Changes in DNZ no longer reach that Traefik."
+
+      - alert: DnzHealthCheckFailing
+        expr: dnz_health_check_up == 0
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "{{ $labels.name }} → {{ $labels.address }} fails its health check"
+          description: "DNZ leaves the address out of answers for {{ $labels.name }} while the check fails."
+
+      - alert: DnzSyncFailing
+        expr: dnz_caddy_sync_success == 0 or dnz_traefik_sync_success == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Record sync from {{ if $labels.caddy }}Caddy {{ $labels.caddy }}{{ else }}Traefik {{ $labels.proxy }}{{ end }} fails"
+          description: "DNZ cannot read the hostnames it should keep records for; existing records stay as they are."
+
+      - alert: DnzClusterNodeBehind
+        expr: |
+          max by (instance) (dnz_cluster_generation{kind="latest"})
+            - max by (instance) (dnz_cluster_generation{kind="applied"}) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cluster node {{ $labels.instance }} is {{ $value }} changes behind"
+          description: "It has not loaded the latest changes from the cluster's change feed for 2 minutes, so it may answer with old data."
+
+      - alert: DnzClusterNoLeader
+        expr: count(dnz_cluster_leader) > 0 and sum(dnz_cluster_leader) == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No DNZ cluster node holds the leader lease"
+          description: "Background jobs (ACME renewals, syncs, health checks) are not running anywhere."
+
+      - alert: DnzBackupFailing
+        expr: dnz_backup_consecutive_failures >= 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backups to {{ $labels.target }} keep failing ({{ $value }} in a row)"
+          description: "See Settings → Backups or `dnz backup status` for the error; the archives already there stay."
+
+      - alert: DnzBackupOverdue
+        expr: time() - dnz_backup_next_run_timestamp_seconds > 3600
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The scheduled backup to {{ $labels.target }} is more than an hour overdue"
+          description: "Schedules run on the cluster leader: check that a node holds the lease and that no backup is stuck."
+
+      - alert: DnzQueryLogDropping
+        expr: rate(dnz_query_log_dropped_total[10m]) > 0
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "DNZ {{ $labels.instance }} drops query log entries"
+          description: "The database cannot keep up with the query log; answers are not affected."
+
+      - alert: DnzThreatFindings
+        expr: increase(dnz_threat_findings_created_total{detector=~"feed|tunnel|dga"}[15m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "DNZ {{ $labels.instance }} found a threat ({{ $labels.detector }})"
+          description: "A client asked for a known-bad domain, tunneled data through DNS or looked up generated names. See the Threats page or `dnz threats list`."
+
+      - alert: DnzThreatFeedStale
+        expr: max by (feed) (dnz_threat_feed_age_seconds) > 86400
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "Threat feed {{ $labels.feed }} is more than a day old"
+          description: "The cluster leader could not download it; `dnz threats feeds` shows the last error."
+
+      - alert: DnzThreatDetectionDropping
+        expr: rate(dnz_threat_queries_dropped_total[10m]) > 0
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "DNZ {{ $labels.instance }} threat detection falls behind"
+          description: "Some queries are not looked at by the threat detectors; answers are not affected."
+
+      - alert: DnzMetricsCollectorFailing
+        expr: dnz_metrics_collector_success == 0
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: "DNZ {{ $labels.instance }} cannot collect its {{ $labels.collector }} metrics"
+          description: "Reading them from the database failed; the other metrics are fine. DNZ logs the error at debug level."
+
+      - alert: DnzHealthFindingFailing
+        expr: sum by (instance, id) (dnz_health_finding_problem{status="fail"}) > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DNZ health check: {{ $labels.id }} fails"
+          description: "Settings → Health check (or `dnz doctor`) shows the evidence and a copy-paste fix."
+
+      - alert: DnzHealthFindingsStale
+        expr: time() - dnz_health_last_check_timestamp_seconds > 6 * 3600
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "The DNZ health check has not run for 6 hours"
+          description: "Its schedule is off, or the cluster has no leader to run the install checks."

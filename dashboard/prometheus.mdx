@@ -89,12 +89,14 @@ curl -s -H "Authorization: Bearer $TOKEN" http://dns1.example.internal:9153/metr
 
 ## Prometheus and Grafana with Docker Compose
 
-DNZ's repository has a compose file in `deploy/monitoring/` that runs Prometheus (with DNZ's alert
-rules) and Grafana (with the dashboard and the data source already set up) for a DNZ that runs
-elsewhere:
+The [`monitoring/`](https://github.com/terrific-ci/dnz/tree/main/monitoring) folder on the public
+repository has a compose file that runs Prometheus (with DNZ's alert rules) and Grafana (with the
+dashboard and the data source already set up) for a DNZ that runs elsewhere:
 
 ```bash
-cd deploy/monitoring
+curl -fsSL https://github.com/terrific-ci/dnz/archive/refs/heads/main.tar.gz \
+  | tar -xz --strip-components=1 dnz-main/monitoring
+cd monitoring
 cp .env.example .env        # set DNZ_TARGET, DNZ_METRICS_TOKEN and GRAFANA_PASSWORD
 docker compose up -d
 ```
@@ -105,15 +107,26 @@ address with `DNZ_SCHEME=https` behind TLS. Grafana is on port 3000 (user `admin
 
 ## Grafana dashboard
 
-Import `deploy/grafana/dnz-dashboard.json` (**Dashboards → New → Import**) and pick your Prometheus
-data source. The data source and the DNZ servers to show are variables at the top. It has rows for
-the overview (queries per second, cache hit ratio, SERVFAIL ratio, p95 latency, upstreams up,
+Download the dashboard, import it (**Dashboards → New → Import**, upload the file) and pick your
+Prometheus data source:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/terrific-ci/dnz/main/monitoring/grafana/dnz-dashboard.json
+```
+
+The data source and the DNZ servers to show are variables at the top. It has rows for the overview (queries per second, cache hit ratio, SERVFAIL ratio, p95 latency, upstreams up,
 soonest certificate expiry), queries, cache and upstreams, filtering and rate limits, DNSSEC and
 recursion, zones and transfers, certificates and proxies, and the process.
 
 ## Alert rules
 
-`deploy/prometheus/dnz-alerts.yml` has rules for:
+Download the rules next to `prometheus.yml`:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/terrific-ci/dnz/main/monitoring/prometheus/dnz-alerts.yml
+```
+
+They cover:
 
 | Alert | When |
 | --- | --- |
@@ -136,9 +149,8 @@ Add the file to `rule_files` in `prometheus.yml`. The rules expect the job to be
 
 ## Metrics reference
 
-Every metric, with its labels, is listed in
-[docs/metrics.md](https://github.com/alfianlensundev/dnz/blob/main/docs/metrics.md). A few to
-start with:
+DNZ describes every metric it exports: each one comes with a `# HELP` line in the scrape output
+(`curl …/metrics` as above). A few to start with:
 
 | Metric | What it tells |
 | --- | --- |

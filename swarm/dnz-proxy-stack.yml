@@ -1,0 +1,44 @@
+# dnz-proxy on Docker Swarm: one node on every server labelled dnz-proxy=true.
+#
+#   docker node update --label-add dnz-proxy=true <server>     # each server that serves
+#   DNZ_PROXY_KEY=dnzp_… docker stack deploy -c dnz-proxy-stack.yml dnz-proxy
+#
+# Each container joins as its own node, named after its server, and keeps its
+# identity in a volume on that server. The ports are published in host mode:
+# the routing mesh would hide visitors' addresses (firewall, analytics) and
+# DNS already sends visitors to each node's own address.
+services:
+  dnz-proxy:
+    image: terrificci/dnz-proxy:latest
+    environment:
+      DNZ_URL: https://dnz.example.com
+      # Only needed to join; taken from the shell at deploy time.
+      DNZ_PROXY_KEY: ${DNZ_PROXY_KEY:?paste the connect key from Settings → Proxy}
+      DNZ_PROXY_NAME: "{{.Node.Hostname}}"
+      # The proxy to join, by name; with "Let nodes join without approval" on
+      # that proxy, new servers join by themselves.
+      DNZ_PROXY_PROXY: Edge
+    ports:
+      - { target: 80, published: 80, protocol: tcp, mode: host }
+      - { target: 443, published: 443, protocol: tcp, mode: host }
+    volumes:
+      - dnz-proxy:/data
+    ulimits:
+      nofile: 65536
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.labels.dnz-proxy == true
+      # Host-mode ports: stop the old container before starting the new one,
+      # one server at a time, so the others keep serving.
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+
+volumes:
+  dnz-proxy:

@@ -19,8 +19,11 @@ npx mint broken-links
   `admin/`: the Guide tab
 - `cli/`: the CLI tab
 - `api/`: the API tab
-- `changelog.mdx`: the Changelog tab, written by the DNZ release workflow
-  (`.github/scripts/docs-changelog.sh` in the source repository) after every release; don't edit it here
+- `changelog.mdx`: the Changelog tab, written by the DNZ release workflow after every release; don't
+  edit it here
+- `monitoring/`, `bench/`, `swarm/`: files the pages tell readers to download (Prometheus + Grafana,
+  the benchmark harness, the dnz-proxy Swarm stack). The DNZ release workflow copies them here after
+  every release; don't edit them here
 
 Pages are MDX. Link between pages with root-relative paths without the extension
 (`/dns/forwarding`), and keep `<` and `{` inside backticks in prose.

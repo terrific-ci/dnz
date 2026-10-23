@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: dnz
+    folder: DNZ
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

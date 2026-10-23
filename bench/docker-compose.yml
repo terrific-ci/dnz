@@ -1,0 +1,183 @@
+# Benchmark: DNZ against Knot DNS, Unbound, Knot Resolver, CoreDNS, BIND 9,
+# Technitium, NSD, PowerDNS (Authoritative, Recursor, dnsdist), YADIFA, gdnsd,
+# Hickory DNS, dnsmasq, AdGuard Home, Pi-hole and Blocky on one Docker network, each server limited to the same CPUs and memory. Run it
+# with ./run.sh; `knot` also serves the zone the
+# forwarders forward to.
+name: dnz-bench
+
+x-server: &server
+  cpus: ${BENCH_CPUS:-2}
+  mem_limit: 1g
+  restart: "no"
+  volumes:
+    - ./conf:/bench/conf:ro
+    - ./work:/bench/work:ro
+
+networks:
+  bench:
+    ipam:
+      config:
+        - subnet: 172.28.53.0/24
+
+services:
+  knot:
+    <<: *server
+    build: { context: ., dockerfile: Dockerfile.tools }
+    image: dnz-bench-tools
+    command: sh -c 'mkdir -p /tmp/knot /run/knot && exec knotd -c /bench/conf/knot.conf'
+    networks: { bench: { ipv4_address: 172.28.53.10 } }
+
+  dnz:
+    <<: *server
+    # The release image from Docker Hub; run.sh sets DNZ_IMAGE (BENCH_BUILD=1
+    # builds it from source instead).
+    image: ${DNZ_IMAGE:-terrificci/dnz:latest}
+    volumes: []
+    environment:
+      DNZ_DNS_ADDR: 0.0.0.0:53
+      DNZ_HTTP_ADDR: 0.0.0.0:8080
+      DNZ_DATABASE_URL: sqlite:///tmp/dnz.db
+      DNZ_UI: "false"
+      DNZ_UPSTREAM: 172.28.53.10:53
+      # One client sends everything: no per-client limit.
+      DNZ_RATE_LIMIT: "0"
+      DNZ_CACHE_SIZE: "100000"
+      DNZ_ADMIN_USERNAME: bench
+      DNZ_ADMIN_PASSWORD: load-test-pass-1
+    networks: { bench: { ipv4_address: 172.28.53.20 } }
+
+  unbound:
+    <<: *server
+    image: dnz-bench-tools
+    depends_on: [knot]
+    command: unbound -d -c /bench/conf/unbound.conf
+    networks: { bench: { ipv4_address: 172.28.53.30 } }
+
+  kresd:
+    <<: *server
+    image: dnz-bench-tools
+    depends_on: [knot]
+    # Two processes sharing one cache, as the Knot Resolver docs advise
+    # for more than one CPU.
+    command: sh -c 'mkdir -p /tmp/k1 /tmp/k2 && kresd -n -q -c /bench/conf/kresd.conf /tmp/k1 & kresd -n -q -c /bench/conf/kresd.conf /tmp/k2 & wait'
+    networks: { bench: { ipv4_address: 172.28.53.40 } }
+
+  coredns:
+    <<: *server
+    image: coredns/coredns:1.12.1
+    command: ["-conf", "/bench/conf/Corefile"]
+    networks: { bench: { ipv4_address: 172.28.53.50 } }
+
+  bind:
+    <<: *server
+    image: dnz-bench-tools
+    depends_on: [knot]
+    # Two worker threads, like the others' two threads or processes.
+    command: sh -c 'mkdir -p /tmp/named && exec named -g -n 2 -c /bench/conf/named.conf'
+    networks: { bench: { ipv4_address: 172.28.53.60 } }
+
+  technitium:
+    <<: *server
+    image: technitium/dns-server:15.6.2
+    volumes: []
+    environment:
+      DNS_SERVER_DOMAIN: technitium.bench
+      DNS_SERVER_ADMIN_PASSWORD: load-test-pass-1
+    # run.sh sets the rest through the API: forwarding to knot, no DNSSEC
+    # validation, no per-client query limit, and imports bench.example.
+    networks: { bench: { ipv4_address: 172.28.53.70 } }
+
+  nsd:
+    <<: *server
+    image: dnz-bench-tools
+    command: sh -c 'mkdir -p /tmp/nsd && exec nsd -d -c /bench/conf/nsd.conf'
+    networks: { bench: { ipv4_address: 172.28.53.80 } }
+
+  pdns:
+    <<: *server
+    image: dnz-bench-tools
+    command: sh -c 'mkdir -p /tmp/pdns && exec pdns_server --config-dir=/bench/conf/pdns'
+    networks: { bench: { ipv4_address: 172.28.53.81 } }
+
+  yadifa:
+    <<: *server
+    image: dnz-bench-tools
+    command: sh -c 'mkdir -p /tmp/yadifa/keys /tmp/yadifa/xfr && cp /bench/work/zones/bench.example.zone /tmp/yadifa/ && exec yadifad -c /bench/conf/yadifad.conf'
+    networks: { bench: { ipv4_address: 172.28.53.82 } }
+
+  gdnsd:
+    <<: *server
+    image: dnz-bench-tools
+    command: sh -c 'mkdir -p /tmp/gdnsd/zones && cp /bench/conf/gdnsd.conf /tmp/gdnsd/config && cp /bench/work/zones/bench.example.zone /tmp/gdnsd/zones/bench.example && exec gdnsd -c /tmp/gdnsd start'
+    networks: { bench: { ipv4_address: 172.28.53.83 } }
+
+  hickory:
+    <<: *server
+    build: { context: ., dockerfile: Dockerfile.hickory }
+    image: dnz-bench-hickory
+    depends_on: [knot]
+    command: ["-c", "/bench/conf/hickory.toml", "--workers", "2"]
+    networks: { bench: { ipv4_address: 172.28.53.84 } }
+
+  recursor:
+    <<: *server
+    image: dnz-bench-tools
+    depends_on: [knot]
+    command: sh -c 'mkdir -p /tmp/recursor && exec pdns_recursor --config-dir=/bench/conf/recursor'
+    networks: { bench: { ipv4_address: 172.28.53.90 } }
+
+  dnsmasq:
+    <<: *server
+    image: dnz-bench-tools
+    depends_on: [knot]
+    command: dnsmasq -k --conf-file=/bench/conf/dnsmasq.conf
+    networks: { bench: { ipv4_address: 172.28.53.91 } }
+
+  dnsdist:
+    <<: *server
+    image: dnz-bench-tools
+    depends_on: [knot]
+    command: dnsdist --supervised --disable-syslog -C /bench/conf/dnsdist.conf
+    ulimits: { nofile: 65536 }
+    networks: { bench: { ipv4_address: 172.28.53.92 } }
+
+  adguard:
+    <<: *server
+    image: adguard/adguardhome:v0.107.79
+    depends_on: [knot]
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["mkdir -p /opt/adguardhome/conf && cp /bench/conf/adguardhome.yaml /opt/adguardhome/conf/AdGuardHome.yaml && exec /opt/adguardhome/AdGuardHome --no-check-update -c /opt/adguardhome/conf/AdGuardHome.yaml -w /opt/adguardhome/work"]
+    networks: { bench: { ipv4_address: 172.28.53.93 } }
+
+  pihole:
+    <<: *server
+    image: pihole/pihole:2026.10.0
+    depends_on: [knot]
+    volumes: []
+    environment:
+      TZ: UTC
+      FTLCONF_webserver_api_password: ""
+      FTLCONF_dns_upstreams: 172.28.53.10
+      FTLCONF_dns_listeningMode: ALL
+      # The defaults allow 1,000 queries a minute per client and keep 10,000
+      # names in the cache; like DNZ here: no limit and 100,000.
+      FTLCONF_dns_rateLimit_count: "0"
+      FTLCONF_dns_cache_size: "100000"
+      FTLCONF_dns_dnssec: "false"
+    networks: { bench: { ipv4_address: 172.28.53.94 } }
+
+  blocky:
+    <<: *server
+    image: spx01/blocky:v0.35.0
+    depends_on: [knot]
+    command: ["--config", "/bench/conf/blocky.yml"]
+    networks: { bench: { ipv4_address: 172.28.53.95 } }
+
+  perf:
+    image: dnz-bench-tools
+    depends_on: [knot]
+    cpus: ${BENCH_PERF_CPUS:-2}
+    command: sleep infinity
+    volumes:
+      - ./work:/bench/work
+    networks: { bench: { ipv4_address: 172.28.53.99 } }

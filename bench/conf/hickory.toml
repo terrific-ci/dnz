@@ -1,0 +1,20 @@
+# Hickory DNS: authoritative for bench.example, forwarding the rest to knot.
+directory = "/bench/work/zones"
+listen_addrs_ipv4 = ["0.0.0.0"]
+listen_addrs_ipv6 = []
+listen_port = 53
+
+[[zones]]
+zone = "bench.example"
+zone_type = "Primary"
+file = "bench.example.zone"
+
+[[zones]]
+zone = "."
+zone_type = "External"
+[zones.stores]
+type = "forward"
+[[zones.stores.name_servers]]
+ip = "172.28.53.10"
+trust_negative_responses = true
+connections = [{ protocol = { type = "udp" } }]

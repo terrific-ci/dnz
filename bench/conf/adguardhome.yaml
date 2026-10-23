@@ -1,0 +1,17 @@
+# AdGuard Home: forward everything to knot, no per-client rate limit (the
+# default is 20 queries a second), no DNSSEC, a 64 MiB cache, no block lists.
+# Everything else keeps its defaults (query log and statistics on).
+http:
+  address: 0.0.0.0:3000
+users: []
+dns:
+  bind_hosts:
+    - 0.0.0.0
+  port: 53
+  upstream_dns:
+    - 172.28.53.10
+  ratelimit: 0
+  cache_enabled: true
+  cache_size: 67108864
+  enable_dnssec: false
+schema_version: 34

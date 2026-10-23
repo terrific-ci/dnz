@@ -1,0 +1,9 @@
+# Blocky: forward everything to knot. Defaults otherwise, including its
+# query log (to the console).
+upstreams:
+  groups:
+    default:
+      - 172.28.53.10
+ports:
+  dns: 53
+  http: 4000

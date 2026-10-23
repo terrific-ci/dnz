@@ -98,18 +98,32 @@ none, and held about 5 MB more.
 
 ## Run it yourself
 
-The harness is in the source repository under
-[`deploy/bench/`](https://github.com/alfianlensundev/dnz/tree/main/deploy/bench). It needs Docker
-and builds DNZ from the checkout:
+The harness is in [`bench/`](https://github.com/terrific-ci/dnz/tree/main/bench) on the public
+repository. It needs Docker and runs DNZ from the release image on Docker Hub
+(`terrificci/dnz:latest`), next to the other servers' official images and Debian packages:
 
 ```bash
-deploy/bench/run.sh
-BENCH_DURATION=60 BENCH_RUNS=5 BENCH_CPUS=4 deploy/bench/run.sh
+curl -fsSL https://github.com/terrific-ci/dnz/archive/refs/heads/main.tar.gz \
+  | tar -xz --strip-components=1 dnz-main/bench
+cd bench
+./run.sh
 ```
 
-The memory table comes from `deploy/bench/memory.sh` (`MEM_CPUS=4` for 4 CPUs, `MEM_IMAGE=` to
-measure an image you already have).
+| Variable | Default | What it sets |
+| --- | --- | --- |
+| `DNZ_IMAGE` | `terrificci/dnz:latest` | The DNZ image to measure, e.g. `terrificci/dnz:1.5.0` |
+| `BENCH_SERVERS` | all | Only these servers, e.g. `"dnz knot"` |
+| `BENCH_DURATION`, `BENCH_RUNS` | `20`, `3` | Seconds per run, and runs per scenario |
+| `BENCH_CPUS`, `BENCH_PERF_CPUS` | `2`, `2` | CPUs per server, and for dnsperf |
+| `BENCH_KEEP` | off | Leave the containers running afterwards |
 
-It prints the table above for your machine, with the versions it ran. Recursion from the root is not
-part of it: a cold recursive lookup depends on the internet far more than on the resolver, and a
-cached one is the cached forwarding case.
+```bash
+BENCH_DURATION=60 BENCH_RUNS=5 BENCH_CPUS=4 ./run.sh
+```
+
+`run.sh` prints the results table for your machine, with the versions it ran. Recursion from the
+root is not part of it: a cold recursive lookup depends on the internet far more than on the
+resolver, and a cached one is the cached forwarding case.
+
+The memory table comes from `./memory.sh` in the same folder (`MEM_CPUS=4` for 4 CPUs,
+`MEM_IMAGE=terrificci/dnz:1.5.0` for a given release).

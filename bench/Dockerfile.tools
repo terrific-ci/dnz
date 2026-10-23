@@ -1,0 +1,10 @@
+# The other servers and the load generator, all from Debian 13 (trixie) so
+# the versions are pinned by the release: Unbound, Knot DNS, Knot Resolver,
+# BIND 9, NSD, PowerDNS (Authoritative, Recursor and dnsdist), YADIFA, gdnsd,
+# dnsmasq and dnsperf (DNS-OARC).
+FROM debian:trixie-slim
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unbound knot knot-resolver bind9 nsd \
+        pdns-server pdns-backend-bind pdns-recursor dnsdist yadifa gdnsd dnsmasq-base \
+        dnsperf knot-dnsutils curl ca-certificates jq \
+    && rm -rf /var/lib/apt/lists/*

@@ -1,0 +1,57 @@
+# Prometheus and Grafana for a DNZ that runs elsewhere (see the Prometheus
+# metrics page of the DNZ docs).
+#
+#   cp .env.example .env    # then set DNZ_TARGET (and DNZ_METRICS_TOKEN)
+#   docker compose up -d
+#
+# Grafana: http://localhost:3000 (admin / the password in .env), with the DNZ
+# dashboard and Prometheus already set up. Prometheus: http://localhost:9090,
+# with the DNZ alert rules loaded (Status → Rules).
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    environment:
+      # host:port where Prometheus reaches DNZ's /metrics.
+      DNZ_TARGET: ${DNZ_TARGET:?set DNZ_TARGET in .env, e.g. dns1.example.internal:9153}
+      DNZ_SCHEME: ${DNZ_SCHEME:-http}
+      DNZ_METRICS_TOKEN: ${DNZ_METRICS_TOKEN:-}
+      DNZ_NAME: ${DNZ_NAME:-dnz}
+    # The target and token come from the environment: write them where
+    # prometheus.yml reads them, then start Prometheus.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mkdir -p /prometheus/dnz
+        printf '[{"targets": ["%s"], "labels": {"dnz": "%s"}}]\n' "$$DNZ_TARGET" "$$DNZ_NAME" > /prometheus/dnz/targets.json
+        printf '%s' "$${DNZ_METRICS_TOKEN:-none}" > /prometheus/dnz/token
+        sed "s/__SCHEME__/$$DNZ_SCHEME/" /etc/prometheus/prometheus.yml > /prometheus/dnz/prometheus.yml
+        exec /bin/prometheus --config.file=/prometheus/dnz/prometheus.yml --storage.tsdb.path=/prometheus --storage.tsdb.retention.time=30d --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/dnz-alerts.yml:/etc/prometheus/dnz-alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD in .env}
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/dnz-dashboard.json
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dnz-dashboard.json:/var/lib/grafana/dashboards/dnz-dashboard.json:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus-data:
+  grafana-data:

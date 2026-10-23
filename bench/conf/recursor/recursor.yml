@@ -1,0 +1,21 @@
+# PowerDNS Recursor: forward everything to knot, without DNSSEC validation,
+# two threads each with its own socket.
+incoming:
+  listen: [0.0.0.0]
+  allow_from: [0.0.0.0/0]
+  reuseport: true
+  pdns_distributes_queries: false
+recursor:
+  forward_zones:
+    - zone: .
+      forwarders: [172.28.53.10]
+  threads: 2
+  socket_dir: /tmp/recursor
+  security_poll_suffix: ''
+dnssec:
+  validation: 'off'
+recordcache:
+  max_entries: 1000000
+logging:
+  disable_syslog: true
+  quiet: true

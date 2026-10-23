@@ -1,0 +1,10 @@
+# Hickory DNS (formerly Trust-DNS) for the benchmark, built from crates.io in
+# release mode with its default features (resolver included, for forwarding).
+FROM rust:1.96-bookworm AS build
+ARG HICKORY_VERSION=0.26.3
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    cargo install hickory-dns --version "$HICKORY_VERSION" --locked --root /out
+
+FROM gcr.io/distroless/cc-debian12:nonroot
+COPY --from=build /out/bin/hickory-dns /usr/local/bin/hickory-dns
+ENTRYPOINT ["/usr/local/bin/hickory-dns"]

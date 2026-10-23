@@ -1,0 +1,7 @@
+bench.example:53 {
+    file /bench/work/zones/bench.example.zone
+}
+.:53 {
+    forward . 172.28.53.10
+    cache 3600
+}
