@@ -106,14 +106,18 @@ its traffic summary from `GET /api/divisions/{id}/stats?range=24h` (see
 
 ## How long data is kept
 
-DNZ keeps two kinds of data:
+DNZ keeps three kinds of data:
 
 | Data | Kept for | Used by |
 | --- | --- | --- |
-| The query log (one row per query) | `DNZ_LOG_RETENTION_DAYS`, **7 days** by default | The Query Logs page, `dnz logs`, top names and clients |
+| The query log (one row per query) | `DNZ_LOG_RETENTION_DAYS`, **7 days** by default | The Query Logs page, `dnz logs` |
+| Hourly top names and clients (the busiest 1,000 of each per hour and division) | As long as the query log | Top names and clients on the dashboard and in `dnz stats` |
 | Hourly query counts | **400 days** | Dashboard charts (back to 90 days) and the counts in `dnz stats` |
 
 Queries are written to the log in batches, and rows older than the retention period are deleted.
+Top names and clients are counted as queries come in, so the dashboard reads a few thousand rows
+instead of the whole log. After an upgrade to a version that has them, DNZ rolls up the log it
+already has in the background, the newest hour first.
 Change the period in the config file or the environment:
 
 ```toml /etc/dnz/dnz.toml

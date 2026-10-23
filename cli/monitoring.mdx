@@ -44,8 +44,9 @@ dnz stats --json
 ```
 
 <Note>
-  Counts come from hourly totals kept for 400 days. The top lists come from the query log, so they
-  cover at most `log_retention_days` (7 days by default).
+  Counts come from hourly totals kept for 400 days. The top lists come from hourly top names and
+  clients, kept as long as the query log, so they cover at most `log_retention_days` (7 days by
+  default).
 </Note>
 
 ## Audit log
