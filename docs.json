@@ -206,6 +206,17 @@
         ]
       },
       {
+        "tab": "Blog",
+        "groups": [
+          {
+            "group": "Posts",
+            "pages": [
+              "blog/the-orange-cloud-comes-home"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Changelog",
         "groups": [
           {
