@@ -76,7 +76,8 @@ Windows are fixed: a 10-minute window runs from :00 to :10, :10 to :20, and so o
   </Accordion>
   <Accordion title="Unusual clients">
     For every client DNZ learns its usual number of queries per window, and how many domains new to
-    it it usually asks for. After 36 active windows, a window counts when the client sent at least
+    it it usually asks for. "New to it" means not asked for lately: DNZ remembers the last one to two
+    million client and domain pairs, in a fixed amount of memory however many clients there are. After 36 active windows, a window counts when the client sent at least
     1,000 queries and that is 5 times its usual upper level (mean + 3 standard deviations), or asked
     for at least 200 new domains, 5 times its usual. Windows without queries don't count, so a laptop
     that sleeps at night isn't judged against its nights.
