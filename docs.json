@@ -211,6 +211,7 @@
           {
             "group": "Posts",
             "pages": [
+              "blog/under-attack-playbook",
               "blog/cloudflare-in-your-server-room"
             ]
           }

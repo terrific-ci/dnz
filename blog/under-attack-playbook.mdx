@@ -1,0 +1,194 @@
+---
+title: "Your Site Is Under Attack. Now What? A Playbook for dnz-proxy"
+sidebarTitle: "Your site is under attack. Now what?"
+description: "A step-by-step playbook for a bad day: find the traffic in analytics, cut it with firewall rules, challenge the rest, keep the origin alive with cache and limits, and fall back to a status page."
+---
+
+<sub>October 24, 2026 · DNZ team</sub>
+
+It's a Tuesday morning. The helpdesk phone starts ringing: the patient portal is slow, then it
+times out. The servers behind it are pinned at 100% CPU. Nothing was deployed. Something out there
+is hammering the site.
+
+This post is the playbook for that morning, using what [dnz-proxy](/proxy/dnz-proxy) already has:
+analytics, a firewall, an under-attack challenge, a cache, rate limits and status pages. Every step
+reaches every node within seconds, and none of them needs a restart.
+
+<Note>
+  Everything here assumes the site already goes through a dnz-proxy proxy. If it doesn't yet, see
+  [Proxied records](/proxy/overview) and the [five-step setup](/blog/cloudflare-in-your-server-room#building-it-in-five-steps).
+</Note>
+
+## Before the bad day: five minutes of preparation
+
+The calmest incident is the one you prepared for. These take a few minutes and cost nothing while
+traffic is normal.
+
+- **Set a GeoIP database.** On the proxy's **Settings** tab, set **GeoIP database URL** to an
+  `.mmdb` file such as MaxMind GeoLite2 Country or DB-IP's IP to Country Lite. Without it, analytics
+  can't show countries and firewall rules can't match on them.
+- **Attach a firewall to the router now**, even with nothing in it but a **Log** rule. Adding rules
+  later is then one edit, not a change to the router.
+- **Create an Under attack middleware** and leave it unattached. On the day, you only have to pick it.
+- **Put a cache in front of anything static**, with **Stale if error** on, so a struggling origin
+  doesn't take the whole site down with it.
+- **Run more than one node.** DNS answers with every healthy node, so the load is already spread,
+  and you can take one out without an outage.
+
+## Step 1: Look before you block
+
+Open **Proxy → Analytics** and pick the proxy and the hostname. Within a few seconds you want to know
+**what kind of attack this is**, because each kind has a different answer:
+
+| What you see | What it usually means |
+| --- | --- |
+| Requests up tenfold, most of them from a handful of clients | A few machines, or a misbehaving script |
+| Requests spread over thousands of clients, mostly one country | A botnet, or a scraper rotating addresses |
+| One path dominates (`/login`, `/search?q=…`) | Someone found your most expensive page |
+| Latency p99 climbing, origin errors (5xx) rising | Your origin is the bottleneck, not the proxy |
+| A strange user agent at the top | A tool that doesn't bother to hide |
+
+The **top paths, clients, countries and user agents** tell you most of it. Then open the **request
+log** in its live view and watch a few seconds of real requests: the pattern is usually obvious once
+you see it scroll by.
+
+<Tip>
+  Blocks, challenges and errors get ten times the usual log budget per node, so the request log stays
+  useful exactly when the traffic is worst.
+</Tip>
+
+## Step 2: Cut what you can name
+
+If the attack has a fingerprint (an address range, a user agent, a path, a country), block it. Open
+the firewall middleware and add rules. The first rule that matches decides, so the order matters:
+
+1. **Allow** your own network first, for example your office range with **in range**. Your team
+   must never be locked out of their own site while fixing it.
+2. **Block** the fingerprint: a client range, a user agent that **contains** the tool's name, a path
+   that **starts with** `/search` with an odd query parameter, or a country you don't serve.
+3. **Log** everything else, so you can see what the rules aren't catching.
+
+A **Block** answers with 403 by default, or any status and message you give it, before the request
+ever reaches your servers. Watch the analytics: the **blocked** count should climb while the origin's
+load falls.
+
+## Step 3: Challenge what you can't name
+
+When the traffic comes from thousands of addresses that look like ordinary browsers, there is no
+fingerprint to block. That's what the **Under attack** challenge is for.
+
+Attach the Under attack middleware to the router, or use a **Challenge** action in a firewall rule
+to aim it at part of the traffic (one country, one path, everything but your office). Visitors with
+a real browser see a short page that solves a small proof of work, get a cookie, and carry on. Most
+attack tools never run the page, so they never get the cookie.
+
+A few things to get right:
+
+- **Difficulty** is in bits, and each bit doubles the work. 16 takes well under a second for a
+  person. Raise it a step at a time if the attack keeps up.
+- **APIs and forms** get a 403 until a page has been visited, because they can't run the challenge.
+  If your mobile app talks to the same hostname, scope the challenge to browser paths with a firewall
+  rule instead of attaching it to the whole router.
+- **Let your own bots through** by user agent or address: uptime monitors, payment callbacks, search
+  engines you care about.
+
+## Step 4: Keep the origin breathing
+
+Blocking and challenging take the worst off. What gets through should cost your servers as little as
+possible.
+
+- **Cache.** With a **Cache** middleware on the router, repeated requests for the same page are
+  answered by the nodes. Turn on **Stale while revalidate** so only one request at a time goes to the
+  origin for an expired page, and **Stale if error** so visitors still get the last good copy while
+  the origin fails. Answers carry `X-Cache: HIT | MISS | STALE | BYPASS`, and the analytics show the
+  hit ratio rising.
+- **Rate limit the expensive paths.** A **rateLimit** middleware on a router for `/login` or
+  `/search` caps each client. Counts are per node in memory, or shared through Redis so a client
+  can't get around the limit by landing on another node. *One client is* can be the address, a
+  header, or the hostname.
+- **Cap concurrency.** **inFlightReq** limits how many requests a client may have open at once, and a
+  **circuitBreaker** stops sending to an origin that is clearly failing, so it gets a moment to
+  recover.
+
+Middlewares are set up under the proxy's **Middlewares** tab and attached in the router's form. See
+[Routers, services and middlewares](/proxy/routing).
+
+## Step 5: Spread the load, or take a node out
+
+If a node itself is struggling (high CPU, its own link full), there are two moves:
+
+- **Add nodes.** Start dnz-proxy on another server with the connect key and approve it. DNS starts
+  answering with its address too.
+- **Drain a node.** It drops out of DNS answers but keeps serving the visitors already on it, so you
+  can look at it, or restart it, without cutting anyone off:
+
+```bash
+dnz proxy nodes                 # every node, its state and addresses
+dnz proxy drain jkt-1           # out of DNS answers, still serving
+dnz proxy drain jkt-1 --undo    # back in
+```
+
+A name can also go through several proxies at once, say one in each building or data center. Each
+proxy's healthy nodes are in the answer, so one site going down doesn't take the name with it.
+
+## Step 6: The last resort, a status page
+
+Sometimes the right call is to stop serving the site for a while: the origin needs a restart, or you
+want the attack to lose interest. Don't let visitors stare at timeouts. Put up a page on every node
+at once, and keep your own network let through:
+
+```bash
+dnz status-page set portal.example.com maintenance --for 1h --allow 10.0.0.0/8
+```
+
+Visitors get a clean **Down for maintenance** page with a 503 and a `Retry-After` counting down to the
+end of the window, while your team on `10.0.0.0/8` still reaches the real site to check the fix.
+Nothing behind the proxy is touched. When you're done:
+
+```bash
+dnz status-page off portal.example.com    # kept, ready for next time
+```
+
+See [Status pages](/proxy/status-pages) for the other statuses, such as `rate_limited` (429) and
+`blocked` (403).
+
+## After it's over
+
+- **Turn the challenge off**, or narrow it, so ordinary visitors stop seeing it.
+- **Keep the firewall rules** that blocked real attackers, and change the broad ones (a whole
+  country) to **Log** so you'll see if they come back.
+- **Purge the cache** if anything wrong got cached during the incident:
+
+  ```bash
+  dnz proxy purge "Edge JKT" --host portal.example.com
+  ```
+
+- **Read the audit log.** Every change made during the incident is in the
+  [audit log](/admin/audit-log): who changed what, and when. It writes the post-mortem timeline for
+  you.
+
+## What this doesn't stop
+
+dnz-proxy works on requests that reach it. A volumetric flood that fills your internet link
+before it gets to any server can't be fixed by anything behind that link: no firewall rule helps when
+the pipe itself is full. For that you need your upstream provider's filtering, or a network built to
+absorb it in front of you.
+
+Everything above the network layer, the floods of HTTP requests, the scrapers, the login attacks,
+the one script someone forgot to rate limit, is where dnz-proxy does its job, on servers you own,
+with every change live within seconds.
+
+<CardGroup cols={2}>
+  <Card title="dnz-proxy" icon="bolt" href="/proxy/dnz-proxy">
+    Nodes, the firewall, the challenge, the cache and analytics.
+  </Card>
+  <Card title="Routing" icon="route" href="/proxy/routing">
+    Routers, services and every middleware.
+  </Card>
+  <Card title="Status pages" icon="triangle-exclamation" href="/proxy/status-pages">
+    Maintenance, blocked, moved and more, on every proxy.
+  </Card>
+  <Card title="Proxy commands" icon="terminal" href="/cli/proxy">
+    Nodes, routes and purges from the terminal.
+  </Card>
+</CardGroup>
