@@ -1,0 +1,22 @@
+http:
+  routers:
+    app:
+      rule: Host(`app.bench.test`)
+      entryPoints: [web]
+      service: app
+    app-tls:
+      rule: Host(`app.bench.test`)
+      entryPoints: [websecure]
+      service: app
+      tls: {}
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: http://172.28.54.10:80
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /bench/work/tls/cert.pem
+        keyFile: /bench/work/tls/key.pem

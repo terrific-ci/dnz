@@ -1,0 +1,111 @@
+# Reverse proxy benchmark: dnz-proxy against nginx, HAProxy, Envoy, Caddy and
+# Traefik, each in front of the same nginx origin on one Docker network. Run it
+# with ./run.sh, which starts one proxy at a time.
+#
+# CPUs are pinned (cpuset), not limited by quota, so every proxy sizes its
+# worker threads to what it may use: the proxy under test on
+# BENCH_PROXY_CPUS (default CPU 1), the origin and DNZ's control plane on
+# CPU 0, the load generator on CPUs 2-3.
+name: dnz-proxybench
+
+x-proxy: &proxy
+  cpuset: ${BENCH_PROXY_CPUS:-1}
+  mem_limit: 1g
+  restart: "no"
+  ulimits: { nofile: 1048576 }
+  volumes:
+    - ./conf:/bench/conf:ro
+    - ./work:/bench/work:ro
+
+networks:
+  bench:
+    ipam:
+      config:
+        - subnet: 172.28.54.0/24
+
+services:
+  backend:
+    image: nginx:1.30.6
+    cpuset: ${BENCH_BACKEND_CPUS:-0}
+    ulimits: { nofile: 1048576 }
+    volumes:
+      - ./conf/backend.conf:/etc/nginx/nginx.conf:ro
+      - ./work:/bench/work:ro
+    networks: { bench: { ipv4_address: 172.28.54.10 } }
+
+  # DNZ: the control plane dnz-proxy joins. It only pushes the configuration;
+  # no traffic goes through it.
+  # The release image from Docker Hub (it holds dnz-proxy too); run.sh sets
+  # DNZ_IMAGE (BENCH_BUILD=1 builds both from source instead).
+  dnz:
+    image: ${DNZ_IMAGE:-terrificci/dnz:latest}
+    cpuset: ${BENCH_BACKEND_CPUS:-0}
+    environment:
+      DNZ_DNS_ADDR: 0.0.0.0:5353
+      DNZ_HTTP_ADDR: 0.0.0.0:8080
+      DNZ_DATABASE_URL: sqlite:///tmp/dnz.db
+      DNZ_UI: "false"
+      # "dnz" switches proxying on, in releases with and without proxy kinds.
+      DNZ_PROXY_BACKEND: dnz
+      DNZ_ADMIN_USERNAME: bench
+      DNZ_ADMIN_PASSWORD: load-test-pass-1
+    networks: { bench: { ipv4_address: 172.28.54.20 } }
+
+  dnzproxy:
+    <<: *proxy
+    image: ${DNZ_IMAGE:-terrificci/dnz:latest}
+    entrypoint: ["/usr/local/bin/dnz-proxy"]
+    environment:
+      DNZ_URL: http://172.28.54.20:8080
+      DNZ_PROXY_KEY: ${DNZ_PROXY_KEY:-}
+      DNZ_PROXY_NAME: node1
+      DNZ_PROXY_PROXY: bench
+      DNZ_PROXY_PUBLIC_IPV4: 172.28.54.30
+      DNZ_PROXY_STATE_DIR: /tmp/dnz-proxy
+      DNZ_PROXY_LOG: warn
+    volumes: []
+    networks: { bench: { ipv4_address: 172.28.54.30 } }
+
+  nginx:
+    <<: *proxy
+    image: nginx:${NGINX_TAG:-1.30.6}
+    volumes:
+      - ./conf/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./work:/bench/work:ro
+    networks: { bench: { ipv4_address: 172.28.54.31 } }
+
+  haproxy:
+    <<: *proxy
+    image: haproxy:${HAPROXY_TAG:-3.4.7}
+    user: root
+    command: haproxy -f /bench/conf/haproxy.cfg
+    networks: { bench: { ipv4_address: 172.28.54.32 } }
+
+  envoy:
+    <<: *proxy
+    image: envoyproxy/envoy:${ENVOY_TAG:-distroless-v1.40.1}
+    # Envoy counts the host's CPUs, not the cpuset: one worker per pinned CPU.
+    command: ["-c", "/bench/conf/envoy.yaml", "--concurrency", "${BENCH_PROXY_NCPU:-1}", "-l", "warn"]
+    networks: { bench: { ipv4_address: 172.28.54.33 } }
+
+  caddy:
+    <<: *proxy
+    image: caddy:${CADDY_TAG:-2.11.7}
+    command: caddy run --config /bench/conf/Caddyfile --adapter caddyfile
+    networks: { bench: { ipv4_address: 172.28.54.34 } }
+
+  traefik:
+    <<: *proxy
+    image: traefik:${TRAEFIK_TAG:-v3.7.16}
+    command: --configFile=/bench/conf/traefik.yml
+    networks: { bench: { ipv4_address: 172.28.54.35 } }
+
+  perf:
+    build: { context: ., dockerfile: Dockerfile.tools }
+    image: dnz-proxybench-tools
+    cpuset: ${BENCH_PERF_CPUS:-2,3}
+    ulimits: { nofile: 1048576 }
+    command: sleep infinity
+    volumes:
+      - ./work:/bench/work
+    networks: { bench: { ipv4_address: 172.28.54.5 } }

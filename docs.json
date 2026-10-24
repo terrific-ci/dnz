@@ -106,7 +106,8 @@
               "proxy/traefik-records",
               "proxy/dnz-proxy",
               "proxy/certificates",
-              "proxy/status-pages"
+              "proxy/status-pages",
+              "proxy/benchmarks"
             ]
           },
           {

@@ -1,0 +1,51 @@
+static_resources:
+  listeners:
+    - name: web
+      address: { socket_address: { address: 0.0.0.0, port_value: 80 } }
+      filter_chains:
+        - filters:
+            - &hcm
+              name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: web
+                codec_type: AUTO
+                use_remote_address: true
+                route_config:
+                  virtual_hosts:
+                    - name: app
+                      domains: ["*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: app, timeout: 30s }
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+    - name: websecure
+      address: { socket_address: { address: 0.0.0.0, port_value: 443 } }
+      filter_chains:
+        - filters: [*hcm]
+          transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+              common_tls_context:
+                alpn_protocols: ["h2", "http/1.1"]
+                tls_certificates:
+                  - certificate_chain: { filename: /bench/work/tls/cert.pem }
+                    private_key: { filename: /bench/work/tls/key.pem }
+  clusters:
+    - name: app
+      type: STATIC
+      connect_timeout: 5s
+      circuit_breakers:
+        thresholds:
+          - max_connections: 100000
+            max_pending_requests: 100000
+            max_requests: 100000
+      load_assignment:
+        cluster_name: app
+        endpoints:
+          - lb_endpoints:
+              - endpoint: { address: { socket_address: { address: 172.28.54.10, port_value: 80 } } }

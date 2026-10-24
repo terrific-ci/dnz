@@ -1,0 +1,7 @@
+# The load generators, from Debian 13 (trixie): wrk (most requests per
+# second) and hey (latency at a fixed rate), plus curl, jq and openssl for
+# the setup.
+FROM debian:trixie-slim
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends wrk hey curl ca-certificates jq openssl netbase \
+    && rm -rf /var/lib/apt/lists/*

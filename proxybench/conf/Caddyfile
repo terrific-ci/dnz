@@ -1,0 +1,16 @@
+{
+	auto_https off
+	admin off
+	servers {
+		protocols h1 h2
+	}
+}
+
+http://app.bench.test:80, http://:80 {
+	reverse_proxy 172.28.54.10:80
+}
+
+https://app.bench.test:443 {
+	tls /bench/work/tls/cert.pem /bench/work/tls/key.pem
+	reverse_proxy 172.28.54.10:80
+}
