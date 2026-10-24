@@ -89,9 +89,9 @@ These changes are in 1.7.1, the release in the tables above.
 
 2. With the old bursty load (`hey`, see the note above).
 
-## After 1.7.1: mimalloc
+## 1.7.3: mimalloc
 
-From the release after 1.7.2, dnz-proxy uses [mimalloc](https://github.com/microsoft/mimalloc) (v3) instead of glibc's
+From 1.7.3, dnz-proxy uses [mimalloc](https://github.com/microsoft/mimalloc) (v3) instead of glibc's
 allocator: Pingora makes many small allocations per request, and the allocator was the largest
 part of dnz-proxy's CPU after the kernel. mimalloc's default asks the kernel for transparent huge
 pages, which made a few touched bytes cost 2 MiB (15 MiB idle instead of 2); it is built with
