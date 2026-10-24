@@ -52,6 +52,35 @@ What it shows:
 - **Latency**: nginx and HAProxy answer in about 1 ms, dnz-proxy in 3.5 ms (p99 6.4 ms); the Go
   proxies (Caddy, Traefik) have p99s of 16 to 17 ms.
 
+## After 1.7.0: one write per answer, fewer allocations
+
+A profile of dnz-proxy under this load (`perf`, 1 CPU) showed no hot spot in dnz-proxy's own code,
+but nearly half the CPU in the kernel's network path, and two causes worth fixing:
+
+- **Each answer's header and body went out in two writes.** Pingora gives a connection a write
+  buffer of one TCP segment only in its own listeners; connections from dnz-proxy's listener had
+  none, so a 1 KiB answer took two packets, each a full trip through the TCP stack. Now they leave
+  in one. Event streams and WebSockets aren't held back: each chunk and each message on an upgraded
+  connection is still sent right away.
+- **Every visit built a whole request log line** (a dozen allocations, a GeoIP lookup), though only
+  **Logged per second, per node** of them are kept. The traffic counters now take what they need
+  from the visit, and a line is made only when it is kept.
+
+Measured against 1.7.0 (its dnz-proxy is the same as 1.6.1's) on the same server, both builds taking
+turns, median of 4 rounds:
+
+| | 1.7.0 | After | Change |
+| --- | ---: | ---: | ---: |
+| HTTP, 1 KiB | 10,699 | 12,006 | +12% |
+| HTTPS, 1 KiB | 9,777 | 11,531 | +18% |
+| HTTPS, new connection per request | 2,331 | 2,429 | +4% |
+| HTTP, 64 KiB | 6,911 | 7,158 | +4% |
+| Latency p50 / p99 at 5,000/s | 3.5 / 6.7 ms | 3.2 / 5.5 ms | |
+| CPU per request | 108 µs | 94 µs | −13% |
+| Memory idle / loaded | 2 / 8 MiB | 2 / 8 MiB | same |
+
+The tables above stay at 1.6.1 until the next release is measured.
+
 ## Method
 
 - Each proxy runs in its own container on one Docker network, started on its own, and forwards to
