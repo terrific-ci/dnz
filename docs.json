@@ -101,6 +101,7 @@
             "pages": [
               "proxy/overview",
               "proxy/traefik",
+              "proxy/caddy",
               "proxy/routing",
               "proxy/traefik-records",
               "proxy/dnz-proxy",

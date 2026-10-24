@@ -1,0 +1,217 @@
+---
+title: "Connecting Caddy"
+description: "Let DNZ configure a Caddy through its HTTP config loader, so it serves the routers, services and middlewares set up for it."
+---
+
+A Caddy proxy is one DNZ doesn't run itself: a [Caddy](https://caddyserver.com/) that DNZ
+configures the way it configures a Traefik, with the same routers, services and middlewares on the
+proxy's page. Caddy's built-in HTTP config loader (`admin.config.load`, module `http`) asks DNZ for
+its configuration every 10 seconds, and Caddy gets its certificates itself.
+
+<Warning>
+  DNZ's configuration **replaces the Caddy's whole configuration**, Caddyfile sites included. To keep
+  a Caddyfile and only get DNS records for its sites, use [Caddy sites in DNS](/integrations/caddy)
+  instead.
+</Warning>
+
+<Note>
+  Caddy **2.7 or newer** is needed (weighted round robin). Turn proxying on first, under
+  **Settings → Proxy**. See [Turning proxying on](/proxy/overview#turning-proxying-on).
+</Note>
+
+## Setting it up
+
+<Steps>
+  <Step title="Open the setup guide">
+    Go to **Settings → Proxy → Add proxy** and pick **Caddy**. Give the name and the addresses
+    visitors reach it at. Everything in the setup is filled in, ready to copy as it is: **New Caddy
+    (Docker)**, **Installed Caddy (systemd)** or **Just the file**.
+  </Step>
+  <Step title="Check DNZ's address">
+    **DNZ address, as Caddy reaches it** is filled in from your browser. Change it when Caddy reaches
+    DNZ another way.
+
+    A `localhost` address only works for a Caddy on the same machine. For one elsewhere, use DNZ's
+    LAN or public address and start DNZ with `DNZ_HTTP_ADDR=0.0.0.0:8080`, or put DNZ behind a
+    reverse proxy. See [HTTPS](/deploy/https).
+  </Step>
+  <Step title="Start Caddy from dnz.json">
+    Pick one of the ways below. Open ports 80 and 443 (and 443/udp for HTTP/3) to visitors.
+  </Step>
+  <Step title="Let it connect">
+    A Caddy that calls from the addresses you gave connects as that proxy. From anywhere else, it
+    shows up on the **Proxy** page as detected, to approve. See
+    [How DNZ recognizes a Caddy](#how-dnz-recognizes-a-caddy).
+  </Step>
+</Steps>
+
+Every Caddy starts from the same small file, `dnz.json`, with the server's **connect key**:
+
+```json dnz.json
+{
+  "admin": {
+    "config": {
+      "load": {
+        "module": "http",
+        "url": "http://DNZ-ADDRESS:8080/api/proxy/caddy",
+        "header": { "Authorization": ["Bearer dnzp_CONNECT_KEY"] },
+        "timeout": "10s"
+      },
+      "load_delay": "10s"
+    }
+  }
+}
+```
+
+The loader asks `GET /api/proxy/caddy` 10 seconds (`load_delay`) after each load. Each configuration
+DNZ sends names the loader again, so Caddy keeps asking.
+
+<Tabs>
+  <Tab title="New Caddy (Docker)">
+    Put `dnz.json` next to this file and run `docker compose up -d`:
+
+    ```yaml docker-compose.yml
+    services:
+      caddy:
+        image: caddy:2
+        restart: unless-stopped
+        command: caddy run --config /etc/caddy/dnz.json
+        ports:
+          - "80:80"
+          - "443:443"
+          - "443:443/udp"
+        volumes:
+          - ./dnz.json:/etc/caddy/dnz.json:ro
+          # Caddy keeps its certificates here.
+          - caddy_data:/data
+
+    volumes:
+      caddy_data:
+    ```
+
+    The setup guide's one command writes both files to `~/caddy` and starts Caddy.
+  </Tab>
+  <Tab title="Installed Caddy (systemd)">
+    For a Caddy from the official packages. Put the file at `/etc/caddy/dnz.json`, then
+    `sudo systemctl edit caddy` and add:
+
+    ```ini
+    [Service]
+    ExecStart=
+    ExecStart=/usr/bin/caddy run --environ --config /etc/caddy/dnz.json
+    ExecReload=
+    ExecReload=/usr/bin/caddy reload --config /etc/caddy/dnz.json --force
+    ```
+
+    Then `sudo systemctl restart caddy`. Caddy now starts from `dnz.json` instead of the Caddyfile.
+  </Tab>
+  <Tab title="Just the file">
+    ```bash
+    caddy run --config dnz.json
+    ```
+  </Tab>
+</Tabs>
+
+## How DNZ recognizes a Caddy
+
+A Caddy is recognized and approved exactly like a Traefik:
+
+- by the **address it calls from**: one of the proxy's addresses, or its **Calls DNZ from**;
+- a Caddy from any other address shows up on the **Proxy** page as **detected** and waits until you
+  approve, link or ignore it;
+- several Caddies behind one address give each a name on the URL:
+  `http://DNZ-ADDRESS:8080/api/proxy/caddy?name=edge-1`;
+- a proxy can get a **token of its own** (**⋯ → Use a token of its own**), which then goes in the
+  `Authorization` header instead of the connect key.
+
+See [How DNZ recognizes a Traefik](/proxy/traefik#how-dnz-recognizes-a-traefik) for the details.
+
+While a Caddy isn't approved, or proxying is off, it gets a configuration with no sites and drops what
+it had. On its card, a proxy's dot turns green (**Connected**) once it has fetched its configuration
+in the last minute.
+
+## What Caddy gets
+
+DNZ translates the proxy's routers, services and middlewares into Caddy's own JSON configuration.
+
+- **HTTPS routers** go to a Caddy server on `:443`, where Caddy gets the certificates itself
+  (automatic HTTPS, Let's Encrypt or ZeroSSL). A router's certificate resolver isn't used.
+- **Certificates uploaded to the proxy** (**TLS → Certificates**) are loaded into Caddy.
+- **Wildcard hosts** need Caddy built with a DNS provider module, or an uploaded certificate.
+- **Other routers** go to a server on `:80`, which also answers Caddy's HTTP-01 challenges.
+- Caddy's own **HTTP→HTTPS redirects are off**. An HTTP router with a redirect middleware does that,
+  as with Traefik; **Add route** makes both in one step.
+- The **entry points** of a Caddy proxy are `web` (:80) and `websecure` (:443).
+- **Order**: exact hosts before wildcards, longer path prefixes first, and a set priority before all
+  of it. A request no route takes gets a 404.
+
+| In DNZ | In Caddy |
+| --- | --- |
+| Hostnames (`*.example.com` covers one label), path prefix | `host` and `path` matchers |
+| Conditions: Path, PathPrefix, PathRegexp, Method, Header, HeaderRegexp, Query, ClientIP, each negatable | The matching Caddy matchers, `not` for Not |
+| Load balancer with http, https and h2c upstreams | `reverse_proxy` |
+| Strategy `wrr`, `p2c`, `leasttime`, `hrw` | Round robin or weighted round robin, random choose 2, least conn, client IP hash |
+| Sticky cookie, active health checks, accept any certificate, preserve path | The `reverse_proxy` equivalents |
+| Pass Host header off | The upstream's host |
+| Weighted services | One upstream list, the weights multiplied |
+| Failover | Caddy's `first` selection policy |
+| Mirroring | The main service only |
+| redirectScheme, basicAuth (bcrypt users only, which DNZ's form makes), stripPrefix, addPrefix, replacePath, ipAllowList, compress, chain | The matching Caddy handlers |
+| headers: custom request and response headers, HSTS, frame deny, nosniff, XSS filter, referrer policy, CSP, permissions policy | `headers` |
+
+### Left out
+
+These are left out, with a warning on the proxy's page:
+
+| What | What is left out |
+| --- | --- |
+| A Traefik extra rule, a QueryRegexp condition | The router |
+| rateLimit, inFlightReq, retry, buffering, circuitBreaker, errors, forwardAuth, redirectRegex, digestAuth, dnz-proxy's own middlewares | Just the middleware |
+| TCP and UDP routers | All of them (Caddy needs the layer4 plugin) |
+| TLS options and stores | All of them |
+
+## Trying the endpoint by hand
+
+Run this from the Caddy's machine, so DNZ recognizes it by that address:
+
+```bash
+curl -H "Authorization: Bearer dnzp_…" https://dnz.example.com/api/proxy/caddy
+```
+
+It returns the same configuration Caddy gets. A superadmin can also look at what a Caddy proxy gets,
+and its warnings, with `GET /api/proxies/{id}/caddy` or `dnz proxy caddy <proxy>`. See the
+[Proxy API](/api/proxy#caddy-config-loader).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The proxy's dot stays grey (not connected)">
+    The Caddy hasn't fetched its configuration in the last minute. Check that it started from
+    `dnz.json` (not the Caddyfile), that it can reach DNZ's HTTP address (a `localhost` address only
+    works on the same machine), that the file has the current connect key, and look on the **Proxy**
+    page for a detected Caddy: it may be calling from an address DNZ doesn't know yet.
+  </Accordion>
+  <Accordion title="My Caddyfile sites are gone">
+    DNZ's configuration replaces the Caddy's whole configuration. Move those sites into routers on
+    the proxy's page, or keep the Caddyfile and use [Caddy sites in DNS](/integrations/caddy)
+    instead.
+  </Accordion>
+  <Accordion title="A wildcard host has no certificate">
+    Caddy needs a DNS challenge for a wildcard certificate, so it must be built with a DNS provider
+    module. Otherwise, upload the certificate to the proxy under **TLS → Certificates**.
+  </Accordion>
+  <Accordion title="A router or middleware doesn't do anything">
+    It may be one Caddy can't take. The proxy's page lists what was left out, and why.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Routers, services and middlewares" icon="route" href="/proxy/routing">
+    Set up what each Caddy serves.
+  </Card>
+  <Card title="Caddy sites in DNS" icon="file-lines" href="/integrations/caddy">
+    Keep your Caddyfile and only get DNS records for its sites.
+  </Card>
+</CardGroup>

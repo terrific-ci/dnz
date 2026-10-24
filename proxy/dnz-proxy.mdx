@@ -4,8 +4,9 @@ description: "Run DNZ's own Pingora-based reverse proxy on any number of servers
 ---
 
 dnz-proxy is DNZ's own reverse proxy, built on Cloudflare's
-[Pingora](https://github.com/cloudflare/pingora). It is the second proxy backend next to
-[Traefik](/proxy/traefik).
+[Pingora](https://github.com/cloudflare/pingora). It is one of the three kinds of proxy, next to
+[Traefik](/proxy/traefik) and [Caddy](/proxy/caddy). Kinds can be mixed, so a name can go through a
+dnz-proxy proxy and a Traefik at once.
 
 It serves the same routers, services and middlewares you set up for a proxy in DNZ (the same objects a
 Traefik would get), and adds what DNZ can do because it controls the proxy:
@@ -20,9 +21,14 @@ Traefik would get), and adds what DNZ can do because it controls the proxy:
 - **TCP and UDP** routing.
 
 <Note>
-  Proxying is off by default. Turn it on with **Settings → Proxy → dnz-proxy**, or
-  `DNZ_PROXY_BACKEND=dnz`. See [Turning proxying on](/proxy/overview#turning-proxying-on).
+  Proxying is off by default. Turn it on under **Settings → Proxy** (or with `DNZ_PROXY_BACKEND=on`),
+  then **Add proxy** and pick **dnz-proxy**. See
+  [Turning proxying on](/proxy/overview#turning-proxying-on).
 </Note>
+
+The work only dnz-proxy needs (the node hub, ACME certificates for dnz-proxy, HTTP-01 answered by
+nodes, the node on DNZ's own server) runs while proxying is on and at least one approved dnz-proxy
+proxy exists. Nodes can only join, or be approved into, dnz-proxy proxies.
 
 ## Nodes
 
@@ -32,7 +38,7 @@ address. It never has to be on the same machine.
 
 ### Running a node
 
-**Settings → Proxy → Set up dnz-proxy** shows these commands filled in, for systemd, Docker, Docker
+**Add proxy → dnz-proxy** shows these commands filled in, for systemd, Docker, Docker
 Swarm and a plain command line.
 
 <Tabs>
@@ -311,7 +317,7 @@ it.
 ### Managing nodes from the CLI
 
 ```bash
-dnz proxy show                                    # backend, proxies, connect key
+dnz proxy show                                    # proxying on/off, proxies, connect key
 dnz proxy nodes                                   # every node: proxy, state, addresses, config
 dnz proxy approve jkt-1 --proxy "Edge JKT" --ipv4 203.0.113.10
 dnz proxy ignore node-10-0-0-9
@@ -431,8 +437,8 @@ circuitBreaker, buffering.
 
 ## dnz-proxy's middlewares
 
-These appear under **dnz-proxy** in **Add middleware** while dnz-proxy is the backend. Traefik never
-gets them.
+These appear under **dnz-proxy** in **Add middleware** on a dnz-proxy proxy. Traefik and Caddy never
+get them.
 
 ### Cache (`dnzCache`)
 
@@ -506,7 +512,7 @@ network and valid for **Valid for**, then lets them through.
 
 ## Analytics
 
-**Proxy → Analytics** shows, per proxy and hostname, over the last hour to 30 days:
+**Proxy → Analytics** shows, per dnz-proxy proxy and hostname, over the last hour to 30 days:
 
 - requests by status class, bandwidth, and latency (p50, p95, p99)
 - cache hit ratio, blocked and challenged visits

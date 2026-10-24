@@ -4,8 +4,8 @@ sidebarTitle: "Certificates"
 description: "Let DNZ get TLS certificates over ACME and hand them to every dnz-proxy node, or upload your own."
 ---
 
-With the **dnz-proxy** backend, DNZ gets TLS certificates itself over ACME and hands them to the
-proxy's nodes with their configuration. Nodes never talk to a CA, and every node serves the same
+For **dnz-proxy** proxies, DNZ gets TLS certificates itself over ACME and hands them to the
+proxy's nodes with their configuration. A Traefik or Caddy proxy gets its own. Nodes never talk to a CA, and every node serves the same
 certificate. Certificates can also be uploaded by hand.
 
 Everything here is for superadmins, under **Proxy → Certificates**.

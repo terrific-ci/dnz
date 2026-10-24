@@ -1,12 +1,36 @@
 ---
 title: "Proxy"
-description: "Add proxy routes and manage dnz-proxy nodes from the terminal."
+description: "Turn proxying on or off, add proxies and routes, and manage dnz-proxy nodes from the terminal."
 ---
 
-`dnz proxy` covers two things: adding a **route** (one hostname through a proxy) and managing the
-**nodes** of DNZ's own reverse proxy, dnz-proxy. All `dnz proxy` commands need a superadmin.
+`dnz proxy` covers turning proxying on or off, adding **proxies** (Traefik, dnz-proxy or Caddy),
+adding a **route** (one hostname through a proxy) and managing the **nodes** of DNZ's own reverse
+proxy, dnz-proxy. All `dnz proxy` commands need a superadmin.
 
 For the concepts, see [Proxy overview](/proxy/overview), [Routing](/proxy/routing) and
+[dnz-proxy](/proxy/dnz-proxy).
+
+## Proxying and proxies
+
+```bash
+dnz proxy show                                    # proxying on/off, proxies, connect key
+dnz proxy on                                      # or: dnz proxy off
+dnz proxy add edge-1 --ipv4 203.0.113.10          # a Traefik (the default kind)
+dnz proxy add edge-2 --kind caddy --ipv4 203.0.113.20 --connects-from 10.0.0.20
+dnz proxy add "Edge JKT" --kind dnz --ipv4 203.0.113.30   # dnz-proxy nodes join it
+dnz proxy caddy edge-2                            # what the Caddy is sent, and what it can't take
+```
+
+`on` and `off` match the switch under **Settings → Proxy**; with `DNZ_PROXY_BACKEND` set, `show` says
+so and the switch can't change. `add` takes:
+
+| Option | What it does |
+| --- | --- |
+| `--kind` | What runs it: `traefik` (default), `dnz` (or `dnz-proxy`) or `caddy`. Can't change later |
+| `--ipv4`, `--ipv6` | Where visitors reach it; DNS answers with these. At least one |
+| `--connects-from` | The address a Traefik or Caddy calls DNZ from, when it isn't one of the above |
+
+See [Connecting Traefik](/proxy/traefik), [Connecting Caddy](/proxy/caddy) and
 [dnz-proxy](/proxy/dnz-proxy).
 
 ## Proxy routes
@@ -63,7 +87,8 @@ HTTPS with a redirect from `http://` is the default.
 The server picks the entry points, the same ones the dashboard's **Add route** uses:
 
 - under **dnz-proxy**, the proxy's own HTTP and HTTPS entry points;
-- under **Traefik**, the ones its API lists, when the proxy has **Traefik API** set.
+- under **Traefik**, the ones its API lists, when the proxy has **Traefik API** set;
+- under **Caddy**, `web` (:80) and `websecure` (:443).
 
 The one on port 80 serves `http://` and the one on 443 serves `https://`; the command prints which it
 picked. Without either, or when no entry point is on that port, it uses `web` and `websecure`.
@@ -72,7 +97,6 @@ picked. Without either, or when no entry point is on that port, it uses `web` an
 ## dnz-proxy nodes
 
 ```bash
-dnz proxy show                                    # backend, proxies, connect key
 dnz proxy nodes                                   # every node: proxy, state, addresses, config
 dnz proxy approve jkt-1 --proxy "Edge JKT" --ipv4 203.0.113.10
 dnz proxy ignore node-10-0-0-9                    # turn a waiting node away
@@ -81,8 +105,8 @@ dnz proxy drain jkt-1 --undo
 dnz proxy remove jkt-1                            # it can't connect any more
 ```
 
-`dnz proxy show` prints the proxying backend, the proxies and the **connect key** new nodes join with.
-New nodes wait for approval. `approve` takes:
+`dnz proxy show` prints whether proxying is on, the proxies and the **connect key** new nodes join
+with. New nodes wait for approval; they can only join dnz-proxy proxies. `approve` takes:
 
 | Option | What it does |
 | --- | --- |

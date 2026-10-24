@@ -1,5 +1,6 @@
 ---
-title: "Caddy"
+title: "Caddy sites in DNS"
+sidebarTitle: "Caddy sites in DNS"
 description: "DNS records for the sites a Caddy serves, kept up to date as the Caddyfile changes."
 ---
 
@@ -9,10 +10,19 @@ CNAME) for them in the division's zones, pointing at the Caddy. When the Caddyfi
 records follow.
 
 DNZ only **reads** Caddy's configuration. Sites, routes and certificates stay in the Caddyfile, and
-nothing goes through DNZ. For a proxy that DNZ configures, see [Proxied records](/proxy/overview).
+nothing goes through DNZ.
 
-A Caddy belongs to a division, under **Settings → Integrations → Caddy**. Connecting one needs the
-`integrations.manage` permission (Owner by default); seeing them needs `zones.read`.
+<Note>
+  This is **not** the Caddy proxy. A [Caddy proxy](/proxy/caddy) (**Add proxy → Caddy**) is a Caddy
+  that DNZ configures with the routers, services and middlewares set up in DNZ, and its
+  configuration replaces the Caddy's own, Caddyfile included. Use this sync to keep your Caddyfile
+  and only get DNS records for its sites.
+</Note>
+
+A Caddy belongs to a division, under **Settings → Proxy → Caddy sites in DNS**. Connecting one needs
+the `integrations.manage` permission (Owner by default); seeing them needs `zones.read`. Division
+owners (with `integrations.manage`) can open **Settings → Proxy** and see only this section;
+superadmins see all of it.
 
 ## Connect a Caddy
 

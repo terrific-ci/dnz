@@ -10,9 +10,11 @@ Everything a proxy serves is set up in DNZ the way Traefik sees it:
 - **Services** are where a visit goes: your upstream servers, or other services.
 - **Middlewares** change or check a visit on its way.
 
-This page applies to both backends. A Traefik gets these objects in its configuration
+This page applies to every kind of proxy. A Traefik gets these objects in its configuration
 ([What Traefik gets](/proxy/traefik#what-traefik-gets)); dnz-proxy reads the same objects as
-Traefik v3 does, with a few differences listed under [Routing](/proxy/dnz-proxy#routing).
+Traefik v3 does, with a few differences listed under [Routing](/proxy/dnz-proxy#routing); a Caddy
+gets them translated into Caddy's own configuration, with what it can't do left out
+([What Caddy gets](/proxy/caddy#what-caddy-gets)).
 
 <Tip>
   For a single hostname, **Add route** on the proxy's page adds the service, router and DNS record in
@@ -89,7 +91,7 @@ Traefik 3, grouped and searchable, and each has its own form.
 | Headers & content | Headers (custom, CORS, security and host headers), compress, content type, **error pages** (from one of the proxy's services), gRPC-Web |
 | Limits & reliability | Rate limit (in memory or shared through Redis), in-flight requests, circuit breaker, retry, buffering |
 
-With the dnz-proxy backend, **Add middleware** also has a **dnz-proxy** group: cache, firewall and
+On a dnz-proxy proxy, **Add middleware** also has a **dnz-proxy** group: cache, firewall and
 under attack. See [dnz-proxy's middlewares](/proxy/dnz-proxy#dnz-proxys-middlewares).
 
 How the forms work:
@@ -195,7 +197,8 @@ example:
 --entrypoints.dns.address=:53/udp
 ```
 
-dnz-proxy has its entry points in DNZ. See [Entry points](/proxy/dnz-proxy#entry-points).
+dnz-proxy has its entry points in DNZ. See [Entry points](/proxy/dnz-proxy#entry-points). A Caddy
+proxy has `web` (:80) and `websecure` (:443), and no TCP or UDP routing.
 
 ## What can't be deleted
 

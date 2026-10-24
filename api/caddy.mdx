@@ -3,9 +3,12 @@ title: "Caddy API"
 description: "Endpoints for connecting Caddies and syncing the DNS records of their sites."
 ---
 
-For what these endpoints do, see [Caddy](/integrations/caddy). They take a signed-in session (see
-[API overview](/api/overview)); API tokens can't hold `integrations.manage`, so with a token only the
-`zones.read` endpoints work.
+For what these endpoints do, see [Caddy sites in DNS](/integrations/caddy). They take a signed-in
+session (see [API overview](/api/overview)); API tokens can't hold `integrations.manage`, so with a
+token only the `zones.read` endpoints work.
+
+A Caddy proxy, one that DNZ configures, is in the [Proxy API](/api/proxy#caddy-config-loader)
+instead.
 
 ## Endpoints
 

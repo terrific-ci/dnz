@@ -3,8 +3,8 @@ title: "Connecting Traefik"
 description: "Point Traefik's HTTP provider at DNZ, so each Traefik serves the routers, services and middlewares set up for it."
 ---
 
-With the Traefik backend, DNZ doesn't run the proxy. Each proxy is a [Traefik](https://traefik.io/)
-v3 that polls DNZ through Traefik's
+A Traefik proxy is one DNZ doesn't run itself: a [Traefik](https://traefik.io/) v3 that polls DNZ
+through Traefik's
 [HTTP provider](https://doc.traefik.io/traefik/providers/http/) and serves what DNZ hands it. You can
 connect several Traefiks, for example one per site, each with its own routers.
 
@@ -12,7 +12,7 @@ Traefik can run anywhere DNZ is reachable from: on the same machine, on another 
 already have.
 
 <Note>
-  Turn proxying on first: **Settings → Proxy → Traefik**. See
+  Turn proxying on first, under **Settings → Proxy**. See
   [Turning proxying on](/proxy/overview#turning-proxying-on).
 </Note>
 
@@ -20,8 +20,8 @@ already have.
 
 <Steps>
   <Step title="Open the setup guide">
-    Go to **Settings → Proxy → Set up Traefik**. Everything in it is filled in, ready to copy as it
-    is.
+    Go to **Settings → Proxy → Add proxy** and pick **Traefik**. Give the name and the addresses
+    visitors reach it at. Everything in the setup is filled in, ready to copy as it is.
   </Step>
   <Step title="Check DNZ's address">
     **DNZ address, as Traefik reaches it** is filled in from your browser. Change it when Traefik
@@ -40,9 +40,9 @@ already have.
       `~/traefik/traefik.yml` and `docker-compose.yml` and starts Traefik on ports 80 and 443, and
       8080 for its API.
   </Step>
-  <Step title="Add the proxy in DNZ">
-    On the **Proxy** page, **Add proxy** with the Traefik's address, or approve it when DNZ detects
-    it. See [How DNZ recognizes a Traefik](#how-dnz-recognizes-a-traefik).
+  <Step title="Let it connect">
+    A Traefik that calls from the addresses you gave connects as that proxy. From anywhere else, it
+    shows up as detected, to approve. See [How DNZ recognizes a Traefik](#how-dnz-recognizes-a-traefik).
   </Step>
 </Steps>
 
@@ -74,7 +74,7 @@ from**.
 
 ### Enter the address
 
-On the **Proxy** page, use **Add proxy** with the Traefik's IPv4 and/or IPv6 address. A Traefik that
+**Add proxy** (kind Traefik) with the Traefik's IPv4 and/or IPv6 address. A Traefik that
 calls with the connect key from one of those addresses connects as that proxy right away. No
 approval and no extra token are needed.
 
@@ -127,8 +127,8 @@ the connect key** turns the token off.
 On its card, a proxy's dot turns green (**Connected**) once it has fetched its configuration in the
 last minute. The card also shows the address it called from and how it is recognized.
 
-**Replace connect key** (**⋯** under **Settings → Proxy**) cuts off every Traefik that uses the old
-key, until its configuration has the new one.
+**Replace connect key** (**⋯** under **Settings → Proxy**) cuts off every Traefik (and Caddy) that
+uses the old key, until its configuration has the new one.
 
 ## Traefik's API
 

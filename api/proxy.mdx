@@ -1,16 +1,17 @@
 ---
 title: "Proxy API"
-description: "Endpoints for proxying settings, proxies, routers, services, middlewares and the Traefik provider."
+description: "Endpoints for proxying settings, proxies, routers, services, middlewares, the Traefik provider and Caddy's config loader."
 ---
 
 <Note>
   Every endpoint here needs a **superadmin** session, with two exceptions: `GET /api/proxies` works
-  for any signed-in user (the record editor uses it), and the Traefik endpoint takes the connect key
-  or a proxy's own token. See [API overview](/api/overview) for how to authenticate.
+  for any signed-in user (the record editor uses it), and the Traefik and Caddy endpoints take the
+  connect key or a proxy's own token. See [API overview](/api/overview) for how to authenticate.
 </Note>
 
 For what these objects do, see [Proxied records](/proxy/overview),
-[Connecting Traefik](/proxy/traefik), [Routers, services and middlewares](/proxy/routing) and
+[Connecting Traefik](/proxy/traefik), [Connecting Caddy](/proxy/caddy),
+[Routers, services and middlewares](/proxy/routing) and
 [Records from Traefik's routers](/proxy/traefik-records). dnz-proxy nodes, entry points and analytics
 are in the [dnz-proxy API](/api/dnz-proxy).
 
@@ -18,20 +19,36 @@ are in the [dnz-proxy API](/api/dnz-proxy).
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/settings/proxy` | Proxying on or off, the connect key, every proxy with its status and proxied hosts |
-| `PUT` | `/api/settings/proxy` | `{"backend": "traefik"}`, `{"backend": "dnz"}` or `{"backend": "off"}` |
+| `GET` | `/api/settings/proxy` | `enabled`, `locked`, `kinds`, `traefik_path`, `caddy_path`, `connect_key`, `max_pending` and `proxies` (see below) |
+| `PUT` | `/api/settings/proxy` | `{"enabled": true}` or `{"enabled": false}` |
 | `POST` | `/api/settings/proxy/connect-key` | Replace the connect key |
-| `GET` | `/api/proxies` | `{"enabled": true, "proxies": [{"id", "name", "ipv4", "ipv6", "routes": [...]}]}`: approved proxies only, with their enabled routers |
-| `POST` | `/api/proxies` | Add a proxy by its addresses |
+| `GET` | `/api/proxies` | `{"enabled": true, "proxies": [{"id", "name", "kind", "ipv4", "ipv6", "routes": [...]}]}`: approved proxies only, with their enabled routers |
+| `POST` | `/api/proxies` | Add a proxy by its `kind` and addresses |
 | `PUT` | `/api/proxies/{id}` | Change a proxy |
 | `DELETE` | `/api/proxies/{id}` | Delete a proxy (409 while records use it) |
-| `POST` | `/api/proxies/{id}/approve` | Approve a detected (or ignored) Traefik, with a proxy body |
-| `POST` | `/api/proxies/{id}/ignore` | Ignore a detected Traefik |
-| `POST` | `/api/proxies/{id}/link` | `{"proxy_id": 3}`: a detected Traefik connects as that proxy from now on |
+| `POST` | `/api/proxies/{id}/approve` | Approve a detected (or ignored) Traefik or Caddy, with a proxy body |
+| `POST` | `/api/proxies/{id}/ignore` | Ignore a detected Traefik or Caddy |
+| `POST` | `/api/proxies/{id}/link` | `{"proxy_id": 3}`: a detected Traefik or Caddy connects as that proxy from now on |
 | `POST` | `/api/proxies/{id}/token` | Give the proxy a token of its own (shown once; replaces an earlier one) |
 | `DELETE` | `/api/proxies/{id}/token` | Back to the connect key |
 | `GET` | `/api/proxies/{id}/traefik` | Version, entry points and router status, from the proxy's Traefik API |
+| `GET` | `/api/proxies/{id}/caddy` | `{"config", "warnings"}`: the configuration a Caddy proxy gets, and what was left out of it |
 | `POST` | `/api/proxies/traefik-check` | Try a Traefik API before saving: `{"url", "user", "password"}` |
+
+**Settings.** `GET /api/settings/proxy` returns:
+
+| Field | Meaning |
+| --- | --- |
+| `enabled` | Whether proxying is on |
+| `locked` | `true` when `DNZ_PROXY_BACKEND` sets it; `PUT` then can't change it |
+| `kinds` | The kinds a proxy can have: `[{"kind", "label"}]`, with `traefik`, `dnz` and `caddy` |
+| `traefik_path`, `caddy_path` | Where Traefik's HTTP provider and Caddy's config loader call |
+| `connect_key` | The key every Traefik and Caddy calls with, and dnz-proxy nodes join with |
+| `max_pending` | How many detected proxies may wait at once |
+| `proxies` | Every proxy, with its `kind`, status, routers and proxied hosts |
+
+`backend` and `backend_locked` are gone. A `PUT` with the older `{"backend": …}` still works and reads
+as on (`traefik`, `dnz`) or off.
 
 ## Routes, routers, services and middlewares
 
@@ -49,7 +66,7 @@ are in the [dnz-proxy API](/api/dnz-proxy).
 
 **Entry points.** Under dnz-proxy, `routes/entry-points` lists the proxy's own entry points. Under
 Traefik it lists the ones its API lists. `from` says which (`dnz-proxy` / `traefik`). Without either,
-it offers `web` (:80) and `websecure` (:443). `http` and `https` are the ones on port 80 and 443 that
+and always under Caddy, it offers `web` (:80) and `websecure` (:443). `http` and `https` are the ones on port 80 and 443 that
 a new route uses.
 
 **One-step routes.** In `POST /api/proxies/{id}/routes`, `http_entry_point` and `https_entry_point`
@@ -100,17 +117,35 @@ curl -H "Authorization: Bearer dnzp_…" https://dnz.example.com/api/proxy/traef
 Run it from the Traefik's machine, so DNZ recognizes it by that address. See
 [Connecting Traefik](/proxy/traefik).
 
+## Caddy config loader
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/proxy/caddy[?name=]` | Caddy's HTTP config loader (`admin.config.load`). Bearer token: the connect key or a proxy's own token. |
+
+It returns a whole Caddy configuration, which names the loader again so Caddy keeps asking. A Caddy
+that isn't approved yet, or any Caddy while proxying is off, gets one with no sites.
+
+```bash
+curl -H "Authorization: Bearer dnzp_…" https://dnz.example.com/api/proxy/caddy
+```
+
+Run it from the Caddy's machine, so DNZ recognizes it by that address. See
+[Connecting Caddy](/proxy/caddy).
+
 ## Objects
 
 ### A proxy
 
 ```json
 {
-  "name": "Edge A", "ipv4": "203.0.113.10", "ipv6": "2001:db8::10",
+  "name": "Edge A", "kind": "traefik", "ipv4": "203.0.113.10", "ipv6": "2001:db8::10",
   "traefik_api_url": "http://10.0.0.12:8080", "traefik_api_user": "", "traefik_api_password": "…"
 }
 ```
 
+- `kind` is `traefik`, `dnz` (dnz-proxy) or `caddy`. It is set when the proxy is added and can't
+  be changed.
 - Leave `traefik_api_password` out to keep the stored one; `null` removes it.
 - Add `"connects_from": "10.0.0.12"` to set the address the Traefik calls DNZ from. Leave it out to
   keep the current one, or send `null` to recognize the Traefik by `ipv4` / `ipv6` again.
@@ -120,7 +155,7 @@ Responses also carry:
 | Field | Meaning |
 | --- | --- |
 | `status` | `pending`, `approved` or `ignored` |
-| `detected_ip`, `detected_name` | How a Traefik with the connect key is recognized |
+| `detected_ip`, `detected_name` | How a Traefik or Caddy with the connect key is recognized |
 | `has_token` | Whether the proxy has a token of its own |
 | `last_seen_at`, `last_seen_ip` | When and from where it last fetched its configuration |
 
