@@ -21,7 +21,8 @@
 #   handshake   TLS 1.3, a new connection for every request; wrk resumes the
 #               TLS session (each proxy's default: all of them resume)
 #   http-64k    GET /64k over HTTP/1.1, a 64 KiB answer
-# Then a fixed rate (BENCH_RATE requests per second over HTTP, with hey):
+# Then a steady rate (BENCH_RATE requests per second over HTTP, evenly spaced,
+# with oha):
 # latency p50/p99 and the proxy's CPU time per request (from its cgroup), and
 # its memory (anonymous, from its cgroup) idle and after the load.
 #
@@ -35,7 +36,7 @@ DURATION=${BENCH_DURATION:-20}
 RUNS=${BENCH_RUNS:-3}
 CONNS=${BENCH_CONNECTIONS:-64}
 RATE=${BENCH_RATE:-5000}
-RATE_WORKERS=50
+RATE_CONNS=50
 PROXIES=${BENCH_PROXIES:-"dnzproxy nginx haproxy envoy caddy traefik"}
 SCENARIOS="http https handshake http-64k"
 
@@ -192,16 +193,18 @@ for p in $PROXIES; do
         row="$row	$rps	$p99"
     done
 
-    # Fixed rate: latency without saturation, and CPU per request. hey's
-    # workers each hold RATE/RATE_WORKERS requests a second.
+    # Steady rate: latency without saturation, and CPU per request. oha
+    # sends one request every 1/RATE seconds over RATE_CONNS connections and
+    # counts each one's latency from when it was due.
+    perf oha --no-tui -z 2s -q "$RATE" -c "$RATE_CONNS" http://app.bench.test/ >/dev/null
     before=$(cpu_usec "$p")
-    perf hey -z "${DURATION}s" -c "$RATE_WORKERS" -q $((RATE / RATE_WORKERS)) http://app.bench.test/ >work/raw/$p-rate.txt
+    perf oha --no-tui --output-format json --latency-correction -z "${DURATION}s" -q "$RATE" -c "$RATE_CONNS" http://app.bench.test/ >work/raw/$p-rate.json
     after=$(cpu_usec "$p")
     loaded=$(anon_mib "$p")
-    done_reqs=$(awk '/responses$/ { n += $2 } END { print n + 0 }' work/raw/$p-rate.txt)
-    ok=$(awk '$1 == "[200]" { print $2 }' work/raw/$p-rate.txt)
-    p50=$(awk '$1 == "50%" { printf "%.2f", $3 * 1000 }' work/raw/$p-rate.txt)
-    rp99=$(awk '$1 == "99%" { printf "%.2f", $3 * 1000 }' work/raw/$p-rate.txt)
+    done_reqs=$(jq '[.statusCodeDistribution[]] | add // 0' work/raw/$p-rate.json)
+    ok=$(jq '.statusCodeDistribution["200"] // 0' work/raw/$p-rate.json)
+    p50=$(jq '.latencyPercentiles.p50 * 1000 * 100 | round / 100' work/raw/$p-rate.json)
+    rp99=$(jq '.latencyPercentiles.p99 * 1000 * 100 | round / 100' work/raw/$p-rate.json)
     cpu=$(awk -v a="$before" -v b="$after" -v n="$done_reqs" 'BEGIN { printf "%.1f", n ? (b - a) / n : 0 }')
     [ "${ok:-0}" = "$done_reqs" ] || log "  rate: only ${ok:-0} of $done_reqs answered 200"
     log "  rate $RATE/s: p50 $p50 ms, p99 $rp99 ms, $cpu µs CPU/request, memory $idle → $loaded MiB"
@@ -235,6 +238,6 @@ done
     fi
     tag() { dc config --images 2>/dev/null | grep "^$1:" | head -1 | cut -d: -f2 | sed -e 's/^v//' -e 's/^distroless-v//'; }
     echo "nginx $(tag nginx), HAProxy $(tag haproxy), Envoy $(tag envoyproxy/envoy), Caddy $(tag caddy), Traefik $(tag traefik);"
-    echo "the origin is nginx $(tag nginx) on its own CPU; load from wrk and hey (Debian 13)."
+    echo "the origin is nginx $(tag nginx) on its own CPU; load from wrk (Debian 13) and oha $(perf oha --version | awk '{ print $2 }')."
 } >work/results.md
 cat work/results.md

@@ -1,7 +1,12 @@
-# The load generators, from Debian 13 (trixie): wrk (most requests per
-# second) and hey (latency at a fixed rate), plus curl, jq and openssl for
-# the setup.
+# The load generators: wrk (most requests per second) and oha (latency at a
+# steady rate: one request every 1/rate seconds, corrected for coordinated
+# omission), plus curl, jq and openssl for the setup.
+FROM rust:1.96-bookworm AS oha
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    cargo install oha --version 1.16.0 --locked --root /out
+
 FROM debian:trixie-slim
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends wrk hey curl ca-certificates jq openssl netbase \
+    && apt-get install -y --no-install-recommends wrk curl ca-certificates jq openssl netbase \
     && rm -rf /var/lib/apt/lists/*
+COPY --from=oha /out/bin/oha /usr/local/bin/oha

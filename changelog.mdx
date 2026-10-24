@@ -6,18 +6,28 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.7.1**, released October 24, 2026. To install or upgrade to it:
+The latest release is **v1.7.2**, released October 24, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.7.1
-docker pull terrificci/dnz-proxy:1.7.1   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.7.1
+docker pull terrificci/dnz:1.7.2
+docker pull terrificci/dnz-proxy:1.7.2   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.7.2
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.7.1" description="October 24, 2026" tags={["Latest"]}>
+<Update label="v1.7.2" description="October 24, 2026" tags={["Latest"]}>
+
+- Proxy settings: a dnz-proxy proxy's state comes from its nodes
+- Backups: a target tile opens the dialog on its kind
+- Proxy benchmarks: 1.7.1, and latency at an evenly spaced rate
+- dnz-proxy: test the X-Forwarded-* headers from visitors and trusted forwarders
+- Proxy benchmarks: what was tried and not kept
+
+</Update>
+
+<Update label="v1.7.1" description="October 24, 2026">
 
 - dnz-proxy: one write for an answer's head and small body; log lines only when kept
 - Proxy benchmarks: after 1.7.0, one write per answer and fewer allocations
