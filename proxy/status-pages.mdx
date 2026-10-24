@@ -18,11 +18,9 @@ The page shows:
 It is one self-contained page (no fonts, scripts or images from elsewhere) in light and dark, and
 search engines are told not to index it.
 
-<Note>
-  Status pages are served by [dnz-proxy](/proxy/dnz-proxy) for now. Support for
-  [Traefik](/proxy/traefik) and [Caddy](/proxy/caddy) proxies is coming: until then, a host routed
-  through one of those keeps reaching its backend while it has a status.
-</Note>
+Every kind of proxy shows them: [dnz-proxy](/proxy/dnz-proxy) nodes render the page themselves, a
+[Caddy](/proxy/caddy) answers with it straight from its configuration, and a
+[Traefik](/proxy/traefik) fetches it from DNZ. See [How each proxy shows it](#how-each-proxy-shows-it).
 
 ## Which names can have one
 
@@ -61,7 +59,7 @@ example your status page or an announcement.
   <Tab title="Dashboard">
     <Steps>
       <Step title="Open Status pages">
-        Go to **Proxy → Status pages** and click **Set status**. Or, in a zone, open a proxied
+        Go to **DNS → Status pages** and click **New status page**. Or, in a zone, open a proxied
         record and pick **Status page…**: the same dialog opens with the record's name filled in.
       </Step>
       <Step title="Pick the host and the status">
@@ -134,6 +132,35 @@ over (the entry point's **PROXY protocol from** and **Trusted forwarders**, see
 `moved` needs the new address (`https://new.example.com`). Visitors get a `301` with
 `Location: <new address>`. With **keep path**, the path and query come along:
 `https://old.example.com/docs?page=2` goes to `https://new.example.com/docs?page=2`.
+
+## How each proxy shows it
+
+<AccordionGroup>
+  <Accordion title="dnz-proxy">
+    The statuses come with the configuration DNZ pushes to the nodes, within seconds of a change.
+    Each node renders the page itself and starts and ends scheduled statuses on its own clock. The
+    page is checked after the router matches and before its middlewares, so Let's Encrypt's HTTP-01
+    checks still get through.
+  </Accordion>
+  <Accordion title="Caddy">
+    Each status becomes a route in front of the site's routes that answers with the page itself
+    (`static_response`, one each for HTML, JSON and text). Allowed addresses are left out with a
+    `not remote_ip` matcher. The request ID and time come from Caddy (`{http.request.uuid}`,
+    `{time.now.http}`), and **Moved** with keep path sends visitors to
+    `<new address>{http.request.uri}`. Caddy fetches its configuration every 10 seconds, so a status
+    (or the start or end of its window) shows up within that.
+  </Accordion>
+  <Accordion title="Traefik">
+    Each status becomes a router with a higher priority than any of DNZ's for the host, on the same
+    entry points and with the same TLS. It sends visitors to DNZ's `/api/proxy/status-page`, at the
+    address the Traefik reached DNZ on, unless their address is allowed (`!ClientIP(...)`). DNZ
+    renders the page there. Traefik polls every 5 seconds by default, and it has to reach DNZ's HTTP
+    port, which it already does to poll.
+  </Accordion>
+</AccordionGroup>
+
+Only names DNZ's own routers serve can be put in front of: a name a Traefik routes with its own
+routers (Docker labels, Kubernetes, files) can't have a status page.
 
 ## Automatic pages for the proxy's own failures
 
