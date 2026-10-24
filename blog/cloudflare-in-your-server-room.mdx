@@ -1,13 +1,13 @@
 ---
-title: "The Orange Cloud Comes Home: Running Your Own Cloudflare on One Binary"
-sidebarTitle: "The orange cloud comes home"
+title: "Cloudflare in Your Server Room: Building a Local Edge on One Binary"
+sidebarTitle: "Cloudflare in your server room"
 description: "DNS, a reverse proxy, certificates, caching, a firewall, an under-attack mode and status pages, the Cloudflare way of working, on servers you own."
 ---
 
 <sub>October 24, 2026 · DNZ team</sub>
 
 Cloudflare changed how people think about running a website. You point your nameservers at it, flip
-the little orange cloud next to a record, and suddenly your origin is hidden, HTTPS just works,
+the proxy toggle next to a record, and suddenly your origin is hidden, HTTPS just works,
 static files are cached, bots get a challenge and you have a dashboard showing every request. It is
 one of the nicest pieces of infrastructure ever built.
 
@@ -40,14 +40,14 @@ hands out the proxy's address instead of your server's, and the proxy takes the 
 Because the same program runs DNS and tells the proxies what to do, the two never disagree: add a
 route and the DNS record follows; take a proxy node down and it drops out of the answers.
 
-That is the whole trick behind the orange cloud. It just never had to be a SaaS.
+That is the whole trick behind a proxied record. It just never had to be a SaaS.
 
 ## What you get, feature by feature
 
 | On Cloudflare | In DNZ |
 | --- | --- |
 | Authoritative DNS with a friendly record editor | [Zones and records](/dns/zones): the same style of editor, plus the `dnz` CLI and an API |
-| The orange cloud (proxied records) | [Proxied records](/proxy/overview): a toggle on the record, or a list of proxies to spread it over |
+| Proxied records | [Proxied records](/proxy/overview): a toggle on the record, or a list of proxies to spread it over |
 | Edge servers | [dnz-proxy](/proxy/dnz-proxy) nodes, built on Cloudflare's own [Pingora](https://github.com/cloudflare/pingora); run as many as you like, anywhere |
 | Universal SSL | [Certificates](/proxy/certificates) from Let's Encrypt, ZeroSSL or your own step-ca, issued by DNZ and handed to every node |
 | Caching and Purge Cache | The [`dnzCache`](/proxy/dnz-proxy#cache-dnzcache) middleware, with stale-while-revalidate and purges by host, URL or prefix |
@@ -120,7 +120,7 @@ Here is the whole thing, from nothing to a proxied HTTPS site with caching and a
 
     Want a second site? Start more nodes. DNS answers with the addresses of the healthy ones.
   </Step>
-  <Step title="Flip the orange cloud">
+  <Step title="Proxy the record">
     Add an ACME account and a resolver under **Proxy → Certificates** (see
     [Certificates](/proxy/certificates)), then route the name:
 
@@ -202,14 +202,14 @@ cache, firewall, status pages and analytics are one program with one source of t
 servers. The [audit log](/admin/audit-log) records who changed what. And the whole thing is
 scriptable from the [`dnz` CLI](/cli/overview) and the [API](/api/overview).
 
-The orange cloud was always a good idea. Now it can live in your server room.
+Putting an edge in front of your servers was always a good idea. Now it can live in your server room.
 
 <CardGroup cols={2}>
   <Card title="Quickstart" icon="rocket" href="/get-started/quickstart">
     Run DNZ and answer your first query in a few minutes.
   </Card>
   <Card title="Proxied records" icon="cloud" href="/proxy/overview">
-    How the orange cloud works in DNZ.
+    How proxying works in DNZ.
   </Card>
   <Card title="dnz-proxy" icon="bolt" href="/proxy/dnz-proxy">
     Nodes, caching, the firewall and analytics.

@@ -211,7 +211,7 @@
           {
             "group": "Posts",
             "pages": [
-              "blog/the-orange-cloud-comes-home"
+              "blog/cloudflare-in-your-server-room"
             ]
           }
         ]
@@ -233,5 +233,11 @@
     "socials": {
       "github": "https://github.com/terrific-ci/dnz"
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/blog/the-orange-cloud-comes-home",
+      "destination": "/blog/cloudflare-in-your-server-room"
+    }
+  ]
 }
