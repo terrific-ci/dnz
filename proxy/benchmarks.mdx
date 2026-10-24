@@ -89,6 +89,36 @@ These changes are in 1.7.1, the release in the tables above.
 
 2. With the old bursty load (`hey`, see the note above).
 
+## After 1.7.1: mimalloc
+
+From the release after 1.7.1, dnz-proxy uses [mimalloc](https://github.com/microsoft/mimalloc) (v3) instead of glibc's
+allocator: Pingora makes many small allocations per request, and the allocator was the largest
+part of dnz-proxy's CPU after the kernel. mimalloc's default asks the kernel for transparent huge
+pages, which made a few touched bytes cost 2 MiB (15 MiB idle instead of 2); it is built with
+`no_thp`, which keeps memory where glibc had it.
+
+1.7.1 against mimalloc, both builds taking turns, median of 4 rounds:
+
+| | 1.7.1 (glibc) | mimalloc | Change |
+| --- | ---: | ---: | ---: |
+| HTTP, 1 KiB | 11,909 | 13,817 | +16% |
+| HTTPS, 1 KiB | 11,439 | 12,682 | +11% |
+| HTTPS, new connection per request | 2,421 | 2,484 | +3% |
+| HTTP, 64 KiB | 7,099 | 7,681 | +8% |
+| Latency p50 / p99 at 5,000/s | 0.64 / 1.77 ms | 0.54 / 1.46 ms | |
+| CPU per request | 106 µs | 95 µs | −11% |
+| Memory idle / loaded | 2 / 8 MiB | 3 / 7 MiB | |
+
+Under a burst of 1,000 connections fetching 64 KiB answers for 30 s:
+
+| | Before | Peak | 60 s later |
+| --- | ---: | ---: | ---: |
+| 1.7.1 (glibc) | 6.5 MiB | 48 MiB | 48 MiB |
+| mimalloc | 6.4 MiB | 51 to 56 MiB | 7.6 MiB |
+
+glibc keeps what a burst took; mimalloc gives it back within a minute, at a peak 3 to 8 MiB
+higher. Its purge delay, commit-on-demand and page-retain options didn't lower that peak.
+
 ## Method
 
 - Each proxy runs in its own container on one Docker network, started on its own, and forwards to
