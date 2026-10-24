@@ -300,6 +300,36 @@ On 4 CPUs: 30.3 MB at idle instead of 48.5 MB, and 59.6 MB a minute after the lo
   show that file too; the kernel gives that memory back when something else needs it.
 - Zones kept in memory no longer reserve room for four records under every name.
 
+### With blocklists and a threat feed
+
+Blocklists and threat feeds are most of what a filtering DNZ holds. The same zone and load as the
+UDP sections above, plus HaGeZi Pro and OISD big as blocklists (361,000 domains together) and the
+HaGeZi Threat Intelligence feed (2 million hosts), each refreshed eight times, then ten minutes of
+mixed load at 4,000 queries a second. The figure is the heap (anonymous resident memory); measured
+on 2026-10-24 on the benchmark server, before is be28bbb.
+
+| Phase | Before | After |
+| --- | ---: | ---: |
+| After the zone import | 69 MB | 68 MB |
+| After adding the lists and the feed | 195 MB | 101 MB |
+| After eight refreshes | 255 MB | 134 MB |
+| After ten minutes of load | 363 MB | 244 MB |
+| Idle, a minute later | 351 MB | 231 MB |
+
+- **Domains packed together.** Every domain was a heap block of its own in a hash set, 58 to 69
+  bytes each. Now a list's domains sit one after another in one buffer with a table of 4-byte
+  positions, about 28 bytes each. The 2-million-host feed went from 132 MB to 54 MB on its own.
+- **Large inserts not kept prepared.** Lists go into the database 5,000 rows at a time, and the
+  database driver kept each such statement prepared: megabytes each, on each of eight connections,
+  and one more whenever a refresh ended on a chunk of a new size.
+- **Cached answers without spare room.** Each cached answer kept a 512-byte buffer; most need 100 to
+  200 bytes.
+
+Finding a name got faster too. Side by side with the lists and the feed loaded on both, six rounds
+of 20 s, the new build was ahead in every round: 123,154 against 109,673 authoritative and 118,956
+against 101,559 cached queries a second (medians), with lower latency. At a steady 80,000 queries a
+second both spent the same CPU time per query.
+
 ## Threat detection on and off
 
 [Threat detection](/dns/threats) looks at a copy of the query log, on its own task. The same release
