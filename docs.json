@@ -26,6 +26,12 @@
     "family": "Manrope"
   },
   "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/terrific-ci/dnz"
+      }
+    ],
     "primary": {
       "type": "button",
       "label": "Install",
@@ -211,5 +217,10 @@
         ]
       }
     ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/terrific-ci/dnz"
+    }
   }
 }
