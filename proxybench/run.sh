@@ -10,7 +10,7 @@
 #   BENCH_DURATION=30 BENCH_RUNS=5 ./run.sh
 #   BENCH_PROXIES="dnzproxy nginx" ./run.sh   # only these (service names)
 #   BENCH_PROXY_CPUS=1,2 ./run.sh             # two CPUs for the proxy under test
-#   BENCH_KEEP=1 ./run.sh                     # leave the containers running
+#   BENCH_KEEP=1 ./run.sh                     # leave the origin, tools and last proxy running
 #   DNZ_IMAGE=terrificci/dnz:1.6.1 ./run.sh   # a given release
 #   BENCH_BUILD=1 ./run.sh                    # DNZ and dnz-proxy built from source (source repository only)
 #
@@ -208,8 +208,12 @@ for p in $PROXIES; do
     row="$row	$p50	$rp99	$cpu	$loaded"
     echo "$row" >>work/raw/summary.tsv
 
-    dc rm -sf "$p" >/dev/null
-    if [ "$p" = dnzproxy ]; then dc rm -sf dnz >/dev/null; fi
+    # BENCH_KEEP leaves the last one running, to look at it.
+    last=${PROXIES##* }
+    if [ -z "${BENCH_KEEP:-}" ] || [ "$p" != "$last" ]; then
+        dc rm -sf "$p" >/dev/null
+        if [ "$p" = dnzproxy ]; then dc rm -sf dnz >/dev/null; fi
+    fi
 done
 
 # --- Table -----------------------------------------------------------------------
