@@ -15,42 +15,48 @@ with 64 connections.
 
 | Proxy | HTTP, 1 KiB | HTTPS, 1 KiB | HTTPS, new connection per request | HTTP, 64 KiB |
 | --- | ---: | ---: | ---: | ---: |
-| nginx 1.30.6 | 24,999 | 17,830 | 1,368 | 7,238 |
-| HAProxy 3.4.7 | 23,684 | 17,738 | 1,229 | 5,992 |
-| **dnz-proxy 1.6.1** | **10,811** | **9,830** | **2,324** | **7,156** |
-| Traefik 3.7.16 | 8,590 | 8,030 | 1,429 | 5,270 |
-| Envoy 1.40.1 | 8,517 | 7,998 | 1,919 ¹ | 5,562 |
-| Caddy 2.11.7 | 6,698 | 6,155 | 1,328 | 4,570 |
+| nginx 1.30.6 | 24,624 | 17,772 | 1,356 | 6,769 |
+| HAProxy 3.4.7 | 22,999 | 17,803 | 1,238 | 5,872 |
+| **dnz-proxy 1.7.1** | **11,668** | **11,476** | **2,441** | **7,216** |
+| Traefik 3.7.16 | 8,586 | 8,097 | 1,433 | 5,128 |
+| Envoy 1.40.1 | 8,584 | 8,010 | 1,930 ¹ | 5,487 |
+| Caddy 2.11.7 | 6,692 | 6,211 | 1,336 | 4,565 |
 
-At a steady 5,000 requests a second over HTTP (well below every proxy's limit):
+At a steady 5,000 requests a second over HTTP, one every 0.2 ms (well below every proxy's limit):
 
 | Proxy | Latency p50 | Latency p99 | CPU per request | Memory idle | Memory loaded |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| nginx | 1.1 ms | 2.5 ms | 45 µs | 17 MiB | 22 MiB |
-| HAProxy | 1.5 ms | 2.3 ms | 46 µs | 17 MiB | 21 MiB |
-| **dnz-proxy** | **3.5 ms** | **6.4 ms** | **106 µs** | **2 MiB** | **8 MiB** |
-| Traefik | 4.3 ms | 16.2 ms | 137 µs | 13 MiB | 39 MiB |
-| Envoy | 4.8 ms | 7.4 ms | 115 µs | 14 MiB | 22 MiB |
-| Caddy | 5.5 ms | 17.1 ms | 170 µs | 9 MiB | 21 MiB |
+| nginx | 0.44 ms | 1.38 ms | 75 µs | 17 MiB | 21 MiB |
+| HAProxy | 0.40 ms | 1.25 ms | 68 µs | 17 MiB | 21 MiB |
+| **dnz-proxy** | **0.60 ms** | **1.54 ms** | **100 µs** | **2 MiB** | **8 MiB** |
+| Traefik | 0.83 ms | 13.16 ms | 137 µs | 13 MiB | 42 MiB |
+| Envoy | 1.22 ms | 16.54 ms | 152 µs | 14 MiB | 23 MiB |
+| Caddy | 1.28 ms | 40.32 ms | 163 µs | 9 MiB | 21 MiB |
 
-dnz-proxy is the release image `terrificci/dnz:1.6.1`. The origin alone answers 36,883 requests a
-second for 1 KiB and 30,139 for 64 KiB, so every number above is the proxy's own limit. No run had a
-failed or non-200 answer.
+dnz-proxy is the release image `terrificci/dnz:1.7.1`. The origin alone answers 36,883 requests a
+second for 1 KiB and 30,139 for 64 KiB, so every number above is the proxy's own limit; on its own
+it answers the steady load in 0.3 ms (p99 1.0 ms). No run had a failed or non-200 answer.
 
 1. Envoy didn't resume TLS sessions in the harness's check, so its new connections are full
    handshakes; the other five resumed.
 
 What it shows:
 
-- **nginx and HAProxy** forward keep-alive HTTP about 2.3 times as fast as dnz-proxy and use less
-  than half its CPU per request.
-- **dnz-proxy** comes third on keep-alive HTTP and HTTPS, ahead of Traefik, Envoy and Caddy. It
-  sets up new TLS connections faster than any of the others (rustls with *ring*, against OpenSSL in
-  nginx and HAProxy), and keeps up with nginx on 64 KiB answers.
-- **Memory**: dnz-proxy holds the least, 2 MiB idle and 8 MiB under load, against 21 to 39 MiB for
+- **nginx and HAProxy** forward keep-alive HTTP about twice as fast as dnz-proxy and HTTPS about 1.5
+  times as fast, and use 68 to 75 µs of CPU per request against dnz-proxy's 100 µs.
+- **dnz-proxy** comes third on keep-alive HTTP and HTTPS, ahead of Traefik, Envoy and Caddy, and
+  first on 64 KiB answers and on new TLS connections (rustls with *ring*, against OpenSSL in nginx
+  and HAProxy).
+- **Latency**: nginx and HAProxy add about 0.1 ms to the origin's 0.3 ms, dnz-proxy 0.3 ms; all
+  three keep p99 near 1.5 ms. Traefik, Envoy and Caddy have p99s of 13 to 40 ms.
+- **Memory**: dnz-proxy holds the least, 2 MiB idle and 8 MiB under load, against 21 to 42 MiB for
   the others.
-- **Latency**: nginx and HAProxy answer in about 1 ms, dnz-proxy in 3.5 ms (p99 6.4 ms); the Go
-  proxies (Caddy, Traefik) have p99s of 16 to 17 ms.
+
+<Note>
+  Until 2026-10-24 this page measured latency with `hey`, whose workers send in step: up to 50
+  requests arrived at once, so the latency mostly showed how long a proxy takes to work through 50
+  requests (dnz-proxy 1.6.1: 3.5 ms p50). The harness now spaces requests evenly with `oha`.
+</Note>
 
 ## After 1.7.0: one write per answer, fewer allocations
 
@@ -75,11 +81,13 @@ turns, median of 4 rounds:
 | HTTPS, 1 KiB | 9,777 | 11,531 | +18% |
 | HTTPS, new connection per request | 2,331 | 2,429 | +4% |
 | HTTP, 64 KiB | 6,911 | 7,158 | +4% |
-| Latency p50 / p99 at 5,000/s | 3.5 / 6.7 ms | 3.2 / 5.5 ms | |
+| Latency p50 / p99 at 5,000/s ² | 3.5 / 6.7 ms | 3.2 / 5.5 ms | |
 | CPU per request | 108 µs | 94 µs | −13% |
 | Memory idle / loaded | 2 / 8 MiB | 2 / 8 MiB | same |
 
-The tables above stay at 1.6.1 until the next release is measured.
+These changes are in 1.7.1, the release in the tables above.
+
+2. With the old bursty load (`hey`, see the note above).
 
 ## Method
 
@@ -99,8 +107,10 @@ The tables above stay at 1.6.1 until the next release is measured.
   mostly TCP setup and resumed handshakes.
 - **Load**: [wrk](https://github.com/wg/wrk) with 2 threads and 64 connections for the requests per
   second (HTTP/1.1; `Connection: close` for the new-connection case), and
-  [hey](https://github.com/rakyll/hey) for the fixed rate (50 workers of 100 requests a second each).
-- **CPU per request** is the proxy's CPU time (its cgroup's `cpu.stat`) during the fixed-rate run
+  [oha](https://github.com/hatoo/oha) for the steady rate: one request every 1/5,000 s over 50
+  connections, each request's latency counted from when it was due (`--latency-correction`), after a
+  2 s warm-up.
+- **CPU per request** is the proxy's CPU time (its cgroup's `cpu.stat`) during the steady-rate run
   divided by the requests, so it includes whatever the proxy does in the background. **Memory** is
   the cgroup's anonymous memory, idle after start and right after the load; it leaves out the binary
   itself.
@@ -123,11 +133,11 @@ own.
 
 | Variable | Default | What it sets |
 | --- | --- | --- |
-| `DNZ_IMAGE` | `terrificci/dnz:latest` | The DNZ image (DNZ and dnz-proxy), e.g. `terrificci/dnz:1.6.1` |
+| `DNZ_IMAGE` | `terrificci/dnz:latest` | The DNZ image (DNZ and dnz-proxy), e.g. `terrificci/dnz:1.7.1` |
 | `BENCH_PROXIES` | all | Only these, e.g. `"dnzproxy nginx"` |
 | `BENCH_DURATION`, `BENCH_RUNS` | `20`, `3` | Seconds per run, and runs per scenario |
 | `BENCH_CONNECTIONS` | `64` | wrk's connections |
-| `BENCH_RATE` | `5000` | Requests a second in the fixed-rate run |
+| `BENCH_RATE` | `5000` | Requests a second in the steady-rate run |
 | `BENCH_PROXY_CPUS` | `1` | CPUs for the proxy under test (a cpuset list, e.g. `1,2`) |
 | `BENCH_BACKEND_CPUS`, `BENCH_PERF_CPUS` | `0`, `2,3` | CPUs for the origin and the load generators |
 | `BENCH_KEEP` | off | Leave the containers running afterwards |
@@ -136,5 +146,5 @@ own.
 BENCH_DURATION=60 BENCH_RUNS=5 BENCH_PROXIES="dnzproxy nginx" ./run.sh
 ```
 
-`run.sh` prints the results table for your machine with the versions it ran; the raw wrk and hey
+`run.sh` prints the results table for your machine with the versions it ran; the raw wrk and oha
 output is in `work/raw/`. For the DNS server benchmarks, see [Benchmarks](/deploy/benchmarks).
