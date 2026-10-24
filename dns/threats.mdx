@@ -14,7 +14,8 @@ Threat detection lives under **DNS → Threats** (superadmins), and in the CLI u
 <Note>
   Detection never slows answers down. The detectors get a copy of the query log as it is written,
   on their own task; when they fall behind, queries are skipped and counted instead of waiting.
-  Queries for your own zones are never suspicious.
+  Queries for your own zones are never suspicious. Their memory stays level however many clients
+  there are: for 2,000 clients at 1,000 queries a second, about 100 MB.
 </Note>
 
 ## The detectors
