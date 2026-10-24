@@ -105,7 +105,8 @@
               "proxy/routing",
               "proxy/traefik-records",
               "proxy/dnz-proxy",
-              "proxy/certificates"
+              "proxy/certificates",
+              "proxy/status-pages"
             ]
           },
           {
@@ -155,6 +156,7 @@
               "cli/replication",
               "cli/cluster",
               "cli/proxy",
+              "cli/status-pages",
               "cli/cloudflare",
               "cli/caddy",
               "cli/dhcp",
@@ -189,6 +191,7 @@
               "api/acme-ddns",
               "api/proxy",
               "api/dnz-proxy",
+              "api/status-pages",
               "api/certificates",
               "api/backups"
             ]

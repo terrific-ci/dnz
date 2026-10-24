@@ -32,6 +32,7 @@ services and middlewares, set up in DNZ.
 | Certificates | Traefik's own certificate resolvers | DNZ issues them over ACME and hands them to the nodes | Caddy's automatic HTTPS, or certificates uploaded to the proxy |
 | Extras | [Records from Traefik's routers](/proxy/traefik-records), from its other providers | Caching, a firewall, an "under attack" challenge, analytics and request logs | – |
 | TCP and UDP | Yes | Yes | No (Caddy needs the layer4 plugin) |
+| [Status pages](/proxy/status-pages) | Coming | Yes | Coming |
 | Set up | [Connecting Traefik](/proxy/traefik) | [dnz-proxy](/proxy/dnz-proxy) | [Connecting Caddy](/proxy/caddy) |
 
 Pick Traefik when you already run it, or want its providers (Docker, Kubernetes) to feed DNS. Pick

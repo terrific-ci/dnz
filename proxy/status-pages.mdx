@@ -1,0 +1,200 @@
+---
+title: "Status pages"
+description: "Switch a proxied host to maintenance, blocked, moved and more, so every proxy serving it shows visitors a styled page instead of the backend."
+---
+
+A host a proxy serves can be switched to a **status**: maintenance, blocked, moved, and so on.
+Every proxy serving the host then answers its visitors with a status page instead of sending them
+to the backend, with the right HTTP status code and, where it fits, a `Retry-After` header.
+
+The page shows:
+
+- the error code, a title and a message
+- the chain **You → Proxy → Destination**, with how each hop is doing (for maintenance: your
+  browser *connected*, the proxy *connected*, the site *maintenance*)
+- **Try again** and **More information** buttons
+- a request ID and the time, and "Powered by DNZ"
+
+It is one self-contained page (no fonts, scripts or images from elsewhere) in light and dark, and
+search engines are told not to index it.
+
+<Note>
+  Status pages are served by [dnz-proxy](/proxy/dnz-proxy) for now. Support for
+  [Traefik](/proxy/traefik) and [Caddy](/proxy/caddy) proxies is coming: until then, a host routed
+  through one of those keeps reaching its backend while it has a status.
+</Note>
+
+## Which names can have one
+
+Plain DNS can't show a page: it only hands out addresses. So only names a proxy serves can have a
+status:
+
+- the name of a **proxied record** (see [Proxied records](/proxy/overview)), or
+- a **router's host** on one of the proxies (see [Routing](/proxy/routing)).
+
+DNZ refuses a status for a name no proxy serves, and says so. `*.example.com` covers one label below
+`example.com` (`app.example.com`, not `a.b.example.com`). When a host has a status of its own and a
+wildcard covers it too, its own status wins. A host has at most one status.
+
+## Statuses
+
+| Status | Code | What visitors see |
+| --- | --- | --- |
+| `maintenance` | 503 | **Down for maintenance**: the site is down for scheduled maintenance and will be back soon |
+| `coming_soon` | 503 | **Coming soon**: the site isn't open yet |
+| `unreachable` | 502 | **Site unreachable**: the proxy can't reach the server behind the site |
+| `blocked` | 403 | **Access blocked**: access to the site has been blocked |
+| `unauthorized` | 401 | **Unauthorized**: you don't have permission to open the site |
+| `suspended` | 403 | **Site suspended**: the site has been suspended |
+| `rate_limited` | 429 | **Too many requests**: wait a moment and try again (`Retry-After: 60` by default) |
+| `geo_blocked` | 451 | **Not available in your region** |
+| `moved` | 301 | A redirect to the new address (`Location`), with a page linking to it |
+| `gone` | 410 | **Site retired**: the site has been shut down and won't be coming back (no Try again button) |
+
+Each status can get its own **title** and **message** instead of the usual ones (up to 120 and 2000
+characters; a message keeps its line breaks), and a **link** for the *More information* button, for
+example your status page or an announcement.
+
+## Setting one
+
+<Tabs>
+  <Tab title="Dashboard">
+    <Steps>
+      <Step title="Open Status pages">
+        Go to **Proxy → Status pages** and click **Set status**. Or, in a zone, open a proxied
+        record and pick **Status page…**: the same dialog opens with the record's name filled in.
+      </Step>
+      <Step title="Pick the host and the status">
+        The host field offers the names a proxy serves, with the proxies serving each.
+      </Step>
+      <Step title="Fine-tune it">
+        Optionally give a title, a message, a schedule, allowed addresses and a link. For **Moved**,
+        give the new address and whether to keep the path. The preview shows the page as visitors
+        will see it.
+      </Step>
+      <Step title="Save">
+        Every dnz-proxy node serving the host shows the page within seconds.
+      </Step>
+    </Steps>
+
+    The list shows each status with its state (*active*, *scheduled*, *ended*, *off*), its window
+    and the proxies serving it. A status can be turned off without removing it, and turned on again
+    later with everything it had.
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    dnz status-page hosts                                   # names a proxy serves, and their status
+    dnz status-page set app.example.com maintenance --for 2h --allow 203.0.113.7,10.0.0.0/8
+    dnz status-page off app.example.com                     # kept; `on` brings it back
+    dnz status-page clear app.example.com                   # remove it
+    ```
+
+    See [Status pages in the CLI](/cli/status-pages).
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST https://dns.example.com/api/status-pages \
+      -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+      -d '{"host":"app.example.com","kind":"maintenance","ends_at":"2026-10-26T01:00:00+07:00",
+           "allow_ips":["203.0.113.7"],"link":"https://status.example.com"}'
+    ```
+
+    See [Status pages API](/api/status-pages).
+  </Tab>
+</Tabs>
+
+## Schedule and Retry-After
+
+A status is on from the moment it is saved until it is turned off, unless it has a window:
+
+- **Starts at**: it waits until then (*scheduled*), and visitors reach the backend as usual.
+- **Ends at**: it stops on its own (*ended*). Until then, the page shows **Expected back** with that
+  time, and `Retry-After` counts down the seconds to it.
+
+Without an end time, `Retry-After` is only sent for `rate_limited` (60 seconds).
+
+Schedules are evaluated by the proxy nodes themselves, so a status starts and ends on time even
+while a node can't reach DNZ. A change made in DNZ reaches every dnz-proxy node within seconds.
+
+## Letting some visitors through
+
+**Allowed addresses** (IPs and CIDRs, up to 100) reach the backend as usual, for example your
+office network, or the team checking the site after maintenance:
+
+```text
+203.0.113.7, 10.0.0.0/8, 2001:db8::/32
+```
+
+The visitor's address is the one dnz-proxy sees, or the one a load balancer in front of it hands
+over (the entry point's **PROXY protocol from** and **Trusted forwarders**, see
+[Entry points](/proxy/dnz-proxy#entry-points)).
+
+## Moved
+
+`moved` needs the new address (`https://new.example.com`). Visitors get a `301` with
+`Location: <new address>`. With **keep path**, the path and query come along:
+`https://old.example.com/docs?page=2` goes to `https://new.example.com/docs?page=2`.
+
+## Automatic pages for the proxy's own failures
+
+dnz-proxy also shows a styled page when it can't get an answer from the backend, for every host and
+with no setup:
+
+| Code | Title | When |
+| --- | --- | --- |
+| 502 | **Bad gateway** | The backend refused the connection or answered with something that isn't HTTP |
+| 503 | **Service unavailable** | No server of the router's service is up |
+| 504 | **Gateway timeout** | The backend took too long to connect or answer |
+
+These can't be set by hand.
+
+## HTML, JSON or text
+
+The page comes in the form the visitor asks for with `Accept`:
+
+- Browsers (`text/html`) get the HTML page.
+- API clients (`Accept: application/json`) get JSON. `until`, `location` and `link` are only there
+  when they are set:
+
+  ```json
+  {
+    "status": 503,
+    "error": "maintenance",
+    "title": "Down for maintenance",
+    "message": "app.example.com is down for scheduled maintenance and will be back soon.",
+    "host": "app.example.com",
+    "request_id": "3f9c0e5a1b2d4c67",
+    "time": "2026-10-24 09:30:00 UTC",
+    "until": "2026-10-24 12:00:00 UTC",
+    "link": "https://status.example.com"
+  }
+  ```
+
+- Everything else gets plain text.
+
+Every answer has `Cache-Control: no-store`, `X-Robots-Tag: noindex` and `X-Request-Id`, so a cache
+never keeps the page after the status is lifted. **Proxy → Analytics** counts these visits under
+**Firewall rules** as `status maintenance` (and so on), and the request log shows them.
+
+## Who can set one
+
+- **Superadmins** manage every status.
+- Others manage statuses of hosts in **zones where they have `records.write`**, and see those of
+  zones they can view (`zones.read`).
+- A host in **none of DNZ's zones** (a router's host for a domain DNZ doesn't hold) is
+  superadmin-only.
+
+API tokens follow the same rule with their own permissions and zones. Every change is in the
+[audit log](/admin/audit-log) as `status_page.create`, `.update`, `.enable`, `.disable` or
+`.delete`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Status pages in the CLI" icon="terminal" href="/cli/status-pages">
+    Set, schedule and lift statuses from the terminal.
+  </Card>
+  <Card title="Status pages API" icon="code" href="/api/status-pages">
+    The endpoints and the fields of a status.
+  </Card>
+</CardGroup>

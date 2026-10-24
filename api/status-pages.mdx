@@ -1,0 +1,88 @@
+---
+title: "Status pages API"
+description: "Endpoints for setting, scheduling and lifting the status pages of proxied hosts."
+---
+
+For what status pages do, see [Status pages](/proxy/status-pages). The endpoints take a signed-in
+session or an API token (see [API overview](/api/overview)).
+
+<Note>
+  Superadmins manage every status. Others manage the statuses of hosts in zones where they have
+  `records.write`, and see those of zones they can read (`zones.read`). A host in none of DNZ's zones
+  is superadmin-only, so a token can't reach it.
+</Note>
+
+## Endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/status-pages` | `{"items": [...], "kinds": [...]}`: the statuses you can see, and the statuses to choose from |
+| `GET` | `/api/status-pages/hosts` | Hosts a status can be set on, with the proxies serving each |
+| `GET` | `/api/status-pages/{id}` | One status |
+| `POST` | `/api/status-pages` | Set a host's status (409 when it already has one) |
+| `PUT` | `/api/status-pages/{id}` | Replace a status (send every field) |
+| `DELETE` | `/api/status-pages/{id}` | Remove a status (204) |
+| `POST` | `/api/status-pages/{id}/enable` | Turn it on |
+| `POST` | `/api/status-pages/{id}/disable` | Turn it off; it is kept |
+| `GET` | `/api/status-pages/preview?kind=…` | The page as visitors would see it |
+
+## A status
+
+The body of `POST` and `PUT`:
+
+```json
+{
+  "host": "app.example.com",
+  "kind": "maintenance",
+  "title": "",
+  "message": "We're upgrading the database. Back by 01:00.",
+  "starts_at": "2026-10-25T22:00:00+07:00",
+  "ends_at": "2026-10-26T01:00:00+07:00",
+  "allow_ips": ["203.0.113.7", "10.0.0.0/8"],
+  "link": "https://status.example.com",
+  "redirect_to": "",
+  "keep_path": false,
+  "enabled": true
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `host` | The host, e.g. `app.example.com` or `*.example.com` (one label below). A proxy must serve it |
+| `kind` | `maintenance`, `coming_soon`, `unreachable`, `blocked`, `unauthorized`, `suspended`, `rate_limited`, `geo_blocked`, `moved` or `gone` |
+| `title`, `message` | Instead of the usual ones (up to 120 and 2000 characters); empty for the usual ones |
+| `starts_at`, `ends_at` | RFC 3339, or `null`. Stored in UTC; `ends_at` can't be in the past |
+| `allow_ips` | IPs and CIDRs that reach the backend as usual (up to 100) |
+| `link` | The *More information* button (`http://` or `https://`) |
+| `redirect_to` | `moved`: the new address (required for it) |
+| `keep_path` | `moved`: keep the path and query |
+| `enabled` | Default `true` |
+
+Answers add `id`, `zone_id`, `zone`, `state` (`active`, `scheduled`, `ended` or `off`), `code`,
+`label`, `retry_after` (seconds right now, or `null`), `proxies` (`[{"id", "name"}]`, the proxies
+serving the host), `updated_by`, `created_at` and `updated_at`.
+
+`GET /api/status-pages/hosts` answers `{"items": [{"host", "zone_id", "zone", "proxies"}]}`. Each
+entry of `kinds` has `kind`, `label`, `code`, `title` and `message` (`{host}` is filled in on the
+page).
+
+## Example
+
+```bash
+curl -X POST https://dns.example.com/api/status-pages \
+  -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+  -d '{"host":"app.example.com","kind":"maintenance","ends_at":"2026-10-26T01:00:00+07:00",
+       "allow_ips":["203.0.113.7"],"link":"https://status.example.com"}'
+```
+
+## Preview
+
+`GET /api/status-pages/preview` renders the page with `kind` and, optionally, `host`, `title`,
+`message`, `link`, `redirect_to`, `ends_at` and `proxy`. It answers HTML, JSON or text by `Accept`,
+like the proxy does.
+
+## Errors
+
+Errors come back as `{"error": "…"}`: `400` for a name no proxy serves or a field that doesn't check
+out, `403` without the permission, `404` for a status you can't see, `409` when the host already has
+a status.

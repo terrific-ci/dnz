@@ -19,6 +19,8 @@ Traefik would get), and adds what DNZ can do because it controls the proxy:
 - **Analytics and request logs** for every proxied hostname.
 - **Caching**, a **firewall**, and an **"under attack"** challenge as middlewares.
 - **TCP and UDP** routing.
+- **Status pages**: switch a host to maintenance, blocked, moved and more, and every node shows
+  visitors a styled page instead of the backend. See [Status pages](/proxy/status-pages).
 
 <Note>
   Proxying is off by default. Turn it on under **Settings → Proxy** (or with `DNZ_PROXY_BACKEND=on`),
@@ -522,6 +524,18 @@ network and valid for **Valid for**, then lets them through.
 Counters are kept per minute for two days and per hour for 90 days. Each node sends up to **Logged
 per second, per node** log lines; errors, blocks and challenges get ten times as many. Logs are kept
 for 7 days by default.
+
+## Status pages
+
+A host a proxy serves can be switched to a status (**Proxy → Status pages**, **Status page…** on a
+proxied record, or `dnz status-page`). Every node then answers its visitors with a status page and
+the matching code (503 maintenance, 403 blocked, 301 moved, and so on) instead of the backend;
+allowed addresses still reach it. Nodes get the change within seconds and keep the schedule
+themselves.
+
+Without any setup, nodes also show styled pages for their own failures: 502 bad gateway, 503 when no
+server is up, 504 gateway timeout. Browsers get HTML, `Accept: application/json` gets JSON, anything
+else plain text. See [Status pages](/proxy/status-pages).
 
 ## Troubleshooting
 

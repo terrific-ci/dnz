@@ -1,0 +1,77 @@
+---
+title: "Status pages"
+description: "Switch a proxied host to maintenance, blocked, moved and more from the terminal, with schedules and allowed addresses."
+---
+
+These commands match **Proxy → Status pages** in the dashboard: a host a proxy serves shows its
+visitors a status page instead of the backend. For what the statuses do, see
+[Status pages](/proxy/status-pages).
+
+`dnz status-pages` is an alias for `dnz status-page`. Hosts are named as they are, e.g.
+`app.example.com` or `*.example.com`.
+
+## Permissions
+
+- Superadmins manage every host.
+- Others manage the hosts in zones where they have `records.write`, and see those of zones they can
+  read.
+- A host in none of DNZ's zones is superadmin-only.
+
+## Finding a host
+
+```bash
+dnz status-page kinds                                   # the statuses, their codes and titles
+dnz status-page hosts                                   # names a proxy serves, the proxies, and their status
+```
+
+Only names a proxy serves can have a status: proxy the record, or add a route with
+[`dnz proxy route`](/cli/proxy#proxy-routes), first.
+
+## Setting a status
+
+```bash
+dnz status-page set app.example.com maintenance --for 2h --allow 203.0.113.7,10.0.0.0/8
+dnz status-page set app.example.com maintenance --from "2026-10-25 22:00" --until "2026-10-26 01:00" \
+  --message "We're upgrading the database. Back by 01:00." --link https://status.example.com
+dnz status-page set old.example.com moved --to https://new.example.com --keep-path
+dnz status-page set beta.example.com coming_soon --off  # saved, but off for now
+```
+
+The status is one of `maintenance`, `coming_soon`, `unreachable`, `blocked`, `unauthorized`,
+`suspended`, `rate_limited`, `geo_blocked`, `moved` or `gone`.
+
+| Flag | Meaning |
+| --- | --- |
+| `--title` | Instead of the status's usual title |
+| `--message` | Instead of the status's usual message |
+| `--from` | Starts at this time (default: now) |
+| `--until` | Ends at this time; drives `Retry-After` and "Expected back" (default: until turned off) |
+| `--for` | Ends this long after it starts: `30m`, `2h`, `1d` (instead of `--until`) |
+| `--allow` | IPs and CIDRs that reach the backend as usual, comma-separated |
+| `--link` | The *More information* button, e.g. `https://status.example.com` |
+| `--to` | `moved`: the new address |
+| `--keep-path` | `moved`: keep the path and query (`/a?b` → `<to>/a?b`) |
+| `--off` | Save it turned off |
+
+Times are RFC 3339 (`2026-10-25T22:00:00+07:00`) or `"YYYY-MM-DD HH:MM"` in this machine's time
+zone. `--for` counts from `--from`, or from now.
+
+<Note>
+  `set` creates the host's status, or **replaces** the one it has with exactly what the command
+  gives. Options left out go back to their defaults (the usual title and message, no window, nobody
+  allowed through), and the status is on unless `--off` is given.
+</Note>
+
+## Watching, turning off and removing
+
+```bash
+dnz status-page list                                    # host, status, state, schedule, proxies, allowed
+dnz status-page show app.example.com
+dnz status-page off app.example.com                     # kept; `on` brings it back
+dnz status-page on app.example.com
+dnz status-page clear app.example.com                   # remove it (`rm`)
+```
+
+**State** is `active` (visitors see the page), `scheduled` (starts later), `ended` (its window is
+over) or `off`. `list` and `show` print times in this machine's time zone. `clear` asks first;
+`--yes` skips the question (needed without a terminal), and `--json` prints the API's answers.
