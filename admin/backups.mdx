@@ -9,7 +9,7 @@ replication, proxies, notification providers, zone history and the audit log, pl
 database and the local dnz-proxy's state. Archives go to a folder, S3-compatible storage or an SFTP
 server, encrypted if you like, and old ones are pruned by a retention policy.
 
-A backup restores onto SQLite, Postgres or MySQL, whichever it was made on, and onto a newer DNZ:
+A backup restores onto SQLite, Postgres, MySQL or Redis, whichever it was made on, and onto a newer DNZ:
 older backups are migrated forward. A dry run lists what a restore would change first, and one zone
 can be restored on its own.
 
@@ -183,7 +183,7 @@ once, then start them all.
 
 ### Across databases and versions
 
-A backup from SQLite restores onto Postgres or MySQL and back. The rows go through a staging SQLite
+A backup from SQLite restores onto Postgres, MySQL or Redis and back. The rows go through a staging SQLite
 database brought to the backup's schema version and migrated forward to this DNZ's, then into the
 database DNZ runs on; new ids continue after the restored ones. A backup from a newer DNZ is refused:
 update DNZ first.

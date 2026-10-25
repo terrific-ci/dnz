@@ -131,8 +131,8 @@ They apply until metrics are saved in the dashboard or with `dnz settings metric
 
 | File key | Environment | Default | Description |
 | --- | --- | --- | --- |
-| `database.url` | `DNZ_DATABASE_URL` | `sqlite://dnz.db` | The database: `sqlite://FILE`, `postgres://…` or `mysql://…`. See [Database](/deploy/database) |
-| `database.data_dir` | `DNZ_DATA_DIR` | next to the SQLite file | Files kept besides the database (the GeoIP database, the local dnz-proxy's state). With Postgres or MySQL: the working directory |
+| `database.url` | `DNZ_DATABASE_URL` | `sqlite://dnz.db` | The database: `sqlite://FILE`, `postgres://…`, `mysql://…` or `redis://…`. See [Database](/deploy/database) |
+| `database.data_dir` | `DNZ_DATA_DIR` | next to the SQLite file | Files kept besides the database (the GeoIP database, the local dnz-proxy's state). With Postgres, MySQL or Redis: the working directory |
 | `sessions.ttl_hours` | `DNZ_SESSION_TTL_HOURS` | `168` | How long a sign-in lasts |
 | `sessions.idle_hours` | `DNZ_SESSION_IDLE_HOURS` | `72` | Sessions unused this long are signed out (`0` = never) |
 

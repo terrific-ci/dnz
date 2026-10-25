@@ -1,6 +1,6 @@
 ---
 title: "Database"
-description: "Keep DNZ's data in SQLite, Postgres or MySQL, and move an existing install from SQLite."
+description: "Keep DNZ's data in SQLite, Postgres, MySQL or Redis / Valkey, and move an existing install from SQLite."
 ---
 
 DNZ keeps zones, records, users, settings and logs in one database. Which one is picked by the
@@ -11,12 +11,13 @@ scheme of `database.url` (`DNZ_DATABASE_URL`):
 | **SQLite** (default) | `sqlite:///var/lib/dnz/dnz.db` | Most installations: one file, nothing else to run or back up separately |
 | **Postgres** 13 or newer | `postgres://dnz:secret@db.internal:5432/dnz` | Large installations: many zones and records, busy query logs, a database team with its own backups, replicas and monitoring |
 | **MySQL** 8.0.13 or newer | `mysql://dnz:secret@db.internal:3306/dnz` | The same, where MySQL is what you run. MariaDB is not supported |
+| **Redis** 6.2+ or **Valkey** | `redis://:secret@cache.internal:6379` | A [cluster](/deploy/cluster) where Redis is what you run: each server keeps a copy and answers from it, Redis holds the truth. Query logs stay on each server |
 
-DNZ works the same on all three; only where the data is kept changes. It creates and upgrades its
+DNZ works the same on all of them; only where the data is kept changes. It creates and upgrades its
 own tables at startup, so give it an empty database and a user that may create tables in it.
 
 <Note>
-  Several DNZ servers can share one Postgres or MySQL database and work as a
+  Several DNZ servers can share one Postgres, MySQL or Redis database and work as a
   [cluster](/deploy/cluster): a change on any of them reaches the others within a second. SQLite is
   one server. For nameservers that keep their own database (or aren't DNZ), use
   [replication](/dns/replication).
@@ -87,6 +88,41 @@ own tables at startup, so give it an empty database and a user that may create t
 - DNZ's connections use `ANSI_QUOTES`, `PIPES_AS_CONCAT` and `NO_BACKSLASH_ESCAPES`, set per
   connection; the server's own `sql_mode` can stay as it is. Tables are InnoDB with `utf8mb4`.
 
+## Redis or Valkey
+
+<Steps>
+  <Step title="Point DNZ at it">
+    ```bash /etc/dnz/dnz.env
+    DNZ_DATABASE_URL='redis://:secret@cache.internal:6379/0'
+    ```
+  </Step>
+  <Step title="Check and start">
+    ```bash
+    dnz config check
+    ```
+
+    It prints `database: Redis at redis://:***@cache.internal:6379/0`. Start DNZ: the first server
+    on an empty Redis starts the data there from its own (migrated) copy; the next ones start from
+    the snapshot it saves.
+  </Step>
+</Steps>
+
+| URL | For |
+| --- | --- |
+| `redis://:PASSWORD@host:6379/0` | One Redis or Valkey server (`valkey://` means the same) |
+| `rediss://host:6380` | TLS (`#insecure` skips the certificate check) |
+| `redis://:PASSWORD@10.0.0.1:26379,10.0.0.2:26379?sentinel=mymaster` | Sentinels watching the master `mymaster`; the password is the master's |
+| `redis://10.0.0.1:7000,10.0.0.2:7000,10.0.0.3:7000` | A Redis Cluster (or one node with `?cluster`) |
+
+- `?namespace=dnz` (the default) starts every key (`{dnz}:…`): give each install its own when they
+  share a Redis. In a Redis Cluster all of them land in one slot.
+- `?cache=/var/lib/dnz/dnz-redis.db` is where this server's copy goes. The default is
+  `dnz-redis-<namespace>.db` in the working directory (`/data` in the Docker image).
+- Turn persistence on (`appendonly yes`). Without it, a Redis restart loses the data there, and the
+  servers start over from the copy of the first one that notices.
+
+How it works, and what is different from Postgres and MySQL: [Cluster → On Redis or Valkey](/deploy/cluster#on-redis-or-valkey).
+
 ## Connections and files
 
 - Characters such as `@`, `:` or `/` in the password go percent-encoded: `p%40ss` for `p@ss`.
@@ -149,7 +185,7 @@ POSTGRES_PASSWORD=change-me docker compose up -d
 
 ## Move an existing install from SQLite
 
-`dnz db migrate-from-sqlite` copies a SQLite install into an empty Postgres or MySQL database. It
+`dnz db migrate-from-sqlite` copies a SQLite install into an empty Postgres, MySQL or Redis database. It
 copies every table in an order that keeps the foreign keys intact, sets the id sequences past the
 copied ids, and compares the row counts at the end.
 
@@ -204,7 +240,8 @@ Start DNZ with database.url (DNZ_DATABASE_URL) set to postgres://dnz:***@db.inte
 
 ## Backups
 
-With Postgres or MySQL, back up the database with its own tools:
+With Redis, use DNZ's own [backups](/admin/backups): Redis holds the data in its own form. With
+Postgres or MySQL, back up the database with its own tools:
 
 ```bash
 pg_dump -Fc dnz > dnz-$(date +%F).dump

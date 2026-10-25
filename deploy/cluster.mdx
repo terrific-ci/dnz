@@ -1,15 +1,16 @@
 ---
 title: "Cluster"
-description: "Run two or more DNZ servers on one Postgres or MySQL database, behind NS records or anycast."
+description: "Run two or more DNZ servers on one Postgres, MySQL or Redis / Valkey database, behind NS records or anycast."
 ---
 
-Several DNZ servers can share one **Postgres or MySQL** database and answer with the same zones and
+Several DNZ servers can share one **Postgres, MySQL or Redis / Valkey** database and answer with the same zones and
 settings. A change made on any of them (dashboard, API, `dnz` CLI, DNS UPDATE, a Caddy or Traefik
 sync, an ACME challenge) reaches the others within a second. Clients reach them through plain NS
 records or one anycast address, and any of them serves the dashboard and the API.
 
 There is nothing to switch on: every DNZ server that uses the same `database.url` joins. SQLite stays
-one server; move to [Postgres or MySQL](/deploy/database) first.
+one server; move to [Postgres, MySQL or Redis](/deploy/database) first. Redis works differently
+underneath: see [On Redis or Valkey](#on-redis-or-valkey).
 
 <Note>
   A cluster shares everything: zones, users, filtering, forwarding, proxies, settings and query logs.
@@ -220,6 +221,40 @@ sessions. The `dnz` CLI can talk to any node.
 - `GET /api/cluster` returns it as JSON; `GET /api/health` on each node is the liveness check for
   load balancers and Docker.
 
+## On Redis or Valkey
+
+With `database.url` set to `redis://…` (or `rediss://`, `valkey://`, `valkeys://`), each node keeps
+the whole database in a SQLite file of its own, the **copy**, and Redis holds the truth:
+
+- **Reads** run on the copy, on the node itself: no round trip to Redis.
+- **Writes** to shared data take a cluster-wide write lock in Redis (a key with a 10 second TTL,
+  renewed while held, so a node that dies lets go), bring the copy up to date, and record the rows
+  the transaction changed with SQLite's session extension. Before the commit, those changes go into
+  a Redis stream as one entry, accepted only while the lock is still this node's.
+- **Every node follows the stream** and applies the other nodes' entries to its copy, usually within
+  a few milliseconds. The change feed and the leader work as on the other databases; the lease is a
+  Redis key with a TTL, on Redis's clock.
+- **Snapshots.** The leader saves the copy to Redis every 10 minutes (or after 5,000 entries) and
+  trims the stream to the snapshot before. A new node, or one away for longer, starts from the
+  snapshot and goes on from the stream.
+
+What is different from Postgres and MySQL:
+
+- **Query and request logs stay on the node that logged them**, since Redis keeps everything in
+  memory. The Overview's counts and charts are shared; **DNS → Query Logs** and dnz-proxy's request
+  logs show the node you're on.
+- **Memory**: the snapshot plus up to two snapshot intervals of changes, a few megabytes for a
+  typical install. Leave room for two snapshots: the new one is written before the old one goes.
+- **Writes need Redis.** A node that can't reach it keeps answering DNS, serving the dashboard from
+  its copy and logging queries; changes to shared data fail at once with "Redis isn't answering"
+  and work again within seconds of Redis coming back.
+- **Failover**: Redis replicates asynchronously, so a Sentinel failover can lose the last changes
+  the old master hadn't passed on. A node whose copy holds such a change notices (its copy is ahead
+  of the stream) and loads the snapshot, so all nodes agree again.
+- **Upgrades**: the first node on a newer DNZ migrates the data under the write lock and saves it as
+  the snapshot. Nodes still on the older version keep answering but can't write until they are
+  updated; a DNZ older than the data doesn't start.
+
 ## Upgrading
 
 Upgrade one node at a time. The first one on the new version upgrades the database's tables when it
@@ -230,7 +265,7 @@ soon after.
 ## Good to know
 
 - **Query logs and statistics** are in the shared database: the Overview and the logs show the
-  traffic of all nodes together.
+  traffic of all nodes together (on Redis, the logs show the node you're on).
 - **GeoIP**: each node keeps its own GeoIP database in its data folder; automatic updates download
   it on every node.
 - **dnz-proxy**: each dnz-proxy node streams its configuration from the DNZ node it connects to.
@@ -249,4 +284,7 @@ soon after.
 | A node is **down** but answers DNS | It can't write its heartbeat. It keeps answering with what it loaded last; fix its database connection |
 | No leader for more than 20 seconds | No node can write to the database; check the database |
 | Two nodes with the same id | Each node needs its own `DNZ_NODE_ID` or data folder. A copied data folder has the same `node-id` file: delete it on the copy |
-| A change shows on one node only | Both must use the same `database.url` (`dnz config check` on each) |
+| A change shows on one node only | Both must use the same `database.url` (`dnz config check` on each); on Redis, the same `namespace` too |
+| Redis: writes fail with "Redis isn't answering" | The node can't reach Redis: check the address, password and firewall (`redis-cli -h … ping` from the node). DNS and reads go on meanwhile |
+| Redis: "another server runs a newer DNZ" | A node on a newer version migrated the data: update this one |
+| Redis: a node keeps loading the snapshot | It was away longer than the stream reaches back, or Redis lost changes in a failover; it settles by itself |

@@ -30,11 +30,12 @@ order and every setting.
 dnz -c /srv/dnz/dnz.toml config check
 ```
 
-## Move to Postgres or MySQL
+## Move to Postgres, MySQL or Redis
 
 ```bash
 dnz db migrate-from-sqlite /var/lib/dnz/dnz.db                           # into database.url
 dnz db migrate-from-sqlite /var/lib/dnz/dnz.db --to postgres://dnz:secret@db.internal/dnz
+dnz db migrate-from-sqlite /var/lib/dnz/dnz.db --to 'redis://:secret@cache.internal:6379'
 ```
 
 Unlike the other commands, this one works on the databases directly, on the machine DNZ runs on.
@@ -42,6 +43,7 @@ Stop DNZ first. It brings the SQLite file up to this version's schema, creates D
 target and copies every table, printing the rows of each. The target must have no users or zones
 yet. Afterwards the ids continue after the copied ones and the row counts are compared. Keep the
 SQLite file as a backup, set `database.url` / `DNZ_DATABASE_URL` to the new database and start DNZ.
+On Redis it also saves the first snapshot, which new servers start from.
 See [Database](/deploy/database#move-an-existing-install-from-sqlite).
 
 ## Health check

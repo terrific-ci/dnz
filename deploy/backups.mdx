@@ -29,7 +29,7 @@ sqlite3 /var/lib/dnz/dnz.db ".backup '/root/dnz-$(date +%F).db'"
   `.backup`, or stop DNZ first.
 </Warning>
 
-With Postgres or MySQL, use their own tools (`pg_dump`, `mysqldump`). See
+With Postgres or MySQL, use their own tools (`pg_dump`, `mysqldump`); with Redis, DNZ's own backups. See
 [Database](/deploy/database#backups). To restore such a copy, stop DNZ, put it back in place of the
 database (for SQLite, remove any `dnz.db-wal` and `dnz.db-shm` next to it), then start DNZ again.
 
