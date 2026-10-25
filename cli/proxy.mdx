@@ -22,7 +22,9 @@ dnz proxy caddy edge-2                            # what the Caddy is sent, and 
 ```
 
 `on` and `off` match the switch under **Settings → Proxy**; with `DNZ_PROXY_BACKEND` set, `show` says
-so and the switch can't change. `add` takes:
+so and the switch can't change. A proxy declared with `DNZ_PROXY_SEED_*` shows **environment** under
+**SET BY**: the fields set there can't be changed, and it can't be deleted or get another token (see
+[DNZ and Traefik in one compose file](/proxy/compose)). `add` takes:
 
 | Option | What it does |
 | --- | --- |
@@ -32,6 +34,29 @@ so and the switch can't change. `add` takes:
 
 See [Connecting Traefik](/proxy/traefik), [Connecting Caddy](/proxy/caddy) and
 [dnz-proxy](/proxy/dnz-proxy).
+
+## Records from Traefik's routers
+
+What a proxy's **From Traefik** tab does: DNS records for the hostnames of the Traefik's own routers
+(Docker labels, Swarm, Kubernetes, files, …). See [Records from Traefik's routers](/proxy/traefik-records).
+`auto` is short for `auto-records`.
+
+```bash
+dnz proxy auto-records show edge                  # on/off, the last read, every hostname and what DNZ did with it
+dnz proxy auto-records on edge                    # turn it on (needs the proxy's Traefik API) and read Traefik now
+dnz proxy auto-records off edge                   # turn it off; the records made so far stay
+dnz proxy auto sync edge                          # read Traefik now instead of within 30 seconds
+dnz proxy auto zones edge                         # zones the routers' hostnames need that DNZ doesn't have
+dnz proxy auto zones edge --create -d default     # make them in a division and turn it on
+dnz proxy auto release edge app.example.com       # stop managing a name; its records stay as manual ones
+dnz proxy auto manage edge app.example.com        # manage a released name again
+dnz proxy auto forget edge old.example.com        # delete an orphaned name and the records DNZ made for it
+```
+
+In `show`, **STATUS** is `created`, `exists`, `no_zone`, `orphaned` or `released` (see
+[What DNZ leaves alone](/proxy/traefik-records#what-dnz-leaves-alone)). Routers whose rule has no
+hostname DNS can answer are listed below it, with the reason. `on` and `off` are refused when
+`DNZ_PROXY_SEED_AUTO_RECORDS` sets it.
 
 ## Proxy routes
 

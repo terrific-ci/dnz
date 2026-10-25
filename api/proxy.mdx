@@ -94,6 +94,10 @@ auth. Add `"digest": true` and an optional `"realm"` for digest auth.
 | `POST` | `/api/proxies/{id}/auto-records/hosts/{host}/manage` | Manage a released name again |
 | `DELETE` | `/api/proxies/{id}/auto-records/hosts/{host}` | Delete an orphaned name's records (409 while a router routes it) |
 
+For a proxy declared with `DNZ_PROXY_SEED_*`, a `PUT /api/proxies/{id}` that changes a field in
+`locked_fields`, a `DELETE`, a new token and, when `DNZ_PROXY_SEED_AUTO_RECORDS` is set, the
+`auto-records` switch are refused with 400, naming the setting.
+
 A host has `host`, `zone_id`, `zone`, `routers`, `records` (how many DNZ keeps) and `status`:
 
 | `status` | Meaning |
@@ -157,6 +161,7 @@ Responses also carry:
 | `status` | `pending`, `approved` or `ignored` |
 | `detected_ip`, `detected_name` | How a Traefik or Caddy with the connect key is recognized |
 | `has_token` | Whether the proxy has a token of its own |
+| `locked_fields` | In `GET /api/settings/proxy`: the fields `DNZ_PROXY_SEED_*` sets (`name`, `kind`, `token`, `ipv4`, `traefik_api_url`, `auto_records`, …); empty for other proxies |
 | `last_seen_at`, `last_seen_ip` | When and from where it last fetched its configuration |
 
 ### A router

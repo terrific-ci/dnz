@@ -1,0 +1,197 @@
+---
+title: "DNZ and Traefik in one compose file"
+description: "Start DNZ and Traefik from one docker-compose.yml, already connected, with DNS records for your containers and certificates through Cloudflare DNS-01, without opening the dashboard."
+---
+
+DNZ and a Traefik can start together from one `docker-compose.yml` and be connected from the first
+start. Nothing is set up in the dashboard:
+
+- DNZ's environment **declares the proxy**, with a token you pick. The same token goes into
+  Traefik's configuration, so Traefik connects from wherever it calls, without the connect key or
+  an approval.
+- `DNZ_ZONES` makes the **zone** at the first start.
+- [Records from Traefik's routers](/proxy/traefik-records) is turned on, so every container with
+  Traefik labels gets its **DNS record** from DNZ.
+- Traefik gets its **certificates** itself, here a Let's Encrypt wildcard through Cloudflare DNS-01.
+
+The example below is split-horizon: the domain stays on Cloudflare, devices on your LAN resolve
+`*.home.example.com` through DNZ to Traefik, and Cloudflare is only used for the certificate. The
+same file is in the repository as `deploy/traefik-stack/docker-compose.yml`.
+
+## The file
+
+Replace the values marked `CHANGE`. Make the proxy token with:
+
+```bash
+echo "dnzp_$(openssl rand -hex 24)"
+```
+
+and put the same value in both places.
+
+```yaml docker-compose.yml
+services:
+  dnz:
+    image: terrificci/dnz:latest
+    restart: unless-stopped
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      # No 8080: the dashboard is served through Traefik (labels below).
+    volumes:
+      - dnz-data:/data
+    environment:
+      TZ: Asia/Jakarta
+      DNZ_INSTANCE_NAME: dnz
+      DNZ_ADMIN_USERNAME: admin
+      DNZ_ADMIN_PASSWORD: change-me-please                       # CHANGE
+      DNZ_ADVERTISE: 192.168.1.10                                # CHANGE: this host's LAN address
+      DNZ_TRUSTED_PROXIES: 172.16.0.0/12
+      DNZ_PROXY_BACKEND: "on"
+      DNZ_ZONES: home.example.com                                # CHANGE
+      DNZ_PROXY_SEED_NAME: edge
+      DNZ_PROXY_SEED_KIND: traefik
+      DNZ_PROXY_SEED_IPV4: 192.168.1.10                          # CHANGE: where devices reach Traefik
+      DNZ_PROXY_SEED_TOKEN: dnzp_9f2c4e7a1b3d5f6e8a0c2b4d6f8e0a1c3b5d   # CHANGE (same as below)
+      DNZ_PROXY_SEED_TRAEFIK_API: http://traefik:8080
+      DNZ_PROXY_SEED_AUTO_RECORDS: "true"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dnz.rule=Host(`dnz.home.example.com`)   # CHANGE
+      - traefik.http.services.dnz.loadbalancer.server.port=8080
+
+  traefik:
+    image: traefik:v3.7
+    restart: unless-stopped
+    depends_on:
+      dnz:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CF_DNS_API_TOKEN: cloudflare-token                         # CHANGE: Zone:Read + DNS:Edit
+    command:
+      - --log.level=INFO
+      - --api.insecure=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls.certresolver=le
+      - --entrypoints.websecure.http.tls.domains[0].main=home.example.com     # CHANGE
+      - --entrypoints.websecure.http.tls.domains[0].sans=*.home.example.com   # CHANGE
+      - --certificatesresolvers.le.acme.email=you@example.com                 # CHANGE
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53
+      - --providers.docker.exposedByDefault=false
+      - --providers.http.endpoint=http://dnz:8080/api/proxy/traefik
+      - --providers.http.pollInterval=5s
+      - --providers.http.headers.Authorization=Bearer dnzp_9f2c4e7a1b3d5f6e8a0c2b4d6f8e0a1c3b5d   # CHANGE (same as above)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+
+  whoami:
+    image: traefik/whoami:v1.10
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.whoami.rule=Host(`whoami.home.example.com`)   # CHANGE
+
+volumes:
+  dnz-data:
+  letsencrypt:
+```
+
+```bash
+docker compose up -d
+```
+
+Then point the LAN's devices (or the router's DHCP) at this host for DNS. See
+[Pointing clients at DNZ](/deploy/clients).
+
+## What happens at start
+
+<Steps>
+  <Step title="DNZ sets itself up">
+    DNZ creates the admin, makes `home.example.com` and adds the proxy `edge`: approved, recognized
+    by the token, with Traefik's API and records from its routers turned on.
+  </Step>
+  <Step title="Traefik connects">
+    Traefik waits until DNZ is healthy, then polls DNZ with the token and gets the routers set up in
+    DNZ. The proxy's card under **Proxy** shows it connected, with a **from environment** badge.
+  </Step>
+  <Step title="Containers get their records">
+    Every 30 seconds DNZ reads Traefik's routers. `whoami.home.example.com` and `dnz.home.example.com`
+    get A records pointing at `192.168.1.10`.
+  </Step>
+  <Step title="Traefik gets the certificate">
+    Traefik asks Let's Encrypt for one wildcard certificate for `*.home.example.com` through
+    Cloudflare DNS-01. Every new container is covered by it, so no request per container.
+  </Step>
+</Steps>
+
+Open the dashboard at `https://dnz.home.example.com` and sign in as `admin` with the password from
+the file. DNZ asks for a new one.
+
+## Things to get right
+
+<AccordionGroup>
+  <Accordion title="Use a subdomain as DNZ's zone">
+    On the LAN, DNZ answers for the whole zone. Give it `home.example.com`, not `example.com`, or names
+    that only exist on Cloudflare stop resolving on the LAN.
+  </Accordion>
+  <Accordion title="Check the challenge on public resolvers">
+    `--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53` makes Traefik check
+    the TXT record on public resolvers. Without it, Traefik may ask DNZ, which doesn't have the
+    challenge, and the certificate fails.
+  </Accordion>
+  <Accordion title="Set the resolver on the entry point">
+    `--entrypoints.websecure.http.tls.certresolver=le` gives every router on `websecure` its certificate,
+    DNZ's and the labels' alike, so none has to name it. `DNZ_PROXY_SEED_CERT_RESOLVER` can also set
+    the resolver of DNZ's own routers.
+  </Accordion>
+  <Accordion title="The same token twice">
+    Compose can't join a YAML anchor with the `Bearer ` prefix, so the token is written twice. To keep
+    it out of the file, use `${EDGE_TOKEN}` in both places and set `EDGE_TOKEN` in the shell that runs
+    `docker compose`.
+  </Accordion>
+  <Accordion title="DNZ as the domain's public nameserver">
+    When DNZ itself answers the internet for the domain, the challenge record goes into DNZ instead of
+    Cloudflare: use lego's `httpreq` provider against DNZ. See
+    [ACME DNS-01](/api/acme-ddns#acme-dns-01-httpreq).
+  </Accordion>
+</AccordionGroup>
+
+## The settings
+
+`DNZ_ZONES` names zones, comma-separated, that DNZ makes at start when they don't exist yet, in the
+first division. They are never changed or deleted after that.
+
+`DNZ_PROXY_SEED_*` declares one Traefik or Caddy proxy. DNZ writes it at every start: it adds it when
+there is no proxy of that name, else it writes the fields that are set over the one there.
+
+| Environment | File key | Description |
+| --- | --- | --- |
+| `DNZ_PROXY_SEED_NAME` | `proxy_seed.name` | The proxy's name; required when any of the others is set |
+| `DNZ_PROXY_SEED_KIND` | `proxy_seed.kind` | `traefik` (default) or `caddy` |
+| `DNZ_PROXY_SEED_IPV4`, `DNZ_PROXY_SEED_IPV6` | `proxy_seed.ipv4`, `proxy_seed.ipv6` | Where visitors reach it; DNS answers with these. At least one |
+| `DNZ_PROXY_SEED_TOKEN` | `proxy_seed.token` | Required. The token the proxy sends: `dnzp_` and at least 32 letters, digits, `-` or `_`. A new value replaces the old one at the next start |
+| `DNZ_PROXY_SEED_TRAEFIK_API` | `proxy_seed.traefik_api` | Traefik's API, so DNZ can read its routers and entry points. Traefik only |
+| `DNZ_PROXY_SEED_HTTP_ENTRYPOINT`, `DNZ_PROXY_SEED_HTTPS_ENTRYPOINT` | `proxy_seed.http_entrypoint`, `proxy_seed.https_entrypoint` | Entry points of the routers DNZ sends (default `web` and `websecure`) |
+| `DNZ_PROXY_SEED_CERT_RESOLVER` | `proxy_seed.cert_resolver` | Certificate resolver of DNZ's HTTPS routers |
+| `DNZ_PROXY_SEED_AUTO_RECORDS` | `proxy_seed.auto_records` | `true` or `false`: [records from Traefik's routers](/proxy/traefik-records). `true` needs `DNZ_PROXY_SEED_TRAEFIK_API` |
+| `DNZ_ZONES` | `seed.zones` | Zones made at start when missing |
+
+A wrong value stops DNZ at start with the setting's name, so it never runs half set up. In a cluster,
+give every node the same settings.
+
+## In the dashboard
+
+The fields the environment sets are read-only in the dashboard, the API and the CLI. The proxy's card
+says **from environment**, the edit form greys those fields out, and the proxy can't be deleted or get
+another token there. Fields the environment leaves alone (HTTPS redirect, health checks, the Traefik
+API's password, …) stay editable, and so do routers, services and middlewares.
+
+To manage the proxy in the dashboard again, remove the `DNZ_PROXY_SEED_*` settings and restart. The
+proxy stays as it is.

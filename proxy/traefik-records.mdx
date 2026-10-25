@@ -35,6 +35,10 @@ Traefik's addresses directly.
   </Step>
 </Steps>
 
+From the terminal: `dnz proxy auto-records on edge` (see [CLI → Proxy](/cli/proxy#records-from-traefiks-routers)).
+In a compose file, `DNZ_PROXY_SEED_AUTO_RECORDS=true` turns it on at start, and the switch is then
+read-only (see [DNZ and Traefik in one compose file](/proxy/compose)).
+
 ## Which routers count
 
 - DNZ's own routers (`dnz-…`) and Traefik's internal ones (`@internal`) are left out, and so are

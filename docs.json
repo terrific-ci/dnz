@@ -110,6 +110,7 @@
               "proxy/caddy",
               "proxy/routing",
               "proxy/traefik-records",
+              "proxy/compose",
               "proxy/dnz-proxy",
               "proxy/certificates",
               "proxy/status-pages",

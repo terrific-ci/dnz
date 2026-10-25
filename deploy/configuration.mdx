@@ -110,6 +110,8 @@ See [Encrypted DNS](/dns/encrypted-dns).
 | File key | Environment | Default | Description |
 | --- | --- | --- | --- |
 | `proxy.backend` | `DNZ_PROXY_BACKEND` | – | `on` or `off` (`true` and `false` too; the old `traefik` and `dnz` mean on): proxying on or off. When set, the switch in the dashboard is read-only |
+| `seed.zones` | `DNZ_ZONES` | – | Zones (comma-separated) made at start when they don't exist yet |
+| `proxy_seed.*` | `DNZ_PROXY_SEED_*` | – | One Traefik or Caddy proxy declared in the environment, with a token you pick. See [DNZ and Traefik in one compose file](/proxy/compose#the-settings) |
 | – | `DNZ_PROXY_BIN` | next to `dnz`, then the `PATH` | The `dnz-proxy` binary DNZ runs itself |
 | – | `DNZ_ACME_CA_ROOTS` | – | PEM bundle of extra CA roots to trust for ACME directories (Pebble, step-ca) |
 

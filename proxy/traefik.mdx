@@ -16,6 +16,11 @@ already have.
   [Turning proxying on](/proxy/overview#turning-proxying-on).
 </Note>
 
+<Tip>
+  Starting DNZ and Traefik together? [DNZ and Traefik in one compose file](/proxy/compose) connects
+  them from the first start, with nothing to set up here.
+</Tip>
+
 ## Setting it up
 
 <Steps>
@@ -121,6 +126,9 @@ The address plus the name tell them apart.
 A proxy can get a token of its own: **⋯ → Use a token of its own**. It is shown once. With it, the
 proxy is recognized wherever it calls from, which suits a Traefik whose address changes. **Back to
 the connect key** turns the token off.
+
+A proxy declared with `DNZ_PROXY_SEED_*` uses the token from `DNZ_PROXY_SEED_TOKEN` instead; it can't
+get another one here. See [DNZ and Traefik in one compose file](/proxy/compose).
 
 ## Connection status
 
