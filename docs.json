@@ -137,6 +137,7 @@
             "group": "Administration",
             "pages": [
               "admin/access",
+              "admin/two-factor",
               "admin/audit-log",
               "admin/backups",
               "admin/settings",

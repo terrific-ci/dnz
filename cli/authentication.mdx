@@ -85,6 +85,30 @@ dnz login --server https://dnz.internal --ca-cert /etc/ssl/internal-ca.pem
 The path is saved with the session, so later commands trust it too. The public web roots stay
 trusted as well.
 
+## Two-factor sign-in
+
+With [two-factor sign-in](/admin/two-factor) on, `dnz login` asks for the code from your
+authenticator app (or a recovery code) after the password. In scripts, set `DNZ_OTP` next to
+`DNZ_PASSWORD`. Accounts with only passkeys can't sign in from the CLI: use an API token there.
+
+```bash
+dnz two-factor status              # app, passkeys, recovery codes left; whether a role requires it
+dnz two-factor totp enable         # shows the secret and the otpauth:// link, then asks for a code
+dnz two-factor totp disable
+dnz two-factor recovery-codes      # a new set; the old ones stop working
+dnz two-factor passkey list        # passkeys are added in the dashboard (they need a browser)
+dnz two-factor passkey rename 3 "YubiKey 5C"
+dnz two-factor passkey rm 3
+```
+
+Superadmins:
+
+```bash
+dnz role require-2fa Viewer on     # members of a role must use it
+dnz settings two-factor on         # superadmins must use it
+dnz user reset-2fa alice           # lost phone and recovery codes
+```
+
 ## Sessions
 
 You can be signed in from several places: the dashboard in a browser, the CLI on your laptop, the CLI

@@ -1,0 +1,101 @@
+---
+title: "Two-factor sign-in"
+description: "A second step after the password: an authenticator app, a passkey or a recovery code. Required per role or for superadmins."
+---
+
+Two-factor sign-in adds a second step after the password: a 6-digit code from an **authenticator
+app**, a **passkey** or security key, or a one-time **recovery code**. It's off until a user sets it
+up; a role or a server setting can make it required. It only runs when someone signs in or changes
+their account, never on DNS queries.
+
+## Set it up
+
+Open the user menu (top right) → **Account** → **Two-factor sign-in**.
+
+<Steps>
+  <Step title="Authenticator app">
+    Click **Set up**, confirm your password, and scan the QR code with 1Password, Google
+    Authenticator, Aegis, Microsoft Authenticator or similar (or type the setup key). Enter the
+    6-digit code the app shows and click **Turn on**.
+  </Step>
+  <Step title="Passkeys and security keys">
+    Click **Add passkey**, confirm your password, name it, and follow the browser's prompt: Touch
+    ID, Windows Hello, your phone or a YubiKey. Add as many as you like.
+  </Step>
+  <Step title="Save the recovery codes">
+    Ten codes appear with your first second factor. Each signs you in once when you don't have your
+    phone or key. **Copy** or **Download** them into a password manager or print them: they are not
+    shown again. **New codes** makes a fresh set and retires the old one.
+  </Step>
+</Steps>
+
+Adding or removing a second factor asks for your password again.
+
+<Note>
+  Passkeys belong to the host name you opened DNZ on (`dns.example.com`; the port doesn't matter).
+  Browsers only offer them on **HTTPS** pages and on `localhost`. On a plain-HTTP address or an IP
+  address, use an authenticator app.
+</Note>
+
+## Signing in
+
+After the password, DNZ asks for the code. Six digits submit by themselves. **Use a recovery code**
+and **Use a passkey** are right below. The sign-in waits five minutes; five wrong codes end it.
+Wrong codes count toward the same lockout as wrong passwords.
+
+If codes are refused, check the clock on the phone and on the server: one 30-second step of drift
+either way is allowed, and each code works once.
+
+## Require it
+
+<Tabs>
+  <Tab title="Per role">
+    **Access → Roles** → edit a role → **Require two-factor sign-in**. Everyone with that role in
+    any division needs it.
+
+    ```bash
+    dnz role require-2fa Viewer on
+    ```
+  </Tab>
+  <Tab title="Superadmins">
+    **Settings → General → Two-factor sign-in for superadmins**. Set it up for your own account
+    first; DNZ refuses otherwise.
+
+    ```bash
+    dnz settings two-factor on
+    ```
+  </Tab>
+</Tabs>
+
+Someone who must have it and doesn't yet only sees the setup screen after signing in, and open
+sessions are sent there on their next request. The API answers `403` with
+`"code": "two_factor_setup_required"` meanwhile. Their last second factor can't be removed while
+it's required. API tokens are not affected.
+
+## Lost phone, no recovery codes
+
+A superadmin resets it: **Access → Users** → **⋯** → **Reset two-factor**. The user's authenticator
+app, passkeys and recovery codes are removed; they sign in with the password and set one up again if
+a role requires it.
+
+```bash
+dnz user reset-2fa alice
+```
+
+The **Users** list marks who has it (**2FA**) and who still has to set it up (**2FA due**).
+
+## Replication and clusters
+
+Servers sharing one database share everything. A secondary that copies its primary's superadmins
+copies their second factors too: the authenticator app and recovery codes work there as well;
+a copied passkey only works on the same host name.
+
+## What DNZ stores
+
+The authenticator app's secret (it has to be readable to check codes; protect the database and its
+backups), the passkeys' **public** keys, and SHA-256 hashes of unused recovery codes. Signatures
+accepted: ES256 (P-256), EdDSA (Ed25519) and RS256.
+
+Every change and sign-in is in the [audit log](/admin/audit-log): `user.login` with the method used,
+`user.two_factor_added`, `user.two_factor_removed`, `user.recovery_code_used`,
+`user.two_factor_reset` and more.
