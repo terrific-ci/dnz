@@ -220,10 +220,17 @@ For example, the primary's DNS is `10.0.100.201` and its UI is served at
 - With the proxy in `DNZ_TRUSTED_PROXIES` (and sending `X-Forwarded-For`), the primary sees the
   secondary's real address directly.
 
+The primary also learns the secondary's address from where it asks: when a DNZ secondary's signed
+catalog check or transfer comes from another address than its NOTIFY address, the NOTIFY address
+doesn't take a NOTIFY and the new one does, the new one replaces it (checked at most every 5
+minutes per secondary). An address that works stays, also one set by hand
+(`dnz replication secondary edit <id> --notify <IP>`).
+
 <Note>
-A secondary that joined through a proxy on DNZ 1.9 or older keeps the proxy's address and shows
-**Unreachable**. After updating both servers, **Leave** on the secondary and join again (the same
-join code works). Or fix the primary side by hand: `dnz replication secondary edit <id> --notify <secondary IP>`.
+A secondary that joined through a proxy on DNZ 1.10 or older shows the proxy's address as its
+NOTIFY address and **Unreachable** in the sync status. From DNZ 1.10.1 on the primary, that's fixed
+by itself at the secondary's next refresh. A secondary on 1.9 or older also copies from the
+proxy's address: update it, then **Leave** and join again (the same join code works).
 </Note>
 
 **Leave** (in the secondary's list, or `dnz replication leave 1`) stops following the primary and
