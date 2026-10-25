@@ -6,18 +6,35 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.10.0**, released October 25, 2026. To install or upgrade to it:
+The latest release is **v1.11.0**, released October 25, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.10.0
-docker pull terrificci/dnz-proxy:1.10.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.10.0
+docker pull terrificci/dnz:1.11.0
+docker pull terrificci/dnz-proxy:1.11.0   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.11.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.10.0" description="October 25, 2026" tags={["Latest"]}>
+<Update label="v1.11.0" description="October 25, 2026" tags={["Latest"]}>
+
+- Replication: the primary learns a secondary's address from where it asks
+- DNS cache and query log: Clear cache and Clear log buttons
+- Domain expiry monitoring over RDAP, per zone and off by default
+- Two-factor sign-in: authenticator app, passkeys and recovery codes (API)
+- CLI: two-factor sign-in
+- UI: two-factor sign-in
+- Domain info: the registry's answer on demand, with a WHOIS fallback
+- UI: dialogs never grow past the screen
+- Trusted reverse proxies: known proxies trusted automatically, a setting, and a warning
+- Roles: server-wide permissions and a built-in Network Admin role
+- UI and CLI: server-wide permissions
+- Query explain: the decision path of one query and its answer
+
+</Update>
+
+<Update label="v1.10.0" description="October 25, 2026">
 
 - Replication: copy zones from the primary's DNS when its API is behind a reverse proxy
 - Replication: removing a DNZ secondary can factory reset it
