@@ -290,6 +290,34 @@ The primary has to allow transfers to this server's address.
   left out of transfers.
 - Only a zone's default records are transferred, never [view](/dns/views) records.
 
+## Sync status
+
+Once this server has a secondary or copies zones from a primary, **Overview** gets a
+**Replication** tab (superadmins). It lists every replica with its state and how far it is in
+sync, in percent of zones with the same SOA serial on both sides:
+
+- **Secondaries of this server**: each one is asked for the serial of every primary zone, at its
+  NOTIFY address over UDP. A non-DNZ secondary that doesn't carry a zone isn't counted against
+  it ("not carried"); a DNZ secondary follows the catalog, so a zone it doesn't serve counts as
+  missing.
+- **Primaries this server copies from**: for each followed catalog, and for hand-added secondary
+  zones grouped by primary, the primary is asked for the serial of every zone (over TCP, with the
+  zone's TSIG key) and compared with the copy here. A zone that was never transferred counts as
+  missing.
+
+The state is **In sync** (every zone current), **Behind** (some zones behind, missing or
+unanswered), **Unreachable** (no zone got an answer) or **Unknown** (no address to ask, or no
+zones). Open a row to see which zones aren't current, with both serials.
+
+The check stays light: it runs only while the tab is open and the browser tab is visible (every
+30 seconds), one report is kept for 15 seconds and shared by every open dashboard, a replica that
+doesn't answer its first zone isn't asked for the rest, and at most 16 zones are asked at a time
+per replica. From the command line:
+
+```bash
+dnz replication status
+```
+
 ## Test with dig
 
 ```bash
