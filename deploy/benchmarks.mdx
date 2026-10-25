@@ -299,7 +299,7 @@ On 4 CPUs: 30.3 MB at idle instead of 48.5 MB, and 59.6 MB a minute after the lo
   so the minute after a large import or a burst of queries is the high point, not the new normal.
 - The query log keeps every query for 7 days by default (`DNZ_LOG_RETENTION_DAYS`), so the database
   file grows until then. Tools that report a container's memory including the kernel's page cache
-  show that file too; the kernel gives that memory back when something else needs it.
+  show that file too; see [the database file in the container's memory](#the-database-file-in-the-containers-memory).
 - Zones kept in memory no longer reserve room for four records under every name.
 
 ### With blocklists and a threat feed
@@ -332,6 +332,39 @@ Finding a name got faster too. Side by side with the lists and the feed loaded o
 of 20 s, the new build was ahead in every round: 123,154 against 109,673 authoritative and 118,956
 against 101,559 cached queries a second (medians), with lower latency. At a steady 80,000 queries a
 second both spent the same CPU time per query.
+
+### The database file in the container's memory
+
+`docker stats` counts the kernel's cache of the files a container uses, and DNZ's SQLite file holds
+the query log: a few GB with 7 days of busy traffic. On a server with plenty of memory the kernel
+had no reason to give that cache back, so a container whose process used 130 MB showed over 1 GB.
+After v1.7.3, on Linux, DNZ drops its cached pages of the database file once nobody has read the
+query log for 10 minutes. Answering queries never reads the file; while someone looks through the
+log, the cache stays.
+
+Measured on 2026-10-25 on the benchmark server, before (v1.7.3) and after side by side, each with
+2 CPUs and a 1 GiB limit, taking turns for six rounds of 20 s per scenario; the query log grew to
+900 MB on each. The figure is all memory charged to the container (the cgroup's
+`memory.current`), page cache included:
+
+| Phase | Before | After |
+| --- | ---: | ---: |
+| Right after the load | 1,013 MB | 503 MB |
+| A minute later, log unread | 1,004 MB | 169 MB |
+| After two searches through the whole log | 1,006 MB | 810 MB |
+| 12 minutes after the searches | 1,010 MB | 58 MB |
+
+How much of that `docker stats` shows depends on the kernel: it leaves out pages the kernel marks
+inactive. On this server's kernel (7.0) that was nearly all of the cache; on older ones, such as
+5.4, pages read more than once stay active and `docker stats` shows them, which is where the 1 GB
+came from.
+
+Throughput is the same: 132,309 against 133,039 authoritative and 123,091 against 127,379 cached
+queries a second (medians, before against after). A search that finds its names returns in 3 ms
+either way. A search that matches nothing reads the whole log: 1.6 s from the cache on both, and
+55 to 60 s the first time after an idle spell on this server's slow disk (about 16 MB/s), 1.6 s
+again from then on. Dropping the cache every minute regardless made every such search take that
+long, so the cache stays while the log is being read.
 
 ## Threat detection on and off
 
