@@ -46,9 +46,12 @@ with all of their addresses.
 
 **Settings → Proxy** has one switch: proxying on or off. Below it, **Proxies** lists the proxies.
 
-**Add proxy** first asks what runs the proxy: **Traefik**, **dnz-proxy** or **Caddy**. Then it asks
-for the name and the addresses visitors reach it at, and shows that kind's setup, ready to copy. A
-proxy's kind can't be changed once it is added.
+**Add proxy** first asks what runs the proxy: **Traefik**, **dnz-proxy** or **Caddy**. For a Caddy
+or a Traefik it then asks whether DNZ configures it: **Caddy proxy** / **Traefik proxy**, or **Keep
+my Caddyfile** / **Keep my Traefik config**, which only reads it and goes to
+[Sites in DNS](/integrations/caddy) instead. dnz-proxy has no such step: its routes always come
+from DNZ. Then it asks for the name and the addresses visitors reach the proxy at, and shows that
+kind's setup, ready to copy. A proxy's kind can't be changed once it is added.
 
 Each proxy in the list shows where it stands. A Traefik or Caddy is **Connected** while it fetches
 its configuration, and shows when it was last seen once it stops. A dnz-proxy proxy is only as up as
@@ -59,11 +62,11 @@ approval** after one joined with the connect key, then **Running** (or how many 
 The **Proxy** page shows up in the menu, next to DNS, while proxying is on and a proxy is listed
 (detected ones included).
 
-Below the proxies, **Caddy sites in DNS** keeps DNS records for the sites in a Caddyfile, without
-proxying through that Caddy. It isn't a proxy: DNZ only reads that Caddy and never changes it,
-while a Caddy added as a proxy gets its whole configuration from DNZ. See [Caddy sites in DNS](/integrations/caddy). Division owners (with
-`integrations.manage`) can open **Settings → Proxy** and see only that section. Everything else
-there needs a superadmin.
+Below the proxies, **Sites in DNS** keeps DNS records for the sites in a Caddy's or Traefik's own
+configuration, without proxying through it. It shows once one is connected. It isn't a proxy: DNZ
+only reads that Caddy or Traefik and never changes it. See [Sites in DNS](/integrations/caddy).
+Division owners (with `integrations.manage`) can open **Settings → Proxy** and see only that
+section, with its own **Caddy** and **Traefik** buttons. Everything else there needs a superadmin.
 
 ### From the environment
 

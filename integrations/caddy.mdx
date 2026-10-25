@@ -1,28 +1,33 @@
 ---
-title: "Caddy sites in DNS"
-sidebarTitle: "Caddy sites in DNS"
-description: "DNS records for the sites a Caddy serves, kept up to date as the Caddyfile changes."
+title: "Sites in DNS (Caddy and Traefik)"
+sidebarTitle: "Sites in DNS"
+description: "DNS records for the sites a Caddy or Traefik serves, kept up to date as its configuration changes."
 ---
 
-DNZ can keep DNS records for the sites a [Caddy](https://caddyserver.com/) serves, like ExternalDNS
-does for Kubernetes. It reads the hostnames from Caddy's admin API and adds A/AAAA records (or a
-CNAME) for them in the division's zones, pointing at the Caddy. When the Caddyfile changes, the
-records follow.
+DNZ can keep DNS records for the sites a [Caddy](https://caddyserver.com/) or a
+[Traefik](https://traefik.io/) serves, like ExternalDNS does for Kubernetes. It reads the hostnames
+from Caddy's admin API (or Traefik's API) and adds A/AAAA records (or a CNAME) for them in the
+division's zones, pointing at that server. When its configuration changes, the records follow.
 
-DNZ only **reads** Caddy's configuration. Sites, routes and certificates stay in the Caddyfile, and
-nothing goes through DNZ.
+DNZ only **reads** their configuration. Sites, routes and certificates stay in the Caddyfile or in
+Traefik's own configuration (files, Docker labels…), and nothing goes through DNZ.
 
 <Note>
-  This is **not** the Caddy proxy. A [Caddy proxy](/proxy/caddy) (**Add proxy → Caddy**) is a Caddy
-  that DNZ configures with the routers, services and middlewares set up in DNZ, and its
-  configuration replaces the Caddy's own, Caddyfile included. Use this sync to keep your Caddyfile
-  and only get DNS records for its sites.
+  This is **not** a proxy. **Add proxy → Caddy** (or **Traefik**) asks first. A
+  [Caddy proxy](/proxy/caddy) or [Traefik proxy](/proxy/traefik) is one DNZ configures, with the
+  routers, services and middlewares set up in DNZ: a Caddy proxy's configuration replaces the
+  Caddyfile, and a Traefik proxy gets DNZ's routes next to its own. **Keep my Caddyfile** / **Keep
+  my Traefik config** is this page: DNZ only reads it and keeps DNS records for its sites.
+  dnz-proxy has no such choice: its routes always come from DNZ.
 </Note>
 
-A Caddy belongs to a division, under **Settings → Proxy → Caddy sites in DNS**. Connecting one needs
-the `integrations.manage` permission (Owner by default); seeing them needs `zones.read`. Division
-owners (with `integrations.manage`) can open **Settings → Proxy** and see only this section;
-superadmins see all of it.
+A Caddy or Traefik belongs to a division, under **Settings → Proxy → Sites in DNS**. Superadmins
+add one with **Add proxy → Caddy** or **Traefik**, then **Keep my Caddyfile** or **Keep my Traefik
+config**; the section shows below the proxies once one is connected. Connecting one needs the
+`integrations.manage` permission (Owner by default); seeing them needs `zones.read`. Division
+owners (with `integrations.manage`) can open **Settings → Proxy** and see only this section, with
+its own **Caddy** and **Traefik** buttons (**Connect a Caddy** and **Connect a Traefik** while none
+is connected); superadmins see all of it.
 
 ## Connect a Caddy
 
@@ -104,11 +109,142 @@ Caddy's admin API only listens on `localhost:2019` of its own machine, so DNZ ne
   </Step>
 </Steps>
 
+## Connect a Traefik
+
+Traefik's API is off until you turn it on, so DNZ needs a way in. **Connect a Traefik** walks
+through it with every block ready to copy, for a Traefik configured with **Files (traefik.yml)** or
+with **Docker (flags and labels)**.
+
+<Tabs>
+  <Tab title="Read-only, with a password">
+    Recommended. The API gets an entry point of its own, `api-read` on port 8081, and a router on it
+    passes only reads (`GET` requests for `/api`) on to `api@internal`, behind a `basicAuth`
+    middleware. DNZ makes the password and its bcrypt hash for you.
+
+    First the API and its entry point (static configuration):
+
+    <CodeGroup>
+
+    ```yaml traefik.yml
+    # traefik.yml: the API, and an entry point for DNZ to read it.
+    api: {}
+    entryPoints:
+      api-read:
+        address: ":8081"
+    ```
+
+    ```bash Docker
+    --api=true
+    --entrypoints.api-read.address=:8081
+    ```
+
+    </CodeGroup>
+
+    Then the router, behind the password (dynamic configuration):
+
+    <CodeGroup>
+
+    ```yaml File provider
+    # A file of the file provider: read-only access to the API for DNZ.
+    http:
+      routers:
+        api-read:
+          entryPoints: [api-read]
+          rule: "Method(`GET`) && PathPrefix(`/api`)"
+          service: api@internal
+          middlewares: [api-read-auth]
+      middlewares:
+        api-read-auth:
+          basicAuth:
+            users:
+              - "dnz:<bcrypt hash>"
+    ```
+
+    ```yaml Docker labels
+    # Labels on the Traefik container (docker-compose).
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api-read.entrypoints=api-read"
+      - "traefik.http.routers.api-read.rule=Method(`GET`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api-read.service=api@internal"
+      - "traefik.http.routers.api-read.middlewares=api-read-auth"
+      - "traefik.http.middlewares.api-read-auth.basicauth.users=dnz:<bcrypt hash>"
+    ```
+
+    </CodeGroup>
+
+    In docker-compose labels, every `$` of the hash is written `$$`; the setup guide does that for
+    you. DNZ then reads `http://<traefik server>:8081` with that user and password. The password is
+    kept on the server and never sent back to the dashboard.
+  </Tab>
+  <Tab title="Open the API (port 8080)">
+    Turn on the API on port 8080:
+
+    <CodeGroup>
+
+    ```yaml traefik.yml
+    # traefik.yml: Traefik's API (read-only) on port 8080.
+    api:
+      insecure: true
+    ```
+
+    ```bash Docker
+    --api.insecure=true
+    ```
+
+    </CodeGroup>
+
+    <Warning>
+      Traefik's API only reads, but it shows every router and service. Let only DNZ reach the port.
+    </Warning>
+
+    DNZ then reads `http://<traefik server>:8080`.
+  </Tab>
+</Tabs>
+
+<Steps>
+  <Step title="Let only DNZ reach the port">
+    Needed for the open API, optional behind a password. With ufw (use your firewall's equivalent;
+    port 8081 for the read-only way):
+
+    ```bash
+    sudo ufw allow from 10.0.0.2 to any port 8080 proto tcp
+    sudo ufw deny 8080/tcp
+    ```
+  </Step>
+  <Step title="Restart Traefik">
+    Traefik only reads its static configuration at start: `sudo systemctl restart traefik`, or
+    `docker restart <traefik container>`. With Docker, also publish the port (`-p 8081:8081` or
+    `-p 8080:8080`, or under `ports:` in compose).
+  </Step>
+  <Step title="Test the connection">
+    Fill in the Traefik server's address. **Test connection** lists the hostnames DNZ can read and
+    the zone each one would go in.
+  </Step>
+  <Step title="Choose what DNS answers with, then preview">
+    Addresses or a CNAME, the TTL and how often DNZ reads, as for a Caddy. A new Traefik starts
+    **paused** too: **Apply and keep syncing** writes the records and starts the background sync.
+  </Step>
+</Steps>
+
 ## Which hostnames get records
 
 DNZ reads Caddy's running configuration (`GET /config/`) and takes the `host` matchers of its HTTP
 routes. A Caddyfile's site addresses become those matchers (`example.com, www.example.com { … }`),
 and so do named matchers inside a site (`@api host api.example.com`).
+
+From a Traefik, DNZ reads the HTTP and TCP routers in Traefik's API, from every provider (files,
+Docker or Swarm labels, Kubernetes, Consul Catalog…). It takes their hostnames the same way as a
+Traefik proxy's [records from Traefik's routers](/proxy/traefik-records):
+
+- `Host`, `HostHeader` and `HostSNI`, several per rule (joined with `||` or listed in one matcher)
+- `HostRegexp` when it is one label of anything in front of a fixed domain
+  (`^[a-z0-9-]+\.apps\.example\.com$` becomes `*.apps.example.com`)
+- left out: routers DNZ itself sends (named `dnz-…`), Traefik's internal ones, disabled ones,
+  negated `!Host(…)` and rules without a usable name
+
+That proxy feature is for a Traefik that is a DNZ proxy, and its records go through the proxy. This
+one is for a Traefik DNZ doesn't configure: plain records per division, with addresses or a CNAME.
 
 Each hostname goes in the division's zone that holds it, the one with the longest matching name:
 `www.lab.example.com` goes in `lab.example.com` when the division has that zone, otherwise in
@@ -124,41 +260,44 @@ These are skipped, and listed with the reason:
 
 ## What DNZ never changes
 
-Records DNZ adds carry the Caddy's mark: the zone editor shows a **Caddy edge-1** badge on them.
+Records DNZ adds carry the Caddy's (or Traefik's) mark: the zone editor shows a **Caddy edge-1**
+(or **Traefik edge-2**) badge on them.
 DNZ only changes or removes records with its own mark.
 
 - **A name that already has records made by hand** (A, AAAA, CNAME or ALIAS; with a CNAME, any
   record) is *taken*: DNZ leaves it alone and lists it with the reason. Delete the hand-made record
-  to let the Caddy take over.
-- **A name another Caddy keeps** is taken too. The first Caddy to add it keeps it.
-- **A record you edit by hand** in the record form becomes yours: the Caddy stops changing or
-  removing it. Turning it off, tagging it or changing its TTL in bulk keeps the mark.
+  to let the Caddy or Traefik take over.
+- **A name another Caddy or Traefik keeps** is taken too. The first one to add it keeps it.
+- **A record you edit by hand** in the record form becomes yours: the Caddy or Traefik stops
+  changing or removing it. Turning it off, tagging it or changing its TTL in bulk keeps the mark.
 
-## When the Caddyfile changes
+## When the configuration changes
 
-On each read:
+DNZ reads each Caddy's or Traefik's configuration every minute by default. On each read:
 
 - A new site gets its records.
-- When the Caddy's addresses (or CNAME target) change in DNZ, its records change with them.
+- When the Caddy's (or Traefik's) addresses (or CNAME target) change in DNZ, its records change with them.
 - A site that left the config loses its records. With **Keep them (flagged)** (*add only*), they
   stay and are listed as *kept* instead.
 
-When the config can't be read (Caddy down, a wrong password), nothing changes: the error shows on
-the Caddy's card until a read works again. A Caddy whose config has no HTTP servers at all, such as
+When the config can't be read (Caddy or Traefik down, a wrong password), nothing changes: the error
+shows on its card until a read works again. A Caddy whose config has no HTTP servers at all, such as
 one that just started without a config, is treated the same way, so its records aren't removed by
-accident.
+accident. So is a Traefik with no HTTP router of its own (besides DNZ's and its internal ones): its
+providers may still be loading.
 
 Every change is in the [audit log](/admin/audit-log) as `record.create`, `record.update` or
-`record.delete` "via Caddy edge-1", under the Caddy's name when the background sync made it.
+`record.delete` "via Caddy edge-1" (or "via Traefik edge-2"), under its name when the background
+sync made it. Record history shows the same name.
 
 ## Pause and remove
 
-The Caddy's card shows the last sync, how many records it keeps in DNS, and its hostnames with what
+Each Caddy's or Traefik's card shows the last sync, how many records it keeps in DNS, and its hostnames with what
 happened to each. **Sync now** shows the preview again. **Pause** stops syncing and leaves the
 records as they are.
 
-Removing a Caddy removes its records too, unless you pick **Remove, keep its records**; then they
+Removing one removes its records too, unless you pick **Remove, keep its records**; then they
 stay as records made by hand.
 
-Caddies also appear on the [topology map](/dashboard/topology), linked to the zones their records are
-in. For the terminal, see the [CLI reference](/cli/caddy); for scripts, the [Caddy API](/api/caddy).
+Caddies and Traefiks also appear on the [topology map](/dashboard/topology), linked to the zones
+their records are in. For the terminal, see the [CLI reference](/cli/caddy); for scripts, the [Caddy API](/api/caddy).

@@ -165,7 +165,7 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_certificate_expiry_timestamp_seconds` | Certificate expiry |
 | `dnz_proxy_enabled`, `dnz_proxies{kind}` | Whether proxying is on (1), and approved proxies by kind (`traefik`, `dnz`, `caddy`) |
 | `dnz_traefik_connected{proxy}`, `dnz_caddy_proxy_connected{proxy}` | 1 while a Traefik or Caddy proxy fetched its configuration in the last minute (`…_last_seen_timestamp_seconds` says when) |
-| `dnz_caddy_sync_success{id,caddy}` | [Caddy sites in DNS](/integrations/caddy): 1 when the last sync worked (not Caddy proxies) |
+| `dnz_caddy_sync_success{id,caddy,kind}` | [Sites in DNS](/integrations/caddy): 1 when the last sync worked, `kind` `caddy` or `traefik` (not proxies; `dnz_caddy_sync_timestamp_seconds` says when) |
 | `dnz_health_findings{status}` | [Health check](/admin/health-check) findings by status |
 | `dnz_dhcp_leases{server}`, `dnz_dhcp_read_success{server}` | DHCP servers' live leases, and whether DNZ can read them |
 | `dnz_ipam_conflicts{division}` | What [IPAM](/integrations/dhcp#ipam) found that doesn't add up |

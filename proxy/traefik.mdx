@@ -16,6 +16,12 @@ already have.
   [Turning proxying on](/proxy/overview#turning-proxying-on).
 </Note>
 
+<Note>
+  For a Traefik DNZ shouldn't configure, pick **Keep my Traefik config** under **Add proxy →
+  Traefik** instead. DNZ then only reads its routers and keeps DNS records for their hostnames: see
+  [Sites in DNS](/integrations/caddy).
+</Note>
+
 <Tip>
   Starting DNZ and Traefik together? [DNZ and Traefik in one compose file](/proxy/compose) connects
   them from the first start, with nothing to set up here.
@@ -25,8 +31,8 @@ already have.
 
 <Steps>
   <Step title="Open the setup guide">
-    Go to **Settings → Proxy → Add proxy** and pick **Traefik**. Give the name and the addresses
-    visitors reach it at. Everything in the setup is filled in, ready to copy as it is.
+    Go to **Settings → Proxy → Add proxy**, pick **Traefik**, then **Traefik proxy**. Give the name
+    and the addresses visitors reach it at. Everything in the setup is filled in, ready to copy as it is.
   </Step>
   <Step title="Check DNZ's address">
     **DNZ address, as Traefik reaches it** is filled in from your browser. Change it when Traefik
@@ -244,5 +250,8 @@ It returns the same configuration Traefik gets.
   </Card>
   <Card title="Records from Traefik's routers" icon="wand-magic-sparkles" href="/proxy/traefik-records">
     DNS records for Docker, Swarm and Kubernetes routes.
+  </Card>
+  <Card title="Sites in DNS" icon="file-lines" href="/integrations/caddy">
+    Keep your Traefik config and only get DNS records for its routers.
   </Card>
 </CardGroup>

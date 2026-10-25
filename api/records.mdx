@@ -113,9 +113,9 @@ curl -X PATCH https://dns.example.com/api/records/42 \
 Records come back with `"proxies": [1, 3]`. The proxy endpoints are described in
 [Proxy](/api/proxy).
 
-Records also come back with `"caddy_id"`: the [Caddy](/integrations/caddy) that keeps the record for
-a site it serves, or `null` for records made by hand or another way. Changing a record with
-`PATCH` clears it, so the Caddy leaves that record alone from then on.
+Records also come back with `"caddy_id"`: the Caddy or Traefik in [Sites in DNS](/integrations/caddy)
+that keeps the record for a site it serves, or `null` for records made by hand or another way.
+Changing a record with `PATCH` clears it, so it leaves that record alone from then on.
 
 ## Traffic steering
 

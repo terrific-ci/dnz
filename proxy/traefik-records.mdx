@@ -17,6 +17,11 @@ provider, **Consul Catalog**, **Nomad**, **ECS**, another **HTTP** provider, and
 It works whether proxying is on or not. The records it makes are DNS only: they answer with the
 Traefik's addresses directly.
 
+<Note>
+  This is for a Traefik that is a DNZ proxy. For a Traefik DNZ doesn't configure, the same router
+  rules give plain records per division in [Sites in DNS](/integrations/caddy).
+</Note>
+
 ## Turning it on
 
 <Steps>

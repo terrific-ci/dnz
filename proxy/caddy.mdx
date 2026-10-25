@@ -10,8 +10,8 @@ its configuration every 10 seconds, and Caddy gets its certificates itself.
 
 <Warning>
   DNZ's configuration **replaces the Caddy's whole configuration**, Caddyfile sites included. To keep
-  a Caddyfile and only get DNS records for its sites, use [Caddy sites in DNS](/integrations/caddy)
-  instead.
+  a Caddyfile and only get DNS records for its sites, pick **Keep my Caddyfile** under
+  **Add proxy → Caddy** instead: see [Sites in DNS](/integrations/caddy).
 </Warning>
 
 <Note>
@@ -28,7 +28,7 @@ its configuration every 10 seconds, and Caddy gets its certificates itself.
 
 <Steps>
   <Step title="Open the setup guide">
-    Go to **Settings → Proxy → Add proxy** and pick **Caddy**. Give the name and the addresses
+    Go to **Settings → Proxy → Add proxy**, pick **Caddy**, then **Caddy proxy**. Give the name and the addresses
     visitors reach it at. Everything in the setup is filled in, ready to copy as it is: **New Caddy
     (Docker)**, **Installed Caddy (systemd)** or **Just the file**.
   </Step>
@@ -198,7 +198,7 @@ and its warnings, with `GET /api/proxies/{id}/caddy` or `dnz proxy caddy <proxy>
   </Accordion>
   <Accordion title="My Caddyfile sites are gone">
     DNZ's configuration replaces the Caddy's whole configuration. Move those sites into routers on
-    the proxy's page, or keep the Caddyfile and use [Caddy sites in DNS](/integrations/caddy)
+    the proxy's page, or keep the Caddyfile and use [Sites in DNS](/integrations/caddy)
     instead.
   </Accordion>
   <Accordion title="A wildcard host has no certificate">
@@ -216,7 +216,7 @@ and its warnings, with `GET /api/proxies/{id}/caddy` or `dnz proxy caddy <proxy>
   <Card title="Routers, services and middlewares" icon="route" href="/proxy/routing">
     Set up what each Caddy serves.
   </Card>
-  <Card title="Caddy sites in DNS" icon="file-lines" href="/integrations/caddy">
+  <Card title="Sites in DNS" icon="file-lines" href="/integrations/caddy">
     Keep your Caddyfile and only get DNS records for its sites.
   </Card>
 </CardGroup>
