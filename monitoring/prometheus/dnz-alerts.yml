@@ -131,6 +131,25 @@ groups:
           summary: "Secondary zone {{ $labels.zone }} expires in {{ $value | humanizeDuration }}"
           description: "After it expires DNZ {{ $labels.instance }} answers SERVFAIL for the zone."
 
+      # Every node reports the same (it is read from the database): one alert per domain.
+      - alert: DnzDomainExpiring
+        expr: max by (zone, domain) (dnz_domain_expiry_days) < 14
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Domain {{ $labels.domain }} expires in {{ $value | humanize }} days"
+          description: "Zone {{ $labels.zone }} stops resolving on the internet when the registration lapses. Renew it at the registrar."
+
+      - alert: DnzDomainExpired
+        expr: max by (zone, domain) (dnz_domain_expiry_days) < 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Domain {{ $labels.domain }} has expired"
+          description: "Renew it at the registrar before it enters redemption and gets deleted (zone {{ $labels.zone }})."
+
       - alert: DnzProxyNodeDown
         expr: dnz_proxy_node_up == 0 and on (instance, proxy, node) dnz_proxy_node_drained == 0
         for: 5m

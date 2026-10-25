@@ -47,6 +47,7 @@ In a [cluster](/deploy/cluster) each node checks its own machine; its findings c
 | Reachable (`reachable:<zone>`) | Public resolvers asked for a random name in the zone get DNZ's answer, so the internet reaches it |
 | Secondaries (`secondary:<name>`) | Each [secondary](/dns/replication) has the current SOA serial of every zone |
 | Certificates (`certificate:<id>`) | ACME, uploaded and DoT/HTTPS certificates within 14 days of the end (a failure within 3) |
+| Domain expiry (`domain_expiry:<zone>`) | Zones with [domain expiry](/dns/domain-expiry) monitoring on: a failure when the registered domain expired, is on hold or being deleted, a warning within the largest threshold or when lookups keep failing. These alert as `domain_expiry` |
 | Admin password (`admin_password`) | A superadmin still on the password from `DNZ_ADMIN_PASSWORD` |
 | Password age (`password_age`) | Superadmin passwords older than a year |
 

@@ -96,6 +96,7 @@
               "dns/views",
               "dns/dnssec",
               "dns/dnssec-validation",
+              "dns/domain-expiry",
               "dns/encrypted-dns",
               "dns/rate-limiting",
               "dns/replication",

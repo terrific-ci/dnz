@@ -83,6 +83,19 @@ dnz zone promote secondary.example            # its primary is gone: make the co
 
 See [DNSSEC](/dns/dnssec) and [Replication](/dns/replication).
 
+### Domain expiry
+
+```bash
+dnz zone expiry enable example.com            # daily RDAP lookup, alerts at 30, 14, 7 and 1 days
+dnz zone expiry status                        # every monitored zone, soonest expiry first
+dnz zone expiry status example.com            # expiry date, registrar, statuses, last lookup
+dnz zone expiry set example.com --thresholds 60,30,7 --domain example.com
+dnz zone expiry check example.com             # look it up now
+dnz zone expiry disable example.com
+```
+
+Off until turned on per zone. See [Domain expiry](/dns/domain-expiry).
+
 ## Records
 
 ### Picking records

@@ -16,6 +16,10 @@ numeric ids: a division id for listing and creating, a zone id for the rest.
 | `PATCH` | `/api/zones/{id}` | `zones.write` | Turn a zone on or off, set its default TTL, choose whether missing names are forwarded |
 | `DELETE` | `/api/zones/{id}` | `zones.write` | Delete a zone |
 | `GET` | `/api/zones/{id}/export` | `zones.read` | The zone as a BIND zone file |
+| `GET` | `/api/zones/{id}/expiry` | `zones.read` | [Domain expiry](/dns/domain-expiry#api) monitoring: settings and the last RDAP lookup |
+| `PUT` | `/api/zones/{id}/expiry` | `zones.write` | Turn it on or off, thresholds, registered domain |
+| `POST` | `/api/zones/{id}/expiry/check` | `zones.write` | Look the domain up now |
+| `GET` | `/api/divisions/{id}/expiry` | `zones.read` | The division's monitored zones |
 | `POST` | `/api/zones/{id}/refresh` | `zones.read` | Secondary zones: check the primary now |
 | `POST` | `/api/zones/{id}/promote` | superadmin | Secondary zones added by hand: make the copy a primary zone here |
 | `GET` | `/api/divisions/{id}/logs` | `logs.read` | Query log of the division's zones |

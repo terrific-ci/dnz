@@ -35,6 +35,7 @@ automatically, and **Send test** checks a provider right away.
 | `cluster_node` | A [cluster](/deploy/cluster) node stops heartbeating or falls behind, and when it is back |
 | `backup_failed` | A [backup](/admin/backups) failed, and the first good one after failures |
 | `health_check` | The [health check](/admin/health-check) finds a problem (with the fix), and when it is fixed |
+| `domain_expiry` | A [monitored domain](/dns/domain-expiry) reaches a threshold (30, 14, 7, 1 days), expires, goes on hold or into redemption, or can't be looked up; and when it is renewed or fine again |
 | `threat` | A new [threat finding](/dns/threats): a known-bad domain, a DNS tunnel, generated names, an unusual client (rate limited per client) |
 
 Traffic alerts are checked every minute and sent at most once an hour each. Thresholds and the

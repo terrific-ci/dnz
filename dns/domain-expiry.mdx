@@ -1,0 +1,119 @@
+---
+title: "Domain expiry"
+description: "Have DNZ watch when your registered domains expire over RDAP, and alert before a missed renewal takes your zones off the internet."
+---
+
+A zone is only as alive as the domain registration behind it. When `example.com` lapses at the
+registrar, every zone DNZ serves for it stops resolving on the internet, however healthy DNZ is.
+DNZ can watch the registration for you: once a day it asks the registry over **RDAP** (the JSON
+successor of WHOIS) when the domain expires, who the registrar is and which statuses it carries,
+and alerts before it is too late.
+
+<Note>
+  Off by default, turned on per zone. While no zone has it on, DNZ does nothing at all: no
+  downloads, no requests.
+</Note>
+
+## Turn it on
+
+On the zone's page, **Domain expiry** → switch on. Or from the terminal:
+
+```bash
+dnz zone expiry enable example.com
+dnz zone expiry enable shop.example.co.uk --thresholds 60,30,7,1
+```
+
+Turning it on looks the domain up at once; after that DNZ checks once a day. The card on the zone's
+page shows the expiry date, the registrar, the registry statuses, the last and next check, and a
+**Check now** button. When the domain needs attention (within a threshold, expired, on hold, lookups
+failing) the zone's header carries a badge.
+
+## Which domain is looked up
+
+The **registered domain** the zone belongs to: the zone itself for `example.com`, or the domain it
+sits in for `lab.example.com` or `shop.example.co.uk` (that is `example.co.uk`). DNZ finds it with
+the ICANN part of the [public suffix list](https://publicsuffix.org/).
+
+When that gets it wrong for your case, set it by hand (the zone or a domain the zone sits in):
+
+```bash
+dnz zone expiry set lab.example.com --domain example.com
+dnz zone expiry set lab.example.com --domain auto     # back to the public suffix list
+```
+
+## How DNZ asks
+
+- The RDAP server for the top-level domain comes from IANA's bootstrap file
+  (`https://data.iana.org/rdap/dns.json`). Both it and the public suffix list are kept in the data
+  folder and fetched again once a week, only while a check runs.
+- **One request per monitored zone per day**, at least 10 seconds apart per RDAP server.
+- A failed lookup is tried again after 1 hour, then 2, 4, 8, 16 and at most 24 hours.
+- A top-level domain without RDAP (such as `.internal`, or some country domains) shows as unknown.
+  Some registries publish no expiry date (`.de`, for one); DNZ then still watches the statuses.
+- In a [cluster](/deploy/cluster) only the leader checks.
+
+## Alerts
+
+Add the event **`domain_expiry`** to a [notification provider](/integrations/notifications)
+(Telegram, Resend, SMTP or a webhook). DNZ alerts when:
+
+| When | Once per |
+| --- | --- |
+| The days left reach a threshold (default **30, 14, 7 and 1** days) | threshold and expiry date |
+| The domain has expired | expiry date |
+| It goes on `clientHold` or `serverHold` (it doesn't resolve), or into `redemptionPeriod` or `pendingDelete` (it is being deleted) | change of statuses |
+| 3 lookups in a row fail | failing spell |
+| After an alert: it was renewed, is no longer on hold, or lookups work again | change |
+
+Each threshold alerts once per expiry date: a zone turned on with 5 days left alerts once, for the
+7-day threshold. When the expiry date moves later (renewed), the thresholds count again.
+
+```bash
+dnz zone expiry set example.com --thresholds 45,14,3
+```
+
+## Health check and metrics
+
+Each monitored zone is a [health check](/admin/health-check) finding (`domain_expiry:<zone>`): a
+failure when the domain expired, is on hold or being deleted, a warning within the largest
+threshold or when lookups keep failing, each with how to fix it. They show on **Settings → Health
+check** and in `dnz doctor`.
+
+With [metrics](/dashboard/prometheus) on, `dnz_domain_expiry_days{zone,domain}` gives the days left
+(negative once expired), with `dnz_domain_expiry_timestamp_seconds` and
+`dnz_domain_expiry_lookup_failures`. The alert rules include `DnzDomainExpiring` (under 14 days) and
+`DnzDomainExpired`.
+
+## CLI
+
+```bash
+dnz zone expiry status                       # every monitored zone of the division, soonest first
+dnz zone expiry status example.com           # one zone: expiry, registrar, statuses, last lookup
+dnz zone expiry enable example.com [--thresholds 30,14,7,1] [--domain example.com]
+dnz zone expiry set example.com --thresholds 60,30,7
+dnz zone expiry check example.com            # look it up now
+dnz zone expiry disable example.com
+```
+
+## API
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/zones/{id}/expiry` | `zones.read` | The zone's settings and what the last lookup found |
+| `PUT` | `/api/zones/{id}/expiry` | `zones.write` | `{"enabled": true, "thresholds": [30, 14, 7, 1], "domain": null}`, each optional. Turning it on looks the domain up at once |
+| `POST` | `/api/zones/{id}/expiry/check` | `zones.write` | Look it up now |
+| `GET` | `/api/divisions/{id}/expiry` | `zones.read` | The division's monitored zones, soonest expiry first |
+
+```json
+{
+  "zone": "lab.example.com", "enabled": true, "thresholds": [30, 14, 7, 1], "domain": null,
+  "state": "ok", "looked_up": "example.com",
+  "expires_at": "2027-08-13T04:00:00Z", "days_left": 291,
+  "registrar": "RESERVED-Internet Assigned Numbers Authority",
+  "statuses": ["client delete prohibited", "client transfer prohibited"], "holds": [],
+  "checked_at": "2026-10-25T13:45:47Z", "next_check_at": "2026-10-26T13:45:47Z",
+  "error": null, "failures": 0
+}
+```
+
+`state` is `off`, `pending`, `ok`, `expiring`, `expired`, `hold`, `failing` or `unknown`.

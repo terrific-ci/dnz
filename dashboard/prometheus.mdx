@@ -140,6 +140,7 @@ They cover:
 | `DnzRateLimitingSpike`, `DnzResponseRateLimitingSpike` | Many queries over the per-client limit, or many answers limited by RRL |
 | `DnzDnssecValidationFailures` | Answers keep failing DNSSEC validation |
 | `DnzSecondaryZoneFailing`, `DnzSecondaryZoneExpiring` | A secondary zone cannot reach its primaries, or is about to expire |
+| `DnzDomainExpiring`, `DnzDomainExpired` | A [monitored domain](/dns/domain-expiry) expires within 14 days, or has expired |
 | `DnzProxyNodeDown`, `DnzTraefikDisconnected` | A dnz-proxy node or a Traefik stopped reporting |
 | `DnzHealthCheckFailing`, `DnzSyncFailing` | A GeoDNS health check, or a Caddy/Traefik record sync, fails |
 | `DnzClusterNodeBehind`, `DnzClusterNoLeader` | A cluster node has not loaded the latest changes, or no node holds the leader lease |
@@ -162,6 +163,7 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_filter_blocked_total` | Blocked queries |
 | `dnz_ratelimit_limited_total`, `dnz_rrl_responses_total` | Rate limiting |
 | `dnz_dnssec_validations_total{result}` | DNSSEC validation |
+| `dnz_domain_expiry_days{zone,domain}` | Days until a [monitored domain](/dns/domain-expiry) expires |
 | `dnz_certificate_expiry_timestamp_seconds` | Certificate expiry |
 | `dnz_proxy_enabled`, `dnz_proxies{kind}` | Whether proxying is on (1), and approved proxies by kind (`traefik`, `dnz`, `caddy`) |
 | `dnz_traefik_connected{proxy}`, `dnz_caddy_proxy_connected{proxy}` | 1 while a Traefik or Caddy proxy fetched its configuration in the last minute (`…_last_seen_timestamp_seconds` says when) |
