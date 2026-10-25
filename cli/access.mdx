@@ -50,12 +50,17 @@ dnz user rm budi
 
 ```bash
 dnz role list                                 # roles and their permissions
-dnz role permissions                          # every permission a role can have
+dnz role permissions                          # every permission; SCOPE server counts from any division
+dnz role grant "Network Admin" replication.manage
+dnz role revoke Editor logs.read
 ```
 
-Built-in roles are Owner, Editor and Viewer. The permissions are `zones.read`, `zones.write`,
-`records.write`, `logs.read`, `members.manage`, `integrations.manage`, `audit.read`,
-`tokens.manage` and `filtering.manage`.
+Built-in roles are Owner, Editor, Viewer and Network Admin. Division permissions are `zones.read`,
+`zones.write`, `records.write`, `logs.read`, `members.manage`, `integrations.manage`, `audit.read`,
+`tokens.manage`, `filtering.manage` and `changes.approve`. Server-wide ones, which count from a role
+in any division, are `views.manage`, `resolver.manage`, `filtering.server`, `logs.server`,
+`threats.manage`, `replication.manage`, `proxy.manage` and `monitoring.manage` (see
+[Users, divisions and roles](/admin/access#server-wide-permissions)).
 
 ## API tokens
 

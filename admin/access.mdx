@@ -27,8 +27,29 @@ and divisions.
 | `filtering.manage` | Manage blocklists | Block or allow domains for the division's client networks | ✓ | | |
 | `tokens.manage` | Manage API tokens | Create and revoke API tokens and DNS update keys | ✓ | | |
 
-Server-wide features are for superadmins only: forwarding, views, replication, proxies, server-wide
-filtering, notifications and **Settings → General**.
+### Server-wide permissions
+
+Some features belong to the whole server, not a division. Their permissions count from a role held
+in **any** division: give someone the built-in **Network Admin** role in one division and they
+manage views and the resolver for the whole server.
+
+| Permission | Label in the dashboard | Allows | Network Admin |
+| --- | --- | --- | :-: |
+| `views.manage` | Manage views | Split-horizon views | ✓ |
+| `resolver.manage` | Manage the resolver | Upstreams, forwarding rules, recursion, DNSSEC validation, cache, rate limiting, GeoIP, automatic PTR | ✓ |
+| `filtering.server` | Manage server-wide filtering | Server-wide blocklists, rules, client networks, safe search and RPZ | ✓ |
+| `logs.server` | View all query logs | Every query to the server, and its traffic stats | ✓ |
+| `threats.manage` | Manage threat detection | Findings, mutes, allow list, feeds and blocks | ✓ |
+| `replication.manage` | Manage replication | Zone transfers, secondaries and primaries | |
+| `proxy.manage` | Manage proxies | Proxies, dnz-proxy nodes, routes, certificates and status pages | |
+| `monitoring.manage` | Manage monitoring | Health check, notification providers, alerts and incidents | |
+
+Network Admin also holds `zones.read`, `zones.write`, `records.write`, `logs.read`, `audit.read`
+and `filtering.manage` in its division. Add or remove any of them under **Access → Roles**; the
+editor shows the two groups as **In the division** and **Whole server**. API tokens never get
+server-wide permissions.
+
+Users, roles, divisions, backups, the cluster and **Settings → General** stay with superadmins.
 
 ## Common tasks
 
