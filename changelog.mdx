@@ -6,18 +6,28 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.8.0**, released October 25, 2026. To install or upgrade to it:
+The latest release is **v1.9.0**, released October 25, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.8.0
-docker pull terrificci/dnz-proxy:1.8.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.8.0
+docker pull terrificci/dnz:1.9.0
+docker pull terrificci/dnz-proxy:1.9.0   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.9.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.8.0" description="October 25, 2026" tags={["Latest"]}>
+<Update label="v1.9.0" description="October 25, 2026" tags={["Latest"]}>
+
+- CI: quote the Redis test step
+- Overview: Replication tab with each replica's sync status
+- Replication: promote a secondary to primary
+- Zone page: secondary zones show DNSSEC read-only; update keys and the DHCP guide skip them
+- Proxy: declare a Traefik and zones in the environment, for one compose file
+
+</Update>
+
+<Update label="v1.8.0" description="October 25, 2026">
 
 - Proxy benchmarks: mimalloc is in 1.7.3
 - Join a primary from the welcome page
