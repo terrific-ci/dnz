@@ -26,7 +26,8 @@ on the secondary by itself. DNSSEC keys are copied too (with their rollover stat
 primary rolls keys), so both servers sign with the same keys and
 the one DS record at your registrar covers them.
 
-There are two ways to join.
+There are two ways to join. A fresh server can do either straight from its welcome page, without an
+admin of its own (see [A new server as a secondary](#a-new-server-as-a-secondary)).
 
 ### Find it on the network
 
@@ -120,9 +121,65 @@ Join requests expire after 10 minutes. At most 20 can wait at once.
 </Tabs>
 
 <Warning>
-  The join code holds a secret. Anyone with it can copy your zones and DNSSEC keys, so treat it
-  like a password. **New join code** in the secondary's menu replaces it.
+  The join code holds a secret. Anyone with it can copy your zones and DNSSEC keys (and, for a
+  server joining from its welcome page, the superadmins' password hashes), so treat it like a
+  password. **New join code** in the secondary's menu replaces it.
 </Warning>
+
+### A new server as a secondary
+
+A server that will only be a secondary doesn't need an admin of its own. It copies the primary's
+**superadmins**, and you sign in with the same username and password as on the primary.
+
+<Tabs>
+  <Tab title="Welcome page">
+
+    On a fresh install, the welcome page offers **Join a primary** next to *Get started*. Find the
+    primary on the network (its admin approves the 6-digit code) or paste a join code. When it's
+    joined, click **Sign in** and use an account of the primary.
+
+  </Tab>
+  <Tab title="Docker">
+
+    Set the join code in the environment, and the server joins by itself at start, with no
+    welcome page at all:
+
+    ```yaml docker-compose.yml
+    services:
+      dnz:
+        image: terrificci/dnz:latest
+        ports: ["53:53/udp", "53:53/tcp", "8080:8080"]
+        volumes: ["dnz-data:/data"]
+        environment:
+          DNZ_INSTANCE_NAME: ns2
+          DNZ_JOIN_CODE: "dnz-join:…"   # from the primary: Add secondary → DNZ server
+    volumes:
+      dnz-data:
+    ```
+
+    It's tried every 30 seconds until the primary answers, and skipped when this server already
+    follows that primary. After **Leave**, remove the variable, or the next start joins again.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz setup --join-code 'dnz-join:…'                  # instead of creating an admin
+    dnz login                                           # with an account of the primary
+    ```
+
+  </Tab>
+</Tabs>
+
+- The accounts are copied with their password hashes and checked again every minute: a new
+  password, a deactivated or removed superadmin, or a new one on the primary reaches the secondary
+  within a minute. A changed password signs that account out on the secondary.
+- They're managed on the primary. On the secondary, changing their password or editing or deleting
+  them is refused.
+- A local account with the same username is never touched. With `DNZ_ADMIN_PASSWORD` set as well,
+  that local admin is created and nothing is copied.
+- **Leave** keeps the copies as ordinary local accounts, so you can still sign in.
+- The zones go into the first division (*Default*).
 
 ### What a joined secondary does
 
@@ -132,6 +189,8 @@ Join requests expire after 10 minutes. At most 20 can wait at once.
   removes the ones that left. A member whose name already exists here as a local zone is not
   touched; the subscription shows a conflict instead.
 - After each change it fetches the DNSSEC keys of signed zones (`/api/replication/keys`).
+- When it joined from its welcome page (or by `DNZ_JOIN_CODE` without an admin), it fetches the
+  superadmins every minute (`/api/replication/admins`).
 - The primary sends NOTIFY to the address the secondary joined from, on its DNS port.
 
 **Leave** (in the secondary's list, or `dnz replication leave 1`) stops following the primary and

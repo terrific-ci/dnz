@@ -130,6 +130,7 @@ DNZ_PASSWORD='a-long-password' dnz setup --username admin --division IT \
 | `--upstream` | Upstream resolvers (repeat or comma-separate) |
 | `--strategy` | Forwarding strategy: `failover`, `wrr`, `p2c`, `hrw`, `least_time` |
 | `--zone` | Create this first zone |
+| `--join-code` | Join the DNZ primary this code names instead of creating an admin; its superadmins sign in here ([details](/dns/replication#a-new-server-as-a-secondary)) |
 
 <Tip>
   For Docker and other automated installs, set `DNZ_ADMIN_PASSWORD` (and optionally

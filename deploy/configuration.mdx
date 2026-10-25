@@ -143,6 +143,12 @@ They apply until metrics are saved in the dashboard or with `dnz settings metric
 | `admin.username` | `DNZ_ADMIN_USERNAME` | `admin` | Admin username for setup without the dashboard |
 | `admin.password` | `DNZ_ADMIN_PASSWORD` | – | When set and there are no users yet, this admin is created at startup |
 
+### Replication
+
+| File key | Environment | Default | Description |
+| --- | --- | --- | --- |
+| `replication.join_code` | `DNZ_JOIN_CODE` | – | Follow the DNZ primary this join code names, from startup; without users yet, the primary's superadmins sign in here ([details](/dns/replication#a-new-server-as-a-secondary)) |
+
 ### Cloudflare
 
 | File key | Environment | Default | Description |
