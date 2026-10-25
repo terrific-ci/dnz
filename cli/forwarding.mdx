@@ -43,7 +43,7 @@ Instead of forwarding, DNZ can resolve names itself from the root servers, like 
 dnz forwarding mode recursive        # names outside your zones; `upstreams` switches back
 dnz forwarding recursor              # alias `recursive`: priming, caches, busiest servers, warnings
 dnz forwarding trace example.com --type AAAA   # every query from the root down, like dig +trace
-dnz forwarding flush                 # empty the resolver's caches (and the answer cache)
+dnz forwarding clear-cache           # empty the DNS cache, in any mode (alias: flush)
 ```
 
 `dnz forwarding show` says when the mode is recursive; the upstream list is kept for switching back.

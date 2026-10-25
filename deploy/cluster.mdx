@@ -242,7 +242,7 @@ What is different from Postgres and MySQL:
 
 - **Query and request logs stay on the node that logged them**, since Redis keeps everything in
   memory. The Overview's counts and charts are shared; **DNS → Query Logs** and dnz-proxy's request
-  logs show the node you're on.
+  logs show the node you're on. **Clear log** on DNS → Query Logs empties every node's query log.
 - **Memory**: the snapshot plus up to two snapshot intervals of changes, a few megabytes for a
   typical install. Leave room for two snapshots: the new one is written before the old one goes.
 - **Writes need Redis.** A node that can't reach it keeps answering DNS, serving the dashboard from

@@ -54,6 +54,23 @@ Both scopes have a source filter, also opened from the Overview's **Answered by*
 - **Blocked**: every blocked query (blocklists and RPZ), with the client's IP (see [Filtering](/dns/filtering))
 - **Errors**
 
+## Clear the log
+
+Superadmins can empty the log at once with **Clear log** at the top of **DNS → Query Logs**. It
+deletes every logged query, for every division and on every server of a
+[cluster](/deploy/cluster), together with the dashboard's top names and clients, which come from
+the log. The hourly query counts behind the charts stay, since they hold no names or clients.
+
+<Warning>
+  Clearing can't be undone. Each clear is in the [audit log](/admin/audit-log) as `logs.clear`, with
+  how many queries were deleted.
+</Warning>
+
+From the terminal, `dnz logs --clear` does the same (it asks first; `--yes` skips the question),
+and scripts can call `DELETE /api/logs` with a superadmin session, which answers
+`{"deleted": 5678}`. Old queries also go on their own after the retention period (see
+[How long data is kept](#how-long-data-is-kept)).
+
 ## From the command line
 
 <Tabs>
@@ -73,6 +90,7 @@ Both scopes have a source filter, also opened from the Overview's **Answered by*
     | `--client` | Only this client address |
     | `--source` | `local`, `forwarded`, `cached`, `blocked`, `error`, or one source such as `conditional` |
     | `-d`, `--division` | Only this division's queries: its zones and its client networks. Superadmins see every query without it. |
+    | `--clear` | Delete every logged query instead (superadmins), see [Clear the log](#clear-the-log) |
 
   </Tab>
   <Tab title="Traffic summary">

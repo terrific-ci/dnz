@@ -30,6 +30,24 @@ cookies = true
 nsid = "dns-1"        # true: the hostname; empty or false: off
 ```
 
+## Clear the cache
+
+**Clear cache** in the **DNS cache** card on **DNS → Forwarding** drops every cached answer at
+once, for example after a record changed at another provider and you don't want to wait for its
+TTL. It works with upstream resolvers and in recursive mode, empties the recursive resolver's caches
+too (records, zone cuts and server timings), and in a [cluster](/deploy/cluster) every node clears
+its own cache. The next lookups go to the upstreams (or the root servers) again, so they take a
+little longer for a moment.
+
+```bash
+dnz forwarding clear-cache    # alias: dnz forwarding flush
+```
+
+Scripts can call `POST /api/cache/clear` with a superadmin session; it answers `{"entries": 1234}`,
+how many answers the node had cached. Each clear is in the audit log as `cache.clear`. DNZ also
+empties the cache on its own when answers could change: forwarding rules, filtering, RPZ, DNSSEC
+validation and automatic PTR settings.
+
 ## Serve-stale
 
 **On by default** (RFC 8767). When every upstream fails (times out, is unreachable, or answers

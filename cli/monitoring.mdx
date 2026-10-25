@@ -24,6 +24,11 @@ dnz logs --division it
 | `--client` | Only this client address |
 | `--source` | `local`, `forwarded`, `cached`, `blocked`, `error`, or one source such as `conditional` |
 | `-d`, `--division` | Only this division's queries: its zones and its client networks (default for superadmins: every query) |
+| `--clear` | Delete every logged query, with the top names and clients, on every server (superadmins; asks first, `--yes` skips) |
+
+```bash
+dnz logs --clear --yes
+```
 
 ## Traffic stats
 
