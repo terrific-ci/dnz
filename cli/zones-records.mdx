@@ -78,6 +78,7 @@ dnz zone dnssec example.com --roll zsk        # roll a key now: csk, or ksk / zs
 dnz zone dnssec example.com --ds-updated      # the registrar has the new DS: the rollover goes on
 dnz zone refresh secondary.example            # secondary zones: check the primary now
 dnz zone refresh secondary.example --full     # transfer the whole zone even if the serial is unchanged
+dnz zone promote secondary.example            # its primary is gone: make the copy a primary zone here
 ```
 
 See [DNSSEC](/dns/dnssec) and [Replication](/dns/replication).

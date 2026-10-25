@@ -17,6 +17,7 @@ numeric ids: a division id for listing and creating, a zone id for the rest.
 | `DELETE` | `/api/zones/{id}` | `zones.write` | Delete a zone |
 | `GET` | `/api/zones/{id}/export` | `zones.read` | The zone as a BIND zone file |
 | `POST` | `/api/zones/{id}/refresh` | `zones.read` | Secondary zones: check the primary now |
+| `POST` | `/api/zones/{id}/promote` | superadmin | Secondary zones added by hand: make the copy a primary zone here |
 | `GET` | `/api/divisions/{id}/logs` | `logs.read` | Query log of the division's zones |
 | `GET` | `/api/token` | – | Token info |
 
@@ -121,6 +122,19 @@ serial now.
 ```bash
 curl -X POST -H "Authorization: Bearer $DNZ_TOKEN" \
   "https://dns.example.com/api/zones/7/refresh?full=true"
+```
+
+## Promote a secondary zone
+
+`POST /api/zones/{id}/promote` (superadmin) makes a secondary zone added by hand this server's own
+primary zone, when its primary is gone: records are kept (the ones the editor knows become
+editable), the serial moves past the primary's, and the zone is no longer transferred. It needs at
+least one successful transfer. Zones from a joined DNZ primary's catalog are promoted with that
+primary instead (`POST /api/replication/subscriptions/{id}/promote`). See
+[Promoting a secondary](/dns/replication#promoting-a-secondary).
+
+```bash
+curl -X POST -H "Authorization: Bearer $DNZ_TOKEN" https://dns.example.com/api/zones/7/promote
 ```
 
 ## Query log

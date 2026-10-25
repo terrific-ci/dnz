@@ -17,6 +17,7 @@ Everything is under **DNS → Replication** (superadmins), and in the CLI under 
 | A second DNZ that follows the first one | [DNZ to DNZ](#dnz-to-dnz) |
 | BIND, Knot or PowerDNS copying zones from DNZ | [DNZ as primary for other nameservers](#dnz-as-primary-for-bind-knot-or-powerdns) |
 | DNZ copying a zone from any other primary | [DNZ as secondary of any primary](#dnz-as-secondary-of-any-primary) |
+| A secondary taking over from a primary that is gone | [Promoting a secondary](#promoting-a-secondary) |
 
 ## DNZ to DNZ
 
@@ -178,7 +179,8 @@ A server that will only be a secondary doesn't need an admin of its own. It copi
   them is refused.
 - A local account with the same username is never touched. With `DNZ_ADMIN_PASSWORD` set as well,
   that local admin is created and nothing is copied.
-- **Leave** keeps the copies as ordinary local accounts, so you can still sign in.
+- **Leave** and **Promote to primary** keep the copies as ordinary local accounts, so you can still
+  sign in.
 - The zones go into the first division (*Default*).
 
 ### What a joined secondary does
@@ -194,7 +196,8 @@ A server that will only be a secondary doesn't need an admin of its own. It copi
 - The primary sends NOTIFY to the address the secondary joined from, on its DNS port.
 
 **Leave** (in the secondary's list, or `dnz replication leave 1`) stops following the primary and
-deletes the zones copied from it.
+deletes the zones copied from it. To keep them instead, because the primary is gone, use
+[Promote to primary](#promoting-a-secondary).
 
 ## DNZ as primary for BIND, Knot or PowerDNS
 
@@ -259,7 +262,7 @@ The primary has to allow transfers to this server's address.
 ## How secondary zones behave
 
 - They're **read-only**: records, import, DNSSEC and Dynamic DNS/ACME tokens only work on the
-  primary. The zone page shows the primary, the last transfer, when the copy expires, and any
+  primary (or here, after [promoting](#promoting-a-secondary) the zone). The zone page shows the primary, the last transfer, when the copy expires, and any
   error.
 - DNZ checks the primary's SOA serial at the SOA *refresh* interval (clamped to 1 minute – 1 day),
   after a NOTIFY, or when you click **Refresh**. A higher serial (RFC 1982 arithmetic) triggers a
@@ -273,6 +276,94 @@ The primary has to allow transfers to this server's address.
   online with its own or the shared key.
 - Secondary zones never forward names they don't have (see
   [Forward missing names](/dns/zones#forward-missing-names)).
+
+## Promoting a secondary
+
+When the primary is gone for good (its disk died, the machine is retired, or you're moving the
+primary role to another server), promote a secondary. The zones it copied become its own primary
+zones, editable there, and it stops following the old primary. Nothing is lost:
+
+- **Records** stay as they were transferred. Records the editor knows (A, MX, TXT, NS, TLSA…) become
+  ordinary editable records; anything else keeps the primary's form and is still served.
+- **DNSSEC keys** stay the same, with their rollover state, because a DNZ secondary already signs
+  with the primary's keys. The DS record at the registrar keeps working, and from now on this
+  server rolls the keys itself.
+- **Superadmins** copied from the primary become ordinary local accounts.
+- Each zone's **SOA serial** moves past the primary's last one, so secondaries of this server take a
+  fresh copy, and the zones join this server's catalog.
+- The subscription and the TSIG key it used for transfers are removed.
+
+<Note>
+  A short outage doesn't need this. A secondary keeps answering until the SOA *expire* time (a week
+  for DNZ primaries) and catches up by itself once the primary is back.
+</Note>
+
+<Tabs>
+  <Tab title="Dashboard">
+    On the secondary, open **DNS → Replication → Copied from other primaries**, open the primary's
+    menu and pick **Promote to primary**. The dialog lists what changes; confirm it.
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    dnz replication show            # the ID of the primary followed
+    dnz replication promote 1
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST -H "Authorization: Bearer $DNZ_TOKEN" \
+      https://ns2.example.com/api/replication/subscriptions/1/promote
+    ```
+
+    Superadmin only. The answer lists the zones promoted (`zones`), the signed ones (`signed`), how
+    many records became editable (`records_converted`) and the superadmins kept (`admins_kept`).
+  </Tab>
+</Tabs>
+
+A **secondary zone added by hand** (copied from BIND, Knot, PowerDNS or another DNZ without joining)
+is promoted on its own: **Promote to primary** on the zone page or in the replication list,
+`dnz zone promote example.org`, or `POST /api/zones/{id}/promote`. It needs at least one successful
+transfer. Zones from a joined primary's catalog are promoted with that primary, all at once.
+
+<Warning>
+  A zone copied from a non-DNZ primary has no DNSSEC keys here: signatures are not transferred. If
+  it was signed there and the registrar has a DS for it, remove that DS, or turn DNSSEC on here and
+  replace the DS with the one DNZ shows. Otherwise validating resolvers stop resolving the zone.
+</Warning>
+
+### After promoting
+
+<Steps>
+  <Step title="Fix the nameservers at the registrar">
+    The zone's NS records still name the old primary. Edit them on the promoted server (they're
+    editable now) and change the NS records at the registrar to match, for example drop `ns1` or
+    point it at a replacement. If the nameservers are named inside the zone itself
+    (`ns1.example.com` for `example.com`), update their glue (addresses) at the registrar too. The
+    SOA now names this server as the primary.
+  </Step>
+  <Step title="Move the other secondaries over">
+    Secondaries that followed the old primary still do. Add each one under **Add secondary** on the
+    promoted server, then on each, **Leave** the old primary and join this one with the new join
+    code. Between leaving and the first transfer (a few seconds) that secondary doesn't answer for
+    the zones. DNZ secondaries copy the same DNSSEC keys again.
+  </Step>
+  <Step title="Bring the old primary back as a secondary">
+    It must not keep serving the same zones as a primary next to the new one: the two would drift
+    apart, and resolvers would get different answers from each. Keep it off the network (or stop
+    DNZ on it) until it's ready, then:
+
+    1. On the promoted server, **Add secondary → DNZ server** for it and copy the join code.
+    2. On the old primary, delete its zones (export them first if you want a copy:
+       `dnz zone export --all`) and remove its own secondaries under **Secondaries of this server**.
+       Zones with the same names aren't followed while they exist there; the replication list shows
+       them as a conflict.
+    3. Join with the code (**Join a primary → Join code**, or `dnz replication join '<code>'`). It
+       copies the zones, records and DNSSEC keys back from the promoted server.
+
+    To make it the primary again later, promote it the same way and repeat these steps the other
+    way round.
+  </Step>
+</Steps>
 
 ## How DNZ answers transfers
 

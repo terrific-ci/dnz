@@ -70,7 +70,13 @@ Once it follows a primary:
 ```bash
 dnz replication sync 1                              # fetch the primary's catalog and zones now
 dnz replication leave 1                             # stop following it and delete the copied zones
+dnz replication promote 1                           # the primary is gone: keep its zones as this server's own
 ```
+
+`promote` turns every zone copied from that primary into a primary zone here, with its records and
+DNSSEC keys (the DS at the registrar stays valid), and stops following the primary. Superadmins
+copied from it become local accounts. It prints what to do next; see
+[Promoting a secondary](/dns/replication#promoting-a-secondary).
 
 ### Copying one zone from any primary
 
