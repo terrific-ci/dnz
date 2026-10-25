@@ -193,7 +193,36 @@ A server that will only be a secondary doesn't need an admin of its own. It copi
 - After each change it fetches the DNSSEC keys of signed zones (`/api/replication/keys`).
 - When it joined from its welcome page (or by `DNZ_JOIN_CODE` without an admin), it fetches the
   superadmins every minute (`/api/replication/admins`).
-- The primary sends NOTIFY to the address the secondary joined from, on its DNS port.
+- It copies zones from the primary's DNS at the host in the join code, or, when nothing answers
+  DNS there, at the addresses the primary hands out (see below).
+- The primary sends NOTIFY to the address the secondary joined from, on its DNS port, or to the
+  secondary's own DNS address when that one doesn't answer DNS.
+
+### Behind a reverse proxy
+
+The join code may name a reverse proxy (`https://dns.example.com` in front of port 8080). The proxy
+only carries the web API; zone transfers, NOTIFY and the sync status need the DNS servers
+themselves. So at join time both sides swap where their DNS answers: the **Device address**
+(Settings → General, or `DNZ_ADVERTISE`), else the machine's interfaces. The secondary asks every
+address for the catalog's SOA over TCP and keeps the ones that answer, the join code's host
+first; the primary keeps the address the request came from unless only the secondary's own one
+answers DNS.
+
+For example, the primary's DNS is `10.0.100.201` and its UI is served at
+`https://localdns.example.com` by a proxy on `10.0.133.10`. The secondary copies from
+`10.0.100.201:53`, and the primary sends NOTIFY to the secondary's own address, not to
+`10.0.133.10`.
+
+- In Docker (bridge network) the interfaces are the container's own. Set the Device address (or
+  `DNZ_ADVERTISE`) on both servers to the host's LAN IP.
+- With the proxy in `DNZ_TRUSTED_PROXIES` (and sending `X-Forwarded-For`), the primary sees the
+  secondary's real address directly.
+
+<Note>
+A secondary that joined through a proxy on DNZ 1.9 or older keeps the proxy's address and shows
+**Unreachable**. After updating both servers, **Leave** on the secondary and join again (the same
+join code works). Or fix the primary side by hand: `dnz replication secondary edit <id> --notify <secondary IP>`.
+</Note>
 
 **Leave** (in the secondary's list, or `dnz replication leave 1`) stops following the primary and
 deletes the zones copied from it. To keep them instead, because the primary is gone, use
