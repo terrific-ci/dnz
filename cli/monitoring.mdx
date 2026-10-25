@@ -3,7 +3,7 @@ title: "Monitoring"
 description: "Read the query log, traffic stats, audit log and topology, and change server-wide settings from the terminal."
 ---
 
-These commands show what the dashboard's Overview, **Query Logs**, **Audit log** and **Topology**
+These commands show what the dashboard's Overview, **Query Logs**, **Query Explain**, **Audit log** and **Topology**
 pages show, and change the server-wide settings under **Settings → General**. See
 [Monitoring](/dashboard/monitoring), [Query logs](/dns/query-logs), [Audit log](/admin/audit-log),
 [Topology](/dashboard/topology) and [Settings](/admin/settings).
@@ -29,6 +29,50 @@ dnz logs --division it
 ```bash
 dnz logs --clear --yes
 ```
+
+## Query explain
+
+`dnz query explain` follows one query through the server and prints each step and the answer it
+gets. Nothing is logged, counted, cached or rate limited. See [Query explain](/dns/query-explain).
+
+```bash
+dnz query explain www.example.com --client 192.168.1.20
+dnz query explain example.com MX --client 10.0.0.5 --protocol tcp
+dnz query explain 192.168.1.10 PTR --client 192.168.1.20
+dnz query explain ads.example.net --client 192.168.1.20 --ask-upstreams
+dnz query explain secure.example.com --client 10.0.0.5 --dnssec --json
+```
+
+| Option | What it does |
+| --- | --- |
+| `<NAME>` | The name; an IP address with type `PTR` |
+| `[TYPE]` | The record type (default `A`) |
+| `--client` | The client's IP address, as the server would see it (required) |
+| `-p`, `--protocol` | `udp` (default), `tcp`, `dot`, `doh` or `doq` |
+| `--dnssec` | Ask with the DO bit |
+| `--ask-upstreams` | On a cache miss, really ask the upstreams. Their answer isn't cached, but their latency stats count it |
+
+```
+www.example.test. A from 192.168.1.20 over udp
+
+ 1. client    Client 192.168.1.20
+              · No split-horizon view: the default records
+              · Client network 192.168.1.0/24 of division Default: its blocklists apply, then the server-wide ones
+ 2. policy    Rate limits, DNS cookies and response rate limiting are skipped for explained queries
+              · Over UDP, answers larger than 1232 bytes are truncated (TC) so the client retries over TCP
+ 3. local     Local zone example.test holds it (as www)
+              · CNAME www.example.test. → example.test (record #2, TTL 300), followed
+              · example.test. is in local zone example.test
+              · 1 A record at example.test.: 192.0.2.1 (record #1, TTL 300)
+
+answer: NOERROR from local   flags: qr aa rd   75 bytes   0.9 ms
+answer:
+  www.example.test. 300 IN CNAME example.test.
+  example.test. 300 IN A 192.0.2.1
+```
+
+Superadmins can explain any client. Everyone else needs `logs.read` in the division whose client
+network holds `--client`.
 
 ## Traffic stats
 

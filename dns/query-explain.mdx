@@ -1,0 +1,79 @@
+---
+title: "Query explain"
+description: "Follow one query through DNZ step by step: the client's view and division, filtering, local zones or the cache and upstreams, and the answer it gets."
+---
+
+**Query explain** answers "why did this client get that answer?". Give it a name, a record type
+and the client's IP address, and DNZ shows the path the query takes through the server, step by
+step, and the reply it gets. It runs the server's own resolution code, not a copy of it, so what it
+shows is what a real query does.
+
+## Explain a query
+
+Open **DNS → Query Explain** (it needs the `logs.read` permission), or click **Explain** at the end
+of a row in **DNS → [Query Logs](/dns/query-logs)** to start from a query a client really asked.
+
+| Field | |
+| --- | --- |
+| **Name** | The name, such as `www.example.com`. With type PTR, an IP address works too |
+| **Type** | The record type |
+| **Client IP** | The address the query comes from, as DNZ would see it |
+| **Protocol** | UDP, TCP, DoT, DoH or DoQ. Over UDP, answers larger than 1232 bytes are truncated |
+| **DNSSEC (DO bit)** | Ask as a validating resolver does, to see signatures and denial proofs |
+| **Ask upstreams on a cache miss** | Send the question to the upstreams for real (see below) |
+
+The form is kept in the page's address, so you can share a link to an explained query.
+
+## What the steps show
+
+1. **Client**: the [split-horizon view](/dns/views) the address falls in, the division whose
+   [client network](/dns/filtering) holds it, and whether DNS64 applies.
+2. **Checks**: rate limits, DNS cookies and response rate limiting are skipped for explained
+   queries, since they depend on how often the client asks, not on the name.
+3. **Local zone**: which zone holds the name, which records answer (with their ids), wildcards,
+   CNAME chains, DNAME, ALIAS flattening, automatic PTR, a secondary zone that has expired, and a
+   zone that [forwards names it doesn't have](/dns/zones#forward-missing-names).
+4. **Filtering**: the blocklist entry or rule that matched and the list it comes from, allow
+   entries, rules limited to some clients or a schedule, [safe search](/dns/filtering#safe-search),
+   and [response policy zones](/dns/rpz) by name, client address or answer address, with the
+   action taken.
+5. **Forwarding**: the [conditional forwarding rule](/dns/forwarding#conditional-forwarding) that
+   matched (or the default upstreams), the strategy and the order the upstreams would be tried in
+   (down ones marked), [recursive mode](/dns/recursive), DNSSEC validation and EDNS Client Subnet.
+6. **Cache**: a hit with the TTL left, a stale answer, or a miss.
+7. **After the answer**: [traffic steering](/dns/geodns) (GeoDNS, weights, health checks) and the
+   addresses it left out, DNS64, and DNSSEC signatures.
+
+Then the **Response**: the result code, the header flags, the answer, authority and additional
+sections and the size on the wire, as the client would get them, and where the answer came from,
+named like the query log's **Answered by** column.
+
+## What it doesn't touch
+
+An explained query is not logged, not counted on the Overview or in `/metrics`, not seen by
+[threat detection](/dns/threats), not rate limited, and not counted as an RPZ hit. It doesn't change
+the cache either: no hit is counted, no prefetch starts, nothing is added or dropped.
+
+On a cache miss the upstreams are **not asked** by default. The steps stop at which upstreams would
+be asked, in which order, and say the final answer is unknown; **Ask them** runs it again with
+**Ask upstreams on a cache miss** on.
+
+<Warning>
+  With **Ask upstreams on a cache miss** on, the question really goes to the upstreams. Their answer
+  is not cached, but their latency and health stats count it like any other query.
+</Warning>
+
+## Who can explain
+
+Superadmins can explain any client's query. Everyone else needs `logs.read` in the division whose
+client network holds the client's address: the same queries they can already see in that division's
+query log. Explaining is read-only and isn't written to the [audit log](/admin/audit-log).
+
+## From the CLI and the API
+
+```bash
+dnz query explain www.example.com --client 192.168.1.20
+```
+
+See [Monitoring](/cli/monitoring#query-explain) for the CLI and [Query explain](/api/query-explain)
+for the API.
