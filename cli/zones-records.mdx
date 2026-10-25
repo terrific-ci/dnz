@@ -96,6 +96,16 @@ dnz zone expiry disable example.com
 
 Off until turned on per zone. See [Domain expiry](/dns/domain-expiry).
 
+### Domain info
+
+```bash
+dnz zone info example.com             # registrar, dates, statuses explained, NS and DS compared with the zone
+dnz zone info example.com --refresh   # ask again even if the last answer is under an hour old
+```
+
+The registry's answer on demand (RDAP, or WHOIS where there is none), for any zone. See
+[Domain info](/dns/domain-info).
+
 ## Records
 
 ### Picking records

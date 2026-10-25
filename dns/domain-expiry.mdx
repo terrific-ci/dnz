@@ -48,8 +48,11 @@ dnz zone expiry set lab.example.com --domain auto     # back to the public suffi
   folder and fetched again once a week, only while a check runs.
 - **One request per monitored zone per day**, at least 10 seconds apart per RDAP server.
 - A failed lookup is tried again after 1 hour, then 2, 4, 8, 16 and at most 24 hours.
-- A top-level domain without RDAP (such as `.internal`, or some country domains) shows as unknown.
-  Some registries publish no expiry date (`.de`, for one); DNZ then still watches the statuses.
+- A top-level domain without RDAP (some country domains) is asked over **WHOIS** (TCP port 43),
+  using the server IANA's `whois.iana.org` names. One with neither (such as `.internal`) shows as
+  unknown. Some registries publish no expiry date (`.de`, for one); DNZ then still watches the
+  statuses.
+- Every lookup also keeps the registry's whole answer as the zone's [domain info](/dns/domain-info).
 - In a [cluster](/deploy/cluster) only the leader checks.
 
 ## Alerts

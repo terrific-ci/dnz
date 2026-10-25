@@ -97,6 +97,7 @@
               "dns/dnssec",
               "dns/dnssec-validation",
               "dns/domain-expiry",
+              "dns/domain-info",
               "dns/encrypted-dns",
               "dns/rate-limiting",
               "dns/replication",

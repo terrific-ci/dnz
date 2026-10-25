@@ -1,0 +1,58 @@
+---
+title: "Domain info"
+description: "See what the registry says about a zone's domain, like whois: registrar, dates, statuses explained, nameservers and DNSSEC compared with the zone, and contacts."
+---
+
+The **Registration** tab of a zone shows what the registry says about its registered domain, next to
+what DNZ serves: the registrar, the dates, every status with what it means, the nameservers and
+DNSSEC at the registry compared with the zone's own, and the contacts the registry publishes.
+
+<Note>
+  A lookup on demand, for any zone, with [expiry monitoring](/dns/domain-expiry) on or off. Nothing
+  runs in the background for it. While monitoring is on, its daily check keeps this fresh too.
+</Note>
+
+## Look it up
+
+On the zone's page, **Registration** → **Look up**. Or from the terminal:
+
+```bash
+dnz zone info example.com
+dnz zone info example.com --refresh   # ask again even if the last answer is under an hour old
+```
+
+An answer less than an hour old is reused; a refresh still asks the registry at most once a minute.
+
+## What it shows
+
+| Part | From the registry | Compared with |
+| --- | --- | --- |
+| Registrar | Name, IANA registrar ID, website, abuse email and phone | – |
+| Dates | Registered, last changed, expires | – |
+| Statuses | Each status (`clientTransferProhibited`, `clientHold`, `redemptionPeriod`, …) explained in plain English; holds and deletion in red | – |
+| Nameservers | The NS the registry delegates to | The zone's NS records; missing and extra ones highlighted |
+| DNSSEC | Signed or not, and the DS records | The DS for the keys DNZ signs with: complete, DS missing, a DS that matches no key, or a DS left behind for an unsigned zone |
+| Contacts | Registrant, admin, tech, billing | – |
+
+Most registries withhold contact details for privacy; those show as **redacted**.
+
+For a zone inside the registered domain (`lab.example.com` in `example.com`), the registry's
+nameservers and DS are about `example.com`, so DNZ shows them without comparing.
+
+## RDAP, then WHOIS
+
+DNZ asks the registry over RDAP. For a top-level domain without RDAP (some country domains) it
+falls back to **WHOIS** on TCP port 43, using the server IANA's `whois.iana.org` names, and reads the
+usual fields from the answer, best effort. The tab says which one answered and, for WHOIS, shows the
+original text.
+
+## API
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/zones/{id}/info` | `zones.read` | The last answer, compared with the zone as it is now (asks nobody) |
+| `POST` | `/api/zones/{id}/info?refresh=true` | `zones.read` | Ask the registry; without `refresh`, an answer under an hour old is reused |
+
+The answer holds `info` (the registry's data, with `source` `rdap` or `whois`), `statuses` (each with
+`epp`, `meaning` and `level`), `nameservers` and `dnssec` (the comparisons, each with a `note`),
+`checked_at`, `cached` and `error` (why the last lookup failed; `info` then keeps the answer before).
