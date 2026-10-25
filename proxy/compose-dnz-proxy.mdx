@@ -1,0 +1,138 @@
+---
+title: "DNZ and dnz-proxy in one compose file"
+description: "Start DNZ and a dnz-proxy node from one docker-compose.yml: the node joins with a connect key you pick, without approval."
+---
+
+DNZ and a [dnz-proxy](/proxy/dnz-proxy) node can start together from one `docker-compose.yml`, with
+the node joined from the first start:
+
+- `DNZ_PROXY_CONNECT_KEY` sets the **connect key**, which DNZ otherwise makes up on first use. The
+  same value goes into the node's `DNZ_PROXY_KEY`.
+- DNZ's environment **declares the proxy** (`DNZ_PROXY_SEED_KIND=dnz-proxy`). DNZ keeps **Let nodes
+  join without approval** on for it, so a node with the key that names the proxy joins at once.
+- `DNZ_ZONES` makes the **zone** at the first start.
+
+The same file is in the repository as `deploy/dnz-proxy-stack/docker-compose.yml`.
+
+## The file
+
+Replace the values marked `CHANGE`. Make the connect key with:
+
+```bash
+echo "dnzp_$(openssl rand -hex 24)"
+```
+
+and put the same value in both places.
+
+```yaml docker-compose.yml
+services:
+  dnz:
+    image: terrificci/dnz:latest
+    restart: unless-stopped
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "8080:8080"
+    volumes:
+      - dnz-data:/data
+    environment:
+      TZ: Asia/Jakarta
+      DNZ_INSTANCE_NAME: dnz
+      DNZ_ADMIN_USERNAME: admin
+      DNZ_ADMIN_PASSWORD: change-me-please                       # CHANGE
+      DNZ_ADVERTISE: 192.168.1.10                                # CHANGE: this host's LAN address
+      DNZ_PROXY_BACKEND: "on"
+      DNZ_ZONES: home.example.com                                # CHANGE
+      DNZ_PROXY_CONNECT_KEY: dnzp_9f2c4e7a1b3d5f6e8a0c2b4d6f8e0a1c3b5d   # CHANGE (same as below)
+      DNZ_PROXY_SEED_NAME: edge
+      DNZ_PROXY_SEED_KIND: dnz-proxy
+      DNZ_PROXY_SEED_IPV4: 192.168.1.10                          # CHANGE: where devices reach the node
+
+  dnz-proxy:
+    image: terrificci/dnz-proxy:latest
+    restart: unless-stopped
+    depends_on:
+      dnz:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - dnz-proxy:/data
+    ulimits:
+      nofile: 65536
+    environment:
+      DNZ_URL: http://dnz:8080
+      DNZ_PROXY_KEY: dnzp_9f2c4e7a1b3d5f6e8a0c2b4d6f8e0a1c3b5d   # CHANGE (same as above)
+      DNZ_PROXY_NAME: node-1
+      DNZ_PROXY_PROXY: edge
+      DNZ_PROXY_PUBLIC_IPV4: 192.168.1.10                        # CHANGE: DNS answers with this
+
+  whoami:
+    image: traefik/whoami:v1.10
+    restart: unless-stopped
+
+volumes:
+  dnz-data:
+  dnz-proxy:
+```
+
+```bash
+docker compose up -d
+```
+
+Then point the LAN's devices (or the router's DHCP) at this host for DNS. See
+[Pointing clients at DNZ](/deploy/clients).
+
+## What happens at start
+
+<Steps>
+  <Step title="DNZ sets itself up">
+    DNZ creates the admin, makes `home.example.com`, stores the connect key and adds the dnz-proxy
+    proxy `edge`, approved, with **Let nodes join without approval** on.
+  </Step>
+  <Step title="The node joins">
+    The node waits until DNZ is healthy, then joins `edge` with the connect key and gets a token of
+    its own. It shows up on the proxy's **Nodes** tab as `node-1`, healthy.
+  </Step>
+</Steps>
+
+More nodes on other servers join the same way: the same key, `DNZ_PROXY_PROXY: edge`, and DNZ's
+address as they reach it in `DNZ_URL`. DNS answers `edge`'s names with every healthy node's address.
+
+## Adding routes
+
+Routes are made in DNZ. Each one makes the service, the router and the DNS record at once.
+
+<Tabs>
+  <Tab title="Dashboard">
+    Open **Proxy → edge → Add route**, give the hostname and the upstream (`http://whoami:80`).
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    docker compose exec dnz dnz login -u admin
+    docker compose exec dnz dnz proxy route edge whoami.home.example.com -u http://whoami:80 --http
+    ```
+  </Tab>
+</Tabs>
+
+The node has the route within a second.
+
+## Certificates
+
+DNZ gets the certificates for a dnz-proxy proxy itself and hands them to its nodes: set up an ACME
+account and a certificate resolver under **Proxy → Certificates**, then add routes without `--http`.
+For names that aren't reachable from the internet, use DNS-01: through DNZ's own zone when DNZ is the
+domain's public nameserver, or a Cloudflare token. See [Certificates](/proxy/certificates).
+
+## The settings
+
+| Environment | File key | Description |
+| --- | --- | --- |
+| `DNZ_PROXY_CONNECT_KEY` | `proxy.connect_key` | The connect key: `dnzp_` and at least 32 letters, digits, `-` or `_`. Written at every start; **Replace connect key** is refused while it is set. Nodes that already joined keep their own tokens when it changes |
+| `DNZ_PROXY_SEED_KIND` | `proxy_seed.kind` | `dnz-proxy` (or `dnz`). Needs `DNZ_PROXY_CONNECT_KEY` and takes no `DNZ_PROXY_SEED_TOKEN` |
+
+`DNZ_PROXY_SEED_NAME`, `DNZ_PROXY_SEED_IPV4` / `IPV6` and the entry point settings are the same as
+[for Traefik](/proxy/compose#the-settings). The proxy's addresses are answered only while it has no
+node. In the dashboard, **Let nodes join without approval** on the proxy's **Settings** tab is
+greyed out, and **Replace connect key** under **Settings → Proxy** is not offered.

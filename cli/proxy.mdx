@@ -22,7 +22,8 @@ dnz proxy caddy edge-2                            # what the Caddy is sent, and 
 ```
 
 `on` and `off` match the switch under **Settings → Proxy**; with `DNZ_PROXY_BACKEND` set, `show` says
-so and the switch can't change. A proxy declared with `DNZ_PROXY_SEED_*` shows **environment** under
+so and the switch can't change. With `DNZ_PROXY_CONNECT_KEY` set, `show` says so after the connect key.
+A proxy declared with `DNZ_PROXY_SEED_*` shows **environment** under
 **SET BY**: the fields set there can't be changed, and it can't be deleted or get another token (see
 [DNZ and Traefik in one compose file](/proxy/compose)). `add` takes:
 

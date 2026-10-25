@@ -283,6 +283,9 @@ A node joins with the connect key, in one of three ways:
 - **Automatically.** A proxy with **Let nodes join without approval** (its **Settings** tab) takes
   every node that names it.
 
+To start DNZ and a node from one compose file with nothing to approve, see
+[DNZ and dnz-proxy in one compose file](/proxy/compose-dnz-proxy).
+
 Once joined, a node gets a token of its own, kept in its state directory. The connect key isn't
 needed any more, and replacing the connect key doesn't affect joined nodes. Removing a node revokes
 its token; with the connect key still set, it asks to join again.

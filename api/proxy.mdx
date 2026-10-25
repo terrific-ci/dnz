@@ -19,9 +19,9 @@ are in the [dnz-proxy API](/api/dnz-proxy).
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/settings/proxy` | `enabled`, `locked`, `kinds`, `traefik_path`, `caddy_path`, `connect_key`, `max_pending` and `proxies` (see below) |
+| `GET` | `/api/settings/proxy` | `enabled`, `locked`, `kinds`, `traefik_path`, `caddy_path`, `connect_key`, `connect_key_locked`, `max_pending` and `proxies` (see below) |
 | `PUT` | `/api/settings/proxy` | `{"enabled": true}` or `{"enabled": false}` |
-| `POST` | `/api/settings/proxy/connect-key` | Replace the connect key |
+| `POST` | `/api/settings/proxy/connect-key` | Replace the connect key (400 while `DNZ_PROXY_CONNECT_KEY` sets it) |
 | `GET` | `/api/proxies` | `{"enabled": true, "proxies": [{"id", "name", "kind", "ipv4", "ipv6", "routes": [...]}]}`: approved proxies only, with their enabled routers |
 | `POST` | `/api/proxies` | Add a proxy by its `kind` and addresses |
 | `PUT` | `/api/proxies/{id}` | Change a proxy |
@@ -44,6 +44,7 @@ are in the [dnz-proxy API](/api/dnz-proxy).
 | `kinds` | The kinds a proxy can have: `[{"kind", "label"}]`, with `traefik`, `dnz` and `caddy` |
 | `traefik_path`, `caddy_path` | Where Traefik's HTTP provider and Caddy's config loader call |
 | `connect_key` | The key every Traefik and Caddy calls with, and dnz-proxy nodes join with |
+| `connect_key_locked` | `true` when `DNZ_PROXY_CONNECT_KEY` sets the connect key |
 | `max_pending` | How many detected proxies may wait at once |
 | `proxies` | Every proxy, with its `kind`, status, routers and proxied hosts |
 
@@ -96,7 +97,9 @@ auth. Add `"digest": true` and an optional `"realm"` for digest auth.
 
 For a proxy declared with `DNZ_PROXY_SEED_*`, a `PUT /api/proxies/{id}` that changes a field in
 `locked_fields`, a `DELETE`, a new token and, when `DNZ_PROXY_SEED_AUTO_RECORDS` is set, the
-`auto-records` switch are refused with 400, naming the setting.
+`auto-records` switch are refused with 400, naming the setting. For a declared dnz-proxy proxy,
+`PUT /api/proxies/{id}/dnz/settings` with `"auto_approve": false` is refused too; `GET
+/api/proxies/{id}/dnz` says so with `auto_approve_locked`.
 
 A host has `host`, `zone_id`, `zone`, `routers`, `records` (how many DNZ keeps) and `status`:
 
@@ -161,7 +164,7 @@ Responses also carry:
 | `status` | `pending`, `approved` or `ignored` |
 | `detected_ip`, `detected_name` | How a Traefik or Caddy with the connect key is recognized |
 | `has_token` | Whether the proxy has a token of its own |
-| `locked_fields` | In `GET /api/settings/proxy`: the fields `DNZ_PROXY_SEED_*` sets (`name`, `kind`, `token`, `ipv4`, `traefik_api_url`, `auto_records`, …); empty for other proxies |
+| `locked_fields` | In `GET /api/settings/proxy`: the fields `DNZ_PROXY_SEED_*` sets (`name`, `kind`, `token`, `auto_approve`, `ipv4`, `traefik_api_url`, `auto_records`, …); empty for other proxies |
 | `last_seen_at`, `last_seen_ip` | When and from where it last fetched its configuration |
 
 ### A router

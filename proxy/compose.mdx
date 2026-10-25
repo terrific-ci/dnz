@@ -14,6 +14,11 @@ start. Nothing is set up in the dashboard:
   Traefik labels gets its **DNS record** from DNZ.
 - Traefik gets its **certificates** itself, here a Let's Encrypt wildcard through Cloudflare DNS-01.
 
+<Tip>
+  Using Caddy or dnz-proxy instead? See [DNZ and Caddy in one compose file](/proxy/compose-caddy) and
+  [DNZ and dnz-proxy in one compose file](/proxy/compose-dnz-proxy).
+</Tip>
+
 The example below is split-horizon: the domain stays on Cloudflare, devices on your LAN resolve
 `*.home.example.com` through DNZ to Traefik, and Cloudflare is only used for the certificate. The
 same file is in the repository as `deploy/traefik-stack/docker-compose.yml`.
@@ -168,20 +173,21 @@ the file. DNZ asks for a new one.
 `DNZ_ZONES` names zones, comma-separated, that DNZ makes at start when they don't exist yet, in the
 first division. They are never changed or deleted after that.
 
-`DNZ_PROXY_SEED_*` declares one Traefik or Caddy proxy. DNZ writes it at every start: it adds it when
+`DNZ_PROXY_SEED_*` declares one Traefik, Caddy or dnz-proxy proxy. DNZ writes it at every start: it adds it when
 there is no proxy of that name, else it writes the fields that are set over the one there.
 
 | Environment | File key | Description |
 | --- | --- | --- |
 | `DNZ_PROXY_SEED_NAME` | `proxy_seed.name` | The proxy's name; required when any of the others is set |
-| `DNZ_PROXY_SEED_KIND` | `proxy_seed.kind` | `traefik` (default) or `caddy` |
+| `DNZ_PROXY_SEED_KIND` | `proxy_seed.kind` | `traefik` (default), `caddy` or `dnz-proxy` ([with the connect key](/proxy/compose-dnz-proxy)) |
 | `DNZ_PROXY_SEED_IPV4`, `DNZ_PROXY_SEED_IPV6` | `proxy_seed.ipv4`, `proxy_seed.ipv6` | Where visitors reach it; DNS answers with these. At least one |
-| `DNZ_PROXY_SEED_TOKEN` | `proxy_seed.token` | Required. The token the proxy sends: `dnzp_` and at least 32 letters, digits, `-` or `_`. A new value replaces the old one at the next start |
+| `DNZ_PROXY_SEED_TOKEN` | `proxy_seed.token` | Required for a Traefik or Caddy. The token the proxy sends: `dnzp_` and at least 32 letters, digits, `-` or `_`. A new value replaces the old one at the next start |
 | `DNZ_PROXY_SEED_TRAEFIK_API` | `proxy_seed.traefik_api` | Traefik's API, so DNZ can read its routers and entry points. Traefik only |
 | `DNZ_PROXY_SEED_HTTP_ENTRYPOINT`, `DNZ_PROXY_SEED_HTTPS_ENTRYPOINT` | `proxy_seed.http_entrypoint`, `proxy_seed.https_entrypoint` | Entry points of the routers DNZ sends (default `web` and `websecure`) |
 | `DNZ_PROXY_SEED_CERT_RESOLVER` | `proxy_seed.cert_resolver` | Certificate resolver of DNZ's HTTPS routers |
 | `DNZ_PROXY_SEED_AUTO_RECORDS` | `proxy_seed.auto_records` | `true` or `false`: [records from Traefik's routers](/proxy/traefik-records). `true` needs `DNZ_PROXY_SEED_TRAEFIK_API` |
 | `DNZ_ZONES` | `seed.zones` | Zones made at start when missing |
+| `DNZ_PROXY_CONNECT_KEY` | `proxy.connect_key` | The connect key, one you pick; needed for `dnz-proxy` |
 
 A wrong value stops DNZ at start with the setting's name, so it never runs half set up. In a cluster,
 give every node the same settings.

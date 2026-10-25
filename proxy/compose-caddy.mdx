@@ -1,0 +1,132 @@
+---
+title: "DNZ and Caddy in one compose file"
+description: "Start DNZ and a Caddy from one docker-compose.yml, already connected, without approving anything in the dashboard."
+---
+
+DNZ and a [Caddy](/proxy/caddy) can start together from one `docker-compose.yml` and be connected
+from the first start:
+
+- DNZ's environment **declares the proxy** (`DNZ_PROXY_SEED_KIND=caddy`), with a token you pick. The
+  same token goes into Caddy's `dnz.json`, so Caddy connects from wherever it calls, without the
+  connect key or an approval.
+- `DNZ_ZONES` makes the **zone** at the first start.
+- Caddy's `dnz.json` is written **inline** in the compose file (`configs.content`), so the compose
+  file is the only file. That needs Docker Compose 2.23 or newer.
+
+The same file is in the repository as `deploy/caddy-stack/docker-compose.yml`.
+
+## The file
+
+Replace the values marked `CHANGE`. Make the proxy token with:
+
+```bash
+echo "dnzp_$(openssl rand -hex 24)"
+```
+
+and put the same value in both places.
+
+```yaml docker-compose.yml
+services:
+  dnz:
+    image: terrificci/dnz:latest
+    restart: unless-stopped
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "8080:8080"
+    volumes:
+      - dnz-data:/data
+    environment:
+      TZ: Asia/Jakarta
+      DNZ_INSTANCE_NAME: dnz
+      DNZ_ADMIN_USERNAME: admin
+      DNZ_ADMIN_PASSWORD: change-me-please                       # CHANGE
+      DNZ_ADVERTISE: 192.168.1.10                                # CHANGE: this host's LAN address
+      DNZ_PROXY_BACKEND: "on"
+      DNZ_ZONES: home.example.com                                # CHANGE
+      DNZ_PROXY_SEED_NAME: edge
+      DNZ_PROXY_SEED_KIND: caddy
+      DNZ_PROXY_SEED_IPV4: 192.168.1.10                          # CHANGE: where devices reach Caddy
+      DNZ_PROXY_SEED_TOKEN: dnzp_9f2c4e7a1b3d5f6e8a0c2b4d6f8e0a1c3b5d   # CHANGE (same as in dnz.json)
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    depends_on:
+      dnz:
+        condition: service_healthy
+    command: caddy run --config /etc/caddy/dnz.json
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    configs:
+      - source: dnz.json
+        target: /etc/caddy/dnz.json
+    volumes:
+      - caddy-data:/data
+
+  whoami:
+    image: traefik/whoami:v1.10
+    restart: unless-stopped
+
+configs:
+  dnz.json:
+    content: |
+      {
+        "admin": {
+          "config": {
+            "load": {
+              "module": "http",
+              "url": "http://dnz:8080/api/proxy/caddy",
+              "header": { "Authorization": ["Bearer dnzp_9f2c4e7a1b3d5f6e8a0c2b4d6f8e0a1c3b5d"] },
+              "timeout": "10s"
+            },
+            "load_delay": "10s"
+          }
+        }
+      }
+
+volumes:
+  dnz-data:
+  caddy-data:
+```
+
+```bash
+docker compose up -d
+```
+
+Then point the LAN's devices (or the router's DHCP) at this host for DNS. See
+[Pointing clients at DNZ](/deploy/clients).
+
+## Adding routes
+
+Caddy has no container labels DNZ reads, so routes are made in DNZ. Each one makes the service, the
+router and the DNS record at once.
+
+<Tabs>
+  <Tab title="Dashboard">
+    Open **Proxy → edge → Add route**, give the hostname and the upstream (`http://whoami:80`).
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    docker compose exec dnz dnz login -u admin
+    docker compose exec dnz dnz proxy route edge whoami.home.example.com -u http://whoami:80 --http
+    ```
+  </Tab>
+</Tabs>
+
+Within 10 seconds Caddy has the route, and `whoami.home.example.com` resolves to `192.168.1.10`.
+
+## Certificates
+
+Caddy gets HTTPS certificates itself (Let's Encrypt or ZeroSSL), which needs the name reachable from
+the internet on ports 80 and 443. For names that only exist on a LAN, keep the route on `http://`
+(`--http`) or upload a certificate to the proxy (**TLS → Certificates**). A wildcard needs Caddy
+built with a DNS provider module, or an uploaded certificate. See [What Caddy gets](/proxy/caddy).
+
+## The settings
+
+The same `DNZ_PROXY_SEED_*` settings as [for Traefik](/proxy/compose#the-settings), with
+`DNZ_PROXY_SEED_KIND=caddy`. `DNZ_PROXY_SEED_TRAEFIK_API` and `DNZ_PROXY_SEED_AUTO_RECORDS` are for
+Traefik only. The fields set there are read-only in the dashboard, the API and the CLI.
