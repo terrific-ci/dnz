@@ -86,6 +86,25 @@ The image has a `HEALTHCHECK` that runs `dnz healthcheck`, so `docker ps` shows 
 API answers. If it shows `unhealthy`, check `docker compose logs dnz`: usually a port that couldn't
 be bound or a `/data` volume that isn't writable.
 
+## Memory
+
+`docker stats` counts more than DNZ's own memory: the kernel's cache of files the container reads
+and writes is charged to it too, and DNZ's SQLite file holds the query log (7 days by default, see
+`DNZ_LOG_RETENTION_DAYS`), which can reach a few GB. On Linux, once nobody has read the query log
+for 10 minutes, DNZ drops its cached pages of the database file, so what `docker stats` shows stays
+close to what DNZ itself uses. Answering queries never reads that file. The first search through
+the whole log after such a pause reads it from disk; later ones are as fast as before. The
+**Server** tab shows both: **Memory** under *DNZ process* is the process, and **Container** is the
+number `docker stats` shows, with the part of it that is file cache.
+
+To cap it, give the container a limit; the kernel then gives back file cache before it gets near it:
+
+```yaml
+services:
+  dnz:
+    mem_limit: 1g
+```
+
 ## Port 53 on the host
 
 Publishing `53:53` fails when something on the host already uses port 53, most often
