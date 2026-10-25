@@ -21,7 +21,8 @@ dnz replication secondary add bind9 --kind other --allow 192.0.2.53 --notify 192
 dnz replication secondary list
 dnz replication secondary join-code 1               # a new code for a DNZ secondary
 dnz replication secondary edit 2 --notify 192.0.2.54
-dnz replication secondary rm 2
+dnz replication secondary rm 2                      # a DNZ secondary also factory resets itself
+dnz replication secondary rm 2 --no-reset           # just stop it copying; it can still be promoted
 ```
 
 `secondary add` allows a server to copy zones. Another DNZ (`--kind dnz`, the default) gets a **join
@@ -37,6 +38,11 @@ code**; any other server (`--kind other`, e.g. BIND or Knot) gets TSIG details.
 
 `secondary edit` takes `--name`, `--allow`, `--notify` and `--tsig on|off`. `secondary join-code`
 makes a new code; the old one stops working.
+
+`secondary rm` stops a server copying zones. A DNZ secondary is also told to factory reset itself:
+the next time it checks in (within a minute) it erases everything and goes back to first-run setup.
+`--no-reset` leaves it as it is, so its copies keep answering until they expire and it can still be
+promoted. See [Removing a secondary](/dns/replication#removing-a-secondary).
 
 ## On the secondary: follow a primary
 

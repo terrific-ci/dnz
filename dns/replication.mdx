@@ -197,6 +197,8 @@ A server that will only be a secondary doesn't need an admin of its own. It copi
   DNS there, at the addresses the primary hands out (see below).
 - The primary sends NOTIFY to the address the secondary joined from, on its DNS port, or to the
   secondary's own DNS address when that one doesn't answer DNS.
+- Every minute it checks in with the primary (`/api/replication/membership`), so it hears when the
+  primary removed it (see [Removing a secondary](#removing-a-secondary)).
 
 ### Behind a reverse proxy
 
@@ -227,6 +229,35 @@ join code works). Or fix the primary side by hand: `dnz replication secondary ed
 **Leave** (in the secondary's list, or `dnz replication leave 1`) stops following the primary and
 deletes the zones copied from it. To keep them instead, because the primary is gone, use
 [Promote to primary](#promoting-a-secondary).
+
+### Removing a secondary
+
+On the primary, **Remove** in a secondary's menu stops it from transferring zones. For a DNZ
+secondary the dialog has **Also reset the secondary**, on by default: the next time that server
+checks in (within a minute, or as soon as it can reach the primary again), it **factory resets
+itself**. Every zone, record, user, setting and log is erased and it goes back to first-run setup,
+the same as **Settings → Factory reset** on that server.
+
+<Warning>
+The whole secondary is reset, including zones of its own and primaries it follows besides this one.
+It can't be undone. If the primary is the server going away, [promote](#promoting-a-secondary) a
+secondary instead of removing it.
+</Warning>
+
+- Its fresh audit log keeps one entry, `replication.reset_by_primary`, saying why. The primary
+  records `replication.secondary_reset` once the secondary confirms.
+- With `DNZ_ADMIN_PASSWORD` set on the secondary, that admin is made again; otherwise its web UI
+  shows the welcome page. Started with `DNZ_JOIN_CODE`, it doesn't join again: its log says the
+  primary removed it. Remove the variable, or set a new join code.
+- Only that explicit answer from the primary resets anything. A secondary that can't reach the
+  primary, or whose join secret is refused (after **New join code**, say), keeps everything and keeps
+  answering until its zones expire.
+- Untick the box to remove the secondary without resetting it: its copies keep answering until they
+  expire, and it can still be promoted.
+
+From a terminal: `dnz replication secondary rm 1` (resets a DNZ secondary; add `--no-reset` to
+keep it as it is). Over the API: `DELETE /api/replication/servers/{id}?reset=true` (superadmin);
+without `reset=true` nothing is reset.
 
 ## DNZ as primary for BIND, Knot or PowerDNS
 
