@@ -30,8 +30,10 @@ Passwords and secrets are never logged. Entries are kept for **365 days**.
 
 Bulk record changes are written as one `record.bulk` entry holding every record before and after.
 
-The IP address is the client's. Behind a reverse proxy, set `DNZ_TRUSTED_PROXIES`, or every entry
-shows the proxy's address. See [HTTPS and reverse proxies](/deploy/https).
+The IP address is the client's. Behind a reverse proxy that DNZ doesn't already know, trust it under
+Settings → General → Trusted reverse proxies, or every entry shows the proxy's address. When the
+latest entries all show one such proxy, the page says so and offers to trust it. See
+[HTTPS and reverse proxies](/deploy/https#trust-the-proxys-forwarded-address).
 
 ## Search and filter
 

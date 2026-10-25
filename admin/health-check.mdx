@@ -32,6 +32,7 @@ Each finding is **fail** (broken), **warning** (fix it), **info** (worth knowing
 | Rate limiting (`rate_limit`) | Neither the per-client limit nor [RRL](/dns/rate-limiting) is on |
 | Metrics token (`metrics_token`) | `/metrics` on a public address without a token |
 | UI over HTTP (`http_public`) | The UI and API on a public address without TLS |
+| Client addresses (`proxy_trust`) | Requests with `X-Forwarded-For` (or `X-Real-IP` / `Forwarded`) from an address DNZ doesn't trust: it is behind a reverse proxy it doesn't trust, so the audit log records the proxy. The fix names the address to [trust](/deploy/https#trust-the-proxys-forwarded-address) |
 
 In a [cluster](/deploy/cluster) each node checks its own machine; its findings carry its name.
 

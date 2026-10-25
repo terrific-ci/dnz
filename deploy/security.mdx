@@ -15,8 +15,8 @@ description: "Sign-in protection, sessions, security headers, and which ports to
     After 5 failed sign-ins, that username is locked for 15 minutes. An IP address is locked after
     20 failures. Both show up in the audit log as `user.login_failed` and `user.login_locked`.
 
-    Behind a reverse proxy, set `DNZ_TRUSTED_PROXIES` so the client's address is locked, not the
-    proxy's. See [HTTPS and reverse proxies](/deploy/https).
+    Behind a reverse proxy, DNZ must trust it so the client's address is locked, not the proxy's.
+    Proxies DNZ manages are trusted automatically; see [HTTPS and reverse proxies](/deploy/https#trust-the-proxys-forwarded-address).
   </Accordion>
   <Accordion title="Sessions" icon="clock">
     Sessions end after `DNZ_SESSION_TTL_HOURS` (168 hours by default), or sooner when unused for

@@ -146,6 +146,7 @@ dnz settings show                             # time zone and DNS settings
 dnz settings timezone Asia/Jakarta            # schedules and reports; "server" follows the server
 dnz settings auto-ptr on                      # PTR answers for addresses of A/AAAA records
 dnz settings advertise 192.168.1.10           # the address devices use (setup guides); --auto works it out
+dnz settings trusted-proxies --add 10.0.133.10   # reverse proxies whose X-Forwarded-For is believed
 dnz settings rrl                              # response rate limiting: settings and counters
 dnz settings dns64 on --network 2001:db8:aa::/48   # AAAA from A for IPv6-only clients (NAT64)
 dnz settings dns64 --prefix 2001:db8:64::/96       # your NAT64 gateway's prefix

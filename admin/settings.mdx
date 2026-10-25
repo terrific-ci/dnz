@@ -53,6 +53,27 @@ dnz settings advertise 192.168.1.10     # set
 dnz settings advertise --auto           # work it out from the network again
 ```
 
+## Trusted reverse proxies
+
+The **Trusted reverse proxies** card lists the proxies whose `X-Forwarded-For`, `X-Real-IP` or
+`Forwarded` header DNZ believes, so the audit log, sessions and sign-in limits see the client
+instead of the proxy. It shows:
+
+- the addresses saved here (IPs or networks, separated by commas);
+- `DNZ_TRUSTED_PROXIES`, read-only (change it in the environment and restart);
+- the proxies DNZ trusts automatically, because it manages them or reads them for Sites in DNS;
+- a warning, with a **Trust** button, for each address that sent these headers without being trusted
+  since DNZ started.
+
+Name the proxy, not the whole LAN. See [HTTPS and reverse proxies](/deploy/https#trust-the-proxys-forwarded-address).
+
+```bash
+dnz settings trusted-proxies                         # show, with untrusted proxies seen
+dnz settings trusted-proxies --add 10.0.133.10       # trust one more
+dnz settings trusted-proxies --remove 10.0.133.10
+dnz settings trusted-proxies 10.0.133.10,172.18.0.5  # replace the saved list (--clear empties it)
+```
+
 ## Response rate limiting (RRL)
 
 The **Response rate limiting (RRL)** card limits identical answers to one client network over UDP,

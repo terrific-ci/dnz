@@ -18,7 +18,7 @@ the fix. See [Health check](/admin/health-check).
 | `migrating the … database` at startup | The database user may not create tables. Postgres: make it the database's owner. MySQL: `GRANT ALL ON dnz.*` |
 | `docker ps` shows `unhealthy` | Check `docker compose logs dnz`. Usually a port that couldn't be bound, or a `/data` volume that isn't writable |
 | Other DNZ servers don't appear on the replication radar | The primary listens on `127.0.0.1`. Set `DNZ_HTTP_ADDR=0.0.0.0:8080`, or type its address under the radar |
-| The audit log shows the proxy's IP for every action | Set `DNZ_TRUSTED_PROXIES` to the reverse proxy's address |
+| The audit log shows the proxy's IP for every action | Trust the proxy: the audit log's **Trust** button, Settings → General → Trusted reverse proxies, `dnz settings trusted-proxies --add <ip>`, or `DNZ_TRUSTED_PROXIES=<ip>` |
 | A setting in `dnz.toml` has no effect | The environment wins over the file. Run `dnz config show` to see where each value comes from |
 
 ## Useful commands

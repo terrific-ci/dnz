@@ -48,15 +48,40 @@ itself. To open them from elsewhere, put an HTTPS reverse proxy in front. HTTPS 
 
 ## Trust the proxy's forwarded address
 
-Tell DNZ the proxy's address, so the audit log, sign-in lockouts, views and blocklists use the real
-client IP instead of the proxy's:
+Behind a reverse proxy, every request reaches DNZ from the proxy's address. DNZ takes the client's
+address from the proxy's headers (`X-Forwarded-For`, else `X-Real-IP`, else `Forwarded: for=`),
+but only from a proxy it trusts, since anyone else could claim any address. The audit log,
+sessions, sign-in lockouts, dynamic DNS, views and blocklists (DoH) use it.
 
-```bash /etc/dnz/dnz.env
-DNZ_TRUSTED_PROXIES=127.0.0.1,::1
-```
+DNZ trusts three kinds of address:
 
-It takes IPs and CIDRs, for example `127.0.0.1,10.0.0.0/8`. On a Docker network, use the network's
-range, such as `172.16.0.0/12`.
+- **Proxies it already knows.** You don't have to set anything for approved Traefik, Caddy and
+  dnz-proxy [proxies](/proxy/overview), active dnz-proxy nodes or the Caddy and Traefik servers of
+  Sites in DNS. DNZ trusts the address each one calls from, the addresses DNS answers with, and the
+  Traefik API's host. It reads them again every 30 seconds and right after one changes.
+- **Addresses you add** under **Settings → General → Trusted reverse proxies**, or from the terminal:
+
+  ```bash
+  dnz settings trusted-proxies --add 10.0.133.10
+  ```
+
+- **`DNZ_TRUSTED_PROXIES`**, which is added to the two above and shown read-only in the UI:
+
+  ```bash /etc/dnz/dnz.env
+  DNZ_TRUSTED_PROXIES=127.0.0.1,::1
+  ```
+
+Both take IPs and CIDRs. Name the proxy itself, not your whole LAN, because any device in a trusted
+range could pretend to be someone else. In Docker, that is the proxy container's address (or a
+small network that holds only the proxy).
+
+<Tip>
+  Don't know the proxy's address? Open the audit log or the health check. When requests carry these
+  headers from an address DNZ doesn't trust, the health check warns "DNZ is behind a proxy it
+  doesn't trust" (`proxy_trust`) with that address and the line to paste. The settings card and the
+  audit log offer a **Trust** button for it. Entries recorded before you trust it keep the proxy's
+  address.
+</Tip>
 
 ## Notes
 
