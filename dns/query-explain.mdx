@@ -65,9 +65,9 @@ be asked, in which order, and say the final answer is unknown; **Ask them** runs
 
 ## Who can explain
 
-Superadmins can explain any client's query. Everyone else needs `logs.read` in the division whose
-client network holds the client's address: the same queries they can already see in that division's
-query log. Explaining is read-only and isn't written to the [audit log](/admin/audit-log).
+Superadmins and roles with the server-wide **View all query logs** permission (`logs.server`) can explain
+any client's query. Everyone else needs `logs.read` in the division whose client network holds the
+client's address: the same queries they can already see in that division's query log. Explaining is read-only and isn't written to the [audit log](/admin/audit-log).
 
 ## From the CLI and the API
 

@@ -9,7 +9,7 @@ For what the steps mean, see [Query explain](/dns/query-explain).
 
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
-| `GET` | `/api/query/explain?name=&type=&client=&protocol=&dnssec=&ask_upstreams=` | `logs.read` | The path one query takes through the server, and its answer |
+| `GET` | `/api/query/explain?name=&type=&client=&protocol=&dnssec=&ask_upstreams=` | `logs.read` or `logs.server` | The path one query takes through the server, and its answer |
 
 | Parameter | |
 | --- | --- |
@@ -20,9 +20,9 @@ For what the steps mean, see [Query explain](/dns/query-explain).
 | `dnssec` | `true` to ask with the DO bit |
 | `ask_upstreams` | `true` to ask the upstreams on a cache miss. Their answer isn't cached, but their latency stats count it |
 
-**Permission:** a superadmin session can explain any client. Other users and
-[API tokens](/api/overview#what-a-token-can-reach) need `logs.read` in the division whose
-[client network](/dns/filtering) holds `client`. Explaining is read-only and isn't written to the
+**Permission:** a superadmin session, or a user whose role has the server-wide `logs.server`, can
+explain any client. Other users and [API tokens](/api/overview#what-a-token-can-reach) need
+`logs.read` in the division whose [client network](/dns/filtering) holds `client`. Explaining is read-only and isn't written to the
 audit log.
 
 ```bash
