@@ -6,18 +6,28 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.9.0**, released October 25, 2026. To install or upgrade to it:
+The latest release is **v1.10.0**, released October 25, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.9.0
-docker pull terrificci/dnz-proxy:1.9.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.9.0
+docker pull terrificci/dnz:1.10.0
+docker pull terrificci/dnz-proxy:1.10.0   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.10.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.9.0" description="October 25, 2026" tags={["Latest"]}>
+<Update label="v1.10.0" description="October 25, 2026" tags={["Latest"]}>
+
+- Replication: copy zones from the primary's DNS when its API is behind a reverse proxy
+- Replication: removing a DNZ secondary can factory reset it
+- Proxy: DNZ with Caddy or dnz-proxy in one compose file
+- Proxy settings: Add proxy → Caddy asks whether DNZ configures it or only keeps DNS records
+- Sites in DNS: Traefik too, chosen under Add proxy → Traefik → Keep my Traefik config
+
+</Update>
+
+<Update label="v1.9.0" description="October 25, 2026">
 
 - CI: quote the Redis test step
 - Overview: Replication tab with each replica's sync status
