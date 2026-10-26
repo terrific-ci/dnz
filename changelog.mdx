@@ -6,18 +6,29 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.11.0**, released October 25, 2026. To install or upgrade to it:
+The latest release is **v1.12.0**, released October 26, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.11.0
-docker pull terrificci/dnz-proxy:1.11.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.11.0
+docker pull terrificci/dnz:1.12.0
+docker pull terrificci/dnz-proxy:1.12.0   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.12.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.11.0" description="October 25, 2026" tags={["Latest"]}>
+<Update label="v1.12.0" description="October 26, 2026" tags={["Latest"]}>
+
+- Secondaries copy the primary's resolver settings and refuse what it manages
+- Replication overview names the followed primary; docs for secondaries following their primary
+- Threats: a secondary leaves automatic blocking to its primary
+- Mirror: build the primary's settings snapshot at most every 5 s
+- UI: a secondary shows what its primary manages read-only
+- Mirror: matches! for the local zone paths
+
+</Update>
+
+<Update label="v1.11.0" description="October 25, 2026">
 
 - Replication: the primary learns a secondary's address from where it asks
 - DNS cache and query log: Clear cache and Clear log buttons
