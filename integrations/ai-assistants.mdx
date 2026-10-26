@@ -142,13 +142,18 @@ with OAuth isn't possible.
 | `audit_log` | Who changed what |
 | `pending_changes` | Change requests waiting for approval |
 | `topology` | How divisions, zones, views, upstreams, proxies and replication fit together |
+| `list_status_pages` | Hosts with a status page ([Status pages](/proxy/status-pages)): kind, state, schedule, allowed addresses, proxies |
+| `status_page_hosts` | Hosts a status page can be set on, with the proxies serving each |
 | `create_record` ✎ | Adds a record |
 | `update_record` ✎ | Changes a record by id; fields left out stay |
 | `delete_records` ✎ | Deletes records of one zone by id, all or none |
 | `create_zone` ✎ | Creates an empty primary zone |
 | `clear_dns_cache` ✎ | Empties the forwarding and recursive caches (superadmin) |
+| `set_status_page` ✎ | Sets or replaces a host's status page: maintenance, moved, blocked…, with a schedule and allowed addresses |
+| `switch_status_page` ✎ | Turns a host's status page on or off |
+| `delete_status_page` ✎ | Removes a host's status page |
 
-✎ marks the tools that change DNS. They are only offered with **read and change** access (OAuth),
+✎ marks the tools that change DNS or what visitors see. They are only offered with **read and change** access (OAuth),
 `--allow-writes` (stdio) or an API token. A change that needs approval isn't made: the tool answers
 with the change request's number instead. No tool approves changes, deletes zones or rolls back.
 
@@ -162,7 +167,8 @@ The token an assistant gets acts as the user who allowed it, with their division
 - **Read only** reads what that user can read in the API, except accounts, sessions, users, API
   tokens, DNS update keys, backups, settings, notification providers, Cloudflare connections, ACME
   credentials and the cluster.
-- **Read and change** also creates, changes and deletes records, creates zones and clears the cache.
+- **Read and change** also creates, changes and deletes records, creates zones, clears the cache
+  and sets, switches and removes status pages.
   Nothing else: no zone deletion, no rollbacks, no approvals, no settings.
 
 Access tokens last an hour; the assistant renews them with a refresh token that lasts 30 days from
