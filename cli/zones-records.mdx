@@ -180,8 +180,7 @@ dnz record rm example.com --tag legacy --all
 
 ### Proxied records
 
-`--proxy` puts an A, AAAA or CNAME record behind one or more proxies, like Cloudflare's orange
-cloud. DNS then answers the name with every proxy's address. Each proxy needs a router for the name
+`--proxy` puts an A, AAAA or CNAME record behind one or more proxies. DNS then answers the name with every proxy's address. Each proxy needs a router for the name
 (see [Proxy routing](/proxy/routing), or let [`dnz proxy route`](/cli/proxy#proxy-routes) set it up).
 
 ```bash

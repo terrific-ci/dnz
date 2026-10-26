@@ -98,7 +98,7 @@ curl -X PATCH https://dns.example.com/api/records/42 \
 
 ## Proxied records
 
-`proxies` puts an A, AAAA or CNAME record behind one or more proxies, like Cloudflare's orange cloud:
+`proxies` puts an A, AAAA or CNAME record behind one or more proxies:
 
 ```json
 { "name": "shop", "type": "A", "value": "10.0.0.5", "proxies": [1, 3] }
