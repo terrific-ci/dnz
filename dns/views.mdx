@@ -64,7 +64,8 @@ for them.
 names from its view's records.
 
 [Forward missing names](/dns/zones#forward-missing-names) respects views: a name that a client's
-view adds is answered for that client, not forwarded.
+view adds is answered for that client, not forwarded. Its missing types (an AAAA for a name with
+only an A) are NODATA, even though public DNS doesn't know the name.
 
 ## What views leave out
 
@@ -75,3 +76,8 @@ These only use a zone's **default records**, so internal addresses don't leak:
 - zone transfers to secondaries ([Replication](/dns/replication)),
 - Dynamic DNS and ACME,
 - [dynamic updates (RFC 2136)](/dns/dynamic-updates), which never touch view records.
+
+A **DNZ secondary** still answers views like its primary: the views follow the primary, and each
+zone's records in views come over with the zone's copy instead of the transfer (see
+[Replication](/dns/replication#records-as-the-primary-keeps-them)). On the secondary they're
+read-only. Other secondaries (BIND, Knot) only get the default records.

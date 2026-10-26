@@ -212,8 +212,12 @@ primary (the first one, when it follows several):
   DNSSEC validation and negative trust anchors, serve-stale, ECS, DNS64, cookies, rate limiting,
   automatic PTR, filtering (block mode, blocklists, rules, safe search, clients, schedules,
   client networks), RPZ, and the threat settings with the allow list, blocks, mutes and feeds
-  (automatic blocking runs on the primary; its blocks reach the secondary).
-  Changes on the primary arrive within about a minute.
+  (automatic blocking runs on the primary; its blocks reach the secondary), the
+  [views](/dns/views) with their networks, and the time zone filter schedules run in (the primary's
+  setting, else its server's own). Changes on the primary arrive within about a minute.
+- **Clients get the same answers** from the secondary as from the primary: records in views, a
+  zone's *Forward missing names*, automatic PTR (which leaves out proxied names) and
+  [traffic steering](/dns/geodns) (GeoDNS, weights, health checks) work the same on both. A zone copied from a primary that isn't DNZ never forwards missing names.
 - **Divisions, roles and accounts** too: a division missing on the secondary is made (matched by
   slug, and followed through renames), each copied zone goes into the division it's in on the
   primary, and the settings of every division come along. Roles are copied with their permissions,
@@ -221,7 +225,8 @@ primary (the first one, when it follows several):
   secondary once it's empty; one made only there stays. From a primary before DNZ 1.14, rows of a
   division the secondary doesn't have are left out.
 - **Downloaded on the secondary:** blocklists, threat feeds and RPZ zones are fetched by the
-  secondary itself from the same sources, and fetched again only when their source changes.
+  secondary itself from the same sources, and fetched again only when their source changes. So is
+  the GeoIP database, from the source the primary uses (**Update now** works on the secondary).
 - **Read-only on the secondary:** everything the primary manages. The pages show it with a
   *Managed on the primary* note and the API refuses changes (HTTP 400): zones and records,
   proxies, status pages, DHCP, views, users, roles and divisions, API tokens, notifications,
@@ -381,8 +386,8 @@ The primary has to allow transfers to this server's address.
   transfer.
 - DNSSEC records from a presigned primary (RRSIG, NSEC, NSEC3, DNSKEY) are not stored; DNZ signs
   online with its own or the shared key.
-- Secondary zones never forward names they don't have (see
-  [Forward missing names](/dns/zones#forward-missing-names)).
+- A secondary zone forwards names it doesn't have when its DNZ primary's zone does (see
+  [Forward missing names](/dns/zones#forward-missing-names)); one from any other primary never does.
 
 ## Taking over as primary
 
@@ -478,7 +483,7 @@ When the primary is gone for good (its disk died, the machine is retired), promo
 zones, editable there, and it stops following the old primary. Nothing is lost:
 
 - **Records** from a DNZ primary come back exactly as the primary kept them: tags, comments,
-  records in views, switched-off records, proxies ([see below](#records-as-the-primary-keeps-them)).
+  records in views, switched-off records, proxies, traffic steering ([see below](#records-as-the-primary-keeps-them)).
   From any other primary they stay as they were transferred: records the editor knows (A, MX, TXT,
   NS, TLSA…) become ordinary editable records; anything else keeps the primary's form and is still
   served.
@@ -534,14 +539,25 @@ transfer. Zones from a joined primary's catalog are promoted with that primary, 
 A zone transfer carries only what DNS answers: no tags or comments, no records in views, no
 switched-off records, no proxies. So a DNZ secondary also asks its DNZ primary for each zone's
 records as they are stored there (`GET /api/replication/zones/{name}/copy`, with its join secret)
-after every transfer, and keeps that copy aside. It isn't served: the secondary answers with the
-transferred records. When the zone is promoted or taken over, the copy becomes the zone's records,
-so a zone can switch primary and back without losing anything.
+after every transfer, and keeps that copy aside. Its **records in views** go into the zone, so
+clients in a view get the same answers here as from the primary (a view this server doesn't have
+yet waits until the views are copied); its *Forward missing names* setting applies to the zone too.
+Each record's **traffic steering** ([GeoDNS, weights and health checks](/dns/geodns)) is tied to the
+transferred record of the same view, name and address (`2001:DB8::0001` in the editor and
+`2001:db8::1` in the transfer are the same address). The secondary runs the **health checks
+itself**, from where it sits, as the primary does from its own network: an address that is down is
+left out of its answers too, and stays out through the next transfer. A steering change on the
+primary moves the zone's serial, so secondaries take the copy again within seconds.
+The rest of the copy isn't served: the secondary answers with the transferred records. When the
+zone is promoted or taken over, the copy becomes the zone's records, so a zone can switch primary
+and back without losing anything.
 
 - **Views** go by name: one this server doesn't have is made, with its networks (a network that
   already belongs to another view stays there).
 - **Proxies** and **Caddy** servers go by name too; one this server doesn't have is left off the
   record, which then answers with its own address.
+- **Traffic steering** comes back with each record: places, weights and health checks, and the
+  health each check last found.
 - A copy is used only when it belongs to the serial the zone holds; otherwise the transferred
   records are kept.
 

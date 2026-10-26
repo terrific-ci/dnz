@@ -296,6 +296,11 @@ Turn it off for a zone that is the whole truth for its domain.
     - a wildcard match,
     - the apex SOA and NS.
 
+    A record type the name doesn't have goes upstream too. If the upstream answers that the name
+    doesn't exist (NXDOMAIN: the public zone lacks a name kept only here, such as an internal
+    host), the client gets this zone's NODATA instead, so an AAAA lookup never denies a name
+    whose A record is answered here.
+
     Views are respected: a name that a client's view adds is answered for that client. Signed
     queries (update clients looking up a name's zone, secondaries) always get this server's answer.
     Changing the setting doesn't bump the serial.
@@ -306,7 +311,8 @@ Turn it off for a zone that is the whole truth for its domain.
 <Warning>
   A DNSSEC-signed zone can't forward missing names, because its denial proofs say missing names
   don't exist. Turning [DNSSEC](/dns/dnssec) on turns this off, and it can't be turned back on
-  while the zone is signed. Secondary zones never forward.
+  while the zone is signed. A secondary zone forwards as its DNZ primary's zone does; one from
+  any other primary never does.
 </Warning>
 
 ### Serve this zone (turning a zone off)
