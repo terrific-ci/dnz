@@ -40,7 +40,7 @@ In a [cluster](/deploy/cluster) each node checks its own machine; its findings c
 
 | Check | What it looks at |
 | --- | --- |
-| DNZ version (`version`) | The latest release on GitHub, asked once a day; can be turned off |
+| DNZ version (`version`) | The latest release on GitHub, asked once a day; can be turned off. A newer release also shows as an **Update** badge in the top bar |
 | Delegation (`delegation:<zone>`) | The NS records the parent zone (your registrar) has for each public zone, against the zone's own: a failure when none point to DNZ, a warning when the lists differ. A zone the parent doesn't delegate is information only |
 | Glue (`glue:<zone>`) | For nameservers inside the zone, the parent's glue against the zone's A/AAAA records |
 | Lame delegation (`lame:<zone>`) | Every nameserver the parent lists answers for the zone itself, authoritatively, with DNZ's serial |
@@ -93,6 +93,19 @@ step after a deploy. The ids of what needs fixing:
 
 ```bash
 dnz doctor --json | jq -r '.findings[] | select(.status == "fail" or .status == "warn") | .id'
+```
+
+## Update badge
+
+While a newer DNZ is out, an **Update** badge shows in the top bar for superadmins (and anyone allowed
+to manage monitoring). It opens the running and latest version, a link to the release notes and
+copy-paste upgrade commands for Docker and the binary. **Not now** hides it in that browser until the
+next release. It reads the same once-a-day release check as the `version` finding, so it follows the
+**Release check** setting below; with the check off there is no badge.
+
+```bash
+dnz version          # the server's version, the latest release and how to upgrade
+dnz version --json   # GET /api/update
 ```
 
 ## Schedule, alerts and muting
