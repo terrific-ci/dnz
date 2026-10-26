@@ -5,7 +5,7 @@ description: "Run DNZ's MCP server over stdio for AI assistants, and manage the 
 
 `dnz mcp` is DNZ's [MCP](https://modelcontextprotocol.io) server for AI assistants that start a command:
 Claude Desktop, Claude Code, Cursor, VS Code. Assistants that connect to a URL use the server's `/mcp`
-endpoint and sign in with OAuth instead. Client configs and the tool list are in
+endpoint and sign in with OAuth instead; that endpoint is off until a superadmin turns it on. Client configs and the tool list are in
 [AI assistants (MCP)](/integrations/ai-assistants).
 
 ## Serve over stdio
@@ -40,6 +40,18 @@ In an assistant's config:
   }
 }
 ```
+
+## Turn the endpoint on
+
+```bash
+dnz settings mcp
+dnz settings mcp on
+dnz settings mcp off
+```
+
+Shows or switches the server's `/mcp` endpoint and its OAuth sign-in (superadmins). It is off by default
+(`DNZ_MCP`), takes effect at once on every server of a cluster, and turning it off also shuts out the
+apps already signed in. `dnz mcp` over stdio doesn't need it.
 
 ## Connected apps
 

@@ -9,7 +9,7 @@ answers the way it does, read the query log, statistics, threats and the audit l
 it, change records. Ask things like "why doesn't app.example.com resolve from 10.0.4.7?", "audit
 example.com" or "point staging at 192.0.2.40".
 
-There are two ways to connect:
+It is off until a superadmin [turns it on](#turn-it-on). Then there are two ways to connect:
 
 - **A URL, `https://<your DNZ>/mcp`** (Streamable HTTP). The assistant signs in with OAuth on its first
   connection: you log in to DNZ as usual (two-factor included), see which app asks, and pick **read
@@ -21,6 +21,22 @@ There are two ways to connect:
 Either way every tool goes through DNZ's HTTP API as you (or as the token): you see what your roles
 let you see, change approval applies, and history and the audit log show the change as made through
 MCP, e.g. `alice via Claude`.
+
+## Turn it on
+
+The `/mcp` endpoint is **off** until a superadmin turns it on: nothing answers there and no app can
+sign in. Turn it on under **Settings → Integrations → AI assistants → Turn on**, or:
+
+```bash
+dnz settings mcp on
+```
+
+It takes effect at once, on every server of a cluster, without a restart. `dnz settings mcp off` (or
+**Turn off**) shuts it again, and also shuts out the apps already signed in until it's back on; their
+grants stay, so they work again when it is. To have it on from the first start, set `DNZ_MCP=true` (or
+`mcp = true` under `[http]` in the config file); a switch made in the dashboard or the CLI wins over that.
+
+`dnz mcp` with an API token works either way: it is a client of the API like any other `dnz` command.
 
 ## Connect
 
@@ -173,8 +189,3 @@ account being switched off signs every app out.
 - The metadata uses the scheme and host the request came in on, so put DNZ behind your TLS proxy (or
   give it a certificate) and connect with that address. Most clients refuse to sign in over plain HTTP
   except on localhost.
-
-## Turning it off
-
-`DNZ_MCP=false` (or `mcp = false` under `[http]` in the config file) removes `/mcp`, the OAuth
-endpoints and the metadata; `dnz mcp` with an API token still works, since it only uses the API.
