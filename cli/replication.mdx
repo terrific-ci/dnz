@@ -77,6 +77,7 @@ Once it follows a primary:
 dnz replication sync 1                              # fetch the primary's catalog and zones now
 dnz replication leave 1                             # stop following it and delete the copied zones
 dnz replication promote 1                           # the primary is gone: keep its zones as this server's own
+dnz replication take-over 1                         # the primary is still there: switch roles with it
 ```
 
 A DNZ secondary also copies the primary's resolver settings, and what the primary manages is
@@ -88,6 +89,12 @@ read-only there: commands that change it fail with `this server is a secondary o
 DNSSEC keys (the DS at the registrar stays valid), and stops following the primary. Superadmins
 copied from it become local accounts. It prints what to do next; see
 [Promoting a secondary](/dns/replication#promoting-a-secondary).
+
+`take-over` switches roles with a primary that is still running: this server becomes the primary,
+the old one its secondary, and the old primary's other DNZ secondaries move here within a minute. It
+prints each step as it goes; pass `--origin` with the address the primary reaches this server's web
+UI at when it isn't the `--server` address. See
+[Taking over as primary](/dns/replication#taking-over-as-primary).
 
 ### Copying one zone from any primary
 

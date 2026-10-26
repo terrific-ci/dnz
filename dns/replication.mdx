@@ -378,10 +378,73 @@ The primary has to allow transfers to this server's address.
 - Secondary zones never forward names they don't have (see
   [Forward missing names](/dns/zones#forward-missing-names)).
 
+## Taking over as primary
+
+To move the primary role to one of its DNZ secondaries while the primary is still running (new
+hardware, maintenance on the old machine), let the secondary take over. The two switch roles in one
+step, and nothing has to be re-joined by hand.
+
+<Steps>
+  <Step title="Hold">
+    The secondary asks the primary to hold changes (edits there are refused for up to five minutes,
+    so none is lost) and to list its zones' serials and its other secondaries. The primary first
+    checks it can reach the secondary's web address; if not, nothing changes.
+  </Step>
+  <Step title="Catch up">
+    Every zone is transferred until its serial matches the primary's.
+  </Step>
+  <Step title="Promote">
+    The secondary allows the primary and the primary's other secondaries to copy from it, then is
+    [promoted](#promoting-a-secondary): records and DNSSEC keys stay, so the DS at the registrar keeps
+    working.
+  </Step>
+  <Step title="Switch">
+    The old primary joins the new one with a join code it is handed. Its zones turn into secondary
+    zones that keep answering with what they hold until the first transfer, a few seconds later.
+    From then on its zones and resolver settings are managed on the new primary.
+  </Step>
+</Steps>
+
+The old primary's **other DNZ secondaries** move by themselves: on their next check-in (within a
+minute) the old primary tells them where to go, and they follow the new primary with their zones
+kept, without a gap. BIND, Knot or PowerDNS secondaries are allowed on the new primary with the same
+TSIG key; change their primary address to the new one. Both servers answer throughout, so NS records
+that name both of them stay right.
+
+<Tabs>
+  <Tab title="Dashboard">
+    On the secondary, open **DNS → Replication → Copied from other primaries**, open the primary's
+    menu and pick **Take over as primary**. The dialog shows each step, and so does the
+    [connections diagram](#connections-diagram) on both servers.
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    dnz replication show            # the ID of the primary followed
+    dnz replication take-over 1     # --origin URL: where the primary reaches this server's web UI
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+      -d '{"origin": "https://ns2.example.com"}' \
+      https://ns2.example.com/api/replication/subscriptions/1/take-over
+    ```
+
+    Superadmin only. It answers 202 once the primary agreed; `handover` in `GET /api/replication`
+    then follows the steps (`preparing`, `syncing`, `promoting`, `switching`, then `done` or
+    `failed` with a `message`). A secondary being moved shows `moving_to` on its followed primary.
+  </Tab>
+</Tabs>
+
+<Note>
+  Both servers need DNZ 1.14 or later. A secondary of the old primary on an older version keeps its
+  copies until they expire; move it by hand as under [After promoting](#after-promoting). If the
+  primary can't be reached, the dialog says why and offers **Promote without** it.
+</Note>
+
 ## Promoting a secondary
 
-When the primary is gone for good (its disk died, the machine is retired, or you're moving the
-primary role to another server), promote a secondary. The zones it copied become its own primary
+When the primary is gone for good (its disk died, the machine is retired), promote a secondary. The zones it copied become its own primary
 zones, editable there, and it stops following the old primary. Nothing is lost:
 
 - **Records** stay as they were transferred. Records the editor knows (A, MX, TXT, NS, TLSA…) become
@@ -402,7 +465,8 @@ zones, editable there, and it stops following the old primary. Nothing is lost:
 <Tabs>
   <Tab title="Dashboard">
     On the secondary, open **DNS → Replication → Copied from other primaries**, open the primary's
-    menu and pick **Take over as primary** (this server becomes the primary of its zones). The dialog lists what changes; confirm it.
+    menu and pick **Take over as primary**. The primary can't be reached, so the dialog offers
+    **Promote without** it and lists what changes.
   </Tab>
   <Tab title="CLI">
     ```bash
