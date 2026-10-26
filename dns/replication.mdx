@@ -96,8 +96,8 @@ Join requests expire after 10 minutes. At most 20 can wait at once.
         that starts with `dnz-join:`.
       </Step>
       <Step title="Use it on the secondary">
-        On the **secondary**, open **Join a primary → Join code**, paste it, and pick the division
-        the zones go to.
+        On the **secondary**, open **Join a primary → Join code**, and paste it. The zones keep the
+        divisions they have on the primary; the division you pick is only for a primary before DNZ 1.14.
       </Step>
     </Steps>
 
@@ -122,15 +122,14 @@ Join requests expire after 10 minutes. At most 20 can wait at once.
 </Tabs>
 
 <Warning>
-  The join code holds a secret. Anyone with it can copy your zones and DNSSEC keys (and, for a
-  server joining from its welcome page, the superadmins' password hashes), so treat it like a
-  password. **New join code** in the secondary's menu replaces it.
+  The join code holds a secret. Anyone with it can copy your zones and DNSSEC keys, and the
+  accounts' password hashes, so treat it like a password. **New join code** in the secondary's menu replaces it.
 </Warning>
 
 ### A new server as a secondary
 
 A server that will only be a secondary doesn't need an admin of its own. It copies the primary's
-**superadmins**, and you sign in with the same username and password as on the primary.
+**accounts**, and you sign in with the same username and password as on the primary.
 
 <Tabs>
   <Tab title="Welcome page">
@@ -172,16 +171,17 @@ A server that will only be a secondary doesn't need an admin of its own. It copi
   </Tab>
 </Tabs>
 
-- The accounts are copied with their password hashes and checked again every minute: a new
-  password, a deactivated or removed superadmin, or a new one on the primary reaches the secondary
-  within a minute. A changed password signs that account out on the secondary.
+- The accounts are copied with their password hashes, their divisions and roles, and checked again
+  every minute: a new password, a deactivated, removed or new account on the primary, or a changed
+  role reaches the secondary within a minute. A changed password signs that account out on the
+  secondary. An account that must choose a new password does so on the primary first.
 - They're managed on the primary. On the secondary, changing their password or editing or deleting
   them is refused.
 - A local account with the same username is never touched. With `DNZ_ADMIN_PASSWORD` set as well,
-  that local admin is created and nothing is copied.
+  that local admin is created and keeps its own password.
 - **Leave** and **Take over as primary** keep the copies as ordinary local accounts, so you can still
   sign in.
-- The zones go into the first division (*Default*).
+- The zones go into the divisions they're in on the primary.
 
 ### What a joined secondary does
 
@@ -191,8 +191,9 @@ A server that will only be a secondary doesn't need an admin of its own. It copi
   removes the ones that left. A member whose name already exists here as a local zone is not
   touched; the subscription shows a conflict instead.
 - After each change it fetches the DNSSEC keys of signed zones (`/api/replication/keys`).
-- When it joined from its welcome page (or by `DNZ_JOIN_CODE` without an admin), it fetches the
-  superadmins every minute (`/api/replication/admins`).
+- It fetches the accounts every minute (`/api/replication/accounts`): every user with their
+  divisions and roles. From a primary before DNZ 1.14 only the superadmins, and only when it joined
+  from its welcome page (or by `DNZ_JOIN_CODE` without an admin).
 - It copies zones from the primary's DNS at the host in the join code, or, when nothing answers
   DNS there, at the addresses the primary hands out (see below).
 - The primary sends NOTIFY to the address the secondary joined from, on its DNS port, or to the
@@ -212,8 +213,13 @@ primary (the first one, when it follows several):
   automatic PTR, filtering (block mode, blocklists, rules, safe search, clients, schedules,
   client networks), RPZ, and the threat settings with the allow list, blocks, mutes and feeds
   (automatic blocking runs on the primary; its blocks reach the secondary).
-  Changes on the primary arrive within about a minute. Rows of a division go to the division with the
-  same slug on the secondary; rows of a division it doesn't have are left out.
+  Changes on the primary arrive within about a minute.
+- **Divisions, roles and accounts** too: a division missing on the secondary is made (matched by
+  slug, and followed through renames), each copied zone goes into the division it's in on the
+  primary, and the settings of every division come along. Roles are copied with their permissions,
+  and every account with its divisions and roles. A division removed on the primary goes on the
+  secondary once it's empty; one made only there stays. From a primary before DNZ 1.14, rows of a
+  division the secondary doesn't have are left out.
 - **Downloaded on the secondary:** blocklists, threat feeds and RPZ zones are fetched by the
   secondary itself from the same sources, and fetched again only when their source changes.
 - **Read-only on the secondary:** everything the primary manages. The pages show it with a
@@ -405,6 +411,11 @@ step, and nothing has to be re-joined by hand.
   </Step>
 </Steps>
 
+Everyone keeps signing in: the new primary already has every **account** with its divisions and
+roles, and they become its own. On the old primary the accounts are managed by the new primary from
+then on, like on any secondary; an account there with the same username as one on the new primary
+takes that one's password.
+
 The old primary's **other DNZ secondaries** move by themselves: on their next check-in (within a
 minute) the old primary tells them where to go, and they follow the new primary with their zones
 kept, without a gap. BIND, Knot or PowerDNS secondaries are allowed on the new primary with the same
@@ -452,7 +463,7 @@ zones, editable there, and it stops following the old primary. Nothing is lost:
 - **DNSSEC keys** stay the same, with their rollover state, because a DNZ secondary already signs
   with the primary's keys. The DS record at the registrar keeps working, and from now on this
   server rolls the keys itself.
-- **Superadmins** copied from the primary become ordinary local accounts.
+- **Accounts** copied from the primary become ordinary local accounts, with their divisions and roles.
 - Each zone's **SOA serial** moves past the primary's last one, so secondaries of this server take a
   fresh copy, and the zones join this server's catalog.
 - The subscription and the TSIG key it used for transfers are removed.
