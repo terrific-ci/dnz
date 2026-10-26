@@ -6,18 +6,34 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.13.0**, released October 26, 2026. To install or upgrade to it:
+The latest release is **v1.14.0**, released October 26, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.13.0
-docker pull terrificci/dnz-proxy:1.13.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.13.0
+docker pull terrificci/dnz:1.14.0
+docker pull terrificci/dnz-proxy:1.14.0   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.14.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.13.0" description="October 26, 2026" tags={["Latest"]}>
+<Update label="v1.14.0" description="October 26, 2026" tags={["Latest"]}>
+
+- Secondary: own rows give way when copying the primary's settings
+- Replication: "Take over as primary" on a followed primary's menu
+- Replication: connections diagram on the Replication page
+- Replication: take over as primary while the old primary is still there
+- Replication: take over from the dashboard, with each step shown
+- Replication: secondaries copy divisions, roles and every account
+- Development guide: CLAUDE.md and lessons learned
+- Development guide: bench server access with ssh-add
+- dnz-proxy: analytics stay on each node, every path counted
+- dnz-proxy analytics: say an old node may need updating when it doesn't answer
+- Lessons: dnz-proxy analytics on the nodes; pgrep wait loops over ssh never end
+
+</Update>
+
+<Update label="v1.13.0" description="October 26, 2026">
 
 - About: link to dnzwithazee.com instead of listing the tech stack
 - UI: right-click menus, starting with views
