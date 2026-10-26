@@ -6,18 +6,24 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.14.0**, released October 26, 2026. To install or upgrade to it:
+The latest release is **v1.14.2**, released October 26, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.14.0
-docker pull terrificci/dnz-proxy:1.14.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.14.0
+docker pull terrificci/dnz:1.14.2
+docker pull terrificci/dnz-proxy:1.14.2   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.14.2
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.14.0" description="October 26, 2026" tags={["Latest"]}>
+<Update label="v1.14.2" description="October 26, 2026" tags={["Latest"]}>
+
+- Take over: tie the hold to its caller, refuse switched-off zones, crash-safe moves
+
+</Update>
+
+<Update label="v1.14.0" description="October 26, 2026">
 
 - Secondary: own rows give way when copying the primary's settings
 - Replication: "Take over as primary" on a followed primary's menu
