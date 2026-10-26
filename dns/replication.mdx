@@ -393,7 +393,8 @@ step, and nothing has to be re-joined by hand.
 <Steps>
   <Step title="Hold">
     The secondary asks the primary to hold changes (edits there are refused for up to five minutes,
-    so none is lost) and to list its zones' serials and its other secondaries. The primary first
+    so none is lost; DNS UPDATEs from DHCP or ACME get SERVFAIL so they are sent again, and DNSSEC
+    rollovers wait) and to list its zones' serials and its other secondaries. The primary first
     checks it can reach the secondary's web address; if not, nothing changes.
   </Step>
   <Step title="Catch up">
@@ -404,7 +405,8 @@ step, and nothing has to be re-joined by hand.
   <Step title="Promote">
     The secondary allows the primary and the primary's other secondaries to copy from it, then is
     [promoted](#promoting-a-secondary): records and DNSSEC keys stay, so the DS at the registrar keeps
-    working.
+    working. If catching up took so long that the primary's hold is nearly over, or the accounts
+    can't be copied, it stops here instead and nothing changes; start again.
   </Step>
   <Step title="Switch">
     The old primary joins the new one with a join code it is handed. Its zones turn into secondary
