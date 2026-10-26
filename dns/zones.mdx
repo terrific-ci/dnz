@@ -156,6 +156,25 @@ dnz record enable example.com --tag legacy --all
 dnz record tag example.com www --all --add v2 --remove web
 ```
 
+### Several records on one name
+
+A name can have several records of one type, e.g. three A records for `test.example.com`. DNS
+answers with all of the ones that are on, and clients pick an address from the answer.
+
+**Group by name** (in the toolbar, on by default) shows them as one row: the name, how many records
+it has, their contents and how many are on (`2/3`). Click the row to open it and edit, turn off or
+delete each record on its own: turning one address off for maintenance takes it out of the answer
+and keeps the others. Selecting the group's checkbox selects all of its records for a bulk change.
+Records only group when the name, type and [view](/dns/views) are the same.
+
+Grouping only changes how the table looks: the records stay separate, and what DNS answers is the
+same either way. To answer by weight, by the client's country, or only while a health check passes,
+use [traffic steering](#traffic-steering).
+
+```bash
+dnz record list example.com --group    # one row per name and type, with all its values
+```
+
 ### View-only records
 
 When the server has [views](/dns/views), the **Answer** field lets a record be answered only to
