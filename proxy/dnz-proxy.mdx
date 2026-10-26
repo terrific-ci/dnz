@@ -268,7 +268,7 @@ Swarm and a plain command line.
 | `--name` | `DNZ_PROXY_NAME` | The node's name in its proxy. Empty: DNZ picks one. |
 | `--proxy` | `DNZ_PROXY_PROXY` | The proxy to join, by name. Empty: whoever approves it picks one. |
 | `--public-ipv4`, `--public-ipv6` | `DNZ_PROXY_PUBLIC_IPV4`, `DNZ_PROXY_PUBLIC_IPV6` | Where visitors reach this server; DNS answers with these |
-| `--state-dir` | `DNZ_PROXY_STATE_DIR` | Identity, last configuration and disk cache (`/var/lib/dnz-proxy` on Linux) |
+| `--state-dir` | `DNZ_PROXY_STATE_DIR` | Identity, last configuration, analytics (`analytics.db`) and disk cache (`/var/lib/dnz-proxy` on Linux) |
 | `--insecure` | `DNZ_PROXY_INSECURE` | Accept a self-signed certificate from DNZ |
 | | `DNZ_PROXY_LOG` | Log filter, for example `info` or `debug,pingora=warn` |
 
@@ -520,16 +520,36 @@ network and valid for **Valid for**, then lets them through.
 
 ## Analytics
 
-**Proxy → Analytics** shows, per dnz-proxy proxy and hostname, over the last hour to 30 days:
+Traffic analytics stay on the node that served the traffic, in its own SQLite database
+(`analytics.db` in its state directory; for the node DNZ runs itself, `<DNZ data dir>/dnz-proxy/`).
+None of it goes into DNZ's database, so a busy proxy never competes with DNS for writes. When you
+open **Proxy → Analytics**, DNZ asks each node over its configuration stream and adds the answers
+up. No port on the node has to be reachable from DNZ.
+
+The page shows, per dnz-proxy proxy and hostname, over the last hour to 30 days:
 
 - requests by status class, bandwidth, and latency (p50, p95, p99)
 - cache hit ratio, blocked and challenged visits
-- top hosts, paths, clients, countries, user agents and statuses
+- the **most requested URLs**, per hostname and path: requests, 4xx and 5xx share, bytes sent and
+  average time. Pick a hostname to list its paths, or a path to filter the request log
+- top hostnames, clients, countries, user agents, status codes and firewall rules
 - a **request log** with filters and a live view
 
-Counters are kept per minute for two days and per hour for 90 days. Each node sends up to **Logged
-per second, per node** log lines; errors, blocks and challenges get ten times as many. Logs are kept
-for 7 days by default.
+Every request is counted: totals, paths and top lists aren't sampled. Paths are counted without the
+query string. For each finished ten minutes and hour a node keeps the 200 busiest paths (and
+clients, user agents, and so on) per hostname and adds the rest up as `(other)`, so a scan of
+random paths can't fill its disk.
+
+Counters are kept per minute (paths and top lists per ten minutes) for two days and per hour for 90
+days. The request log is sampled: each node keeps up to **Logged per second, per node** lines;
+errors, blocks and challenges get ten times as many. Log lines are kept for 7 days by default
+(**Keeping request logs** on the Analytics page, 1 to 365 days).
+
+<Note>
+  A node that is offline, or in a [cluster](/deploy/cluster) connected to another DNZ server, can't
+  answer. The page names the nodes it left out. Removing a node, or its state directory, removes its
+  history.
+</Note>
 
 ## Status pages
 

@@ -20,6 +20,7 @@ are in the [Certificates API](/api/certificates).
 | `POST /api/proxy/dnz/join` | A node asks to join (connect key) |
 | `GET /api/proxy/dnz/stream` | A node's configuration stream (node token) |
 | `POST /api/proxy/dnz/report` | A node's report (node token) |
+| `POST /api/proxy/dnz/answer` | A node's answer to an analytics question sent down its stream (node token) |
 
 The stream stays open and must not be buffered by a reverse proxy in front of DNZ. DNZ sends
 `X-Accel-Buffering: no`.
@@ -53,10 +54,20 @@ The stream stays open and must not be buffered by a reverse proxy in front of DN
 
 | Method and path | What it does |
 | --- | --- |
-| `GET /api/proxy/analytics` | Traffic |
-| `GET /api/proxy/logs` | Request logs |
-| `GET /api/proxy/analytics/settings` | Log retention |
-| `PUT /api/proxy/analytics/settings` | Change log retention |
+| `GET /api/proxy/analytics` | Traffic, the most requested URLs and top lists, added up over the nodes |
+| `GET /api/proxy/logs` | Request log, newest first |
+| `GET /api/proxy/analytics/settings` | How long nodes keep request logs |
+| `PUT /api/proxy/analytics/settings` | Change it |
+
+Each node keeps its own analytics; DNZ asks the nodes when these are called. Both answers list the
+nodes in `nodes`, with `answered: false` and an `error` for any that didn't answer.
+
+- `/api/proxy/analytics` takes `proxy_id`, `host`, `from` and `to` (RFC 3339; spans over six hours
+  come in hours). `top_paths` holds `host`, `path`, `requests`, `status_4xx`, `status_5xx`,
+  `bytes_out` and `avg_ms`.
+- `/api/proxy/logs` takes `proxy_id`, `host`, `status` (`404` or `4xx`), `client_ip`, `q` (text in the
+  path or user agent) and `limit`. Pass `before=<next_before>` for older lines, `after=<newest>` for
+  the lines since (the live tail). Line ids are `<node id>.<line id>`.
 
 ## From the CLI
 

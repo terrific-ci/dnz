@@ -42,7 +42,7 @@ underneath: see [On Redis or Valkey](#on-redis-or-valkey).
 | DNSSEC key rollovers | The GeoIP database download (each node keeps its own file) |
 | RPZ and blocklist downloads | dnz-proxy configuration streams, the local dnz-proxy |
 | GeoDNS health checks (the others load each up/down flip) | |
-| Query log, session and analytics cleanup; the daily summary and NXDOMAIN alert | |
+| Query log and session cleanup; the daily summary and NXDOMAIN alert | |
 | Cluster alerts | |
 
 ## Set it up
@@ -240,9 +240,9 @@ the whole database in a SQLite file of its own, the **copy**, and Redis holds th
 
 What is different from Postgres and MySQL:
 
-- **Query and request logs stay on the node that logged them**, since Redis keeps everything in
-  memory. The Overview's counts and charts are shared; **DNS → Query Logs** and dnz-proxy's request
-  logs show the node you're on. **Clear log** on DNS → Query Logs empties every node's query log.
+- **Query logs stay on the node that logged them**, since Redis keeps everything in
+  memory. The Overview's counts and charts are shared; **DNS → Query Logs** shows the node you're
+  on. **Clear log** on DNS → Query Logs empties every node's query log.
 - **Memory**: the snapshot plus up to two snapshot intervals of changes, a few megabytes for a
   typical install. Leave room for two snapshots: the new one is written before the old one goes.
 - **Writes need Redis.** A node that can't reach it keeps answering DNS, serving the dashboard from

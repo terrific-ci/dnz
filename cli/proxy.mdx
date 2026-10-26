@@ -153,3 +153,18 @@ dnz proxy purge "Edge JKT" --url https://app.example.com/logo.png
 ```
 
 `--prefix` needs `--host`.
+
+### Traffic and request logs
+
+Each node keeps its own analytics. These commands ask the nodes, like **Proxy → Analytics**, and
+say on stderr which nodes didn't answer.
+
+```bash
+dnz proxy analytics                               # last 24 h, every proxy: totals, most requested URLs, top lists
+dnz proxy analytics -p "Edge JKT" --since 7d      # 1h, 6h, 24h, 7d or 30d
+dnz proxy analytics --host app.example.com -n 50  # that hostname's 50 busiest paths
+dnz proxy logs                                    # newest 50 request log lines
+dnz proxy logs --host app.example.com --status 5xx -q /api
+dnz proxy logs --client 198.51.100.7 -n 200
+dnz proxy logs -f                                 # follow, oldest first (with --json: one JSON line each)
+```
