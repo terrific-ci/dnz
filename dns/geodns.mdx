@@ -171,6 +171,21 @@ The state shows:
 
 Changes are logged by the server (`health check failing: left out of DNS answers`).
 
+In a [cluster](/deploy/cluster) the leader runs the checks and the other nodes take its results.
+
+## On secondaries
+
+A [DNZ secondary](/dns/replication#records-as-the-primary-keeps-them) answers steered names as its
+primary does: each record's steering comes with the zone's copy after every transfer, matched to the
+transferred record by view, name and address.
+
+- **Health checks** run on the secondary itself, from its own network, so each server leaves out
+  what it can't reach. When the primary is down, the secondary still notices an origin going down.
+- **GeoIP**: the secondary downloads its own database from the source the primary uses, as soon as
+  a record is placed by country or continent. Until it has one, every client gets the default records.
+- **Changes** are made on the primary only; the secondary picks them up within seconds, because a
+  steering change moves the zone's serial. A promoted secondary keeps the steering as its own.
+
 ## Removing the steering
 
 ```bash

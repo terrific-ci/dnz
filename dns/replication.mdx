@@ -189,7 +189,10 @@ A server that will only be a secondary doesn't need an admin of its own. It copi
   (`/api/replication/bootstrap`), then uses DNS for everything else.
 - It transfers the catalog `catalog.dnz.invalid.`, adds a secondary zone for each member, and
   removes the ones that left. A member whose name already exists here as a local zone is not
-  touched; the subscription shows a conflict instead.
+  touched; the subscription shows a conflict instead. The catalog lists every zone the primary
+  answers, including zones it copies from another primary itself (BIND, Knot, another DNZ), so a
+  CNAME into one of them answers the same on both. The primary sends NOTIFY on after each transfer
+  it takes.
 - After each change it fetches the DNSSEC keys of signed zones (`/api/replication/keys`).
 - It fetches the accounts every minute (`/api/replication/accounts`): every user with their
   divisions and roles. From a primary before DNZ 1.14 only the superadmins, and only when it joined
@@ -560,6 +563,10 @@ and back without losing anything.
   health each check last found.
 - A copy is used only when it belongs to the serial the zone holds; otherwise the transferred
   records are kept.
+
+A zone the old primary copied from another primary itself isn't made a primary zone: it stays a
+secondary zone, copied from that same primary now (with its TSIG key, if any), as if added by hand.
+The promotion lists it under *still copied*. A take over moves only the old primary's own zones.
 
 ### After promoting
 
