@@ -199,6 +199,40 @@ A server that will only be a secondary doesn't need an admin of its own. It copi
   secondary's own DNS address when that one doesn't answer DNS.
 - Every minute it checks in with the primary (`/api/replication/membership`), so it hears when the
   primary removed it (see [Removing a secondary](#removing-a-secondary)).
+- Every minute it copies the primary's resolver settings (`/api/replication/settings`), so it
+  answers like the primary (see below).
+
+### The secondary follows its primary
+
+A DNZ secondary is a copy of its primary, not a second server to set up. While it follows a DNZ
+primary (the first one, when it follows several):
+
+- **Copied from the primary:** upstreams with the strategy and recursive mode, forward rules,
+  DNSSEC validation and negative trust anchors, serve-stale, ECS, DNS64, cookies, rate limiting,
+  automatic PTR, filtering (block mode, blocklists, rules, safe search, clients, schedules,
+  client networks), RPZ, and the threat settings with the allow list, blocks, mutes and feeds
+  (automatic blocking runs on the primary; its blocks reach the secondary).
+  Changes on the primary arrive within about a minute. Rows of a division go to the division with the
+  same slug on the secondary; rows of a division it doesn't have are left out.
+- **Downloaded on the secondary:** blocklists, threat feeds and RPZ zones are fetched by the
+  secondary itself from the same sources, and fetched again only when their source changes.
+- **Read-only on the secondary:** everything the primary manages. The pages show it with a
+  *Managed on the primary* note and the API refuses changes (HTTP 400): zones and records,
+  proxies, status pages, DHCP, views, users, roles and divisions, API tokens, notifications,
+  backups, metrics and the settings above.
+- **Still the secondary's own:** your account (password, two-factor), the device address, trusted
+  reverse proxies, the health check, the cluster, clearing the cache or the query log, the
+  replication itself (sync, promote, leave) and a factory reset. The setup wizard skips the
+  upstreams and first-zone steps.
+
+<Note>
+The primary builds the settings once for all its secondaries (at most every 5 seconds) and
+answers an unchanged copy with *304 Not Modified*, so a secondary that checks every minute costs it
+almost nothing.
+</Note>
+
+When the secondary leaves the primary (**Leave** under **DNS → Replication**) or is
+[promoted](#promoting-a-secondary), the last copy becomes its own and is editable again.
 
 ### Behind a reverse proxy
 

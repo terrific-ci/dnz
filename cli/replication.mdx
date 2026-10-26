@@ -79,6 +79,11 @@ dnz replication leave 1                             # stop following it and dele
 dnz replication promote 1                           # the primary is gone: keep its zones as this server's own
 ```
 
+A DNZ secondary also copies the primary's resolver settings, and what the primary manages is
+read-only there: commands that change it fail with `this server is a secondary of …`, and
+`dnz replication show` names the primary on its first line. See
+[The secondary follows its primary](/dns/replication#the-secondary-follows-its-primary).
+
 `promote` turns every zone copied from that primary into a primary zone here, with its records and
 DNSSEC keys (the DS at the registrar stays valid), and stops following the primary. Superadmins
 copied from it become local accounts. It prints what to do next; see
