@@ -510,6 +510,20 @@ per replica. From the command line:
 dnz replication status
 ```
 
+### Connections diagram
+
+**DNS → Replication** opens with a diagram of every replication link: this server in the
+middle with its role (primary, secondary, or both), the primaries it copies from on the left and
+its secondaries on the right (above and below on a phone), with arrows from primary to secondary.
+Each server and arrow takes the colour of the sync status above: green **In sync**, amber
+**Synchronizing** with how many zones are current, red **Unreachable** or a sync error, grey when
+not checked yet or a DNZ secondary hasn't joined. Each server also shows its address, its last
+error and when it last synced. While a **Take over as primary** runs, this server and the arrow
+to the other server show how far it got (preparing, syncing before the switch, switching, done,
+or failed with the reason), and a primary that a secondary is moving away from shows **Moving
+to** the new primary. The diagram uses the same status check as the Replication tab, so it adds
+no extra load.
+
 ## Test with dig
 
 ```bash
