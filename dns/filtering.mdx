@@ -36,7 +36,9 @@ division's networks show in that division's [query log](/dns/query-logs) and Ove
     <Steps>
       <Step title="Add a blocklist">
         Open **DNS → Filtering**. In **Blocklists**, click one of the suggested lists, or paste the
-        URL of any list you trust (with an optional name). The list is downloaded right away.
+        URL of any list you trust (with an optional name). The list is downloaded right away. To
+        block your own domains, click **Paste domains or upload a .txt file** (see
+        [Your own lists](#your-own-lists)).
       </Step>
       <Step title="Map client networks (per-division filtering)">
         As a superadmin, add each division's networks in **Client networks**, for example
@@ -55,6 +57,7 @@ division's networks show in that division's [query log](/dns/query-logs) and Ove
     dnz filter show [--division it]
     dnz filter list presets
     dnz filter list add "HaGeZi Multi Light" https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/light.txt
+    dnz filter list add "School" --file blocked.txt
     dnz filter network add 10.20.0.0/16 --division radiology
     dnz filter check ads.example.net [--client 10.20.1.5]
     ```
@@ -98,11 +101,53 @@ An entry covers the domain **and all its subdomains**: `doubleclick.net` also bl
 
 - **hosts**: `0.0.0.0 ads.example.com`
 - **AdGuard / Adblock**: `||ads.example.com^`, `@@||ok.example.com^`
-- **One domain per line**: `ads.example.com` (a leading `*.` is ignored)
+- **One domain per line**: `ads.example.com` (a leading `*.` is ignored; `*.xxx` blocks a whole
+  top-level domain)
 
 Cosmetic rules, regexes and rules with modifiers (`$client=…`) are skipped. To get the effect of
 `$client`, limit the whole list to some clients instead (see
 [Clients](#clients-rules-for-some-devices-only)).
+
+### Your own lists
+
+A list doesn't need a URL. Click **Paste domains or upload a .txt file** under the URL field, give
+the list a name, and paste the domains or load a text file. It is added like any other list: a
+switch, **Clients & schedule…** and a domain count. Edit its domains later with the pencil button
+(or **⋯ → Edit domains…**).
+
+```text
+pornhub.com
+*.xhamster.com
+*.xxx
+||ads.example.org^
+0.0.0.0 tracker.example
+https://www.example.net/some/page
+[www.example.com](https://www.example.com)
+```
+
+- `*.example.com` is the same as `example.com`: subdomains are always covered.
+- `*.xxx` blocks a **whole top-level domain** (`*.sex`, `*.wtf`…). Only this form takes a single
+  label, so a stray word like `tp-link` is skipped.
+- Web addresses and Markdown links, as copied from a chat or a document, count as their host
+  (`www.example.net`, `www.example.com` above). Lists downloaded from a URL don't do this.
+- Lines without a domain are skipped, and you're told how many.
+- Up to 4 MB. The text is kept in DNZ's database, so secondaries and cluster nodes get the same list
+  without downloading anything. It isn't refreshed every 24 hours; it changes when you edit it.
+
+<Tabs>
+  <Tab title="Dashboard">
+    **DNS → Filtering → Blocklists → Paste domains or upload a .txt file**.
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz filter list add "School" --file blocked.txt     # - reads stdin
+    dnz filter list show 5 > blocked.txt                # its domains, to edit
+    dnz filter list edit 5 --file blocked.txt           # replace them
+    ```
+
+  </Tab>
+</Tabs>
 
 ## Your own rules
 
