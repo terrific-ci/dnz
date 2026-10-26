@@ -397,7 +397,9 @@ step, and nothing has to be re-joined by hand.
     checks it can reach the secondary's web address; if not, nothing changes.
   </Step>
   <Step title="Catch up">
-    Every zone is transferred until its serial matches the primary's.
+    Every zone is transferred until its serial matches the primary's, and the secondary takes each
+    zone's records as the primary stores them ([see below](#records-as-the-primary-keeps-them)), so
+    tags, comments, views and switched-off records come along.
   </Step>
   <Step title="Promote">
     The secondary allows the primary and the primary's other secondaries to copy from it, then is
@@ -449,8 +451,10 @@ that name both of them stay right.
 
 <Note>
   Both servers need DNZ 1.14 or later. A secondary of the old primary on an older version keeps its
-  copies until they expire; move it by hand as under [After promoting](#after-promoting). If the
-  primary can't be reached, the dialog says why and offers **Promote without** it.
+  copies until they expire; move it by hand as under [After promoting](#after-promoting). The old
+  primary needs DNZ 1.14.1 or later to hand over its records' tags, comments and views; an older one
+  is refused with *update it first* rather than losing them. If the primary can't be reached, the
+  dialog says why and offers **Promote without** it.
 </Note>
 
 ## Promoting a secondary
@@ -458,8 +462,11 @@ that name both of them stay right.
 When the primary is gone for good (its disk died, the machine is retired), promote a secondary. The zones it copied become its own primary
 zones, editable there, and it stops following the old primary. Nothing is lost:
 
-- **Records** stay as they were transferred. Records the editor knows (A, MX, TXT, NS, TLSA…) become
-  ordinary editable records; anything else keeps the primary's form and is still served.
+- **Records** from a DNZ primary come back exactly as the primary kept them: tags, comments,
+  records in views, switched-off records, proxies ([see below](#records-as-the-primary-keeps-them)).
+  From any other primary they stay as they were transferred: records the editor knows (A, MX, TXT,
+  NS, TLSA…) become ordinary editable records; anything else keeps the primary's form and is still
+  served.
 - **DNSSEC keys** stay the same, with their rollover state, because a DNZ secondary already signs
   with the primary's keys. The DS record at the registrar keeps working, and from now on this
   server rolls the keys itself.
@@ -506,6 +513,22 @@ transfer. Zones from a joined primary's catalog are promoted with that primary, 
   it was signed there and the registrar has a DS for it, remove that DS, or turn DNSSEC on here and
   replace the DS with the one DNZ shows. Otherwise validating resolvers stop resolving the zone.
 </Warning>
+
+### Records as the primary keeps them
+
+A zone transfer carries only what DNS answers: no tags or comments, no records in views, no
+switched-off records, no proxies. So a DNZ secondary also asks its DNZ primary for each zone's
+records as they are stored there (`GET /api/replication/zones/{name}/copy`, with its join secret)
+after every transfer, and keeps that copy aside. It isn't served: the secondary answers with the
+transferred records. When the zone is promoted or taken over, the copy becomes the zone's records,
+so a zone can switch primary and back without losing anything.
+
+- **Views** go by name: one this server doesn't have is made, with its networks (a network that
+  already belongs to another view stays there).
+- **Proxies** and **Caddy** servers go by name too; one this server doesn't have is left off the
+  record, which then answers with its own address.
+- A copy is used only when it belongs to the serial the zone holds; otherwise the transferred
+  records are kept.
 
 ### After promoting
 
