@@ -179,7 +179,7 @@ A server that will only be a secondary doesn't need an admin of its own. It copi
   them is refused.
 - A local account with the same username is never touched. With `DNZ_ADMIN_PASSWORD` set as well,
   that local admin is created and nothing is copied.
-- **Leave** and **Promote to primary** keep the copies as ordinary local accounts, so you can still
+- **Leave** and **Take over as primary** keep the copies as ordinary local accounts, so you can still
   sign in.
 - The zones go into the first division (*Default*).
 
@@ -269,7 +269,7 @@ proxy's address: update it, then **Leave** and join again (the same join code wo
 
 **Leave** (in the secondary's list, or `dnz replication leave 1`) stops following the primary and
 deletes the zones copied from it. To keep them instead, because the primary is gone, use
-[Promote to primary](#promoting-a-secondary).
+[Take over as primary](#promoting-a-secondary).
 
 ### Removing a secondary
 
@@ -402,7 +402,7 @@ zones, editable there, and it stops following the old primary. Nothing is lost:
 <Tabs>
   <Tab title="Dashboard">
     On the secondary, open **DNS → Replication → Copied from other primaries**, open the primary's
-    menu and pick **Promote to primary**. The dialog lists what changes; confirm it.
+    menu and pick **Take over as primary** (this server becomes the primary of its zones). The dialog lists what changes; confirm it.
   </Tab>
   <Tab title="CLI">
     ```bash
