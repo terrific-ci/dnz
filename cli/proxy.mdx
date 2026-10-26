@@ -168,3 +168,20 @@ dnz proxy logs --host app.example.com --status 5xx -q /api
 dnz proxy logs --client 198.51.100.7 -n 200
 dnz proxy logs -f                                 # follow, oldest first (with --json: one JSON line each)
 ```
+
+### Waiting rooms
+
+A waiting room is a `dnzWaitingRoom` middleware (see
+[Waiting room](/proxy/dnz-proxy#waiting-room-dnzwaitingroom)). `set` adds one or changes the settings
+you give, keeping the rest. Put it on a route with `dnz proxy route … -m <name>` or in the proxy's
+page.
+
+```bash
+dnz proxy waiting-room set "Edge JKT" sale-line --max-active 500 --session 5m \
+  --bypass-path /api/ --bypass-path /static/ --allow-user-agent UptimeRobot
+dnz proxy waiting-room set "Edge JKT" sale-line --queue-all   # before the launch: everyone waits
+dnz proxy waiting-room set "Edge JKT" sale-line --open        # open: the line goes in first
+dnz proxy waiting-room set "Edge JKT" sale-line --redis redis:6379   # one line across all nodes
+dnz proxy waiting-room show                       # visitors in, the limit and waiting, per hostname
+dnz proxy wr ls -p "Edge JKT" --json
+```

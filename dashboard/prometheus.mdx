@@ -166,6 +166,7 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_domain_expiry_days{zone,domain}` | Days until a [monitored domain](/dns/domain-expiry) expires |
 | `dnz_certificate_expiry_timestamp_seconds` | Certificate expiry |
 | `dnz_proxy_enabled`, `dnz_proxies{kind}` | Whether proxying is on (1), and approved proxies by kind (`traefik`, `dnz`, `caddy`) |
+| `dnz_proxy_waiting_room_active`, `…_queued`, `…_max_active` `{proxy,node,middleware,host}` | A dnz-proxy [waiting room](/proxy/dnz-proxy#waiting-room-dnzwaitingroom): visitors in, visitors in line, and the limit, per node and hostname. With Redis every node reports the shared totals: take the max, not the sum |
 | `dnz_traefik_connected{proxy}`, `dnz_caddy_proxy_connected{proxy}` | 1 while a Traefik or Caddy proxy fetched its configuration in the last minute (`…_last_seen_timestamp_seconds` says when) |
 | `dnz_caddy_sync_success{id,caddy,kind}` | [Sites in DNS](/integrations/caddy): 1 when the last sync worked, `kind` `caddy` or `traefik` (not proxies; `dnz_caddy_sync_timestamp_seconds` says when) |
 | `dnz_health_findings{status}` | [Health check](/admin/health-check) findings by status |

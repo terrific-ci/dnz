@@ -17,7 +17,7 @@ Traefik would get), and adds what DNZ can do because it controls the proxy:
 - **Certificates from DNZ**, issued over ACME with DNS-01 through DNZ's own zones or a Cloudflare
   token per domain, or HTTP-01 answered by every node. See [Certificates](/proxy/certificates).
 - **Analytics and request logs** for every proxied hostname.
-- **Caching**, a **firewall**, and an **"under attack"** challenge as middlewares.
+- **Caching**, a **firewall**, an **"under attack"** challenge and a **waiting room** as middlewares.
 - **TCP and UDP** routing.
 - **Status pages**: switch a host to maintenance, blocked, moved and more, and every node shows
   visitors a styled page instead of the backend. See [Status pages](/proxy/status-pages).
@@ -517,6 +517,67 @@ network and valid for **Valid for**, then lets them through.
 - Bots can be let through by user agent and by address.
 - Requests that aren't a browser page (APIs, forms) get a 403 until a page has been visited.
 - **Difficulty** is in bits: each one doubles the work. 16 takes well under a second.
+
+### Waiting room (`dnzWaitingRoom`)
+
+A virtual line in front of a hostname, for launches, sales and traffic spikes the backend can't take.
+
+While fewer than **Visitors in at once** are in, everyone goes straight through. Past that, new
+visitors get a waiting page, styled like the status pages, with their place in line and an estimated
+wait. The page checks again every **refresh interval** and lets them in, in the order they arrived, as
+places free up. Requests that aren't a browser page get `503` with `Retry-After` (JSON for
+`Accept: application/json`, text otherwise).
+
+- **Visitors in.** A visitor let in gets a signed cookie that works on every node of the proxy and
+  slides along while they keep visiting. **A visitor stays in for** (5 minutes by default) after their
+  last request; then their place goes to the next in line.
+- **The line.** A waiting visitor holds a signed ticket with the time they arrived, and the line is in
+  ticket order, whichever node they come back to. A ticket not shown for a while (three refreshes,
+  at least two minutes) loses its place. Clients that keep no cookies never join the line, so bots
+  can't push people back.
+- **Everyone waits.** Before a launch, turn it on: nobody is let in and visitors line up as they
+  arrive. Turn it off to open; the line goes in first, at the limit's pace.
+- **Never wait.** Path prefixes (an API, or `/static/` for the assets your pages load), user agents
+  (monitors, crawlers) and addresses.
+- **Per node or shared.** The limit counts per hostname, on each node. With **Redis servers** set,
+  every node using that Redis keeps one line and one count; while Redis fails, each node counts on
+  its own.
+
+The line and the visitors in survive configuration changes. Each node reports its counts per
+hostname: the middleware's dialog shows them live under **Visitors now**, `dnz proxy waiting-room
+show` lists them, and Prometheus gets `dnz_proxy_waiting_room_active`, `…_queued` and
+`…_max_active`.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    **Proxy** → open the proxy → **Add middleware** → **dnz-proxy** → **Waiting room**, then add the
+    middleware to the hostname's route.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz proxy waiting-room set "Edge JKT" sale-line --max-active 500 --bypass-path /static/
+    dnz proxy route "Edge JKT" shop.example.com -u http://10.0.0.10:8080 -m sale-line
+    dnz proxy waiting-room set "Edge JKT" sale-line --queue-all   # everyone waits until you --open
+    dnz proxy waiting-room show
+    ```
+
+  </Tab>
+  <Tab title="JSON">
+
+    ```json
+    { "dnzWaitingRoom": {
+        "maxActive": 500, "sessionDuration": "5m", "refreshInterval": "20s",
+        "title": "You're in line", "message": "{host} is busy right now.",
+        "bypassPaths": ["/api/", "/static/"], "allowUserAgents": ["UptimeRobot"],
+        "allowIps": ["10.0.0.0/8"], "queueAll": false,
+        "redis": { "endpoints": ["redis:6379"] } } }
+    ```
+
+  </Tab>
+</Tabs>
 
 ## Analytics
 
