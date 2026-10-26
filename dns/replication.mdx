@@ -400,7 +400,9 @@ step, and nothing has to be re-joined by hand.
   <Step title="Catch up">
     Every zone is transferred until its serial matches the primary's, and the secondary takes each
     zone's records as the primary stores them ([see below](#records-as-the-primary-keeps-them)), so
-    tags, comments, views and switched-off records come along.
+    tags, comments, views and switched-off records come along. A copy of a zone the primary no
+    longer has (deleted there, and the catalog not read again yet) is removed, as the next catalog
+    read would, rather than becoming a primary zone; the final message names it.
   </Step>
   <Step title="Promote">
     The secondary allows the primary and the primary's other secondaries to copy from it, then is
@@ -415,6 +417,16 @@ step, and nothing has to be re-joined by hand.
   </Step>
 </Steps>
 
+It is refused, with nothing changed, when:
+
+- the primary has **switched-off zones**: they are in no catalog, so the secondary has no copy, and
+  they would stay behind on the old primary, which is read-only afterwards. Switch them on or delete
+  them there first.
+- the secondary also follows **another DNZ primary**: its settings come from there and everything on
+  it is read-only, the zones it took over too. Leave the other primary first.
+- another of the primary's secondaries is taking over already. Only the secondary that asked for
+  the hold can go on with it or cancel it.
+
 Everyone keeps signing in: the new primary already has every **account** with its divisions and
 roles, and they become its own. On the old primary the accounts are managed by the new primary from
 then on, like on any secondary; an account there with the same username as one on the new primary
@@ -422,7 +434,8 @@ takes that one's password.
 
 The old primary's **other DNZ secondaries** move by themselves: on their next check-in (within a
 minute) the old primary tells them where to go, and they follow the new primary with their zones
-kept, without a gap. BIND, Knot or PowerDNS secondaries are allowed on the new primary with the same
+kept, without a gap. They keep checking in with the old primary until the move is done, so one cut
+short (a restart) goes on at the next check-in. BIND, Knot or PowerDNS secondaries are allowed on the new primary with the same
 TSIG key; change their primary address to the new one. Both servers answer throughout, so NS records
 that name both of them stay right.
 
