@@ -6,18 +6,31 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.14.2**, released October 26, 2026. To install or upgrade to it:
+The latest release is **v1.14.3**, released October 26, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.14.2
-docker pull terrificci/dnz-proxy:1.14.2   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.14.2
+docker pull terrificci/dnz:1.14.3
+docker pull terrificci/dnz-proxy:1.14.3   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.14.3
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.14.2" description="October 26, 2026" tags={["Latest"]}>
+<Update label="v1.14.3" description="October 26, 2026" tags={["Latest"]}>
+
+- 2FA test: name TOTP steps instead of "now", so a step boundary can't flip the replay check
+- Forward missing names: a local name's missing type is NODATA, not the upstream's NXDOMAIN
+- Secondaries answer views and forward missing names as their primary does
+- Secondaries run filter schedules in the primary's time zone
+- Automatic PTR on a secondary leaves out proxied names, as the primary does
+- Secondaries steer traffic as their primary does
+- Catalog lists the zones a server copies from other primaries too
+- Promoting a secondary keeps copying what its primary copied from elsewhere
+
+</Update>
+
+<Update label="v1.14.2" description="October 26, 2026">
 
 - Take over: tie the hold to its caller, refuse switched-off zones, crash-safe moves
 
