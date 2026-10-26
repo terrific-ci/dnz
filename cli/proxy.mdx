@@ -61,27 +61,34 @@ hostname DNS can answer are listed below it, with the reason. `on` and `off` are
 
 ## Proxy routes
 
-`dnz proxy route` does what **Add route** on a proxy's page does: it sets up one hostname through a
-proxy, with its service (upstreams), router(s) and DNS record, in one go.
+`dnz proxy routes` does what **Routes** on a proxy's page does: one hostname (or a few) through a
+proxy, with its service, router(s), the switches' middlewares and DNS record kept together.
+`dnz proxy route …` is the same as `dnz proxy routes add …`.
 
 ### Find a hostname
 
 ```bash
-dnz proxy hosts local                             # names with A/AAAA/CNAME records, and whether local routes them
-dnz proxy hosts local portal                      # what Add route offers for "portal": existing names, and new ones per zone
+dnz proxy hosts edge                              # names with A/AAAA/CNAME records, and whether edge routes them
+dnz proxy hosts edge portal                       # what Add route offers for "portal": existing names, and new ones per zone
 ```
 
 The first argument is the proxy, by name or id. In the output, **DNS** shows a name's record types, or
 **new** when the name has no record yet.
 
-### Add a route
+### List, add, edit, delete
 
 ```bash
-dnz proxy route local app.example.com -u http://10.0.0.10:8080
-dnz proxy route local app.example.com -u http://10.0.0.10:8080=3 -u http://10.0.0.11:8080 \
-  --cert-resolver letsencrypt -m compress         # weights 3:1, a middleware by name
-dnz proxy route local intranet.example.com -u http://10.0.0.20 --http     # HTTP only
-dnz proxy route local app.example.com -u http://10.0.0.10:8080 --no-dns   # leave DNS alone
+dnz proxy routes list edge                        # hostnames, where they go, HTTPS / certificate, switches
+dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000
+dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000=3 -u http://10.0.1.21:3000 \
+  --also www.example.com --cache 10m --user admin:s3cret --allow 10.0.0.0/8
+dnz proxy routes add edge api.example.com -u http://10.0.2.11:8080 --rate-limit 100/300 --firewall office
+dnz proxy routes add edge intranet.example.com -u http://10.0.9.4 --http        # HTTP only
+dnz proxy routes edit edge app.example.com --no-cache --user ops:other-pass --remove-user admin
+dnz proxy routes edit edge app.example.com --https off
+dnz proxy routes cert edge app.example.com        # the certificate's state and latest steps; --renew gets it again
+dnz proxy routes clear-cache edge app.example.com
+dnz proxy routes rm edge app.example.com          # its DNS records stop going through edge
 ```
 
 What happens to DNS:
@@ -93,20 +100,34 @@ What happens to DNS:
 The hostname must be in one of DNZ's zones; `*.example.com` covers one label. A hostname outside
 every zone, or one the proxy already routes, is refused, and the closest names are offered.
 
-| Option | What it does |
+| Option (`add`) | What it does |
 | --- | --- |
 | `-u`, `--upstream` | Upstream URL with scheme and port; repeat for more. Append `=WEIGHT` to share visits unevenly, e.g. `http://10.0.0.10:8080=3`. Required |
+| `--also` | Another hostname of the same route; repeat for more |
 | `--http` | Plain HTTP only: no HTTPS router and no redirect |
 | `--no-redirect` | Keep `http://` as it is instead of redirecting to `https://` |
-| `--cert-resolver` | Certificate resolver for HTTPS, e.g. `letsencrypt` |
-| `-m`, `--middleware` | Middleware by name or id, in order; repeat for more |
+| `--cert-resolver` | Certificate resolver for HTTPS; default: DNZ's automatic certificates on dnz-proxy |
+| `--path` | Only paths under this, e.g. `/api` |
+| `--cache [TTL]` | Cache answers on the nodes (dnz-proxy), default `10m` |
+| `--firewall` | Run one of the proxy's firewall middlewares first (dnz-proxy) |
+| `--challenge` | The "under attack" browser check (dnz-proxy) |
+| `--rate-limit` | Requests a second per visitor, optionally with a burst: `100` or `100/300` |
+| `--user` | `NAME:PASSWORD` for a password; repeat for more. Only a bcrypt hash is kept |
+| `--allow` | Only these addresses or ranges get through; repeat for more |
+| `-m`, `--middleware` | Another middleware by name or id, in order; repeat for more |
 | `--no-dns` | Leave the DNS record alone |
 | `--strategy` | How the upstreams share visits: `wrr` (default), `p2c`, `hrw` or `leasttime` |
 | `--sticky` | Keep each visitor on the upstream it first reached (a cookie) |
 | `--http-entry` | Entry point for `http://` |
 | `--https-entry` | Entry point for `https://` |
 
-HTTPS with a redirect from `http://` is the default.
+`routes edit` changes only what you pass: `--add-host`, `--remove-host`, `-u` (replacing the
+upstreams), `--https on|off`, `--redirect on|off`, `--path`, `--enabled on|off`, the switches above,
+and `--no-cache`, `--no-firewall`, `--no-challenge`, `--no-rate-limit`, `--no-password`,
+`--remove-user NAME`, `--no-allow`. A route set up under **Advanced** is refused with the reason.
+
+HTTPS with a redirect from `http://` is the default. On a dnz-proxy proxy its certificate comes by
+itself once [automatic certificates](#certificates) are set up; until then it gets a temporary one.
 
 ### Entry points
 
@@ -119,6 +140,38 @@ The server picks the entry points, the same ones the dashboard's **Add route** u
 The one on port 80 serves `http://` and the one on 443 serves `https://`; the command prints which it
 picked. Without either, or when no entry point is on that port, it uses `web` and `websecure`.
 `--http-entry` and `--https-entry` name them yourself.
+
+### Route defaults (dnz-proxy)
+
+What every route of a dnz-proxy proxy gets, live on its nodes:
+
+```bash
+dnz proxy defaults edge                           # show them
+dnz proxy defaults edge --redirect-https on --compress on --security-headers on --firewall office
+dnz proxy defaults edge --firewall none
+```
+
+See [Route defaults](/proxy/dnz-proxy#route-defaults).
+
+### Certificates
+
+DNZ's automatic certificates for dnz-proxy routes:
+
+```bash
+dnz proxy certs show                              # on or not, the account, the credentials in use
+dnz proxy certs setup --agree --email admin@example.com   # once: a Let's Encrypt account (accepting its agreement)
+dnz proxy certs setup --account "Let's Encrypt"   # or one DNZ already has
+dnz proxy certs check edge app.example.com shop.example.org
+dnz proxy certs credential shop.example.org --cloudflare-token …
+dnz proxy certs credential shop.example.org --rfc2136 192.0.2.53:53 --key-name acme. --secret …
+dnz proxy certs credential shop.example.org --webhook https://hooks.example.com/acme --suffix example.org
+```
+
+`certs check` says per name how DNZ would prove it: DNZ's own zone, a Cloudflare connection, a DNS
+credential, HTTP-01 through the nodes, or **needs a way**. `certs credential` adds and removes a test
+TXT record first and keeps the credential only when that works. `DNZ_CLOUDFLARE_TOKEN` and
+`DNZ_ACME_SECRET` keep secrets off the command line. See
+[Automatic certificates](/proxy/certificates#automatic-certificates).
 
 ## dnz-proxy nodes
 
@@ -142,9 +195,10 @@ with. New nodes wait for approval; they can only join dnz-proxy proxies. `approv
 
 Nodes are named by name or id.
 
-### Purging the cache
+### Clearing the cache
 
-`dnz proxy purge` clears cached answers on every node of a proxy:
+`dnz proxy purge` (or `dnz proxy clear-cache`) clears cached answers on every node of a proxy;
+`dnz proxy routes clear-cache` does it for one route's hostnames:
 
 ```bash
 dnz proxy purge "Edge JKT"                        # every cached answer

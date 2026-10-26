@@ -45,10 +45,11 @@ The stream stays open and must not be buffered by a reverse proxy in front of DN
 | --- | --- |
 | `GET /api/proxies/{id}/dnz` | A proxy's nodes, entry points and settings |
 | `PUT /api/proxies/{id}/dnz/settings` | Change a proxy's settings |
+| `PUT /api/proxies/{id}/dnz/defaults` | Route defaults: `{"redirect_https", "compress", "security_headers", "firewall_id"}` |
 | `POST /api/proxies/{id}/entrypoints` | Add an entry point |
 | `PUT /api/proxies/{id}/entrypoints/{eid}` | Change an entry point |
 | `DELETE /api/proxies/{id}/entrypoints/{eid}` | Delete an entry point |
-| `POST /api/proxies/{id}/purge` | Purge the cache on every node |
+| `POST /api/proxies/{id}/purge` | Clear the cache on every node: `{"target": {"kind": "everything" \| "host" \| "url" \| "prefix", …}}` |
 
 ## Analytics
 

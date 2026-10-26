@@ -122,15 +122,47 @@ upgrade:
 
 ### Adding a route
 
-**Add route** takes a hostname and its upstreams. You choose HTTPS (with a redirect from `http://`)
-and middlewares. DNZ then:
+A proxy's page opens on **Routes**: one row per hostname, with where it goes, its HTTPS and
+certificate, whether DNS answers with the proxy (**Add DNS record** when not), and its switches.
+**Add route** is the one button, and the same dialog edits a route later.
 
-- adds the service and the router,
+The dialog has the **Hostname** (and **Another hostname**), the **Upstreams**, **HTTPS** with a
+redirect from `http://`, the switches under **Protect and speed up**, and **Advanced** for a path,
+other middlewares and the DNS record.
+
+The switches are each the route's own middleware, made and removed with it:
+
+| Switch | What it does |
+| --- | --- |
+| **Cache** (dnz-proxy) | Keeps answers on the nodes; **Clear cache** right next to it when editing |
+| **Firewall** (dnz-proxy) | Runs one of the proxy's firewall middlewares |
+| **Rate limit** | Requests a second per visitor, with a burst |
+| **Password** | Users added by name and password; only a bcrypt hash is kept |
+| **Only from these addresses** | Addresses or ranges; everyone else gets 403 |
+| **Under attack check** (dnz-proxy) | Browsers solve a short check once |
+
+They run in that order, with the cache last, so only visits let through ever see a cached answer.
+
+DNZ then:
+
+- adds the service, the router and the switches' middlewares,
 - adds a second router on the HTTP entry point with a *Redirect to HTTPS* middleware, when you chose
-  HTTPS with a redirect,
+  HTTPS with a redirect (unless a dnz-proxy proxy's [route defaults](/proxy/dnz-proxy#route-defaults)
+  already redirect),
 - proxies the name's DNS record, and makes an A record pointing at the proxy when there is none.
 
-The **Services**, **Middlewares** and **Routers** tabs are there to fine-tune afterwards.
+On a dnz-proxy proxy, HTTPS gets a Let's Encrypt certificate by itself. When DNZ needs something
+first, the dialog asks for it in a **Certificate** step before saving: Let's Encrypt's agreement the
+first time, and a way to prove a name DNZ can't prove yet (a Cloudflare token, another DNS provider,
+or HTTP through the nodes), tested before it is saved. See
+[Automatic certificates](/proxy/certificates#automatic-certificates). The row then shows the
+certificate's progress; a failure says why, with a fix, a retry and the full log.
+
+Everything behind the routes (routers, services, middlewares, TLS, TCP and UDP) is under
+**Advanced** on the page. A router made there shows in Routes too; one the dialog can't hold (extra
+conditions, a priority, TLS options, a weighted or shared service) is marked **Set up in Advanced**.
+**Delete** removes the route's routers, its service and its switches, and its DNS records stop going
+through the proxy.
 
 As you type the hostname, the field offers:
 
@@ -141,28 +173,29 @@ As you type the hostname, the field offers:
 
 The routers go on the proxy's entry points on port 80 and 443. Under dnz-proxy these are its own
 entry points. Under Traefik they are the ones its API lists (when the proxy has **Traefik API**
-set), else `web` and `websecure`. Under Caddy they are `web` (:80) and `websecure` (:443). The
-dialog says where they came from.
+set), else `web` and `websecure`. Under Caddy they are `web` (:80) and `websecure` (:443).
 
 A record without a router links straight to this dialog, with its name filled in.
 
 <Tabs>
   <Tab title="Dashboard">
 
-    **Proxy** → open the proxy → **Add route**.
+    **Proxy** → open the proxy → **Routes** → **Add route**.
 
   </Tab>
   <Tab title="CLI">
 
     ```bash
-    dnz proxy hosts local                             # names with A/AAAA/CNAME records, and whether local routes them
-    dnz proxy route local app.example.com -u http://10.0.0.10:8080
-    dnz proxy route local app.example.com -u http://10.0.0.10:8080=3 -u http://10.0.0.11:8080 \
-      --cert-resolver letsencrypt -m compress         # weights 3:1, a middleware by name
-    dnz proxy route local intranet.example.com -u http://10.0.0.20 --http     # HTTP only
+    dnz proxy hosts edge                              # names with A/AAAA/CNAME records, and whether edge routes them
+    dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000 --cache 10m
+    dnz proxy routes add edge api.example.com -u http://10.0.2.11:8080=3 -u http://10.0.2.12:8080 \
+      --rate-limit 100/300 --user admin:s3cret       # weights 3:1, a rate limit and a password
+    dnz proxy routes add edge intranet.example.com -u http://10.0.9.4 --http --allow 10.0.0.0/8
+    dnz proxy routes list edge
+    dnz proxy routes edit edge app.example.com --no-cache
     ```
 
-    `local` is the proxy's name. See [Proxy commands](/cli/proxy) for every option.
+    `edge` is the proxy's name. See [Proxy commands](/cli/proxy#proxy-routes) for every option.
 
   </Tab>
 </Tabs>

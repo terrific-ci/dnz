@@ -58,7 +58,10 @@ as on (`traefik`, `dnz`) or off.
 | `GET` | `/api/proxies/{id}/setup` | The proxy's routers, services and middlewares, and its proxied names |
 | `GET` | `/api/proxies/{id}/routes/hosts` | What Add route offers: `{"zones": [...], "records": [{"host", "types", "routed"}]}`. DNZ's primary zones and the names with A/AAAA/CNAME records (`routed` when this proxy has a router for one) |
 | `GET` | `/api/proxies/{id}/routes/entry-points` | The proxy's HTTP entry points for the router and Add route dialogs: `{"list": [{"name", "address"}], "http", "https", "from", "http_found", "https_found", "error"}` |
-| `POST` | `/api/proxies/{id}/routes` | One step: `{"host", "servers", "tls", "cert_resolver", "redirect_http", "middlewares", "dns_record"}` adds the service, router(s) and proxied DNS record |
+| `GET` | `/api/proxies/{id}/routes` | `{"routes": [...], "auto_certificates"}`: each route's `id` (its router), `hosts`, `path_prefix`, `tls`, `cert_resolver`, `redirect_router`, `servers`, `options` (the switches), other `middlewares`, `simple` / `advanced` and, on dnz-proxy, `certificate` |
+| `POST` | `/api/proxies/{id}/routes` | One step: `{"host" or "hosts", "servers", "tls", "redirect_http", "options", "middlewares", "path_prefix", "dns_record"}` adds the service, router(s), switches and proxied DNS records |
+| `PUT` | `/api/proxies/{id}/routes/{router}` | The same body: changes the route (409 for one set up under Advanced) |
+| `DELETE` | `/api/proxies/{id}/routes/{router}[?unproxy=true]` | Deletes its routers, service and switches; `unproxy` takes the proxy off its DNS records instead of refusing |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/routers[/{router}]` | Add, change, delete a router |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/services[/{service}]` | Add, change, delete a service |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/middlewares[/{middleware}]` | Add, change, delete a middleware |
@@ -70,8 +73,24 @@ Traefik it lists the ones its API lists. `from` says which (`dnz-proxy` / `traef
 and always under Caddy, it offers `web` (:80) and `websecure` (:443). `http` and `https` are the ones on port 80 and 443 that
 a new route uses.
 
-**One-step routes.** In `POST /api/proxies/{id}/routes`, `http_entry_point` and `https_entry_point`
-default to the `http` and `https` entry points above.
+**Routes.** In `POST /api/proxies/{id}/routes`, `http_entry_point` and `https_entry_point` default
+to the `http` and `https` entry points above, and `cert_resolver` to DNZ's automatic certificates on
+dnz-proxy (once set up). `options` holds the switches:
+
+```json
+{
+  "cache": "10m",
+  "firewall": 4,
+  "challenge": true,
+  "rate_limit": { "average": 100, "burst": 300 },
+  "basic_auth": ["admin:$2y$05$…"],
+  "allow_ips": ["10.0.0.0/8"]
+}
+```
+
+Each is the route's own middleware (`cache`, `firewall` and `challenge` on dnz-proxy only; `firewall`
+names one of the proxy's firewall middlewares). A route's `certificate` has `state`, `not_after`,
+`last_error`, `next_attempt_at` and its latest `events`.
 
 **Auth users.** `POST /api/proxy/auth-user` with `{"user", "password"}` returns `{"line"}` for basic
 auth. Add `"digest": true` and an optional `"realm"` for digest auth.

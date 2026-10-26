@@ -17,15 +17,14 @@ gets them translated into Caddy's own configuration, with what it can't do left 
 ([What Caddy gets](/proxy/caddy#what-caddy-gets)).
 
 <Tip>
-  For a single hostname, **Add route** on the proxy's page adds the service, router and DNS record in
-  one step. See [Adding a route](/proxy/overview#adding-a-route). Use the tabs below to fine-tune
-  afterwards.
+  For most hostnames you don't need this page: **Routes** on the proxy's page adds and edits the
+  service, router, switches and DNS record together. See [Adding a route](/proxy/overview#adding-a-route).
+  Use what follows for anything a route can't hold.
 </Tip>
 
 ## Where to find them
 
-On the **Proxy** page, open a proxy (**Routers, services, middlewares**). Its page groups everything
-the way Traefik does:
+On the **Proxy** page, open a proxy and pick **Advanced**. It groups everything the way Traefik does:
 
 | Group | What it holds |
 | --- | --- |
@@ -135,7 +134,7 @@ A router can be turned off without deleting it.
 
 <Info>
   With dnz-proxy, the certificate resolver can be one of DNZ's own resolvers, and DNZ issues the
-  certificate. See [Certificates](/proxy/certificates).
+  certificate; routes use DNZ's `auto` resolver by themselves. See [Certificates](/proxy/certificates).
 </Info>
 
 ### HTTPS with a redirect
@@ -145,7 +144,8 @@ Use two routers on the same hostnames:
 1. one on the HTTPS entry point, with TLS;
 2. one on the HTTP entry point, with a *Redirect to HTTPS* middleware.
 
-**Add route** sets this up for you when you choose HTTPS with a redirect.
+**Add route** sets this up for you when you choose HTTPS with a redirect. On dnz-proxy, the proxy's
+[route defaults](/proxy/dnz-proxy#route-defaults) can redirect every route at once instead.
 
 ## HTTP transports
 

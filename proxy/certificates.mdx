@@ -8,7 +8,9 @@ For **dnz-proxy** proxies, DNZ gets TLS certificates itself over ACME and hands 
 proxy's nodes with their configuration. A Traefik or Caddy proxy gets its own. Nodes never talk to a CA, and every node serves the same
 certificate. Certificates can also be uploaded by hand.
 
-Everything here is for superadmins, under **Proxy → Certificates**.
+Everything here is for superadmins. Routes get their certificates by themselves
+([Automatic certificates](#automatic-certificates)); the accounts, credentials, resolvers and every
+certificate are under **Proxy → Certificates**.
 
 <Note>
   This page is about certificates DNZ gets **for its own proxy**. To let lego, Traefik or certbot
@@ -16,7 +18,65 @@ Everything here is for superadmins, under **Proxy → Certificates**.
   [ACME DNS-01](/integrations/acme).
 </Note>
 
-## Setting it up
+## Automatic certificates
+
+Most setups need nothing here: an HTTPS route on a dnz-proxy proxy gets a Let's Encrypt certificate
+by itself, through DNZ's resolver `auto`.
+
+<Steps>
+  <Step title="Turn on HTTPS for a route">
+    In the route dialog ([Adding a route](/proxy/overview#adding-a-route)), leave **HTTPS** on and
+    save.
+  </Step>
+  <Step title="Answer the certificate step, if there is one">
+    The first time, the dialog asks for an e-mail (optional) and Let's Encrypt's Subscriber
+    Agreement, or one of DNZ's ACME accounts. For a name DNZ can't prove yet, it asks for a way:
+    a Cloudflare token, another DNS provider, or HTTP through the nodes.
+  </Step>
+  <Step title="Watch it arrive">
+    The route's row shows each step: order, records, propagation, validation, sent to the nodes. A
+    failure says why, with **Fix how it's proven**, **Try again now** and the full log.
+  </Step>
+</Steps>
+
+The `auto` resolver proves each name the way DNZ can manage, in this order:
+
+1. a **rule** of the resolver: added when you gave DNZ a way for a name in the certificate step;
+2. **DNS-01 in DNZ's own zone**, when the internet asks DNZ for it (the zone's public name servers
+   answer with the serial DNZ has). A zone DNZ serves only inside, or split from a public copy
+   elsewhere, isn't used;
+3. **DNS-01 through a division's Cloudflare connection** whose zones hold the name
+   ([Cloudflare](/integrations/cloudflare));
+4. **HTTP-01 through the nodes**, not for wildcards.
+
+In the certificate step, a Cloudflare token (the link opens Cloudflare's form with **Zone · Read** and
+**DNS · Edit** filled in) or another DNS provider (RFC 2136, a webhook) is tested first: a TXT record
+is added and removed, and only when that works is it saved, as a DNS credential with a rule for every
+name under its domain. **Through the nodes** is offered once DNZ sees the name pointing at the
+proxy's nodes and port 80 answering.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    **Proxy** → the proxy → **Routes** → **Add route** or a route's **Edit** (HTTPS on). The proxy's
+    **Settings → Certificates** shows the account and the credentials in use.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz proxy certs setup --agree --email admin@example.com   # once: a Let's Encrypt account
+    dnz proxy certs check edge app.example.com shop.example.org
+    dnz proxy certs credential shop.example.org --cloudflare-token …   # tested, then used for example.org
+    dnz proxy routes cert edge app.example.com                # its state and latest steps
+    ```
+
+  </Tab>
+</Tabs>
+
+## Setting it up by hand
+
+For another CA, a resolver of your own, or certificates requested or uploaded by hand:
 
 <Steps>
   <Step title="Add an ACME account">
@@ -28,13 +88,14 @@ Everything here is for superadmins, under **Proxy → Certificates**.
     HTTP-01, or for names in DNZ's own zones. See [DNS credentials](#dns-credentials).
   </Step>
   <Step title="Add a certificate resolver">
-    On the **Resolvers** tab, add a resolver: an account plus a challenge. Its name is what routers
-    give as their *certificate resolver*. See [Resolvers](#resolvers).
+    On the **Resolvers** tab, add a resolver: an account plus a challenge (HTTP-01, DNS-01 or
+    Automatic). Its name is what routers give as their *certificate resolver*. See
+    [Resolvers](#resolvers).
   </Step>
   <Step title="Point routers at it">
-    In a router's **TLS** tab, pick the resolver as its certificate resolver. DNZ then gets the
-    certificate by itself. You can also request or upload certificates on the **Certificates** tab.
-    See [Certificates](#certificates).
+    Under **Advanced**, in a router's **TLS** tab, pick the resolver as its certificate resolver. DNZ
+    then gets the certificate by itself. You can also request or upload certificates on the
+    **Certificates** tab. See [Certificates](#certificates).
   </Step>
 </Steps>
 
@@ -116,7 +177,9 @@ leaves a secret out keeps the stored one.
 
 ## Resolvers
 
-A resolver names an account and a challenge. For DNS-01 it picks the credential for each name:
+A resolver names an account and a challenge: **HTTP-01**, **DNS-01**, or **Automatic** (DNS-01 where
+DNZ can write the name's records, as in [Automatic certificates](#automatic-certificates), else
+HTTP-01). For DNS-01 it picks the credential for each name:
 
 1. the **rule** with the longest matching suffix (`example.com` covers `example.com` and every name
    under it), so each domain can use its own Cloudflare token;

@@ -14,8 +14,12 @@ Traefik would get), and adds what DNZ can do because it controls the proxy:
 - **Many servers per proxy.** Any number of servers ("nodes") join a proxy. DNZ pushes the
   configuration to all of them the moment it changes, and DNS answers the proxy's names with the
   addresses of the nodes that are up.
-- **Certificates from DNZ**, issued over ACME with DNS-01 through DNZ's own zones or a Cloudflare
-  token per domain, or HTTP-01 answered by every node. See [Certificates](/proxy/certificates).
+- **Certificates from DNZ**, automatic for every HTTPS route: Let's Encrypt over DNS-01 through
+  DNZ's own zones, a Cloudflare connection or another DNS provider, or HTTP-01 answered by every
+  node. See [Certificates](/proxy/certificates).
+- **Route defaults**: what Traefik keeps in its static configuration (redirecting to `https://`,
+  middlewares on every router) is a switch on the proxy, live on every node. See
+  [Route defaults](#route-defaults).
 - **Analytics and request logs** for every proxied hostname.
 - **Caching**, a **firewall**, an **"under attack"** challenge and a **waiting room** as middlewares.
 - **TCP and UDP** routing.
@@ -347,9 +351,54 @@ one `DNZ_PROXY_BIN` names. It restarts the node if it exits and shows its last l
   it.
 </Note>
 
+## The proxy's page
+
+A dnz-proxy proxy's page has **Routes** ([Adding a route](/proxy/overview#adding-a-route)),
+**Nodes**, **Analytics**, **Settings** and **Advanced** (the routers, services, middlewares and TLS,
+TCP and UDP objects behind the routes). **Settings** holds:
+
+| Card | What it holds |
+| --- | --- |
+| **Every route** | The [route defaults](#route-defaults) |
+| **Certificates** | Where the routes' certificates come from: the ACME account and the DNS credentials added for names DNZ couldn't prove |
+| **Ports** | The [entry points](#entry-points) |
+| **Cache** | What each node holds, and **Clear cache** |
+| **Nodes and DNS** | Joining without approval, the TTL of proxied answers, checking the nodes' ports, cache sizes, request log sampling, the GeoIP database |
+
+### Route defaults
+
+What every route of the proxy gets, without touching a router, live on every node:
+
+- **Redirect http:// to https://**: a lowest-priority router on each HTTP entry point sends every
+  visit no HTTP route takes to `https://` (permanent). Let's Encrypt's HTTP-01 checks are answered
+  before any router, so they still get through. With it on, new routes don't get a redirecting
+  router of their own.
+- **Compress answers**: gzip, Brotli or zstd, whichever the browser takes.
+- **Security headers**: `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+  strict-origin-when-cross-origin`, `X-Frame-Options: SAMEORIGIN`, and HSTS (180 days) over HTTPS.
+- **Firewall on every route**: one of the proxy's firewall middlewares, run before anything else.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    **Proxy** → open the proxy → **Settings** → **Every route**.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz proxy defaults edge --redirect-https on --compress on --security-headers on --firewall office
+    ```
+
+  </Tab>
+</Tabs>
+
+They go into the nodes' configuration as `dnz-defaults-*` routers, services and middlewares, so names
+starting with `defaults-` are DNZ's own. A firewall used here can't be deleted until it is taken off.
+
 ## Entry points
 
-A proxy's nodes listen on its **entry points**, on the proxy's **Entry points** tab. Each has a name,
+A proxy's nodes listen on its **entry points**, under **Settings → Ports**. Each has a name,
 an address (`:443` listens on every address, IPv6 and IPv4), and a protocol: `http`, `https`, `tcp`
 or `udp`.
 
@@ -469,14 +518,16 @@ cookies, and the accepted encoding.
 Answers carry `X-Cache: HIT | MISS | STALE | BYPASS` and `Age`.
 
 Each node caches in memory (256 MiB by default) and, with a **disk cache directory** and size, on disk
-too. Both are on the proxy's **Settings** tab.
+too. Both are on the proxy's **Settings**.
 
-**Purge cache** on the proxy clears everything, a hostname, a URL or a path prefix on every node:
+**Clear cache** drops what the nodes hold: on a route (its ⋯ menu, or next to the **Cache** switch in
+its dialog), in a cache middleware's editor (the hostnames of the routers using it), or under
+**Settings → Cache** for everything, a hostname, a URL or a path prefix:
 
 <Tabs>
   <Tab title="Dashboard">
 
-    **Proxy** → open the proxy → **Purge cache**.
+    **Proxy** → open the proxy → a route's ⋯ → **Clear cache**, or **Settings → Cache → Clear cache**.
 
   </Tab>
   <Tab title="CLI">
