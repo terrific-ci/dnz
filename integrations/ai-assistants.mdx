@@ -1,0 +1,180 @@
+---
+title: "AI assistants (MCP)"
+description: "Connect Claude, Cursor, VS Code and other MCP clients to DNZ: sign in with OAuth at /mcp, or run dnz mcp with an API token."
+---
+
+DNZ is an [MCP](https://modelcontextprotocol.io) server: Claude, Cursor, VS Code and other
+assistants that speak the Model Context Protocol can look up zones and records, explain why a name
+answers the way it does, read the query log, statistics, threats and the audit log and, if you allow
+it, change records. Ask things like "why doesn't app.example.com resolve from 10.0.4.7?", "audit
+example.com" or "point staging at 192.0.2.40".
+
+There are two ways to connect:
+
+- **A URL, `https://<your DNZ>/mcp`** (Streamable HTTP). The assistant signs in with OAuth on its first
+  connection: you log in to DNZ as usual (two-factor included), see which app asks, and pick **read
+  only** or **read and change**. Or it sends an API token as the bearer token.
+- **A command, `dnz mcp`** (stdio), for assistants that start a program. It uses the session from
+  `dnz login` or an API token, like every other `dnz` command, and is read only unless started with
+  `--allow-writes`.
+
+Either way every tool goes through DNZ's HTTP API as you (or as the token): you see what your roles
+let you see, change approval applies, and history and the audit log show the change as made through
+MCP, e.g. `alice via Claude`.
+
+## Connect
+
+<Tip>
+**Settings → Integrations → AI assistants** in the dashboard has the URL for your server and these steps with copy buttons.
+</Tip>
+
+### Claude (claude.ai, Claude Desktop)
+
+1. **Settings → Connectors → Add custom connector**.
+2. Name it `DNZ` and paste `https://dns.example.com/mcp`.
+3. **Connect**, log in to DNZ if asked, choose the access and **Allow**.
+
+claude.ai connects from Anthropic's servers, so the URL must be reachable from the internet over
+HTTPS. For a DNZ that is only on your network, use Claude Desktop with the `dnz mcp` command below.
+
+### Claude Code
+
+```bash
+claude mcp add --transport http dnz https://dns.example.com/mcp
+```
+
+Then run `/mcp` in Claude Code and choose **dnz → Authenticate**.
+
+### Cursor
+
+`~/.cursor/mcp.json` (or `.cursor/mcp.json` in a project):
+
+```json
+{
+  "mcpServers": {
+    "dnz": { "url": "https://dns.example.com/mcp" }
+  }
+}
+```
+
+### VS Code
+
+`.vscode/mcp.json`, or **MCP: Add Server… → HTTP**:
+
+```json
+{
+  "servers": {
+    "dnz": { "type": "http", "url": "https://dns.example.com/mcp" }
+  }
+}
+```
+
+### With an API token instead of signing in
+
+Any client that lets you set headers can skip OAuth: create a token under **Settings → API tokens** ([API tokens](/api/overview))
+and send `Authorization: Bearer dnz_…`. The token's permissions and zones decide what the tools may
+read and change. With Claude Code:
+
+```bash
+claude mcp add --transport http dnz https://dns.example.com/mcp --header "Authorization: Bearer dnz_…"
+```
+
+### As a command (stdio)
+
+Install the `dnz` binary where the assistant runs (it doesn't have to be the DNZ server), then
+either sign in once with `dnz login --server https://dns.example.com`, or give it an API token:
+
+```json
+{
+  "mcpServers": {
+    "dnz": {
+      "command": "dnz",
+      "args": ["mcp", "--server", "https://dns.example.com", "--allow-writes"],
+      "env": { "DNZ_TOKEN": "dnz_…" }
+    }
+  }
+}
+```
+
+Leave out `--allow-writes` for read only. That's `claude_desktop_config.json` for Claude Desktop, and
+the same shape for Cursor; for Claude Code:
+
+```bash
+claude mcp add dnz -e DNZ_TOKEN=dnz_… -- dnz mcp --server https://dns.example.com
+```
+
+This is also how to connect a DNZ that runs without the web UI (`DNZ_UI=false`), where signing in
+with OAuth isn't possible.
+
+## Tools
+
+| Tool | Does |
+|---|---|
+| `whoami` | Who the connection acts as, its divisions, superadmin or not |
+| `list_zones` | Zones you can see, optionally of one division |
+| `get_zone` | One zone's settings |
+| `list_records` | A zone's records, by name, type or a search in name, value and comment |
+| `export_zone` | A zone as a zone file |
+| `zone_history` | A zone's versions: who changed what, when, from where |
+| `explain_query` | The decision path and answer for a name, type and client ([Query explain](/dns/query-explain)) |
+| `query_log` | Recent queries, filtered by name, client or source |
+| `traffic_stats` | Query counts, NXDOMAIN ratio, top names and clients |
+| `threat_findings` | What threat detection found |
+| `audit_log` | Who changed what |
+| `pending_changes` | Change requests waiting for approval |
+| `topology` | How divisions, zones, views, upstreams, proxies and replication fit together |
+| `create_record` ✎ | Adds a record |
+| `update_record` ✎ | Changes a record by id; fields left out stay |
+| `delete_records` ✎ | Deletes records of one zone by id, all or none |
+| `create_zone` ✎ | Creates an empty primary zone |
+| `clear_dns_cache` ✎ | Empties the forwarding and recursive caches (superadmin) |
+
+✎ marks the tools that change DNS. They are only offered with **read and change** access (OAuth),
+`--allow-writes` (stdio) or an API token. A change that needs approval isn't made: the tool answers
+with the change request's number instead. No tool approves changes, deletes zones or rolls back.
+
+Each zone is also a resource, `dnz://zone/<name>`, with its zone file. And there are three prompts
+(slash commands in clients that show them): `audit_zone`, `troubleshoot_name` and `recent_changes`.
+
+## What an OAuth sign-in may do
+
+The token an assistant gets acts as the user who allowed it, with their divisions and roles, and:
+
+- **Read only** reads what that user can read in the API, except accounts, sessions, users, API
+  tokens, DNS update keys, backups, settings, notification providers, Cloudflare connections, ACME
+  credentials and the cluster.
+- **Read and change** also creates, changes and deletes records, creates zones and clears the cache.
+  Nothing else: no zone deletion, no rollbacks, no approvals, no settings.
+
+Access tokens last an hour; the assistant renews them with a refresh token that lasts 30 days from
+its last use and is replaced every time. **Account → Connected apps** (your name in the top bar)
+lists the apps you allowed, with their access and last use, and signs them out; so does
+`dnz mcp apps` / `dnz mcp revoke <id>` ([CLI](/cli/mcp)). Changing your password, a superadmin resetting it, or the
+account being switched off signs every app out.
+
+## How it works
+
+- **Discovery**: an unauthenticated request to `/mcp` gets `401` with `WWW-Authenticate: Bearer
+  resource_metadata=…` pointing at `/.well-known/oauth-protected-resource/mcp` (RFC 9728), which names
+  this server as the authorization server; `/.well-known/oauth-authorization-server` (RFC 8414) has the
+  endpoints.
+- **Registration**: clients register themselves at `/oauth/register` (RFC 7591) as public clients (no
+  secret). Redirect URIs must be `https://`, `http://` on localhost / 127.0.0.1 / [::1] (any port), or an
+  app's own scheme (`cursor://…`). Apps nobody approved are forgotten after a day.
+- **Authorization**: `/oauth/authorize` checks the request and sends you to the consent page at
+  `/oauth/consent`; PKCE with `S256` is required, codes last five minutes and work once. Scopes are
+  `dnz:read` and `dnz:write`.
+- **Tokens**: `/oauth/token` (authorization code and refresh token grants), `/oauth/revoke` (RFC 7009).
+  Access tokens start with `dnzo_`, refresh tokens with `dnzr_`; only their SHA-256 is stored.
+- **MCP**: `POST /mcp` takes one JSON-RPC message (or a batch) and answers with JSON; no sessions and
+  no server-sent stream (`GET` is 405). Protocol revisions 2025-11-25, 2025-06-18, 2025-03-26 and
+  2024-11-05. The tools call the API over this machine's loopback with your token; the audit log still
+  shows the assistant's own address.
+- The metadata uses the scheme and host the request came in on, so put DNZ behind your TLS proxy (or
+  give it a certificate) and connect with that address. Most clients refuse to sign in over plain HTTP
+  except on localhost.
+
+## Turning it off
+
+`DNZ_MCP=false` (or `mcp = false` under `[http]` in the config file) removes `/mcp`, the OAuth
+endpoints and the metadata; `dnz mcp` with an API token still works, since it only uses the API.

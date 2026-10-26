@@ -132,7 +132,8 @@
               "integrations/acme",
               "integrations/dynamic-dns",
               "integrations/terraform",
-              "integrations/kubernetes"
+              "integrations/kubernetes",
+              "integrations/ai-assistants"
             ]
           },
           {
@@ -183,6 +184,7 @@
               "cli/notifications",
               "cli/backups",
               "cli/monitoring",
+              "cli/mcp",
               "cli/maintenance"
             ]
           }

@@ -1,0 +1,54 @@
+---
+title: "MCP server"
+description: "Run DNZ's MCP server over stdio for AI assistants, and manage the assistants signed in over OAuth."
+---
+
+`dnz mcp` is DNZ's [MCP](https://modelcontextprotocol.io) server for AI assistants that start a command:
+Claude Desktop, Claude Code, Cursor, VS Code. Assistants that connect to a URL use the server's `/mcp`
+endpoint and sign in with OAuth instead. Client configs and the tool list are in
+[AI assistants (MCP)](/integrations/ai-assistants).
+
+## Serve over stdio
+
+```bash
+dnz mcp
+dnz mcp --allow-writes
+DNZ_SERVER=https://dns.example.com DNZ_TOKEN=dnz_… dnz mcp
+```
+
+It reads JSON-RPC on stdin and answers on stdout (notes go to stderr), and talks to the server with the
+session from `dnz login` or `--token` / `DNZ_TOKEN`, so the tools see and change what that account or
+token may. History and the audit log show its changes as made through MCP.
+
+| Option | What it does |
+| --- | --- |
+| `--allow-writes` | Also offer the tools that change DNS: create, update and delete records, create zones, clear the cache. Without it the connection is read only |
+| `-s`, `--server` | The DNZ server (`DNZ_SERVER`; default: the one you signed in to last) |
+| `--token` | An API token instead of the saved session (`DNZ_TOKEN`) |
+| `--ca-cert` | CA certificates for a server signed by a private CA (`DNZ_CA_CERT`) |
+
+In an assistant's config:
+
+```json
+{
+  "mcpServers": {
+    "dnz": {
+      "command": "dnz",
+      "args": ["mcp", "--server", "https://dns.example.com"],
+      "env": { "DNZ_TOKEN": "dnz_…" }
+    }
+  }
+}
+```
+
+## Connected apps
+
+```bash
+dnz mcp apps
+dnz mcp revoke 3
+```
+
+`apps` lists the assistants you allowed at `/mcp`: their access (read only, or read and change), where
+they return to after signing in, and when and from where they were last used. `revoke` signs one out;
+it has to sign in again. Both need a normal sign-in (`dnz login`), not an API token. The same list is
+under **Account → Connected apps** in the dashboard.

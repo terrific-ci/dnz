@@ -90,6 +90,7 @@ saved there, the saved value wins over the file.
 | `http.addr` | `DNZ_HTTP_ADDR` | `127.0.0.1:8080` | API and dashboard address. Use `0.0.0.0:8080` so other DNZ servers can find this one |
 | `http.ui` | `DNZ_UI` | `true` | `false` runs without the dashboard (API, DNS and the CLI only) |
 | `http.ui_dir` | `DNZ_UI_DIR` | – | Serve the dashboard from this folder instead of the binary |
+| `http.mcp` | `DNZ_MCP` | `true` | `false` turns off the [MCP endpoint](/integrations/ai-assistants) (`/mcp`) and its OAuth sign-in |
 | `http.cors_origin` | `DNZ_CORS_ORIGIN` | `http://localhost:3111` | Origin allowed to call the API from another site |
 | `http.trusted_proxies` | `DNZ_TRUSTED_PROXIES` | – | Reverse proxy IPs or CIDRs whose `X-Forwarded-For` / `X-Real-IP` / `Forwarded` is trusted, added to Settings → General and the proxies DNZ knows ([details](/deploy/https#trust-the-proxys-forwarded-address)) |
 

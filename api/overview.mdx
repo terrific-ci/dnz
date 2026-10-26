@@ -54,6 +54,8 @@ Every change made with a token appears in the [audit log](/admin/audit-log) as
 Tokens can only call the **zone, record, query log and ACME** endpoints, the Dynamic DNS
 endpoint, and pushing a DHCP server's lease file and reading leases and IPAM ([DHCP](/api/dhcp)). Account, user, role and settings endpoints always need a normal sign-in.
 
+AI assistants that sign in over OAuth for MCP get tokens starting with `dnzo_` that act as the user who allowed them; see [AI assistants (MCP)](/integrations/ai-assistants#what-an-oauth-sign-in-may-do) for what they may call.
+
 | Permission | Lets the token |
 | --- | --- |
 | `zones.read` | List zones, read records, tags and zone files, refresh secondary zones |
