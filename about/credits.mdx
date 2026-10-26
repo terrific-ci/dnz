@@ -1,0 +1,94 @@
+---
+title: "Credits"
+description: "The open-source projects, fonts and data that DNZ is built on."
+---
+
+DNZ stands on the work of many open-source projects. Thank you to everyone who builds and maintains
+them. Each one keeps its own license, listed next to it.
+
+## DNS and networking
+
+| Project | What DNZ uses it for | License |
+| --- | --- | --- |
+| [Hickory DNS](https://github.com/hickory-dns/hickory-dns) (`hickory-proto`, `hickory-net`) | Parsing and building DNS messages, DNSSEC signing and validation, upstream connections | MIT or Apache-2.0 |
+| [Tokio](https://github.com/tokio-rs/tokio) | The async runtime under every server and client | MIT |
+| [rustls](https://github.com/rustls/rustls) and [tokio-rustls](https://github.com/rustls/tokio-rustls) | TLS for DNS over TLS, DNS over HTTPS, HTTPS and encrypted upstreams | Apache-2.0, ISC or MIT |
+| [ring](https://github.com/briansmith/ring) | Cryptography for TLS and DNSSEC | Apache-2.0 and ISC |
+| [Quinn](https://github.com/quinn-rs/quinn) and [h3](https://github.com/hyperium/h3) | QUIC and HTTP/3 for DNS over HTTPS | MIT or Apache-2.0 / MIT |
+| [webpki-roots](https://github.com/rustls/webpki-roots) | The trusted root certificates | CDLA-Permissive-2.0 |
+| [rcgen](https://github.com/rustls/rcgen) and [x509-parser](https://github.com/rusticata/x509-parser) | Making and reading certificates | MIT or Apache-2.0 |
+| [instant-acme](https://github.com/djc/instant-acme) | Let's Encrypt and ZeroSSL certificates over ACME | Apache-2.0 |
+| [mdns-sd](https://github.com/keepsimple1/mdns-sd) | Finding other DNZ servers on the local network | MIT or Apache-2.0 |
+| [socket2](https://github.com/rust-lang/socket2) | Low-level socket options for the DNS listeners | MIT or Apache-2.0 |
+
+## Web, API and storage
+
+| Project | What DNZ uses it for | License |
+| --- | --- | --- |
+| [actix-web](https://github.com/actix/actix-web) | The REST API and the dashboard server | MIT or Apache-2.0 |
+| [SQLx](https://github.com/launchbadge/sqlx) | SQLite, PostgreSQL and MySQL databases | MIT or Apache-2.0 |
+| [SQLite](https://sqlite.org/) | The default database | Public domain |
+| [redis-rs](https://github.com/redis-rs/redis-rs) | The Redis and Valkey backend | BSD-3-Clause |
+| [reqwest](https://github.com/seanmonstar/reqwest) | Blocklists, threat feeds, Cloudflare, notifications and other outgoing HTTP | MIT or Apache-2.0 |
+| [lettre](https://github.com/lettre/lettre) | Email notifications over SMTP | MIT |
+| [russh](https://github.com/warp-tech/russh) and [russh-sftp](https://github.com/AspectUnk/russh-sftp) | Backups over SFTP | Apache-2.0 |
+| [maxminddb](https://github.com/oschwald/maxminddb-rust) | Reading GeoIP databases for GeoDNS and traffic maps | ISC |
+| [Serde](https://github.com/serde-rs/serde) | JSON and TOML for the API and configuration | MIT or Apache-2.0 |
+| [clap](https://github.com/clap-rs/clap) | The `dnz` command line | MIT or Apache-2.0 |
+| [argon2](https://github.com/RustCrypto/password-hashes) and the [RustCrypto](https://github.com/RustCrypto) crates | Password hashing, HMAC and digests | MIT or Apache-2.0 |
+| [tracing](https://github.com/tokio-rs/tracing) | Logs | MIT |
+| [sysinfo](https://github.com/GuillaumeGomez/sysinfo) | CPU, memory, disk and network figures on the dashboard | MIT |
+| [rust-embed](https://github.com/pyrossh/rust-embed) | The dashboard built into the binary | MIT |
+| [zip](https://github.com/zip-rs/zip2) | Backup archives | MIT |
+| [chrono](https://github.com/chronotope/chrono) and [chrono-tz](https://github.com/chronotope/chrono-tz) | Dates and time zones | MIT or Apache-2.0 |
+
+## dnz-proxy
+
+| Project | What DNZ uses it for | License |
+| --- | --- | --- |
+| [Pingora](https://github.com/cloudflare/pingora) | The HTTP proxy engine of [dnz-proxy](/proxy/dnz-proxy) | Apache-2.0 |
+| [Moka](https://github.com/moka-rs/moka) | The response cache | MIT or Apache-2.0 |
+| [mimalloc](https://github.com/microsoft/mimalloc) ([Rust bindings](https://github.com/purpleprotocol/mimalloc_rust)) | The memory allocator | MIT |
+
+## Dashboard
+
+| Project | What DNZ uses it for | License |
+| --- | --- | --- |
+| [Nuxt](https://nuxt.com/) and [Vue](https://vuejs.org/) | The dashboard app | MIT |
+| [shadcn-vue](https://www.shadcn-vue.com/) and [Reka UI](https://reka-ui.com/) | Components | MIT |
+| [Tailwind CSS](https://tailwindcss.com/) | Styling | MIT |
+| [Vue Flow](https://vueflow.dev/) and [Dagre](https://github.com/dagrejs/dagre) | The [topology map](/dashboard/topology) and its layout | MIT |
+| [VueUse](https://vueuse.org/) | Composition utilities | MIT |
+| [vue-sonner](https://github.com/xiaoluoboding/vue-sonner) | Toasts | MIT |
+| [uqr](https://github.com/unjs/uqr) | QR codes for [two-factor sign-in](/admin/two-factor) | MIT |
+| [html-to-image](https://github.com/bubkoo/html-to-image) | Exporting the topology map as an image | MIT |
+| [Phosphor Icons](https://phosphoricons.com/) | Icons | MIT |
+| [Simple Icons](https://simpleicons.org/) | Brand logos | CC0-1.0 |
+| [Manrope](https://github.com/sharanda/manrope) and [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) | Fonts | SIL OFL 1.1 |
+
+## Data
+
+| Source | What DNZ uses it for | License |
+| --- | --- | --- |
+| [DB-IP IP to Country Lite](https://db-ip.com/db/download/ip-to-country-lite) | The default GeoIP database for [GeoDNS](/dns/geodns) and traffic maps. [IP Geolocation by DB-IP](https://db-ip.com). | CC BY 4.0 |
+| [Public Suffix List](https://publicsuffix.org/) | Finding the registered domain of a name, built into the binary | MPL-2.0 |
+| [Tranco](https://tranco-list.eu/) | The popular domains the [threat detector](/dns/threats) trains on and never flags | Free to use, see the site |
+| [IANA RDAP bootstrap](https://data.iana.org/rdap/) | Finding the RDAP server for [domain expiry](/dns/domain-expiry) and [domain info](/dns/domain-info) | Public |
+
+### Blocklists and threat feeds
+
+DNZ downloads these only when you turn them on under [Filtering](/dns/filtering) or
+[Threats](/dns/threats). They belong to their maintainers and keep their own licenses.
+
+- [HaGeZi DNS blocklists](https://github.com/hagezi/dns-blocklists)
+- [StevenBlack hosts](https://github.com/StevenBlack/hosts)
+- [OISD](https://oisd.nl/)
+- [AdGuard DNS filter](https://github.com/AdguardTeam/AdGuardSDNSFilter)
+- [The Block List Project](https://github.com/blocklistproject/Lists)
+- [abuse.ch URLhaus](https://urlhaus.abuse.ch/) and [ThreatFox](https://threatfox.abuse.ch/)
+
+<Note>
+  This page lists the projects DNZ uses directly. Each of them pulls in more crates and packages,
+  and their licenses come with them. `cargo tree` in the source and `web/package.json` show the full
+  list.
+</Note>
