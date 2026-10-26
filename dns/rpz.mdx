@@ -112,6 +112,9 @@ rules are counted as *skipped*.
 | Local CNAME | `CNAME walled-garden.example.net.` | A CNAME there, followed through the upstreams |
 | Wildcard CNAME | `CNAME *.walled.example.net.` | The query name put in front: `x.bad.example` → `x.bad.example.walled.example.net` |
 
+For clients that send EDNS, NXDOMAIN and NODATA answers carry the Extended DNS Error (RFC 8914) 15
+*Blocked*, and local data and local CNAMEs carry 4 *Forged Answer*. Drop and TCP-only add none.
+
 For example, a small zone file served over a URL:
 
 ```text threats.rpz

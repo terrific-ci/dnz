@@ -317,6 +317,19 @@ dnz filter mode nxdomain                       # or null_ip
 
 Blocked answers have a TTL of 60 seconds, so unblocking reaches clients quickly.
 
+Clients that send EDNS also get an Extended DNS Error (RFC 8914) with code 15 *Blocked* and the
+text "Blocked by DNS filtering", so `dig` and resolvers that understand it can tell a block from a
+missing or broken site.
+
+<Note>
+Browsers don't show the extended error yet: users see their browser's usual "This site can't be
+reached" page, not a "blocked" page.
+</Note>
+
+```bash
+dig @<dnz> blocked.example A    # ; EDE: 15 (Blocked): (Blocked by DNS filtering)
+```
+
 ## Check and monitor
 
 - **Test a domain** shows whether a domain is blocked, by which entry and from which list (or which
