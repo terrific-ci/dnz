@@ -6,18 +6,35 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.14.3**, released October 26, 2026. To install or upgrade to it:
+The latest release is **v1.15.0**, released October 26, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.14.3
-docker pull terrificci/dnz-proxy:1.14.3   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.14.3
+docker pull terrificci/dnz:1.15.0
+docker pull terrificci/dnz-proxy:1.15.0   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.15.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.14.3" description="October 26, 2026" tags={["Latest"]}>
+<Update label="v1.15.0" description="October 26, 2026" tags={["Latest"]}>
+
+- Add proxy: Docker Compose guide for dnz-proxy nodes
+- Drop the "orange cloud" wording; describe proxied records by what they do
+- Blocked answers carry an Extended DNS Error (RFC 8914)
+- Set status pages from a router's hostnames on a proxy's page
+- MCP: status page tools
+- dnz-proxy: waiting room middleware (dnzWaitingRoom)
+- Waiting room: form with live counts, CLI, MCP tool and docs
+- Routes API and automatic certificates for dnz-proxy
+- Route defaults for dnz-proxy proxies
+- Proxy page: Routes first, a simple route dialog, certificates step by step
+- MCP: proxy_routes and clear_proxy_cache
+- Routes: a waiting room switch, status pages from a route's menu
+
+</Update>
+
+<Update label="v1.14.3" description="October 26, 2026">
 
 - 2FA test: name TOTP steps instead of "now", so a step boundary can't flip the replay check
 - Forward missing names: a local name's missing type is NODATA, not the upstream's NXDOMAIN

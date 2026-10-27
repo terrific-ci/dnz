@@ -161,6 +161,8 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_cache_hits_total`, `dnz_cache_misses_total` | Cache effectiveness |
 | `dnz_upstream_up`, `dnz_upstream_rtt_seconds` | Upstream health and speed |
 | `dnz_filter_blocked_total` | Blocked queries |
+| `dnz_query_log_bytes`, `dnz_query_log_files` | This server's [query log](/dns/query-logs) day files: their size (WAL included) and how many days are kept |
+| `dnz_query_log_searches_rejected_total`, `dnz_query_log_dropped_total` | Searches turned away with 429 because two were still running, and log entries dropped because the writer fell behind |
 | `dnz_live_captures` | [Live captures](/dns/live-capture) running on this server |
 | `dnz_ratelimit_limited_total`, `dnz_rrl_responses_total` | Rate limiting |
 | `dnz_dnssec_validations_total{result}` | DNSSEC validation |

@@ -24,8 +24,14 @@ ns2  ns2            up     http://10.0.0.12:8080  10.0.0.12:53  1.2.0    1s ago 
 | --- | --- |
 | `NAME` | The node's `instance_name`; `*` marks the leader, `(this)` the node you asked |
 | `STATE` | `up`, `behind` (hasn't loaded a change that is 30 seconds old) or `down` (no heartbeat for 30 seconds) |
-| `ADDRESS` / `DNS` | Where its dashboard/API and its DNS listen (`DNZ_CLUSTER_ADDRESS`) |
+| `ADDRESS` / `DNS` | Where its dashboard/API and its DNS listen (`DNZ_CLUSTER_ADDRESS`). The other nodes fetch its [query log](/dns/query-logs#in-a-cluster) rows at `ADDRESS`, so it must be reachable from them |
 | `CHANGES` | The last change it has loaded, of the feed's last one |
 
 `forget` only removes the node from the list: a node that still runs puts itself back with its next
 heartbeat. On SQLite, `dnz cluster` says the server runs on its own.
+
+The `ID` column is what `dnz logs --node` takes to show one node's queries:
+
+```bash
+dnz logs --node ns2 --query example.com
+```

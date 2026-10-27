@@ -186,32 +186,40 @@ These can't be set by hand.
 
 ## Pages for visitors a middleware turns away
 
-A route's protections answer with the same kind of page, in the same three forms, instead of a bare
-status line. They need no setup.
+A route's protections answer with the same kind of page, in the same three forms (see
+[HTML, JSON or text](#html-json-or-text)), instead of a bare status line. They need no setup:
 
 | Code | Title | When | Proxies |
 | --- | --- | --- | --- |
-| 401 | **Sign in to continue** | **Password**: the browser's sign-in was cancelled or wrong. **Try again** asks again | dnz-proxy, Caddy |
-| 429 | **Too many requests** | **Rate limit**, saying how long to wait. `Retry-After` stays | dnz-proxy |
-| 403 | **Not open to your address** | **Only from these addresses**, naming the visitor's address | dnz-proxy, Caddy |
-| 403 | **Access blocked** | A **Firewall** block rule, with the rule's status. **Not available in your region** when the rule checks the country | dnz-proxy |
-| 403 | **Browser check failed** | The **Under attack** check wasn't solved, or the visit isn't a browser page | dnz-proxy |
+| 401 | **Sign in to continue** | **Password** (`basicAuth`, `digestAuth`): the browser's sign-in was cancelled or wrong. The `WWW-Authenticate` header stays, so **Try again** asks again | dnz-proxy, Caddy (`basicAuth`) |
+| 429 | **Too many requests** | **Rate limit** (`rateLimit`, `inFlightReq`), saying how long to wait; `Retry-After` stays | dnz-proxy |
+| 403 | **Not open to your address** | **Only from these addresses** (`ipAllowList`), naming the visitor's address | dnz-proxy, Caddy |
+| 403 | **Access blocked** | A **Firewall** block rule, with the rule's status; **Not available in your region** when the rule checks the country | dnz-proxy |
+| 403 | **Browser check failed** / **Browser check needed** | The **Under attack** check wasn't solved, or the visit isn't a browser page (an API call, a form) | dnz-proxy |
 
 Some answers stay as they are written:
 
-- A firewall rule with its own **message** sends exactly that text.
-- An allow list with a **reject status** other than 403 (a 404, say, to hide the site) sends just
-  that status.
-- A backend's own 401, 403 or 429 is never replaced.
+- a firewall rule with its own **message** sends exactly that text;
+- an allow list with a **reject status** other than 403 (a 404, say, to hide the site) sends just
+  that status and its reason;
+- a backend's own 401, 403 or 429 is never replaced.
 
 <Note>
-  Traefik answers these middlewares itself, with its own plain replies. Its `errors` middleware
-  would also replace the backend's own errors, so DNZ doesn't add one.
+  Traefik answers these middlewares itself, with its own plain replies: its `errors` middleware
+  would also replace the backend's own errors.
 </Note>
 
 The **Under attack** check and the **Waiting room** have pages of their own in the same style: the
 check shows **Checking your browser** while the browser solves it, and the waiting room shows the
 visitor's place in line and the estimated wait.
+
+## DNS filtering's block page
+
+When DNS filtering answers blocked names with the [block page](/dns/filtering#block-page), the
+proxy it points at shows them a page in the same style: 403 **Blocked by network policy**, the
+blocked name, and the message and link set there. A dnz-proxy shows it for every host none of its
+routes serve (over HTTPS too, with DNZ's own certificate authority); a Traefik or Caddy over plain
+HTTP only.
 
 ## HTML, JSON or text
 

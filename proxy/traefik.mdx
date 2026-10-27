@@ -199,6 +199,16 @@ pages may use ones no router does). Every name is prefixed with `dnz-` (router `
 | Weighted, mirroring, failover | `weighted` / `mirroring` / `failover`, with the proxy's service names prefixed `dnz-` |
 | Middleware | its Traefik object, as written by the form or as JSON; the names in a chain and an error-pages service get `dnz-` too |
 
+When DNS filtering's [block page](/dns/filtering#block-page) uses this Traefik, its configuration
+also gets a `dnz-block-page` router, below every other on the plain HTTP entry point. It sends visits
+to hosts no other router takes to DNZ, which answers with the block page, so Traefik has to reach
+DNZ's HTTP port (it already does to poll). HTTPS visits to blocked names get a certificate warning
+instead: only dnz-proxy can show the page over HTTPS.
+
+A password, rate limit or address list that turns a visitor away gets Traefik's own plain reply,
+not a styled [status page](/proxy/status-pages#pages-for-visitors-a-middleware-turns-away): Traefik's
+`errors` middleware would also replace the backend's own errors.
+
 Each configuration also includes a `dnz-https-redirect` middleware, even when no router uses it.
 Traefik ignores an empty configuration and would otherwise keep old routes.
 

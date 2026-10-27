@@ -10,7 +10,9 @@ install (zones, users, settings, DNSSEC keys, certificates, the GeoIP database) 
 S3-compatible storage or SFTP, keeps N daily, weekly and monthly ones, and restores them onto any
 database, even a new install from its first-run page. See [Backups and restore](/admin/backups).
 
-The database's own tools work too. With SQLite, the default, all of DNZ's data is in one file:
+The database's own tools work too. With SQLite, the default, all of DNZ's data is in one file, apart
+from the [query log](/dns/query-logs#disk-volumes-and-backups) in the `logs/` folder next to it,
+which a backup may leave out:
 
 | Install | Database |
 | --- | --- |
@@ -53,6 +55,13 @@ database (for SQLite, remove any `dnz.db-wal` and `dnz.db-shm` next to it), then
 
 Database migrations run automatically at startup. Take a backup before updating, so you can go
 back.
+
+<Note>
+  The update to the version that keeps the query log in day files of its own starts the query log
+  over: the old log is emptied, while the charts and top lists keep their history. With SQLite,
+  `dnz.db` keeps its old size until you run `dnz db vacuum`. See
+  [Upgrading to the day files](/dns/query-logs#upgrading-to-the-day-files).
+</Note>
 
 If you run [dnz-proxy](/proxy/dnz-proxy) nodes, update them together with DNZ, to the same
 version. With Docker, pull the same tag of `terrificci/dnz-proxy` on each node

@@ -24,7 +24,7 @@ numeric ids: a division id for listing and creating, a zone id for the rest.
 | `POST` | `/api/zones/{id}/info?refresh=` | `zones.read` | Ask the registry (RDAP, else WHOIS) unless the last answer is under an hour old |
 | `POST` | `/api/zones/{id}/refresh` | `zones.read` | Secondary zones: check the primary now |
 | `POST` | `/api/zones/{id}/promote` | superadmin | Secondary zones added by hand: make the copy a primary zone here |
-| `GET` | `/api/divisions/{id}/logs` | `logs.read` | Query log of the division's zones |
+| `GET` | `/api/divisions/{id}/logs` | `logs.read` | The division's query log (last 24 hours by default) |
 | `GET` | `/api/token` | – | Token info |
 
 Records have their own endpoints; see [Records](/api/records).
@@ -145,8 +145,11 @@ curl -X POST -H "Authorization: Bearer $DNZ_TOKEN" https://dns.example.com/api/z
 
 ## Query log
 
-`GET /api/divisions/{id}/logs` returns the query log of the division's zones, newest first. It needs
-`logs.read`.
+`GET /api/divisions/{id}/logs` returns the division's queries, newest first: names in its zones and
+what clients in its client networks asked, from the last 24 hours unless asked otherwise. It needs
+`logs.read`. In a cluster it gathers every server's rows. The time window, `source`, `node`, the
+`x-dnz-missing-nodes` header and the 429 a search gets while two others run are in
+[Query logs → API](/dns/query-logs#api).
 
 <ParamField query="q" type="string">
   Only queries whose name or client address contains this text.
@@ -160,9 +163,17 @@ curl -X POST -H "Authorization: Bearer $DNZ_TOKEN" https://dns.example.com/api/z
   How many entries to return, from 1 to 1000.
 </ParamField>
 
+<ParamField query="range" type="string" default="24h">
+  `1h`, `24h`, `7d` or `all`. `since` and `until` (RFC 3339) set the window instead.
+</ParamField>
+
+<ParamField query="node" type="string">
+  One server of a cluster, by node id. Default: every server.
+</ParamField>
+
 ```bash
 curl -fsS -H "Authorization: Bearer $DNZ_TOKEN" \
-  "https://dns.example.com/api/divisions/1/logs?q=example.com&limit=100"
+  "https://dns.example.com/api/divisions/1/logs?q=example.com&range=7d&limit=100"
 ```
 
 See [Query logs](/dns/query-logs) for what each entry means.

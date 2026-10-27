@@ -399,6 +399,28 @@ days), a search that matches nothing, the file's cache dropped before each run (
 | Last hour | 0.01 s | 0 MiB |
 | All days | 31.0 s | 1,262 MiB |
 
+### The query log in day files of its own
+
+Since v1.16.0 the query log is no longer a table in the main database but one SQLite file per UTC
+day on each server, with connections of its own ([Query logs](/dns/query-logs#where-the-log-is-kept)).
+Writing the log to a second file must not cost queries: the build before it and the one with it
+side by side on the benchmark server (2026-10-27), the settings above, six rounds taking turns,
+then CPU time per query at a fixed 80,000 queries a second (five rounds). The two slots can differ
+by about 10% on their own, so the whole run was done twice, the second time with the builds
+swapped:
+
+| | Before | Day files |
+| --- | ---: | ---: |
+| Authoritative, queries/s (median), first run / swapped | 116,873 / 129,587 | 132,388 / 130,436 |
+| Cached, queries/s (median), first run / swapped | 119,363 / 128,179 | 125,569 / 127,162 |
+| CPU µs per query, authoritative, first run / swapped | 21.03 / 21.09 | 20.81 / 20.74 |
+| CPU µs per query, cached, first run / swapped | 21.66 / 21.39 | 21.49 / 21.28 |
+| Container memory after the run, first run / swapped | 82.5 / 54.1 MiB | 49.0 / 40.9 MiB |
+
+With the slots swapped the throughput is the same (within 1%); the first run's gap was mostly the
+slot. CPU time per query is slightly lower with the day files in both runs, and the container ends
+smaller: the main database no longer grows with the log.
+
 ## Threat detection on and off
 
 [Threat detection](/dns/threats) looks at a copy of the query log, on its own task. The same release

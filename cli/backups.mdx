@@ -59,7 +59,7 @@ dnz backup schedule                                   # every target's
 dnz backup schedule offsite --every daily --at 02:30 --keep-daily 7 --keep-weekly 4 --keep-monthly 12
 dnz backup schedule nas --every weekly --day sun --at 04:00
 dnz backup schedule usb --every hourly --at 00:15     # hourly: only the minute counts
-dnz backup schedule offsite --logs on                 # also the query log and statistics
+dnz backup schedule offsite --logs on                 # also the traffic statistics (never the query log)
 dnz backup schedule usb --every off                   # only by hand
 ```
 

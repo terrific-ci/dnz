@@ -167,7 +167,8 @@ and the systemd sandbox.
 
 ## What the unit does
 
-- `DynamicUser=yes`: a temporary user just for DNZ. Data lives in `/var/lib/dnz/dnz.db`.
+- `DynamicUser=yes`: a temporary user just for DNZ. Data lives in `/var/lib/dnz/dnz.db`, and the
+  [query log](/dns/query-logs#where-the-log-is-kept) in `/var/lib/dnz/logs`, one file per day.
 - `AmbientCapabilities=CAP_NET_BIND_SERVICE`: ports 53, 443 and 853 without root.
 - The systemd sandbox: `ProtectSystem=strict`, `NoNewPrivileges`, a syscall filter and more.
 - The dashboard only on `127.0.0.1:8080`. To reach it from the network, put a

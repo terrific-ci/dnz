@@ -15,6 +15,9 @@ dnz logs -n 100
 dnz logs --query example.com --source forwarded
 dnz logs --client 192.168.1.20
 dnz logs --division it
+dnz logs --query example.com --range 7d
+dnz logs --since 2026-10-20T00:00:00+07:00 --until 2026-10-21T00:00:00+07:00
+dnz logs --node ns2                           # one server of a cluster
 ```
 
 | Option | What it does |
@@ -22,37 +25,56 @@ dnz logs --division it
 | `-n`, `--limit` | How many, newest first (default 50) |
 | `-q`, `--query` | Name or client contains this |
 | `--client` | Only this client address |
-| `--source` | `local`, `forwarded`, `cached`, `blocked`, `error`, or one source such as `conditional` |
+| `--source` | `local`, `forwarded`, `cached`, `blocked`, `error`, or one source such as `conditional` or `stale` |
 | `-d`, `--division` | Only this division's queries: its zones and its client networks (default for superadmins: every query) |
-| `--range` | How far back: `1h`, `24h` (default), `7d` or `all` (a search through all of a big log is slow) |
-| `--since`, `--until` | A window of RFC 3339 times, e.g. `2026-10-20T00:00:00+07:00`; without `--since` the range reaches back from `--until` |
+| `--range` | How far back: `1h`, `24h` (default), `7d` or `all` |
+| `--since`, `--until` | RFC 3339 times instead of `--range`; without `--since`, the range reaches back from `--until` |
+| `--node` | Only this server of a cluster, by its id from `dnz cluster` (default: every server) |
 | `--clear` | Delete every logged query, with the top names and clients, on every server (superadmins; asks first, `--yes` skips) |
+
+The list covers the **last 24 hours** unless `--range` or `--since` / `--until` say otherwise. A
+search over `--range all` reads every day of the query log, which can take a while on a big one.
+
+In a [cluster](/deploy/cluster) the list holds every server's queries, newest first, with a `SERVER`
+column when they come from more than one. Servers that didn't answer in time are named in a warning
+on stderr.
+
+`--query`, `--client` and `--source` make the list a search, and each server runs at most two
+searches at once. A third stops with "A log search is still running; try again in a moment." The
+newest queries without those options always list. See
+[Query logs](/dns/query-logs#two-searches-at-a-time).
 
 ```bash
 dnz logs --clear --yes
 ```
 
+`--clear` is the **Clear log** button on **DNS → Query Logs**: it deletes every server's day files,
+and the hourly counts behind the charts stay. Old days also go on their own after
+`dns.log_retention_days` (default 7): each server deletes its own.
+
 ## Live capture
 
+`dnz capture` shows the queries whose name holds any of the keywords as the server answers them. See
+[Live capture](/dns/live-capture).
+
 ```bash
-dnz capture tiktok facebook                 # every matching query, until Ctrl-C
-dnz capture tiktok --group                  # each domain once, when it first shows up
-dnz capture --client 192.168.1.20 --for 2m  # everything one device asks, for two minutes
-dnz capture ads --division it --json        # one JSON object per query
+dnz capture tiktok facebook                   # every matching query, until Ctrl-C
+dnz capture tiktok --group                    # each domain once, when it first shows up
+dnz capture --client 192.168.1.20 --for 2m    # everything one device asks, for two minutes
+dnz capture ads --division it --json          # one JSON object per query
 ```
 
-Shows the queries whose name holds any keyword as the server answers them (no keywords: every
-query). When it ends (Ctrl-C or `--for`), the domains seen are listed busiest first with query,
-name, client and blocked counts; block one with `dnz filter rule block <domain>`.
-
-| Flag | |
+| Flag | Meaning |
 | --- | --- |
-| `-d`, `--division` | Only this division's queries: its zones and its client networks (default for superadmins: every query) |
+| *keywords* | A name holding any of them is shown; none shows every query |
+| `--division`, `-d` | Only that division's queries: names in its zones and what clients in its client networks ask. Superadmins capture the whole server by default |
 | `--client` | Only this client address |
 | `--for` | Stop after this long (`90s`, `10m`, `1h`); default: until Ctrl-C |
-| `-g`, `--group` | Print each domain once when it first shows up, instead of every query |
+| `--group`, `-g` | Print each domain once, when it first shows up, instead of every query |
 
-See [Live capture](/dns/live-capture).
+When the capture ends (Ctrl-C or `--for`), the domains it saw are listed busiest first, with query,
+name, client and blocked counts. Block one with `dnz filter rule block <domain>` (see
+[Filtering](/cli/filtering)).
 
 ## Query explain
 
@@ -170,13 +192,15 @@ dnz settings show                             # time zone and DNS settings
 dnz settings timezone Asia/Jakarta            # schedules and reports; "server" follows the server
 dnz settings auto-ptr on                      # PTR answers for addresses of A/AAAA records
 dnz settings advertise 192.168.1.10           # the address devices use (setup guides); --auto works it out
-dnz settings file-cache on --idle-minutes 30  # drop the database file's cache 30 min after the last search
 dnz settings trusted-proxies --add 10.0.133.10   # reverse proxies whose X-Forwarded-For is believed
 dnz settings rrl                              # response rate limiting: settings and counters
 dnz settings dns64 on --network 2001:db8:aa::/48   # AAAA from A for IPv6-only clients (NAT64)
 dnz settings dns64 --prefix 2001:db8:64::/96       # your NAT64 gateway's prefix
 dnz settings cookies on                       # DNS cookies; valid ones skip the UDP rate limit
 dnz settings nsid on --value dns-1.jkt        # tell `dig +nsid` which server answered
+dnz settings file-cache                       # is the query log's file cache dropped, and after how long
+dnz settings file-cache on --idle-minutes 30  # drop it 30 minutes after the last search (default 10)
+dnz settings file-cache off                   # leave it to the kernel: searches stay fast
 dnz settings metrics on --addr 0.0.0.0:9153   # Prometheus /metrics on a listen address of its own
 dnz settings metrics --new-token              # bearer token for scrapers (printed once)
 dnz settings metrics --api on                 # also at /metrics on the HTTP API
@@ -189,6 +213,9 @@ dnz settings metrics --api on                 # also at /metrics on the HTTP API
 - **DNS64**: `--prefix` is the NAT64 prefix (default `64:ff9b::/96`), `--network` the client
   networks it applies to (repeat or comma-separate; `all` for every client).
 - **Cookies** and **NSID**: `dnz settings nsid on` uses the hostname unless you pass `--value`.
+- **File cache**: on Linux, whether DNZ drops the kernel's cache of the query log files once nobody
+  has searched the log for `--idle-minutes` (1 to 1440, default 10), or leaves it to the kernel
+  (`off`). See [Query log file cache](/admin/settings#query-log-file-cache).
 - **Metrics**: `on`/`off`, `--addr` a listen address of their own (`off` for none), `--api on|off`
   for `/metrics` on the HTTP API, `--new-token` (printed once) and `--remove-token`. See
   [Prometheus and Grafana](/dashboard/prometheus).

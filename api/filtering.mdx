@@ -1,6 +1,6 @@
 ---
 title: "Filtering"
-description: "API endpoints for blocklists, rules, client groups, schedules, safe search and response policy zones."
+description: "API endpoints for blocklists, rules, client groups, schedules, safe search, the block page and response policy zones."
 ---
 
 Filtering endpoints need a signed-in session, not an
@@ -17,10 +17,10 @@ For how the pieces work together, see [Filtering](/dns/filtering) and
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/api/filtering?division_id=` | A scope's lists, rules, client groups, schedules and safe search |
-| `PUT` | `/api/filtering/mode` | What blocked names answer: `{"mode": "null_ip"}`, `"nxdomain"` or `"block_page"` (set up the block page first) |
-| `GET` / `PUT` | `/api/filtering/block-page` | The block page's proxy, addresses, text and HTTPS (superadmin) |
-| `POST` | `/api/filtering/block-page/ca/rotate` | A new block page certificate authority (superadmin) |
-| `GET` | `/api/filtering/block-page/ca.crt` | The block page certificate authority, PEM; `?format=der` for DER. Public |
+| `PUT` | `/api/filtering/mode` | What blocked names answer: `{"mode": "null_ip"}`, `"nxdomain"` or `"block_page"` (superadmin; the block page must be set up first) |
+| `GET` / `PUT` | `/api/filtering/block-page` | The [block page](#block-page) (superadmin) |
+| `POST` | `/api/filtering/block-page/ca/rotate` | A new certificate authority for the block page (superadmin) |
+| `GET` | `/api/filtering/block-page/ca.crt` | The block page's certificate authority, PEM (`?format=der` for DER). Public |
 | `GET` | `/api/filtering/check?domain=&client=&division_id=` | Would this name be blocked, and why |
 | `POST` | `/api/filtering/lists` | Subscribe to a list |
 | `PATCH` / `DELETE` | `/api/filtering/lists/{id}` | Change or delete a list |
@@ -39,27 +39,6 @@ For how the pieces work together, see [Filtering](/dns/filtering) and
 `GET /api/filtering` returns `clients`, `schedules`, `safe_search`, `server_safe_search`,
 `categories` (the parental control categories) and the `timezone` schedules run in, next to the lists
 and rules.
-
-## Block page
-
-```json
-PUT /api/filtering/block-page
-{
-  "proxy_id": 1,
-  "ipv4": [],
-  "ipv6": [],
-  "title": "",
-  "message": "{host} is blocked. Ask IT at ext. 123.",
-  "link": "https://intranet.example.com/rules",
-  "https": true
-}
-```
-
-Empty `ipv4` and `ipv6` take the proxy's addresses. `https` works only with a dnz-proxy proxy and
-makes the certificate authority on first use. The answer, like `GET`, has the `settings`, whether
-they are `ready`, the approved `proxies` with their addresses, and the `authority`'s SHA-256
-`fingerprint`. While blocked names answer with the block page, its proxy and addresses can't be
-removed. See [Block page](/dns/filtering#block-page).
 
 ## Limiting to clients and a schedule
 
@@ -119,6 +98,44 @@ before the `start` runs past midnight. `PATCH /api/filtering/schedules/{id}` tak
 `youtube` is `off`, `moderate` or `strict`. A division's settings replace the server-wide ones for
 its devices; `DELETE /api/filtering/safe-search?division_id=3` removes them again.
 
+## Block page
+
+With the `block_page` mode, blocked names answer with a proxy's addresses and the proxy shows a page
+saying the name is blocked (see [Block page](/dns/filtering#block-page)). All superadmin, except
+downloading the certificate authority.
+
+`PUT /api/filtering/block-page`:
+
+```json
+{
+  "proxy_id": 1,
+  "ipv4": [], "ipv6": [],
+  "title": "", "message": "{host} is blocked. Ask IT at ext. 123.", "link": "",
+  "https": true
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `proxy_id` | An approved proxy that shows the page, or `null` |
+| `ipv4`, `ipv6` | What blocked names answer. Both empty: the proxy's addresses (a dnz-proxy's healthy nodes) |
+| `title`, `message` | Empty for the usual ones; `{host}` in the message is the blocked name |
+| `link` | A *More information* button, or empty |
+| `https` | HTTPS with DNZ's own certificate authority; dnz-proxy only |
+
+`GET` and `PUT` answer with `mode`, `settings` (the fields above), `ready` (a proxy and addresses are
+set), `proxy_missing`, `proxying_enabled`, `proxies` (each approved proxy with `id`, `name`, `kind`
+and its `ipv4` / `ipv6`), `default_title`, `default_message` and `authority` (`fingerprint`, `path`,
+`name`, or `null` before HTTPS was first turned on).
+
+- `PUT` with `https` on makes the certificate authority right away, so it can be downloaded before
+  devices need it.
+- While blocked names answer with the page, removing its proxy or addresses is refused: switch
+  `PUT /api/filtering/mode` to another answer first.
+- `POST /api/filtering/block-page/ca/rotate` makes a new authority; devices must trust it again.
+- `GET /api/filtering/block-page/ca.crt` needs no sign-in, so devices can download it. It answers
+  404 until an authority exists.
+
 ## Response policy zones
 
 All superadmin.
@@ -151,6 +168,6 @@ or `drop`. `refresh_secs` runs from 60 seconds to 7 days.
 ## Audit log
 
 Every change to lists, rules, networks, client groups, schedules, safe search and response policy
-zones is in the [audit log](/admin/audit-log). RPZ changes are under `rpz.*`; the blocked answer and
-the block page under `settings.filter_mode`, `settings.filter_block_page` and
-`settings.filter_block_page_ca`.
+zones is in the [audit log](/admin/audit-log). RPZ changes are under `rpz.*`; the blocked answer,
+the block page and its certificate authority under `settings.filter_mode`,
+`settings.filter_block_page` and `settings.filter_block_page_ca`.

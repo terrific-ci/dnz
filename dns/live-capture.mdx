@@ -1,6 +1,6 @@
 ---
 title: "Live capture"
-description: "Watch the queries DNZ answers as they arrive, filtered by keywords, grouped by domain, and block what you don't want straight from the results."
+description: "Watch the queries holding a few keywords as the server answers them, grouped by domain or one by one, and block a domain straight from the results."
 ---
 
 **Live capture** shows the queries the server answers as they arrive, filtered by keywords, so you
@@ -8,126 +8,152 @@ can see what a device or a whole network is reaching right now and block what yo
 `tiktok, facebook`, start the capture, and every query whose name holds one of the keywords
 (`api.tiktok.com`, `v16.tiktokcdn.com`, `graph.facebook.com`…) shows up within a second.
 
-## Start a capture
-
-Open **DNS → Live Capture** (it needs the `logs.read` permission), or click **Live capture** on
-**DNS → [Query Logs](/dns/query-logs)**, which carries its search over.
-
-1. Enter one or more **keywords**.
-2. Optionally enter a **client** address to watch one device.
-3. If you can see every query, pick **All queries** or the current division.
-4. Press **Start capture**. **Stop** ends it; so does closing the page.
-
-`?q=` and `?client=` in the page's address fill the form, so a capture can be shared as a link.
-
-### Keywords
-
-- Separate keywords with commas or spaces; a name holding **any** of them matches. `tiktok` matches
-  `tiktok.com`, `tiktokcdn.com` and `tiktokv.com`.
-- Matching is on the name as asked, lowercase. A leading `*.` or a trailing dot is ignored.
-- No keywords captures every query: useful together with a client address, to see everything one
-  device asks.
-- Up to 20 keywords per capture.
-
-## Results
-
 The results come two ways:
 
 - **By domain**: queries grouped by registered domain (`api.tiktok.com` and `www.tiktok.com` under
   `tiktok.com`, `p16.tiktokcdn-us.com` under `tiktokcdn-us.com`; the public suffix list knows that
-  `example.co.uk` is one domain), with how many queries, names and clients each has, how many were
-  already answered as blocked, and when it was last seen. Open a domain to see the names inside it.
+  `example.co.uk` is one domain). Each domain shows how many queries, names and clients it has, how
+  many were already answered as blocked, and when it was last seen. Open a domain to see the names
+  inside it.
 - **Live**: every query, newest first (the last 500), with the type, response code, where the answer
   came from and the client.
 
-**Filter results** narrows either view without stopping the capture, and **Clear** starts the
-counts again.
+## Start a capture
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Open Live Capture">
+        Open **DNS → Live Capture**, or click **Live capture** on **DNS → Query Logs**, which carries
+        the log's search over.
+      </Step>
+      <Step title="Enter keywords">
+        Type the keywords, for example `tiktok, facebook`. Optionally give a **client** address to
+        watch one device, and, if you can see all queries, pick the scope.
+      </Step>
+      <Step title="Start">
+        Click **Start capture**. Matching queries show up within a second. **Stop** ends it.
+      </Step>
+    </Steps>
+
+    `?q=` and `?client=` in the page's address fill the form, so a capture can be shared as a link.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz capture tiktok facebook                 # every matching query, until Ctrl-C
+    dnz capture tiktok --group                  # each domain once, when it first shows up
+    dnz capture --client 192.168.1.20 --for 2m  # everything one device asks, for two minutes
+    dnz capture ads --division it --json        # one JSON object per query
+    ```
+
+    `--division` captures that division's queries; superadmins capture the whole server by default.
+    When the capture ends (Ctrl-C or `--for`), the CLI lists the domains it saw, busiest first, with
+    query, name, client and blocked counts. Block one with `dnz filter rule block <domain>`.
+
+  </Tab>
+  <Tab title="AI assistant">
+
+    Over [MCP](/integrations/ai-assistants), the `capture_queries` tool watches for 1 to 60 seconds
+    (15 by default) and returns the matching domains, grouped as above. Ask, for example:
+
+    > What is 192.168.1.20 talking to right now? Suggest what to block.
+
+  </Tab>
+</Tabs>
+
+## Keywords
+
+- Separate keywords with commas or spaces; a name holding **any** of them matches. `tiktok` matches
+  `tiktok.com`, `tiktokcdn.com` and `tiktokv.com`.
+- Matching is on the name as asked, in lowercase. A leading `*.` or a trailing dot is ignored.
+- No keywords captures every query. Use it with a client address to see everything one device asks.
+- Up to 20 keywords per capture.
 
 ## Block from the results
 
 Each domain has a **Block** button, and **Block N selected** blocks every ticked domain at once.
-Blocking adds a rule to the **block list** (**DNS → [Filtering](/dns/filtering) → Rules**), which
-covers the name and everything under it, so blocking `tiktok.com` blocks `api.tiktok.com` too. To
-block one name only, open its domain and use **Block only this**. Domains already covered by a block
-rule say **In block list**. The rule's comment records the keywords it came from, and it is in the
-[audit log](/admin/audit-log) as `filter_rule.create`, like any other rule.
+
+Blocking adds a rule to the **block list** (**DNS → Filtering → Rules**, see
+[Filtering](/dns/filtering)). A rule covers the name and everything under it, so blocking
+`tiktok.com` blocks `api.tiktok.com` too. To block one name only, open its domain and click
+**Block only this**. Domains a block rule already covers say **In block list**.
+
+The rule's comment records the keywords it came from, and it is in the
+[audit log](/admin/audit-log) as `filter_rule.create`, like any other rule. Rules take effect on the
+next query: cached answers are not used for blocked names.
 
 Which block list the rule lands in follows the capture's scope:
 
-| Capture | Rule goes to | Needs |
+| Capture | The rule goes to | Needs |
 | --- | --- | --- |
 | **All queries** | The server-wide block list | **Manage server-wide filtering** |
-| A division | That division's block list | **Manage blocklists** in the division |
+| A division | That division's block list | **Manage blocklists** (`filtering.manage`) in it |
 
-Without that permission the results show no Block buttons. A rule takes effect on the next query,
-cached answers included.
+Without that permission, the results show no **Block** buttons.
 
 ## Scope and permissions
 
 | Capture | Permission | Sees |
 | --- | --- | --- |
-| All queries | **View all query logs** (`logs.server`) | Every query this server answers |
-| A division | **View query logs** (`logs.read`) in it | Names in its zones, and what clients in its [client networks](/dns/filtering) ask |
+| **All queries** | **View all query logs** (`logs.server`) | Every query this server answers |
+| A division | **View query logs** (`logs.read`) in it | Names in its zones, and what clients in its [client networks](/dns/filtering#scopes) ask |
 
-A client address narrows either one to a single device. [API tokens](/api/overview#what-a-token-can-reach)
-with `logs.read` can capture their division.
+A **client** address narrows either one to a single device. API tokens with `logs.read` can capture
+their division. See [Access](/admin/access) for roles and permissions.
 
 ## How it works
 
-- A capture is fed by the query log writer, which takes each batch of answered queries off the hot
-  path every second (or every 500 queries). While nobody captures, a batch costs one atomic load;
-  DNS answers never wait on a capture.
-- Nothing is stored. A capture lives as long as its connection (a server-sent event stream) and ends
-  when the page is closed, **Stop** is pressed, or its time runs out. Starting one is in the audit
-  log as `capture.start`.
-- At most 16 captures run at once on a server. A viewer that falls behind gets a count of the
+- The query log writer feeds the captures: it takes each batch of answered queries off the hot path
+  every second (or every 500 queries). While nobody captures, a batch costs one atomic load. DNS
+  answers never wait on a capture.
+- **Nothing is stored.** A capture lives as long as its connection and ends when the page is closed,
+  **Stop** is pressed, or its time runs out. Starting one is in the audit log as `capture.start`.
+- At most **16 captures** run at once on a server. A viewer that falls behind gets a count of the
   queries it skipped instead of slowing anything down.
 - In a [cluster](/deploy/cluster), a capture shows the queries answered by the server you are
   connected to, like the query log. Queries a client sends to another server show up in a capture
   there.
 - `dnz_live_captures` on [`/metrics`](/dashboard/prometheus) is the number of captures running.
 
-## From the command line
-
-```bash
-dnz capture tiktok facebook                 # every matching query, until Ctrl-C
-dnz capture tiktok --group                  # each domain once, when it first shows up
-dnz capture --client 192.168.1.20 --for 2m  # everything one device asks, for two minutes
-dnz capture ads --division it --json        # one JSON object per query
-```
-
-When the capture ends (Ctrl-C or `--for`), the CLI prints the domains it saw, busiest first, with
-query, name, client and blocked counts. Block one with `dnz filter rule block <domain>`. See
-[CLI: Monitoring](/cli/monitoring#live-capture).
-
 ## API
 
-`POST /api/capture` answers with server-sent events:
+`POST /api/capture` answers with server-sent events. It needs `logs.read` in the division given by
+`division_id`, or `logs.server` for the whole server.
 
 ```bash
-curl -sN https://dnz.example.com/api/capture \
+curl -N -X POST https://dns.example.com/api/capture \
   -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
-  -d '{"keywords": "tiktok, facebook", "division_id": 1, "client": "", "seconds": 60}'
+  -d '{"keywords": "tiktok, facebook", "division_id": null, "client": "", "seconds": 60}'
 ```
 
-| Field | |
+| Field | Meaning |
 | --- | --- |
-| `keywords` | Separated by commas or spaces; empty captures every query |
-| `division_id` | Only this division's queries (`logs.read`); left out is the whole server (`logs.server`) |
-| `client` | Only this client address |
-| `seconds` | End after this long (at most 24 hours); left out runs until the client disconnects |
+| `keywords` | Keywords, separated by commas or spaces; empty for every query |
+| `division_id` | A division, or `null` for the whole server |
+| `client` | One client address, or empty for all |
+| `seconds` | How long to run; empty runs until the client disconnects (at most 24 hours) |
 
 Events:
 
-- `start`: `{"keywords": ["tiktok", "facebook"], "division_id": 1, "client": null, "seconds": 60, "node": "…"}`
-- `hits`: `{"at": "2026-10-27T08:55:03.120Z", "hits": [{"name": "api.tiktok.com", "domain": "tiktok.com", "qtype": "A", "client": "192.168.1.20", "rcode": "NOERROR", "source": "upstream", "duration_ms": 12}], "dropped": 0}`
-- `end`: `{"reason": "time"}` when `seconds` ran out.
+| Event | Data |
+| --- | --- |
+| `start` | `{"keywords": ["tiktok", "facebook"], "division_id": null, "client": null, "seconds": 60, "node": "…"}` |
+| `hits` | `{"at": "2026-10-27T08:55:03.120Z", "hits": [{"name": "api.tiktok.com", "domain": "tiktok.com", "qtype": "A", "client": "192.168.1.20", "rcode": "NOERROR", "source": "upstream", "duration_ms": 12}], "dropped": 0}` |
+| `end` | `{"reason": "time"}` when `seconds` ran out |
 
-A comment line (`: ping`) every 15 seconds keeps idle streams open through proxies. Too many
-captures running answers `429`.
+A comment line (`: ping`) every 15 seconds keeps idle streams open through proxies. When too many
+captures are running, the answer is `429`.
 
-## AI assistants
+## Next steps
 
-The [MCP](/integrations/ai-assistants) tool `capture_queries` watches for 1–60 seconds (default 15)
-and returns the matching domains grouped as above, so an assistant can answer "what is this device
-talking to?" and suggest what to block.
+<CardGroup cols={2}>
+  <Card title="Query logs" icon="list" href="/dns/query-logs">
+    Search what clients asked in the past.
+  </Card>
+  <Card title="Filtering" icon="filter" href="/dns/filtering">
+    Blocklists, rules, client groups and schedules.
+  </Card>
+</CardGroup>

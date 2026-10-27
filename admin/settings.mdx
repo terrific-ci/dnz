@@ -1,7 +1,7 @@
 ---
 title: "Server settings"
 sidebarTitle: "Settings"
-description: "Time zone, automatic PTR, the device address, response rate limiting, the GeoIP database, zone history retention, Prometheus metrics, encrypted DNS status and factory reset under Settings → General."
+description: "Time zone, automatic PTR, the device address, response rate limiting, the GeoIP database, zone history retention, the query log file cache, Prometheus metrics, encrypted DNS status and factory reset under Settings → General."
 ---
 
 **Settings → General** holds the settings that apply to the whole server. Only superadmins can
@@ -145,20 +145,29 @@ Decided change requests follow the days limit.
 dnz settings history --keep-days 90 --keep-versions 500
 ```
 
-## Release database file cache
+## Query log file cache
 
-Searching the [query log](/dns/query-logs) reads DNZ's SQLite file, and the kernel keeps what it read
-in memory, which `docker stats` counts as the container's. With this switch on (the default), DNZ
-drops that cache once nobody has searched the log for **Minutes after the last search** (10 by
-default, up to 1440); the next search reads the disk again. Off, the kernel keeps it: searches stay
-fast, and it still gives the memory back when the host runs short. Only a SQLite database on Linux
-has such a cache. Each server applies the setting within a minute, a cluster's other servers too.
+Searching the [query log](/dns/query-logs) reads its day files, and the Linux kernel keeps what it
+read in memory. That cache is charged to DNZ's container, so `docker stats` (and the **Server** tab's
+*Container* row) can show far more than DNZ itself uses.
+
+With **Release query log file cache** on (the default), DNZ drops that cache once nobody has searched
+or filtered the log for **Minutes after the last search** (default 10, at most 1440). The next search
+reads the disk once; later ones are fast again. The Live list and the Overview's recent queries read
+only the newest rows and don't keep the cache.
+
+Turn it off to leave the cache to the kernel: every search stays fast, `docker stats` counts the
+cache, and the kernel still gives it back when memory runs short. The setting applies to every server
+of a [cluster](/deploy/cluster); servers that don't run on Linux have no cache to drop.
 
 ```bash
 dnz settings file-cache                         # show
 dnz settings file-cache on --idle-minutes 30    # drop it 30 minutes after the last search
 dnz settings file-cache off                     # leave it to the kernel
 ```
+
+Changes are in the [audit log](/admin/audit-log) as `settings.file_cache`. See
+[Docker: memory](/deploy/docker#memory).
 
 ## Prometheus metrics
 

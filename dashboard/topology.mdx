@@ -15,7 +15,8 @@ description: "Your whole DNS setup on one interactive canvas, with live health d
   [GeoDNS and health checks](/dns/geodns).
 - **The query path**: clients → filtering → the cache → forwarding rules → upstreams. The filtering
   node shows safe search and how many lists or rules are only for some clients or hours; the cache
-  node shows the per-client rate limit and [RRL](/dns/rate-limiting).
+  node shows the per-client rate limit and [RRL](/dns/rate-limiting). When blocked names answer
+  with the [block page](/dns/filtering#block-page), filtering is linked to the proxy that shows it.
 - **Response policy zones**: each subscribed **RPZ** zone feeds into filtering (checked first), with
   its rule count, policy and last error; a **Served as RPZ** node shows the zone resolvers transfer
   DNZ's lists from. See [Response policy zones](/dns/rpz).

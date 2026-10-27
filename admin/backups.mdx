@@ -90,7 +90,7 @@ these commands, filled in with what you typed.
 | --- | --- |
 | Back up | Only by hand, every hour (at a minute), every day (at a time), or every week (on a day, at a time), in DNZ's [time zone](/admin/settings) |
 | Keep daily / weekly / monthly | After each backup, older archives are deleted except the newest of each of the last N days, weeks and months, and every archive of the last 24 hours. The newest always stays. 0, 0 and 0 keeps all. Default 7, 4, 6 |
-| Query log and statistics | Left out unless turned on: they can be large. Restoring a backup without them leaves the query log as it is |
+| Also the traffic statistics | The hourly query counts behind the charts, and the top names and clients, are left out unless this is on: they can be large. Restoring a backup without them leaves them as they are. The query log itself is never in an archive: each server keeps it in [day files](/dns/query-logs#where-the-log-is-kept) of its own, and a restore leaves them as they are |
 
 Schedules run on the [cluster](/deploy/cluster) leader, one backup at a time. A backup missed while
 DNZ was down runs once it is back. Only DNZ's own archives (`dnz-backup-…`) are ever deleted.
