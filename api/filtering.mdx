@@ -17,7 +17,10 @@ For how the pieces work together, see [Filtering](/dns/filtering) and
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/api/filtering?division_id=` | A scope's lists, rules, client groups, schedules and safe search |
-| `PUT` | `/api/filtering/mode` | What blocked names answer: `{"mode": "null_ip"}` or `"nxdomain"` |
+| `PUT` | `/api/filtering/mode` | What blocked names answer: `{"mode": "null_ip"}`, `"nxdomain"` or `"block_page"` (set up the block page first) |
+| `GET` / `PUT` | `/api/filtering/block-page` | The block page's proxy, addresses, text and HTTPS (superadmin) |
+| `POST` | `/api/filtering/block-page/ca/rotate` | A new block page certificate authority (superadmin) |
+| `GET` | `/api/filtering/block-page/ca.crt` | The block page certificate authority, PEM; `?format=der` for DER. Public |
 | `GET` | `/api/filtering/check?domain=&client=&division_id=` | Would this name be blocked, and why |
 | `POST` | `/api/filtering/lists` | Subscribe to a list |
 | `PATCH` / `DELETE` | `/api/filtering/lists/{id}` | Change or delete a list |
@@ -36,6 +39,27 @@ For how the pieces work together, see [Filtering](/dns/filtering) and
 `GET /api/filtering` returns `clients`, `schedules`, `safe_search`, `server_safe_search`,
 `categories` (the parental control categories) and the `timezone` schedules run in, next to the lists
 and rules.
+
+## Block page
+
+```json
+PUT /api/filtering/block-page
+{
+  "proxy_id": 1,
+  "ipv4": [],
+  "ipv6": [],
+  "title": "",
+  "message": "{host} is blocked. Ask IT at ext. 123.",
+  "link": "https://intranet.example.com/rules",
+  "https": true
+}
+```
+
+Empty `ipv4` and `ipv6` take the proxy's addresses. `https` works only with a dnz-proxy proxy and
+makes the certificate authority on first use. The answer, like `GET`, has the `settings`, whether
+they are `ready`, the approved `proxies` with their addresses, and the `authority`'s SHA-256
+`fingerprint`. While blocked names answer with the block page, its proxy and addresses can't be
+removed. See [Block page](/dns/filtering#block-page).
 
 ## Limiting to clients and a schedule
 
@@ -127,4 +151,6 @@ or `drop`. `refresh_secs` runs from 60 seconds to 7 days.
 ## Audit log
 
 Every change to lists, rules, networks, client groups, schedules, safe search and response policy
-zones is in the [audit log](/admin/audit-log). RPZ changes are under `rpz.*`.
+zones is in the [audit log](/admin/audit-log). RPZ changes are under `rpz.*`; the blocked answer and
+the block page under `settings.filter_mode`, `settings.filter_block_page` and
+`settings.filter_block_page_ca`.

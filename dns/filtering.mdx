@@ -310,9 +310,10 @@ A superadmin sets this in the server-wide scope under **Blocked answers**:
 | --- | --- |
 | **Null IP** (default) | A → `0.0.0.0`, AAAA → `::`, other types get an empty answer. Apps fail right away without trying another resolver. |
 | **NXDOMAIN** | Answered as if the domain didn't exist. |
+| **Block page** | A and AAAA point at a proxy, which shows the visitor a page saying the name is blocked. Other types get an empty answer. See [Block page](#block-page). |
 
 ```bash
-dnz filter mode nxdomain                       # or null_ip
+dnz filter mode nxdomain                       # or null_ip, block_page
 ```
 
 Blocked answers have a TTL of 60 seconds, so unblocking reaches clients quickly.
@@ -322,13 +323,82 @@ text "Blocked by DNS filtering", so `dig` and resolvers that understand it can t
 missing or broken site.
 
 <Note>
-Browsers don't show the extended error yet: users see their browser's usual "This site can't be
-reached" page, not a "blocked" page.
+Browsers don't show the extended error yet: with Null IP or NXDOMAIN, users see their browser's
+usual "This site can't be reached" page. The [block page](#block-page) tells them why instead.
 </Note>
 
 ```bash
 dig @<dnz> blocked.example A    # ; EDE: 15 (Blocked): (Blocked by DNS filtering)
 ```
+
+## Block page
+
+With **Block page**, blocked names answer with the addresses of a proxy you pick, and the proxy
+answers visits to them with a page (HTTP 403) in the [status page](/proxy/status-pages) style:
+"Blocked by network policy", the blocked name, your own message and an optional **More information**
+link to the network's rules or a help desk. API clients get the same as JSON or plain text.
+
+| Proxy | HTTP | HTTPS |
+| --- | --- | --- |
+| [dnz-proxy](/proxy/dnz-proxy) | Every host none of its routes serve | Yes, on devices that trust DNZ's block page authority |
+| [Traefik](/proxy/traefik) | A router below every other on its HTTP entry point | No: a certificate warning |
+| [Caddy](/proxy/caddy) | In place of its closing 404 | No: a certificate warning |
+
+<Steps>
+  <Step title="Pick the proxy">
+    In the server-wide scope, go to **Blocked answers → Block page** and pick the proxy that shows
+    the page. [Proxying](/proxy/overview) must be on.
+  </Step>
+  <Step title="Check the addresses">
+    **IPv4 answers** and **IPv6 answers** are what blocked names answer. They start as the proxy's
+    (a dnz-proxy's healthy nodes). Change them when devices reach the proxy on another address, such
+    as a node's LAN address for clients inside your network. Without an IPv6 address, AAAA gets an
+    empty answer, so clients use IPv4.
+  </Step>
+  <Step title="Write the message">
+    Set a title, a message (`{host}` is the blocked name) and a link, or keep the usual text. Save.
+  </Step>
+  <Step title="Turn it on">
+    Pick **Block page** as the blocked answer.
+  </Step>
+</Steps>
+
+```bash
+dnz filter block-page set --proxy edge --message "{host} is blocked. Ask IT at ext. 123." --link https://intranet.example.com/rules
+dnz filter mode block_page
+```
+
+The addresses are stored with the setting, so [secondaries](/dns/replication) answer blocked names
+the same way.
+
+### HTTPS
+
+Most visits are HTTPS, and a proxy can't hold a valid certificate for a name it doesn't own. Turn on
+**HTTPS** (dnz-proxy only) and DNZ makes its own certificate authority, "DNZ block page CA". The
+proxy's nodes then make a certificate for each blocked name on the spot, signed by it. Devices that
+trust the authority see the page over HTTPS; other devices get a certificate warning instead.
+
+To trust it on a device, the dashboard shows copy-paste commands for Windows, macOS and Linux with
+DNZ's address filled in, and the steps for iPhone and Android. It is also at a public address:
+
+```bash
+curl -fsSLo dnz-block-page-ca.crt http://<dnz>:8080/api/filtering/block-page/ca.crt
+dnz filter block-page ca > dnz-block-page-ca.crt       # or --der --out dnz-block-page-ca.cer
+```
+
+For managed devices, push it as a trusted root with your MDM or group policy. Firefox keeps its own
+list: set `security.enterprise_roots.enabled` to `true`, or import it there too.
+
+<Warning>
+Whoever holds the authority's key can make certificates these devices trust for any site. DNZ keeps
+it in its database and sends it only to the block page's dnz-proxy nodes, never to secondaries.
+**Replace** (or `dnz filter block-page rotate-ca`) makes a new one, which devices must then trust
+again.
+</Warning>
+
+Apps that pin their certificates still fail, as they do with any blocked answer. On the proxy, block
+page visits are counted as one host, `(block page)`, so blocked names don't crowd out the hosts it
+serves; the request log keeps the real name.
 
 ## Check and monitor
 

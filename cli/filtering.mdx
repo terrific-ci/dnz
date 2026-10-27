@@ -185,7 +185,32 @@ at the current time.
 ## What blocked names answer
 
 ```bash
-dnz filter mode nxdomain                      # or null_ip
+dnz filter mode nxdomain                      # or null_ip, block_page
 ```
 
-`null_ip` answers `0.0.0.0` / `::`; `nxdomain` answers that the name doesn't exist.
+`null_ip` answers `0.0.0.0` / `::`; `nxdomain` answers that the name doesn't exist; `block_page`
+answers with a proxy's addresses, and the proxy shows a page saying the name is blocked.
+
+## Block page
+
+Superadmin. Set it up, then turn it on with `dnz filter mode block_page`
+(see [Block page](/dns/filtering#block-page)):
+
+```bash
+dnz filter block-page show
+dnz filter block-page set --proxy edge                     # addresses: the proxy's
+dnz filter block-page set --ipv4 10.0.0.80 --ipv6 ""       # devices reach it here
+dnz filter block-page set --proxy-addresses                # back to the proxy's
+dnz filter block-page set --message "{host} is blocked. Ask IT at ext. 123." --link https://intranet.example.com/rules
+dnz filter block-page set --https on                       # dnz-proxy: HTTPS with DNZ's own authority
+dnz filter block-page ca > dnz-block-page-ca.crt           # for devices to trust (--der --out ca.cer)
+dnz filter block-page rotate-ca                            # a new authority; devices must trust it again
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--proxy` | The proxy showing the page, by name or id; `none` to clear |
+| `--ipv4`, `--ipv6` | What blocked names answer, comma-separated (`""` for none) |
+| `--proxy-addresses` | Take the addresses from the proxy again |
+| `--title`, `--message`, `--link` | The page's text; `{host}` in the message is the blocked name (`""` for the usual) |
+| `--https` | `on` or `off`: certificates from DNZ's block page authority (dnz-proxy only) |
