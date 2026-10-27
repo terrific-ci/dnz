@@ -9,7 +9,8 @@ description: "Sign-in protection, sessions, security headers, and which ports to
   <Accordion title="First passwords" icon="key" defaultOpen>
     The first admin created with `DNZ_ADMIN_PASSWORD` must choose a new password at the first
     sign-in. So must every user whose password an admin created or reset. Passwords need at least
-    10 characters and are hashed with argon2.
+    8 characters (no rules about mixing letters, numbers or symbols; common passwords and the
+    username itself are refused) and are hashed with argon2.
   </Accordion>
   <Accordion title="Brute-force protection" icon="lock">
     After 5 failed sign-ins, that username is locked for 15 minutes. An IP address is locked after
