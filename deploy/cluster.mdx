@@ -132,7 +132,7 @@ connections open, 17 on Postgres.
       terrificci/dnz:latest
     ```
 
-    **Settings → Cluster** has these commands filled in under *Add a node*.
+    **High availability → Cluster** has these commands filled in under *Add a node*.
   </Step>
   <Step title="Check">
     ```bash
@@ -216,7 +216,7 @@ sessions. The `dnz` CLI can talk to any node.
 
 ## Watching it
 
-- **Settings → Cluster** (superadmin): each node's address, DNS address, version, last heartbeat,
+- **High availability → Cluster** (superadmin): each node's address, DNS address, version, last heartbeat,
   whether it leads, and the change it has loaded against the feed's last one. A node is **down** after
   30 seconds without a heartbeat and **behind** when it hasn't loaded a change that is 30 seconds old.
   Nodes gone for good can be removed from the list.
@@ -283,7 +283,7 @@ soon after.
   ACME HTTP-01 challenges are handed out by the leader, which runs the issuance: point dnz-proxy nodes
   at the leader's address, or use DNS-01 through DNZ's own zones, which works from any node.
 - **NOTIFY from a primary** may arrive at any node; the leader transfers the zone within seconds.
-- **Removing a node**: stop it, then remove it under **Settings → Cluster** (or
+- **Removing a node**: stop it, then remove it under **High availability → Cluster** (or
   `dnz cluster forget`). Nodes not seen for 7 days are removed by themselves.
 - **Containers without a data volume** get a new node id on every start unless `DNZ_NODE_ID` is
   set, and start their query log over: set it, and keep `/data` on a volume.
@@ -296,7 +296,7 @@ soon after.
 | A node is **down** but answers DNS | It can't write its heartbeat. It keeps answering with what it loaded last; fix its database connection |
 | No leader for more than 20 seconds | No node can write to the database; check the database |
 | Two nodes with the same id | Each node needs its own `DNZ_NODE_ID` or data folder. A copied data folder has the same `node-id` file: delete it on the copy |
-| Query Logs says *No answer from* a node that is up | The node you're on can't reach that node's address (Settings → Cluster) within 4 seconds. Set `DNZ_CLUSTER_ADDRESS` on that node to an address the others can reach (not `127.0.0.1` or a container's host name; `https://` needs a certificate from a public CA). A node already running two searches shows up here too, for that search |
+| Query Logs says *No answer from* a node that is up | The node you're on can't reach that node's address (High availability → Cluster) within 4 seconds. Set `DNZ_CLUSTER_ADDRESS` on that node to an address the others can reach (not `127.0.0.1` or a container's host name; `https://` needs a certificate from a public CA). A node already running two searches shows up here too, for that search |
 | A change shows on one node only | Both must use the same `database.url` (`dnz config check` on each); on Redis, the same `namespace` too |
 | Redis: writes fail with "Redis isn't answering" | The node can't reach Redis: check the address, password and firewall (`redis-cli -h … ping` from the node). DNS and reads go on meanwhile |
 | Redis: "another server runs a newer DNZ" | A node on a newer version migrated the data: update this one |

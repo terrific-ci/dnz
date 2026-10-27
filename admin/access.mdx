@@ -45,7 +45,7 @@ manage views and the resolver for the whole server.
 | `monitoring.manage` | Manage monitoring | Health check, notification providers, alerts and incidents | |
 
 Network Admin also holds `zones.read`, `zones.write`, `records.write`, `logs.read`, `audit.read`
-and `filtering.manage` in its division. Add or remove any of them under **Access → Roles**; the
+and `filtering.manage` in its division. Add or remove any of them under **Settings → Roles**; the
 editor shows the two groups as **In the division** and **Whole server**. API tokens never get
 server-wide permissions.
 
@@ -55,14 +55,14 @@ Users, roles, divisions, backups, the cluster and **Settings → General** stay 
 
 <AccordionGroup>
   <Accordion title="Create a division" icon="building">
-    **Access → Divisions → Create** (or **Create New → Division**). Superadmins only.
+    **Settings → Divisions → Create** (or **Create New → Division**). Superadmins only.
 
     ```bash
     dnz division add Radiology --description "Imaging"
     ```
   </Accordion>
   <Accordion title="Add a user" icon="user-plus">
-    **Access → Users → Create** (or **Create New → User**). Give them a password and pick their role
+    **Settings → Users → Create** (or **Create New → User**). Give them a password and pick their role
     in each division; **No access** hides a division from them. Tick superadmin for full access.
     They must change the password at their first sign-in.
 
@@ -72,7 +72,7 @@ Users, roles, divisions, backups, the cluster and **Settings → General** stay 
     ```
   </Accordion>
   <Accordion title="Add a member to your division" icon="users">
-    Division Owners (or anyone with `members.manage`) add people under **Access → Members** and
+    Division Owners (or anyone with `members.manage`) add people under **Settings → Members** and
     assign their role in that division.
 
     ```bash
@@ -81,7 +81,7 @@ Users, roles, divisions, backups, the cluster and **Settings → General** stay 
     ```
   </Accordion>
   <Accordion title="Create a custom role" icon="key">
-    **Access → Roles → Create** (or **Create New → Role**), then tick its permissions. Assign it from
+    **Settings → Roles → Create** (or **Create New → Role**), then tick its permissions. Assign it from
     **Users** or **Members**.
 
     ```bash

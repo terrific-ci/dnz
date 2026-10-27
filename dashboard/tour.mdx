@@ -13,7 +13,8 @@ From left to right:
 - **DNZ logo**: back to the Overview.
 - **Division switcher**: the division you're working in. Zones, members, tokens and logs follow it.
   You only see the divisions you're assigned to; superadmins see them all.
-- **The menu**: Overview, Topology, DNS, Proxy, Access, Settings.
+- **The menu**: Overview, DNS, Proxy, High availability, Settings. Older links to Topology, Access,
+  DNS → Replication and Settings → Cluster still open the page at its new place.
 - **Find** (`⌘K` on macOS, `Ctrl+K` elsewhere): jump to any page, zone or setting by typing. It
   also lists the settings cards inside the pages you may open (DNS cache, upstreams, blocklists,
   the block page, encrypted DNS, RRL, TSIG keys, MCP and more), each found by the words people use
@@ -34,19 +35,20 @@ What you see depends on your role. Sections you can't use are hidden.
 
 | Menu | Section | Who sees it |
 | --- | --- | --- |
-| **Overview** | | Everyone |
-| **Topology** | | Everyone, limited to what they may see |
+| **Overview** | Dashboard | Everyone |
+| | Topology | Everyone, limited to what they may see |
 | **DNS** | Zones | `zones.read` |
 | | Query Logs | `logs.read` |
 | | Forwarding | Superadmins |
 | | Filtering | `filtering.manage` |
 | | Views | Superadmins |
-| | Replication | Superadmins |
 | **Proxy** | | Superadmins, while proxying is on and a proxy is listed |
-| **Access** | Members | `zones.read` |
+| **High availability** | Replication | `replication.manage` |
+| | Cluster | Superadmins |
+| **Settings** | General, Proxy, Notifications | Superadmins |
+| | Members | `zones.read` |
 | | Users, Roles, Divisions | Superadmins |
 | | Audit log | `audit.read` |
-| **Settings** | General, Proxy, Notifications | Superadmins |
 | | Integrations | `integrations.manage` |
 | | Proxy, only **Sites in DNS** | `integrations.manage` |
 | | API tokens | `tokens.manage` |
@@ -82,6 +84,7 @@ The landing page sums up the current division:
 - **Recent queries**.
 - **Alerts**: recent upstream outages.
 
+A **Topology** tab draws the whole setup on one canvas; see [Topology map](/dashboard/topology).
 Superadmins also see **forward DNS monitoring** and server usage. See
 [Monitoring](/dashboard/monitoring). Once the server has secondaries or copies zones from a
 primary, a **Replication** tab shows each replica's state and how far it is in sync; see
@@ -97,7 +100,7 @@ primary, a **Replication** tab shows each replica's state and how far it is in s
     DNS → Forwarding
   </Card>
   <Card title="Users, divisions and roles" icon="users" href="/admin/access">
-    Access
+    Settings → Members, Users, Roles, Divisions
   </Card>
   <Card title="Settings" icon="gear" href="/admin/settings">
     Settings → General

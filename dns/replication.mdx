@@ -10,7 +10,7 @@ primary, or both at once.
 Copies are made with standard zone transfers (AXFR/IXFR, RFC 5936/1995), authenticated with
 **TSIG** (RFC 8945), and kept current with **NOTIFY** (RFC 1996) plus the SOA refresh timers.
 
-Everything is under **DNS → Replication** (superadmins), and in the CLI under `dnz replication`.
+Everything is under **High availability → Replication** (superadmins), and in the CLI under `dnz replication`.
 
 | You want | Go to |
 | --- | --- |
@@ -37,7 +37,7 @@ admin of its own (see [A new server as a secondary](#a-new-server-as-a-secondary
 
     <Steps>
       <Step title="Look for the primary">
-        On the **secondary**, open **DNS → Replication → Join a primary**. The **On this network**
+        On the **secondary**, open **High availability → Replication → Join a primary**. The **On this network**
         tab shows a radar of the DNZ servers it finds.
       </Step>
       <Step title="Pick it">
@@ -245,7 +245,7 @@ answers an unchanged copy with *304 Not Modified*, so a secondary that checks ev
 almost nothing.
 </Note>
 
-When the secondary leaves the primary (**Leave** under **DNS → Replication**) or is
+When the secondary leaves the primary (**Leave** under **High availability → Replication**) or is
 [promoted](#promoting-a-secondary), the last copy becomes its own and is editable again.
 
 ### Behind a reverse proxy
@@ -510,7 +510,7 @@ that name both of them stay right.
 
 <Tabs>
   <Tab title="Dashboard">
-    On the secondary, open **DNS → Replication → Copied from other primaries**, open the primary's
+    On the secondary, open **High availability → Replication → Copied from other primaries**, open the primary's
     menu and pick **Take over as primary**. The dialog asks for the address the primary reaches
     this server's web API at (prefilled with the one the browser uses; behind a reverse proxy the
     proxy's address works for the API). It shows each step, and so does the
@@ -598,7 +598,7 @@ zones, editable there, and it stops following the old primary. Nothing is lost:
 
 <Tabs>
   <Tab title="Dashboard">
-    On the secondary, open **DNS → Replication → Copied from other primaries**, open the primary's
+    On the secondary, open **High availability → Replication → Copied from other primaries**, open the primary's
     menu and pick **Take over as primary**. The primary can't be reached, so the dialog offers
     **Promote without** it and lists what changes.
   </Tab>
@@ -741,7 +741,7 @@ dnz replication status
 
 ### Connections diagram
 
-**DNS → Replication** opens with a diagram of every replication link: this server in the
+**High availability → Replication** opens with a diagram of every replication link: this server in the
 middle with its role (primary, secondary, or both), the primaries it copies from on the left and
 its secondaries on the right (above and below on a phone), with arrows from primary to secondary.
 Each server and arrow takes the colour of the sync status above: green **In sync**, amber
