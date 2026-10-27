@@ -291,9 +291,51 @@ by itself at the secondary's next refresh. A secondary on 1.9 or older also copi
 proxy's address: update it, then **Leave** and join again (the same join code works).
 </Note>
 
-**Leave** (in the secondary's list, or `dnz replication leave 1`) stops following the primary and
-deletes the zones copied from it. To keep them instead, because the primary is gone, use
+**Leave** (in the secondary's list, by right-clicking the primary in the
+[connections diagram](#connections-diagram), or `dnz replication leave 1`) stops following the
+primary and deletes the zones copied from it. A DNZ primary hears about it at once and drops its
+entry for this server; an unreachable one keeps it (shown unreachable) until it is removed there.
+To keep the zones instead, because the primary is gone, use
 [Take over as primary](#promoting-a-secondary).
+
+### A secondary can't be joined
+
+A server that follows a DNZ primary refuses servers that want to join it, by join code and by
+pairing: *ns2 is a secondary of ns1; join ns1 instead*. Every DNZ secondary joins the primary
+itself, so it can take over or be moved on later.
+
+### A primary joining another primary
+
+**Join a primary** also works on a server that is a primary itself, with zones or secondaries of
+its own. It becomes a secondary of the primary it joins, and nothing is lost:
+
+<Steps>
+  <Step title="The primary checks first">
+    Nothing changes on either server when it refuses: a zone it has already (delete or rename one
+    of them), records proxied through a proxy it doesn't have (add the proxy there first), or being
+    a secondary itself. Switched-off zones on the joining server are refused too, and so is a server
+    that already follows another DNZ primary.
+  </Step>
+  <Step title="The zones go there">
+    As they are kept on the joining server: records with tags, comments, views, switched-off
+    records and traffic steering, the zone's settings and its DNSSEC keys, so the DS at the
+    registrar stays valid. Each lands in the division of the same slug (or name), made when
+    missing.
+  </Step>
+  <Step title="The secondaries go there">
+    DNZ secondaries move by themselves at their next check-in (within a minute), keeping their
+    zones. BIND, Knot or PowerDNS ones keep their TSIG key and only need the new primary's address.
+  </Step>
+  <Step title="The joining server becomes a copy">
+    Its zones become secondary zones of the primary, still answering with what they hold until the
+    first transfer, and its settings are managed there from then on. Accounts stay its own.
+  </Step>
+</Steps>
+
+<Note>
+  The join dialog says this before you join. The join code must be fresh: a primary takes zones
+  only within 15 minutes of a server joining it. Both servers need DNZ 1.17 or later.
+</Note>
 
 ### Removing a secondary
 
@@ -501,6 +543,36 @@ that name both of them stay right.
   dialog says why and offers **Promote without** it.
 </Note>
 
+### Set as primary (from the primary)
+
+The same switch can be started on the primary: right-click a DNZ secondary in the
+[connections diagram](#connections-diagram), or open its menu under *Secondaries of this server*,
+and pick **Set as primary**. The dialog asks where this server reaches the secondary's web UI
+(prefilled with the secondary's address and this UI's port) and checks at once that the server
+there answers as that secondary. The secondary hears the request at its next check-in, within a
+minute, and takes over exactly as above. A bar on the page says it is waiting; when the secondary
+can't take over it says why, and when it doesn't check in within three minutes (down, or on DNZ
+before 1.17) it says so. **Withdraw** or **Dismiss** clears it.
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    dnz replication secondary set-primary 2 --address http://10.0.0.6:8080
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
+      -d '{"origin": "http://10.0.0.6:8080"}' \
+      https://ns1.example.com/api/replication/servers/2/take-over
+    ```
+
+    Superadmin only; it answers 202. `take_over_request` in `GET /api/replication` shows the
+    request until it starts, with an `error` when it didn't; `DELETE /api/replication/take-over-request`
+    withdraws it.
+  </Tab>
+</Tabs>
+
 ## Promoting a secondary
 
 When the primary is gone for good (its disk died, the machine is retired), promote a secondary. The zones it copied become its own primary
@@ -680,6 +752,10 @@ to the other server show how far it got (preparing, syncing before the switch, s
 or failed with the reason), and a primary that a secondary is moving away from shows **Moving
 to** the new primary. The diagram uses the same status check as the Replication tab, so it adds
 no extra load.
+
+Right-click a server for its actions: this server, while it follows a DNZ primary, **Take over as
+primary**; a primary it follows **Take over as primary**, **Sync now** and **Leave**; a secondary
+**Set as primary** (DNZ ones), **New join code** and **Remove**.
 
 ## Test with dig
 
