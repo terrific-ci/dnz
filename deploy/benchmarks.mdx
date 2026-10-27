@@ -421,6 +421,33 @@ With the slots swapped the throughput is the same (within 1%); the first run's g
 slot. CPU time per query is slightly lower with the day files in both runs, and the container ends
 smaller: the main database no longer grows with the log.
 
+**Searches that never end.** The day files exist so that a search through a large log can't take
+the rest of DNZ down with it. To check, one server (2 CPUs, 1 GiB) held 5.4 GB of day files (26
+million rows today, 18 million yesterday), its page cache cold, took 20,000 DNS queries a second,
+and three clients sent a search for a name that isn't there over the last 24 hours every 5 seconds
+without waiting for the answer, as the old Live list did. Every second a probe asked for the Live
+list, the health check, the dashboard and the Server tab (2026-10-27):
+
+| | First build | With the fix |
+| --- | ---: | ---: |
+| Live list (`/api/logs?limit=50`) | 446 of 584 failed after 30 s | all OK: p50 6.6 ms, p99 57 ms |
+| Health check, p50 / p99 | 1.9 / 22 ms | 1.9 / 19 ms |
+| Dashboard (`/api/stats?range=24h`), p50 / p99 | 16 / 55 ms | 14 / 69 ms |
+| Server tab, p50 / p99 | 4.1 / 40 ms | 4.2 / 37 ms |
+| DNS, queries/s and average | 19,744, 0.89 ms | 19,982, 0.79 ms |
+| Memory at the end | 131 MiB | 129 MiB |
+
+Two searches ran at a time and every other one got 429 within 61 ms. The first build gave each day
+file as many readers as searches allowed (two), so the two endless searches held both of today's
+readers and the Live list, which reads only the newest rows, waited for one until it timed out.
+Each day file now has two readers more than searches, and the Live list answered every time. Under
+load, nothing else waited, and DNS lost no query.
+
+Two things to know about such a search: one through 24 hours of a 6.7 GB log, for a name that isn't
+there, didn't finish within 10 minutes on this 1 GiB container and its slow disk; and while it
+runs, it keeps its snapshot of today's file, so the file's WAL can't be reset and grows (1.2 GB
+after 5 minutes, 1.9 GB after 10) until the search ends.
+
 ## Threat detection on and off
 
 [Threat detection](/dns/threats) looks at a copy of the query log, on its own task. The same release
