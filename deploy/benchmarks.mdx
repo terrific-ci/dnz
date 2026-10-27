@@ -344,7 +344,7 @@ the query log: a few GB with 7 days of busy traffic. On a server with plenty of 
 had no reason to give that cache back, so a container whose process used 130 MB showed over 1 GB.
 After v1.7.3, on Linux, DNZ drops its cached pages of the database file once nobody has read the
 query log for 10 minutes. Answering queries never reads the file; while someone looks through the
-log, the cache stays (since v1.15.1 only a search or a filter counts, see below).
+log, the cache stays (since v1.16.0 only a search or a filter counts, see below).
 
 Measured on 2026-10-25 on the benchmark server, before (v1.7.3) and after side by side, each with
 2 CPUs and a 1 GiB limit, taking turns for six rounds of 20 s per scenario; the query log grew to
@@ -370,7 +370,7 @@ either way. A search that matches nothing reads the whole log: 1.6 s from the ca
 again from then on. Dropping the cache every minute regardless made every such search take that
 long, so the cache stays while the log is being read.
 
-Until v1.15.1 the *Live* list on Query Logs counted as reading the log too. It polls the newest
+Until v1.16.0 the *Live* list on Query Logs counted as reading the log too. It polls the newest
 rows every 5 seconds, so a tab left open kept the cache for good: a production server showed
 2.2 GiB in `docker stats` for a process of 200 MB, 2.1 GB of it a 7.5 GB database file's cache, on
 kernel 5.4. Now only a search or a filter counts. Measured on 2026-10-27 on the benchmark server,
@@ -388,7 +388,7 @@ each). As before, the first search through the whole log after the cache is drop
 (65 to 89 s for 1.8 GB on this server's disk, 4 s from the cache). Answering DNS queries doesn't
 touch this code.
 
-Since v1.15.1 a search also stays inside a time window, the last 24 hours unless asked otherwise:
+Since v1.16.0 a search also stays inside a time window, the last 24 hours unless asked otherwise:
 the window becomes a range of ids through the index on `created_at`. The same 1.8 GB log (six
 days), a search that matches nothing, the file's cache dropped before each run (2026-10-27):
 
