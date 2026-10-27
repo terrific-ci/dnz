@@ -153,7 +153,7 @@ DNZ_PASSWORD='a-long-password' dnz setup --username admin --division IT \
 | `notify` | Notification providers and alerts | [Notifications](/cli/notifications) |
 | `backup` | Backup targets, schedules, backups now, archives and restores | [Backups](/cli/backups) |
 | `logs`, `stats`, `audit`, `topology`, `settings` | Monitoring and server settings | [Monitoring](/cli/monitoring) |
-| `config`, `db`, `healthcheck`, `--reset` | Configuration, moving to Postgres or MySQL, maintenance | [Maintenance](/cli/maintenance) |
+| `config`, `db`, `healthcheck`, `--reset` | Configuration, moving to Postgres, MySQL or Redis, giving back SQLite space, maintenance | [Maintenance](/cli/maintenance) |
 | `externaldns-webhook` | ExternalDNS's webhook provider, run as a sidecar next to ExternalDNS | [Kubernetes](/integrations/kubernetes) |
 
 <CardGroup cols={2}>
@@ -188,6 +188,6 @@ DNZ_PASSWORD='a-long-password' dnz setup --username admin --division IT \
     Query log, stats, audit log, topology and settings.
   </Card>
   <Card title="Maintenance" icon="wrench" href="/cli/maintenance">
-    Configuration, health checks, version and factory reset.
+    Configuration, database moves and vacuum, health checks, version and factory reset.
   </Card>
 </CardGroup>

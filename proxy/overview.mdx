@@ -137,7 +137,7 @@ The switches are each the route's own middleware, made and removed with it:
 | **Cache** (dnz-proxy) | Keeps answers on the nodes; **Clear cache** right next to it when editing |
 | **Firewall** (dnz-proxy) | Runs one of the proxy's firewall middlewares |
 | **Rate limit** | Requests a second per visitor, with a burst |
-| **Password** | Users added by name and password; only a bcrypt hash is kept |
+| **Password** | Any number of users, each added by name and password; only a bcrypt hash is kept. A user typed but not added yet is added on save |
 | **Only from these addresses** | Addresses or ranges; everyone else gets 403 |
 | **Custom headers** | Headers set on requests **to the servers** and on answers **to visitors**; an empty value removes the header (e.g. `Server`) |
 | **Under attack check** (dnz-proxy) | Browsers solve a short check once |
@@ -147,6 +147,11 @@ They run with the address list, firewall and check first, then the waiting room,
 password and custom headers, and the cache last, so only visits let through ever see a cached
 answer (and cached answers get the custom headers too). Custom headers work on every proxy kind. A route's ⋯ menu
 also sets a hostname's [status page](/proxy/status-pages) and clears its cache.
+
+On dnz-proxy (and on Caddy for the password and the address list), a visitor these switches turn
+away gets a styled page, such as **Sign in to continue** or **Not open to your address**, instead of
+a bare status line. See
+[Pages for visitors a middleware turns away](/proxy/status-pages#pages-for-visitors-a-middleware-turns-away).
 
 DNZ then:
 

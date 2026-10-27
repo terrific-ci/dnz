@@ -4,8 +4,10 @@ description: "Run DNZ with Docker Compose: ports, the data volume and environmen
 ---
 
 The image is distroless and runs as a non-root user. It listens for DNS on port **53** (UDP and
-TCP) and serves the dashboard on **8080**, with data in the `/data` volume. Docker lets containers
-use ports below 1024 without root.
+TCP) and serves the dashboard on **8080**, with data in the `/data` volume: the SQLite database, and
+the [query log](/dns/query-logs#where-the-log-is-kept) in `/data/logs`, one file per day. Keep `/data`
+on a volume whatever the database, or every restart starts with an empty query log. Docker lets
+containers use ports below 1024 without root.
 
 Save this as `docker-compose.yml`:
 
@@ -94,13 +96,21 @@ be bound or a `/data` volume that isn't writable.
 ## Memory
 
 `docker stats` counts more than DNZ's own memory: the kernel's cache of files the container reads
-and writes is charged to it too, and DNZ's SQLite file holds the query log (7 days by default, see
-`DNZ_LOG_RETENTION_DAYS`), which can reach a few GB. On Linux, once nobody has read the query log
-for 10 minutes, DNZ drops its cached pages of the database file, so what `docker stats` shows stays
-close to what DNZ itself uses. Answering queries never reads that file. The first search through
-the whole log after such a pause reads it from disk; later ones are as fast as before. The
-**Server** tab shows both: **Memory** under *DNZ process* is the process, and **Container** is the
-number `docker stats` shows, with the part of it that is file cache.
+and writes is charged to it too. The [query log](/dns/query-logs)'s day files (7 days by default,
+see `DNZ_LOG_RETENTION_DAYS`) can reach a few GB, and a search reads them. Once nobody has searched
+or filtered the query log for 10 minutes, DNZ drops its cached pages of those files, so what
+`docker stats` shows stays close to what DNZ itself uses. Answering queries never reads them, and
+the Live list and the Overview's recent queries read only the newest rows, so they don't keep the
+cache. The first search through the whole log after such a pause reads it from disk; later ones are
+as fast as before.
+
+**Settings → General → Release query log file cache** (`dnz settings file-cache`) changes the
+minutes, or turns it off and leaves the cache to the kernel so searches stay fast (see
+[Query log file cache](/admin/settings#query-log-file-cache)).
+
+The **Server** tab shows both: **Memory** under *DNZ process* is the process, and **Container** is
+the number `docker stats` shows, with the part of it that is file cache. It reads cgroup v2, else
+v1, so hosts that mix both (such as Ubuntu 20.04) show it too.
 
 To cap it, give the container a limit; the kernel then gives back file cache before it gets near it:
 

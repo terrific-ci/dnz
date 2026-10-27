@@ -3,18 +3,20 @@ title: "Database"
 description: "Keep DNZ's data in SQLite, Postgres, MySQL or Redis / Valkey, and move an existing install from SQLite."
 ---
 
-DNZ keeps zones, records, users, settings and logs in one database. Which one is picked by the
+DNZ keeps zones, records, users, settings and its other data in one database. Which one is picked by the
 scheme of `database.url` (`DNZ_DATABASE_URL`):
 
 | Database | URL | Good for |
 | --- | --- | --- |
 | **SQLite** (default) | `sqlite:///var/lib/dnz/dnz.db` | Most installations: one file, nothing else to run or back up separately |
-| **Postgres** 13 or newer | `postgres://dnz:secret@db.internal:5432/dnz` | Large installations: many zones and records, busy query logs, a database team with its own backups, replicas and monitoring |
+| **Postgres** 13 or newer | `postgres://dnz:secret@db.internal:5432/dnz` | Large installations: many zones and records, a [cluster](/deploy/cluster), a database team with its own backups, replicas and monitoring |
 | **MySQL** 8.0.13 or newer | `mysql://dnz:secret@db.internal:3306/dnz` | The same, where MySQL is what you run. MariaDB is not supported |
-| **Redis** 6.2+ or **Valkey** | `redis://:secret@cache.internal:6379` | A [cluster](/deploy/cluster) where Redis is what you run: each server keeps a copy and answers from it, Redis holds the truth. Query logs stay on each server |
+| **Redis** 6.2+ or **Valkey** | `redis://:secret@cache.internal:6379` | A [cluster](/deploy/cluster) where Redis is what you run: each server keeps a copy and answers from it, Redis holds the truth |
 
 DNZ works the same on all of them; only where the data is kept changes. It creates and upgrades its
-own tables at startup, so give it an empty database and a user that may create tables in it.
+own tables at startup, so give it an empty database and a user that may create tables in it. The
+query log is never in the database: each server keeps it in local files, one per day (see
+[Query logs](/dns/query-logs#where-the-log-is-kept)).
 
 <Note>
   Several DNZ servers can share one Postgres, MySQL or Redis database and work as a
@@ -128,7 +130,8 @@ How it works, and what is different from Postgres and MySQL: [Cluster → On Red
 - Characters such as `@`, `:` or `/` in the password go percent-encoded: `p%40ss` for `p@ss`.
 - DNZ keeps up to 16 connections to Postgres or MySQL open.
 - The password never shows up in `dnz config show`, `dnz config check` or the log.
-- Files DNZ keeps besides the database, the GeoIP database and the local dnz-proxy's state, go in
+- Files DNZ keeps besides the database (the query log's day files in `logs/`, the GeoIP database
+  and the local dnz-proxy's state) go in
   `database.data_dir` (`DNZ_DATA_DIR`). With SQLite that's the database file's folder. With Postgres
   or MySQL it's the working directory: `/var/lib/dnz` with the [systemd unit](/deploy/systemd), `/data`
   in the Docker image.
@@ -151,7 +154,7 @@ services:
       - "53:53/tcp"
       - "8080:8080"
     volumes:
-      # The GeoIP database and the local dnz-proxy's state (DNZ_DATA_DIR).
+      # The query log (logs/), the GeoIP database and the local dnz-proxy's state (DNZ_DATA_DIR).
       - dnz-data:/data
     environment:
       TZ: Asia/Jakarta

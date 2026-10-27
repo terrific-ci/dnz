@@ -90,6 +90,7 @@
               "dns/recursive",
               "dns/resolver-options",
               "dns/query-logs",
+              "dns/live-capture",
               "dns/query-explain",
               "dns/filtering",
               "dns/rpz",

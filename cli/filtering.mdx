@@ -1,6 +1,6 @@
 ---
 title: "Filtering"
-description: "Manage blocklists, allow and block rules, client networks and groups, schedules, safe search, parental control and response policy zones from the terminal."
+description: "Manage blocklists, allow and block rules, client networks and groups, schedules, safe search, parental control, the block page and response policy zones from the terminal."
 ---
 
 These commands match **DNS → Filtering** in the dashboard. For how blocklists, rules and client
@@ -185,7 +185,44 @@ at the current time.
 ## What blocked names answer
 
 ```bash
-dnz filter mode nxdomain                      # or null_ip
+dnz filter mode nxdomain                      # or null_ip, block_page
 ```
 
 `null_ip` answers `0.0.0.0` / `::`; `nxdomain` answers that the name doesn't exist.
+`block_page` points blocked names at a proxy that shows a page saying so; set the page up first
+(below).
+
+## The block page
+
+Blocked names answer with the addresses of a proxy, and the proxy shows visitors a page saying the
+name is blocked on this network. These commands need a superadmin. See
+[Block page](/dns/filtering#block-page).
+
+```bash
+dnz filter block-page show
+dnz filter block-page set --proxy edge                     # addresses: the proxy's
+dnz filter block-page set --ipv4 10.0.0.80 --ipv6 ""       # devices reach it here
+dnz filter block-page set --proxy-addresses                # back to the proxy's
+dnz filter block-page set --message "{host} is blocked. Ask IT at ext. 123." --link https://intranet.example.com/rules
+dnz filter block-page set --https on                       # dnz-proxy: HTTPS with DNZ's own authority
+dnz filter mode block_page
+dnz filter block-page ca > dnz-block-page-ca.crt           # for devices to trust (--der --out ca.cer)
+dnz filter block-page rotate-ca                            # a new authority; devices must trust it again
+```
+
+`set` changes only what you pass:
+
+| Flag | Meaning |
+| --- | --- |
+| `--proxy` | The proxy that shows the page, by name or id; `none` to clear |
+| `--ipv4`, `--ipv6` | The addresses blocked names answer, comma-separated (`""` for none). Without them, the proxy's |
+| `--proxy-addresses` | Take the addresses from the proxy again |
+| `--title` | The page's title (`""` for the usual one, "Blocked by network policy") |
+| `--message` | The page's message; `{host}` is the blocked name (`""` for the usual one) |
+| `--link` | A *More information* button, such as the network's rules or a help desk (`""` for none) |
+| `--https on\|off` | HTTPS visits get a certificate from DNZ's authority. dnz-proxy only; devices must trust the authority |
+
+`show` lists the proxy, the addresses, the text, whether blocked names answer with the page, and the
+certificate authority's fingerprint. `ca` prints the authority as PEM; `--der` gives DER (`.cer`) and
+`--out` writes it to a file. `dnz filter mode block_page` is refused until a proxy and its addresses
+are set.

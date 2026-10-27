@@ -25,6 +25,9 @@ Traefik would get), and adds what DNZ can do because it controls the proxy:
 - **TCP and UDP** routing.
 - **Status pages**: switch a host to maintenance, blocked, moved and more, and every node shows
   visitors a styled page instead of the backend. See [Status pages](/proxy/status-pages).
+- **DNS filtering's block page**: blocked names point at the proxy, and its nodes show "Blocked by
+  network policy", over HTTPS too for devices that trust DNZ's own authority. See
+  [Block page](/dns/filtering#block-page).
 
 <Note>
   Proxying is off by default. Turn it on under **Settings → Proxy** (or with `DNZ_PROXY_BACKEND=on`),
@@ -551,7 +554,7 @@ not**, **in range**, **contains**, **starts with** or **matches** (a regular exp
 
 | Action | What it does |
 | --- | --- |
-| **Block** | Answers with a status (403 by default) and an optional message |
+| **Block** | Answers with a status (403 by default) and an optional message. Without a message, visitors get a styled **Access blocked** page (**Not available in your region** for a country rule); with one, exactly that text |
 | **Challenge** | The under attack check, below |
 | **Allow** | Skips the rules after it |
 | **Log** | Notes it in the request log and goes on |
@@ -566,7 +569,9 @@ Browsers get a short page that solves a small proof of work. A cookie, signed fo
 network and valid for **Valid for**, then lets them through.
 
 - Bots can be let through by user agent and by address.
-- Requests that aren't a browser page (APIs, forms) get a 403 until a page has been visited.
+- The page shows **Checking your browser** in the style of the status pages, with a request ID.
+- Requests that aren't a browser page (APIs, forms) get a 403 (a page, JSON or text by `Accept`)
+  until a page has been visited.
 - **Difficulty** is in bits: each one doubles the work. 16 takes well under a second.
 
 ### Waiting room (`dnzWaitingRoom`)
@@ -672,8 +677,17 @@ allowed addresses still reach it. Nodes get the change within seconds and keep t
 themselves.
 
 Without any setup, nodes also show styled pages for their own failures: 502 bad gateway, 503 when no
-server is up, 504 gateway timeout. Browsers get HTML, `Accept: application/json` gets JSON, anything
-else plain text. See [Status pages](/proxy/status-pages).
+server is up, 504 gateway timeout. A password, rate limit, allow list or firewall block that turns a
+visitor away answers with such a page too (see
+[Pages for visitors a middleware turns away](/proxy/status-pages#pages-for-visitors-a-middleware-turns-away)).
+Browsers get HTML, `Accept: application/json` gets JSON, anything else plain text. See
+[Status pages](/proxy/status-pages).
+
+When DNS filtering's [block page](/dns/filtering#block-page) uses the proxy, a visit to a host no
+route serves gets the block page (403) instead of a 404. With **HTTPS** on, a name no certificate
+covers gets one made on the spot by DNZ's block page authority (kept for up to 10,000 names, made
+again after 30 days). Those visits are counted in [analytics](#analytics) as one host,
+`(block page)`; the request log keeps the real name.
 
 ## Troubleshooting
 

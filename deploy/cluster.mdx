@@ -13,7 +13,9 @@ one server; move to [Postgres, MySQL or Redis](/deploy/database) first. Redis wo
 underneath: see [On Redis or Valkey](#on-redis-or-valkey).
 
 <Note>
-  A cluster shares everything: zones, users, filtering, forwarding, proxies, settings and query logs.
+  A cluster shares everything (zones, users, filtering, forwarding, proxies, settings, query
+  statistics) but the query log, which each server keeps itself and **DNS → Query Logs** gathers
+  from all of them.
   [Replication](/dns/replication) is the other way to run more nameservers: each server keeps its own
   database and copies zones over AXFR/IXFR, and the secondaries may be any DNS server.
 </Note>
@@ -42,7 +44,7 @@ underneath: see [On Redis or Valkey](#on-redis-or-valkey).
 | DNSSEC key rollovers | The GeoIP database download (each node keeps its own file) |
 | RPZ and blocklist downloads | dnz-proxy configuration streams, the local dnz-proxy |
 | GeoDNS health checks (the others load each up/down flip) | |
-| Query log and session cleanup; the daily summary and NXDOMAIN alert | |
+| Session cleanup, old hourly counts and top lists; the daily summary and NXDOMAIN alert | Deleting its own old [query log](/dns/query-logs) days |
 | Cluster alerts | |
 
 ## Set it up
@@ -110,7 +112,11 @@ connections open, 17 on Postgres.
 
     Open the dashboard and create the first admin ([First run](/get-started/first-run)).
     `DNZ_CLUSTER_ADDRESS` is what the Cluster page shows as the node's address, and the host of its
-    DNS address when DNS listens on `0.0.0.0`.
+    DNS address when DNS listens on `0.0.0.0`. The other nodes also ask it there for its
+    [query log](/dns/query-logs#in-a-cluster) rows, so it must be an address they can reach (an
+    `https://` address needs a certificate from a public CA). Its default comes from `http.addr`,
+    which gives `127.0.0.1` with the systemd unit and the container's host name with Docker: neither
+    works, so always set it.
   </Step>
   <Step title="Add more nodes">
     On each other machine, the same with its own name and address. On `10.0.0.12`:
@@ -240,9 +246,6 @@ the whole database in a SQLite file of its own, the **copy**, and Redis holds th
 
 What is different from Postgres and MySQL:
 
-- **Query logs stay on the node that logged them**, since Redis keeps everything in
-  memory. The Overview's counts and charts are shared; **DNS → Query Logs** shows the node you're
-  on. **Clear log** on DNS → Query Logs empties every node's query log.
 - **Memory**: the snapshot plus up to two snapshot intervals of changes, a few megabytes for a
   typical install. Leave room for two snapshots: the new one is written before the old one goes.
 - **Writes need Redis.** A node that can't reach it keeps answering DNS, serving the dashboard from
@@ -264,8 +267,16 @@ soon after.
 
 ## Good to know
 
-- **Query logs and statistics** are in the shared database: the Overview and the logs show the
-  traffic of all nodes together (on Redis, the logs show the node you're on).
+- **Statistics** (the Overview's counts, charts and top lists) are in the shared database and show
+  the traffic of all nodes together.
+- **Query logs** stay on the node that answered the query, in day files in its data folder
+  (`logs/`), on every database. **DNS → Query Logs** on any node asks every live node for its rows
+  and merges them newest first, with a **Server** column and a picker for one server
+  (`dnz logs --node`, `?node=` in the API). A node that doesn't answer within 4 seconds is named
+  above the list (and in the API's `x-dnz-missing-nodes` header) instead of failing it. **Clear
+  log** empties every node's files. Each node deletes its own old days by its own
+  `log_retention_days`: give the nodes the same value. See
+  [Query logs](/dns/query-logs#in-a-cluster).
 - **GeoIP**: each node keeps its own GeoIP database in its data folder; automatic updates download
   it on every node.
 - **dnz-proxy**: each dnz-proxy node streams its configuration from the DNZ node it connects to.
@@ -274,7 +285,8 @@ soon after.
 - **NOTIFY from a primary** may arrive at any node; the leader transfers the zone within seconds.
 - **Removing a node**: stop it, then remove it under **Settings → Cluster** (or
   `dnz cluster forget`). Nodes not seen for 7 days are removed by themselves.
-- **Containers without a data volume** get a new node id on every start unless `DNZ_NODE_ID` is set.
+- **Containers without a data volume** get a new node id on every start unless `DNZ_NODE_ID` is
+  set, and start their query log over: set it, and keep `/data` on a volume.
 
 ## Troubleshooting
 
@@ -284,6 +296,7 @@ soon after.
 | A node is **down** but answers DNS | It can't write its heartbeat. It keeps answering with what it loaded last; fix its database connection |
 | No leader for more than 20 seconds | No node can write to the database; check the database |
 | Two nodes with the same id | Each node needs its own `DNZ_NODE_ID` or data folder. A copied data folder has the same `node-id` file: delete it on the copy |
+| Query Logs says *No answer from* a node that is up | The node you're on can't reach that node's address (Settings → Cluster) within 4 seconds. Set `DNZ_CLUSTER_ADDRESS` on that node to an address the others can reach (not `127.0.0.1` or a container's host name; `https://` needs a certificate from a public CA). A node already running two searches shows up here too, for that search |
 | A change shows on one node only | Both must use the same `database.url` (`dnz config check` on each); on Redis, the same `namespace` too |
 | Redis: writes fail with "Redis isn't answering" | The node can't reach Redis: check the address, password and firewall (`redis-cli -h … ping` from the node). DNS and reads go on meanwhile |
 | Redis: "another server runs a newer DNZ" | A node on a newer version migrated the data: update this one |

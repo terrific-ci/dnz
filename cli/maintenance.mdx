@@ -1,6 +1,6 @@
 ---
 title: "Maintenance"
-description: "Write and check the configuration, run health checks, print the version and factory-reset a server."
+description: "Write and check the configuration, move to another database, give back SQLite space, run health checks, print the version and factory-reset a server."
 ---
 
 These commands look after the server itself rather than its DNS data. For the settings themselves,
@@ -45,6 +45,47 @@ yet. Afterwards the ids continue after the copied ones and the row counts are co
 SQLite file as a backup, set `database.url` / `DNZ_DATABASE_URL` to the new database and start DNZ.
 On Redis it also saves the first snapshot, which new servers start from.
 See [Database](/deploy/database#move-an-existing-install-from-sqlite).
+
+## Give back SQLite space
+
+A SQLite file keeps its size when rows are deleted. After the upgrade that moved the query log into
+day files of its own ([Query logs](/dns/query-logs#upgrading-to-the-day-files)), `dnz.db` still
+holds the space the old log took. `dnz db vacuum` rewrites the file without it (SQLite's `VACUUM`)
+and prints its size before and after.
+
+<Tabs>
+  <Tab title="systemd">
+    The [systemd unit](/deploy/systemd) runs DNZ as a temporary user, so run the command the same
+    way:
+
+    ```bash
+    sudo systemctl stop dnz
+    sudo systemd-run --wait --pty -p DynamicUser=yes -p User=dnz -p StateDirectory=dnz \
+      -p WorkingDirectory=/var/lib/dnz -E DNZ_DATABASE_URL=sqlite:///var/lib/dnz/dnz.db \
+      -p EnvironmentFile=-/etc/dnz/dnz.env /usr/local/bin/dnz db vacuum
+    sudo systemctl start dnz
+    ```
+  </Tab>
+  <Tab title="Docker">
+    ```bash
+    docker compose stop dnz
+    docker compose run --rm --no-deps dnz db vacuum
+    docker compose start dnz
+    ```
+  </Tab>
+</Tabs>
+
+Like `migrate-from-sqlite`, it works on the file directly (the one in `database.url`):
+
+- **Stop DNZ first.** A running server can't write to the database until it's done, which takes
+  minutes on a file of gigabytes.
+- Run it as the user DNZ runs as, so the file keeps its owner.
+- The disk needs about as much free space as the file.
+- The file is brought up to this version's schema first.
+- `--json` prints `{"file": …, "before_bytes": …, "after_bytes": …}`.
+
+Postgres, MySQL and Redis don't need it: they give the space back on their own, and the command
+stops with an error there.
 
 ## Health check
 

@@ -148,7 +148,14 @@ DNZ translates the proxy's routers, services and middlewares into Caddy's own JS
   as with Traefik; **Add route** makes both in one step.
 - The **entry points** of a Caddy proxy are `web` (:80) and `websecure` (:443).
 - **Order**: exact hosts before wildcards, longer path prefixes first, and a set priority before all
-  of it. A request no route takes gets a 404.
+  of it. A request no route takes gets a 404, or, over plain HTTP, DNS filtering's
+  [block page](/dns/filtering#block-page) when it uses this proxy. HTTPS visits to blocked names are
+  left alone: Caddy would ask Let's Encrypt for a certificate for every one.
+- **Refusals**: an **Only from these addresses** list (`ipAllowList`) answers the visitors it turns
+  away with the styled **Not open to your address** page (unless its reject status is something
+  other than 403), and a **Password** (`basicAuth`) that fails answers with **Sign in to continue**.
+  A backend's own 401 goes out untouched. See
+  [Status pages](/proxy/status-pages#pages-for-visitors-a-middleware-turns-away).
 
 | In DNZ | In Caddy |
 | --- | --- |

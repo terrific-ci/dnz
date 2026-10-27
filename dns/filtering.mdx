@@ -310,9 +310,10 @@ A superadmin sets this in the server-wide scope under **Blocked answers**:
 | --- | --- |
 | **Null IP** (default) | A → `0.0.0.0`, AAAA → `::`, other types get an empty answer. Apps fail right away without trying another resolver. |
 | **NXDOMAIN** | Answered as if the domain didn't exist. |
+| **Block page** | A and AAAA point at a proxy, which shows the visitor a page saying the name is blocked on this network (see [Block page](#block-page)). Other types get an empty answer. |
 
 ```bash
-dnz filter mode nxdomain                       # or null_ip
+dnz filter mode nxdomain                       # or null_ip, block_page
 ```
 
 Blocked answers have a TTL of 60 seconds, so unblocking reaches clients quickly.
@@ -322,13 +323,101 @@ text "Blocked by DNS filtering", so `dig` and resolvers that understand it can t
 missing or broken site.
 
 <Note>
-Browsers don't show the extended error yet: users see their browser's usual "This site can't be
-reached" page, not a "blocked" page.
+Browsers don't show the extended error yet: with **Null IP** or **NXDOMAIN**, users see their
+browser's usual "This site can't be reached" page. The [block page](#block-page) is for showing
+them why.
 </Note>
 
 ```bash
 dig @<dnz> blocked.example A    # ; EDE: 15 (Blocked): (Blocked by DNS filtering)
 ```
+
+### Block page
+
+With **Block page**, blocked names answer with the addresses of a proxy you pick, and the proxy
+answers visits to them with a page (HTTP 403) built from the [status page](/proxy/status-pages)
+template: **Blocked by network policy**, the blocked name, your own message and an optional
+*More information* link (the network's rules, a help desk). JSON and plain-text clients get the same
+in their format.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Open the block page settings">
+        As a superadmin, open **DNS → Filtering**, the server-wide scope, then **Blocked answers** →
+        **Block page**.
+      </Step>
+      <Step title="Pick the proxy showing the page">
+        Any approved proxy. [Proxying](/proxy/overview#turning-proxying-on) must be on.
+      </Step>
+      <Step title="Check the addresses">
+        **IPv4** and **IPv6** are what blocked names answer. They start as the proxy's addresses (a
+        dnz-proxy's healthy nodes). Change them when devices reach the proxy on another address, such
+        as a node's LAN address for clients inside your network. Without an IPv6 address, AAAA gets
+        an empty answer, so clients use IPv4.
+      </Step>
+      <Step title="Write the text">
+        A **title**, a **message** (`{host}` is the blocked name) and a **link**, or leave them empty
+        for the usual ones.
+      </Step>
+      <Step title="Turn it on">
+        Save, then pick **Block page** as the blocked answer.
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz filter block-page set --proxy edge --message "{host} is blocked. Ask IT at ext. 123." --https on
+    dnz filter mode block_page
+    ```
+
+    See [Filtering in the CLI](/cli/filtering#the-block-page).
+
+  </Tab>
+</Tabs>
+
+How each kind of proxy shows it:
+
+| Proxy | Shows the block page |
+| --- | --- |
+| [dnz-proxy](/proxy/dnz-proxy) | For every host none of its routes serve, over HTTP, and over HTTPS with **HTTPS** on |
+| [Traefik](/proxy/traefik) | Over plain HTTP: a router below every other on its HTTP entry point asks DNZ for the page |
+| [Caddy](/proxy/caddy) | Over plain HTTP, in place of its closing 404 |
+
+The addresses are stored, so [secondaries](/dns/replication) answer blocked names the same way. The
+[topology](/dashboard/topology) links filtering to the block page's proxy.
+
+#### HTTPS
+
+Most visits are HTTPS, and a proxy can't hold a valid certificate for a name it doesn't own. With
+**HTTPS** on (dnz-proxy only), DNZ makes its own certificate authority, **DNZ block page CA**, and the
+proxy's nodes make a certificate for each blocked name on the spot, signed by it. Devices that trust
+the authority see the page over HTTPS. Others get a certificate warning instead of the page, as they
+do with Traefik and Caddy.
+
+To trust the authority:
+
+- Download it from `/api/filtering/block-page/ca.crt` (public; `?format=der` gives a `.cer`), or run
+  `dnz filter block-page ca > dnz-block-page-ca.crt`. The dashboard shows the commands for Windows,
+  macOS and Linux with DNZ's address filled in, and the steps for iPhone and Android.
+- On managed devices, push it as a trusted root with your MDM or group policy.
+- Firefox keeps its own list: set `security.enterprise_roots.enabled` to `true`, or import it there.
+
+<Warning>
+  Whoever holds the authority's key can make certificates those devices trust for any site. DNZ keeps
+  it in its database, sends it only to the block page's dnz-proxy nodes, and never to secondaries.
+  **Replace** (or `dnz filter block-page rotate-ca`) makes a new one; devices must then trust the new
+  one.
+</Warning>
+
+Apps that pin their certificates still fail, as they do with any blocked answer.
+
+Visits answered with the block page show up in the proxy's
+[analytics](/proxy/dnz-proxy#analytics) as one host, `(block page)`, so the names it blocks don't
+crowd out the ones it serves. The request log keeps the real name.
 
 ## Check and monitor
 
@@ -339,6 +428,9 @@ dig @<dnz> blocked.example A    # ; EDE: 15 (Blocked): (Blocked by DNS filtering
   checked at the current time. The **Allow** and **Block** buttons add a rule straight away.
 - **Query Logs → All queries → Blocked** lists every blocked query (blocklists and RPZ) with the
   client's IP (see [Query logs](/dns/query-logs)).
+- **DNS → Live Capture** shows the queries holding a few keywords as they arrive, grouped by
+  domain, and blocks a domain (or several at once) straight from the results (see
+  [Live capture](/dns/live-capture)).
 - Every change to lists, rules and networks is recorded in the [audit log](/admin/audit-log).
 
 ## Troubleshooting

@@ -57,7 +57,7 @@ url = "sqlite:///var/lib/dnz/dnz.db"
 | `dns.nameserver` | `DNZ_NAMESERVER` | `ns1.dnz.local` | Nameserver in the generated SOA and NS records |
 | `dns.cache_size` | `DNZ_CACHE_SIZE` | `10000` | Upstream answers kept in the cache (`0` = off) |
 | `dns.rate_limit` | `DNZ_RATE_LIMIT` | `200` | Queries per second per client IP over UDP (`0` = off); see [Rate limiting](/dns/rate-limiting) |
-| `dns.log_retention_days` | `DNZ_LOG_RETENTION_DAYS` | `7` | Query logs older than this are deleted. Hourly counts are kept 400 days |
+| `dns.log_retention_days` | `DNZ_LOG_RETENTION_DAYS` | `7` | Days of query log each server keeps; older day files are deleted (see [Query logs](/dns/query-logs#how-long-data-is-kept)). Hourly counts are kept 400 days |
 | `dns.dns64` | `DNZ_DNS64` | `false` | [DNS64](/dns/resolver-options#dns64) for IPv6-only clients behind NAT64 |
 | `dns.dns64_prefix` | `DNZ_DNS64_PREFIX` | `64:ff9b::/96` | The NAT64 prefix |
 | `dns.dns64_clients` | `DNZ_DNS64_CLIENTS` | – | Client networks DNS64 applies to (empty: every client) |
@@ -136,7 +136,7 @@ They apply until metrics are saved in the dashboard or with `dnz settings metric
 | File key | Environment | Default | Description |
 | --- | --- | --- | --- |
 | `database.url` | `DNZ_DATABASE_URL` | `sqlite://dnz.db` | The database: `sqlite://FILE`, `postgres://…`, `mysql://…` or `redis://…`. See [Database](/deploy/database) |
-| `database.data_dir` | `DNZ_DATA_DIR` | next to the SQLite file | Files kept besides the database (the GeoIP database, the local dnz-proxy's state). With Postgres, MySQL or Redis: the working directory |
+| `database.data_dir` | `DNZ_DATA_DIR` | next to the SQLite file | Files kept besides the database (the [query log](/dns/query-logs#where-the-log-is-kept) in `logs/`, the GeoIP database, the local dnz-proxy's state). With Postgres, MySQL or Redis: the working directory |
 | `sessions.ttl_hours` | `DNZ_SESSION_TTL_HOURS` | `168` | How long a sign-in lasts |
 | `sessions.idle_hours` | `DNZ_SESSION_IDLE_HOURS` | `72` | Sessions unused this long are signed out (`0` = never) |
 

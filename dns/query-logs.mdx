@@ -1,12 +1,15 @@
 ---
 title: "Query logs"
-description: "See which names clients ask for, who answered them, and how long the logs and traffic counts are kept."
+description: "See which names clients ask for and who answered them, search a time window across every server of a cluster, and see where the log is kept and for how long."
 ---
 
 DNZ logs every DNS query it answers: the name and type, the status, who answered it (a local zone,
 an upstream, the cache, a blocklist), the client's address and how long it took. Use the log to
 check that a record is being used, to find a client that keeps asking for a missing name, or to see
 why a site is blocked.
+
+The dashboard's charts and top lists don't read the log: they come from hourly counts in the
+database, kept up as each batch of queries is logged.
 
 ## Open the query log
 
@@ -20,10 +23,17 @@ Open **DNS → Query Logs**. Viewing it needs the `logs.read` permission.
 | **Status** | The answer's result code, such as NOERROR, NXDOMAIN or SERVFAIL |
 | **Answered by** | `local`, `forwarded`, `conditional` (a [forwarding rule](/dns/forwarding#conditional-forwarding)), `cache`, `blocked`, `rpz` (a [response policy zone](/dns/rpz)), `safe_search` ([safe search](/dns/filtering#safe-search)) or `error` |
 | **Client** | The client's IP address |
+| **Server** | In a [cluster](#in-a-cluster): the server that answered the query |
 | **Latency** | Time to answer, in milliseconds |
 
-- Type in **Filter by name or client** to search.
-- Turn on **Live** to refresh the list every 5 seconds, or click **Refresh**.
+- Type in **Filter by name or client** to search. The search starts half a second after the last
+  key.
+- Pick the [time window](#time-window) next to the source filter: the last 24 hours by default.
+- Turn on **Live** to fetch the newest queries every 5 seconds, or click **Refresh**. See
+  [Live](#live).
+- Click **Live capture** to watch the queries holding a few keywords as they arrive, grouped by
+  domain, and block from the results. It carries the search over. See
+  [Live capture](/dns/live-capture).
 - Click **Explain** at the end of a row to see why that client got that answer, step by step (see
   [Query explain](/dns/query-explain)).
 
@@ -56,12 +66,84 @@ Both scopes have a source filter, also opened from the Overview's **Answered by*
 - **Blocked**: every blocked query (blocklists and RPZ), with the client's IP (see [Filtering](/dns/filtering))
 - **Errors**
 
+### Time window
+
+The list covers the **last 24 hours** unless you pick another window:
+
+| Window | Covers |
+| --- | --- |
+| **Last hour** | The last 60 minutes |
+| **Last 24 hours** (default) | The last day |
+| **Last 7 days** | The last week |
+| **All days (slow)** | Every day the server keeps (see [How long data is kept](#how-long-data-is-kept)) |
+| **Custom…** | A **From**–**To** range |
+
+A window only opens the day files it touches, and inside a file reads only the rows of the window.
+**All days** reads every file a search has to go through, which can take minutes on a big log, so
+the page warns about it. Without a search, every window shows its newest queries, as usual.
+
+### Two searches at a time
+
+A **search** is a list with a filter: a name or client to look for, one client, or a kind of answer
+(*Forwarded*, *Blocked* and so on). A search may have to read far back through the log, so each
+server runs at most **two** at once. A third one, while two are running, is turned away at once:
+the page shows *A search is still running* with a **Try again** button, and `dnz logs` prints the
+same message.
+
+The newest queries without a filter (the Live list, the Overview's recent queries) are never turned
+away. A few people searching at once can slow each other down, but never sign-in, the dashboard,
+sync jobs or logging itself.
+
+### Live
+
+With **Live** on, the page fetches the newest queries every 5 seconds, but never sends a new
+request while the last one is still on its way.
+
+- Live pauses while a search or filter is set (the switch shows *Paused while filtering*) and
+  resumes when they are cleared.
+- Picking **All days** or **Custom…** turns Live off.
+
+## In a cluster
+
+Each server of a [cluster](/deploy/cluster) keeps the queries it answered in files of its own. A list
+asked on any server (the page, `dnz logs`, the API or the MCP tool `query_log`) asks every other live
+server for its rows at the same time, with the same filters and your own sign-in, and merges them
+newest first:
+
+- Each row names the server that answered it: the **Server** column on the page, `node` (its name)
+  and `node_id` in the API.
+- The **Server** picker next to the time window shows one server, or **All servers**.
+  `dnz logs --node ns2`, `?node=ns2` in the API and the MCP tool's `node` do the same.
+- A server that is down, doesn't answer within 4 seconds, or turns the request away (two searches
+  already running there, say) doesn't fail the list. The page says *No answer from: ns2*, and the
+  API names it in the `x-dnz-missing-nodes` header. Only that server's queries are missing from that
+  list.
+
+The servers reach each other at the address **Settings → Cluster** shows for each of them
+(`DNZ_CLUSTER_ADDRESS`). Set it on every node to an address the others can reach.
+
+<Warning>
+  The default address comes from `http.addr`: `127.0.0.1` with the [systemd unit](/deploy/systemd),
+  the container's host name with Docker. Neither works from another server, so set
+  `DNZ_CLUSTER_ADDRESS` (for example `http://10.0.0.12:8080`). An `https://` address needs a
+  certificate from a public CA.
+</Warning>
+
+A search across the cluster runs on every server it asks, and counts towards each one's two searches
+at once.
+
+Two things read only the log of the server they run on: the domain suggestions when adding a
+[forwarding rule](/dns/forwarding) (the last 7 days; they count as a search too) and the names and
+clients an NXDOMAIN spike [alert](/integrations/notifications) lists (on the leader, so its share of
+the queries). The alert's counts, like the charts, cover every server.
+
 ## Clear the log
 
 Superadmins can empty the log at once with **Clear log** at the top of **DNS → Query Logs**. It
 deletes every logged query, for every division and on every server of a
-[cluster](/deploy/cluster), together with the dashboard's top names and clients, which come from
-the log. The hourly query counts behind the charts stay, since they hold no names or clients.
+[cluster](/deploy/cluster) (each server's day files), together with the dashboard's top names and
+clients, which come from the log. The hourly query counts behind the charts stay, since they hold no
+names or clients.
 
 <Warning>
   Clearing can't be undone. Each clear is in the [audit log](/admin/audit-log) as `logs.clear`, with
@@ -69,9 +151,9 @@ the log. The hourly query counts behind the charts stay, since they hold no name
 </Warning>
 
 From the terminal, `dnz logs --clear` does the same (it asks first; `--yes` skips the question),
-and scripts can call `DELETE /api/logs` with a superadmin session, which answers
-`{"deleted": 5678}`. Old queries also go on their own after the retention period (see
-[How long data is kept](#how-long-data-is-kept)).
+and scripts can call `DELETE /api/logs` with a superadmin session. It answers `{"deleted": 5678}`,
+the queries deleted on the server you asked. Old days also go on their own after the retention
+period (see [How long data is kept](#how-long-data-is-kept)).
 
 ## From the command line
 
@@ -83,6 +165,9 @@ and scripts can call `DELETE /api/logs` with a superadmin session, which answers
     dnz logs --query example.com --source forwarded
     dnz logs --client 192.168.1.20
     dnz logs --division it
+    dnz logs --query example.com --range 7d
+    dnz logs --since 2026-10-20T00:00:00+07:00 --until 2026-10-21T00:00:00+07:00
+    dnz logs --node ns2                         # one server of a cluster
     ```
 
     | Option | Meaning |
@@ -92,7 +177,15 @@ and scripts can call `DELETE /api/logs` with a superadmin session, which answers
     | `--client` | Only this client address |
     | `--source` | `local`, `forwarded`, `cached`, `blocked`, `error`, or one source such as `conditional` |
     | `-d`, `--division` | Only this division's queries: its zones and its client networks. Superadmins see every query without it. |
+    | `--range` | `1h`, `24h` (default), `7d` or `all` |
+    | `--since`, `--until` | RFC 3339 times instead of `--range`; without `--since`, the range reaches back from `--until` |
+    | `--node` | One server of a cluster, by its id from `dnz cluster` |
     | `--clear` | Delete every logged query instead (superadmins), see [Clear the log](#clear-the-log) |
+
+    In a cluster the list has a `SERVER` column when the rows come from more than one server, and
+    servers that didn't answer in time are named in a warning on stderr. `--query`, `--client` and
+    `--source` make it a [search](#two-searches-at-a-time): while two others run on a server, it
+    stops with "A log search is still running; try again in a moment."
 
   </Tab>
   <Tab title="Traffic summary">
@@ -119,10 +212,99 @@ and scripts can call `DELETE /api/logs` with a superadmin session, which answers
   </Tab>
 </Tabs>
 
-See [CLI: monitoring](/cli/monitoring) for every option. Scripts can also read a division's log
-over the API with a token that has `logs.read`: `GET /api/divisions/{id}/logs?q=&source=&limit=`, and
-its traffic summary from `GET /api/divisions/{id}/stats?range=24h` (see
-[API overview](/api/overview)).
+See [CLI: monitoring](/cli/monitoring) for every option. An AI assistant reads the log with the MCP
+tool `query_log`, which takes the same window, filters and `node` (see
+[AI assistants](/integrations/ai-assistants)).
+
+## API
+
+| Method | Path | Permission | |
+| --- | --- | --- | --- |
+| `GET` | `/api/divisions/{id}/logs` | `logs.read` | The division's queries: names in its zones, and what clients in its client networks asked |
+| `GET` | `/api/logs` | `logs.server` (a sign-in, not an API token) | Every query the servers answered |
+| `DELETE` | `/api/logs` | superadmin | Clear the log on every server |
+
+Both lists take:
+
+| Parameter | |
+| --- | --- |
+| `limit` | Rows, newest first: default 100, at most 1000 |
+| `q` | Name or client contains this |
+| `client` | Exactly this client address |
+| `source` | A kind of answer (`local`, `forwarded`, `cached`, `blocked`, `error`) or one source, such as `conditional` |
+| `range` | `1h`, `24h` (the default), `7d` or `all` |
+| `since`, `until` | RFC 3339 times instead of `range`; without `since`, the range reaches back from `until` |
+| `node` | One server of a cluster, by node id; default: every server |
+
+An [API token](/api/overview) with `logs.read` can read its division's log:
+
+```bash
+curl -i -H "Authorization: Bearer dnz_…" \
+  "https://dns.example.com/api/divisions/1/logs?q=example.com&range=7d"
+```
+
+```
+HTTP/1.1 200 OK
+x-dnz-missing-nodes: ns3
+
+[
+  {
+    "id": 207530000004321,
+    "zone_id": null,
+    "name": "www.example.com",
+    "qtype": "A",
+    "client": "192.168.1.20",
+    "rcode": "NOERROR",
+    "source": "upstream",
+    "duration_ms": 14,
+    "created_at": "2026-10-27T08:15:02Z",
+    "node": "ns1",
+    "node_id": "ns1"
+  }
+]
+```
+
+- The body is a plain array. `x-dnz-missing-nodes` (server names, comma-separated) is only there
+  when a server of the cluster didn't answer.
+- Ids are unique per server, not across a cluster.
+- `q`, `client` and `source` make a list a search. While two others run on the server, it gets:
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 2
+
+{"error": "A log search is still running; try again in a moment."}
+```
+
+A division's traffic summary is at `GET /api/divisions/{id}/stats?range=24h`.
+
+## Where the log is kept
+
+Each server keeps its own query log in local files, **one SQLite file per day** (UTC), whatever
+database DNZ uses (SQLite, Postgres, MySQL or Redis / Valkey):
+
+```
+<data folder>/logs/2026-10-26.db
+<data folder>/logs/2026-10-27.db
+```
+
+| Install | Folder |
+| --- | --- |
+| [systemd unit](/deploy/systemd) | `/var/lib/dnz/logs` |
+| [Docker image](/deploy/docker) | `/data/logs` (in the `dnz-data` volume) |
+| Otherwise | `logs` in `database.data_dir` (`DNZ_DATA_DIR`): next to `dnz.db` with SQLite, the working directory with Postgres, MySQL or Redis |
+
+The log is never in the main database, and never shared through it in a cluster. The main database
+keeps the hourly query counts behind the charts and the top names and clients, shared by every
+server of a cluster.
+
+The day files have connections of their own: one writer for today's file, and read-only readers for
+each day a search reads. A search can only ever wait on another search, never hold up the rest of
+DNZ.
+
+Queries are written in batches by a background task, every second or every 500 queries, so answering
+never waits on the disk. If the writer falls behind, queries are left out of the log and counted
+(`dnz_query_log_dropped_total`) instead of slowing DNS down.
 
 ## How long data is kept
 
@@ -130,14 +312,15 @@ DNZ keeps three kinds of data:
 
 | Data | Kept for | Used by |
 | --- | --- | --- |
-| The query log (one row per query) | `DNZ_LOG_RETENTION_DAYS`, **7 days** by default | The Query Logs page, `dnz logs` |
+| The query log (one row per query, in day files on each server) | `DNZ_LOG_RETENTION_DAYS`, **7 days** by default | The Query Logs page, `dnz logs`, the API and MCP |
 | Hourly top names and clients (the busiest 1,000 of each per hour and division) | As long as the query log | Top names and clients on the dashboard and in `dnz stats` |
 | Hourly query counts | **400 days** | Dashboard charts (back to 90 days) and the counts in `dnz stats` |
 
-Queries are written to the log in batches, and rows older than the retention period are deleted.
-Top names and clients are counted as queries come in, so the dashboard reads a few thousand rows
-instead of the whole log. After an upgrade to a version that has them, DNZ rolls up the log it
-already has in the background, the newest hour first.
+At start and then every hour, each server deletes its own day files older than the retention period,
+one whole file at a time; today's file is never deleted. Nothing is deleted row by row, so pruning
+never holds up logging or searches. Top names and clients are counted as queries come in, so the
+dashboard reads a few thousand rows instead of the whole log.
+
 Change the period in the config file or the environment:
 
 ```toml /etc/dnz/dnz.toml
@@ -150,10 +333,51 @@ DNZ_LOG_RETENTION_DAYS=30
 ```
 
 <Note>
+  Every server reads the retention from its own configuration: give the servers of a cluster the
+  same value.
+</Note>
+
+<Note>
   The top names and clients in `dnz stats` come from the query log, so they cover at most
   `log_retention_days`, even when you ask for `--range 90d`. The counts come from the hourly totals
   and cover the whole range.
 </Note>
+
+## Disk, volumes and backups
+
+- With Docker, Kubernetes or any other container, keep the data folder on a volume (the image's
+  `/data` is one), whatever the database: otherwise every restart starts with an empty log.
+- The files take what a day of traffic takes, times the retention. To keep less, lower
+  `log_retention_days`.
+- DNZ's own [backups](/admin/backups) never include the log files, and a restore leaves them as they
+  are. A file-level backup of the data folder may leave out `logs/` too: nothing but the log is in it.
+- On Linux, DNZ drops the kernel's cache of the log files a while after the last search, so
+  `docker stats` stays close to what DNZ itself uses. See
+  [Query log file cache](/admin/settings#query-log-file-cache).
+
+[Prometheus](/dashboard/prometheus) shows each server's log:
+
+| Metric | Type | |
+| --- | --- | --- |
+| `dnz_query_log_bytes` | gauge | Size of this server's log files (`<data dir>/logs/`), their WAL included |
+| `dnz_query_log_files` | gauge | Day files kept (one per UTC day) |
+| `dnz_query_log_dropped_total` | counter | Queries left out of the log because the writer fell behind |
+| `dnz_query_log_searches_rejected_total` | counter | Searches turned away because two were still running on this server |
+
+## Upgrading to the day files
+
+Before DNZ kept the log in day files, it was a table in the main database. On a busy server it grew
+to gigabytes, and a few long searches at once could take every database connection, so sign-in, the
+dashboard and sync jobs timed out.
+
+The first start on a version with day files empties the old `query_logs` table. Nothing is copied
+into the day files: Query Logs starts empty and fills up from then on. The charts and top lists keep
+their history, since they come from the hourly counts.
+
+Postgres and MySQL give the table's space back at once. With SQLite, `dnz.db` keeps its size: DNZ
+reuses the emptied space but doesn't give it back to the disk. To give it back, stop DNZ and run
+`dnz db vacuum` (see [Give back SQLite space](/cli/maintenance#give-back-sqlite-space)). It needs
+about as much free disk as the file, and can take minutes for gigabytes.
 
 <CardGroup cols={2}>
   <Card title="Monitoring" icon="chart-line" href="/dashboard/monitoring">

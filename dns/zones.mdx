@@ -97,7 +97,7 @@ fields:
 
 | Field | What it does |
 | --- | --- |
-| **Type** | One of the types above. |
+| **Type** | One of the types above. The list is searchable, also by what a type holds: `ipv6` finds AAAA, `mail` finds MX. |
 | **Name** | Relative to the zone: `www`, or `@` for the zone apex. |
 | **Value** | The record's content. The label changes with the type (IPv4 address, Target, Mail server…). |
 | **Priority** | MX and SRV only. |
@@ -112,7 +112,8 @@ fields:
     - **Add record**: fill in the form and save.
     - **Edit**: click a record row.
     - **Search**: the search box matches the name or the content. **Filter** narrows the list by
-      type, on/off and tags.
+      type, on/off and tags, and, when [views](/dns/views) exist, by view: **Any view**, **All
+      clients** (records every client gets) or **Only** one view, each with its count.
     - **Turn off / Turn on**: the switch on each row.
     - **Delete**: open the record and click **Delete**. It stops resolving immediately.
 
@@ -178,8 +179,8 @@ dnz record list example.com --group    # one row per name and type, with all its
 ### View-only records
 
 When the server has [views](/dns/views), the **Answer** field lets a record be answered only to
-clients in one view. Such records carry a badge with the view's name in the table. In the CLI, add
-`--view`:
+clients in one view. Such records carry a badge with the view's name in the table; click it to show
+only that view's records, and again to show them all. In the CLI, add `--view`:
 
 ```bash
 dnz record add example.com intranet A 10.1.1.1 --view lan

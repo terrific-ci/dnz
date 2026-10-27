@@ -51,7 +51,7 @@ Every change made with a token appears in the [audit log](/admin/audit-log) as
 
 ### What a token can reach
 
-Tokens can only call the **zone, record, query log and ACME** endpoints, the Dynamic DNS
+Tokens can only call the **zone, record, query log, live capture and ACME** endpoints, the Dynamic DNS
 endpoint, and pushing a DHCP server's lease file and reading leases and IPAM ([DHCP](/api/dhcp)). Account, user, role and settings endpoints always need a normal sign-in.
 
 AI assistants that sign in over OAuth for MCP get tokens starting with `dnzo_` that act as the user who allowed them; see [AI assistants (MCP)](/integrations/ai-assistants#what-an-oauth-sign-in-may-do) for what they may call.
@@ -61,7 +61,7 @@ AI assistants that sign in over OAuth for MCP get tokens starting with `dnzo_` t
 | `zones.read` | List zones, read records, tags and zone files, refresh secondary zones |
 | `zones.write` | Create, change and delete zones |
 | `records.write` | Create, change and delete records, ACME challenges and Dynamic DNS |
-| `logs.read` | Read the query log of the division's zones |
+| `logs.read` | Read the query log of the division's zones and client networks ([Query logs API](/dns/query-logs#api)), and capture the division's queries live with `POST /api/capture` ([Live capture](/dns/live-capture#api)) |
 
 ## Authentication
 
@@ -96,6 +96,7 @@ Errors come back as JSON with an HTTP status:
 | `403` | The token or user lacks the permission |
 | `404` | The zone or record doesn't exist |
 | `409` | A conflict: a duplicate record, a CNAME next to other data |
+| `429` | Too busy right now, for example a [query log search](/dns/query-logs#two-searches-at-a-time) while two others run on the server. Wait the seconds in `Retry-After` and try again |
 
 ## Example: adding a record
 
@@ -127,14 +128,19 @@ Find a zone's id with `GET /api/divisions/{id}/zones`, or with `dnz --json zone 
   <Card title="Query explain" icon="route" href="/api/query-explain">
     The decision path of one query and the answer it gets, without logging or caching it.
   </Card>
+  <Card title="Live capture" icon="satellite-dish" href="/dns/live-capture#api">
+    `POST /api/capture`: the queries matching keywords as server-sent events. Needs `logs.read`
+    with a `division_id`, or `logs.server` for the whole server.
+  </Card>
   <Card title="Filtering" icon="filter" href="/api/filtering">
-    Blocklists, rules, client groups, schedules, safe search and response policy zones.
+    Blocklists, rules, client groups, schedules, safe search, the block page and response policy
+    zones.
   </Card>
   <Card title="DHCP and IPAM" icon="network-wired" href="/api/dhcp">
     DHCP servers, lease file pushes, leases, subnets and conflicts.
   </Card>
   <Card title="Settings" icon="gear" href="/api/settings">
-    Response rate limiting and the GeoIP database.
+    Response rate limiting, the query log file cache and the GeoIP database.
   </Card>
   <Card title="Proxy" icon="cloud" href="/api/proxy">
     Proxies, routers, services and middlewares.

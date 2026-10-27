@@ -32,8 +32,8 @@ nsid = "dns-1"        # true: the hostname; empty or false: off
 
 ## Clear the cache
 
-**Clear cache** in the **DNS cache** card on **DNS → Forwarding** drops every cached answer at
-once, for example after a record changed at another provider and you don't want to wait for its
+**Clear cache** in the **DNS cache** card on **DNS → Forwarding** (or **Clear DNS cache** in Find,
+`⌘K` / `Ctrl+K`) drops every cached answer at once, for example after a record changed at another provider and you don't want to wait for its
 TTL. It works with upstream resolvers and in recursive mode, empties the recursive resolver's caches
 too (records, zone cuts and server timings), and in a [cluster](/deploy/cluster) every node clears
 its own cache. The next lookups go to the upstreams (or the root servers) again, so they take a
