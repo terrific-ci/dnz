@@ -30,6 +30,28 @@ dnz logs --division it
 dnz logs --clear --yes
 ```
 
+## Live capture
+
+```bash
+dnz capture tiktok facebook                 # every matching query, until Ctrl-C
+dnz capture tiktok --group                  # each domain once, when it first shows up
+dnz capture --client 192.168.1.20 --for 2m  # everything one device asks, for two minutes
+dnz capture ads --division it --json        # one JSON object per query
+```
+
+Shows the queries whose name holds any keyword as the server answers them (no keywords: every
+query). When it ends (Ctrl-C or `--for`), the domains seen are listed busiest first with query,
+name, client and blocked counts; block one with `dnz filter rule block <domain>`.
+
+| Flag | |
+| --- | --- |
+| `-d`, `--division` | Only this division's queries: its zones and its client networks (default for superadmins: every query) |
+| `--client` | Only this client address |
+| `--for` | Stop after this long (`90s`, `10m`, `1h`); default: until Ctrl-C |
+| `-g`, `--group` | Print each domain once when it first shows up, instead of every query |
+
+See [Live capture](/dns/live-capture).
+
 ## Query explain
 
 `dnz query explain` follows one query through the server and prints each step and the answer it

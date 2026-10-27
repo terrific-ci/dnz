@@ -10,6 +10,7 @@ For what the steps mean, see [Query explain](/dns/query-explain).
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
 | `GET` | `/api/query/explain?name=&type=&client=&protocol=&dnssec=&ask_upstreams=` | `logs.read` or `logs.server` | The path one query takes through the server, and its answer |
+| `POST` | `/api/capture` | `logs.read` (with `division_id`) or `logs.server` | Live capture: the queries matching keywords as server-sent events (see [Live capture](/dns/live-capture#api)) |
 
 | Parameter | |
 | --- | --- |

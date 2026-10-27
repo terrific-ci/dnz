@@ -91,6 +91,7 @@
               "dns/resolver-options",
               "dns/query-logs",
               "dns/query-explain",
+              "dns/live-capture",
               "dns/filtering",
               "dns/rpz",
               "dns/threats",
