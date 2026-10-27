@@ -42,6 +42,7 @@ until you confirm.
 (**Export all zones** under **Settings → Backups**: every division). From the CLI,
 `dnz zone export --all` (`--division` for one division); from the API, `GET /api/export/zones`
 (`?division=`). It's a readable copy, not a [backup](/admin/backups): no keys, settings or history.
+To bring it back in, see [Import many zones at once](#import-many-zones-at-once).
 
 ## Import into an existing zone
 
@@ -88,7 +89,7 @@ until you confirm.
 <Tabs>
   <Tab title="Dashboard">
 
-    On **DNS → Zones**, click **Import zone**, add the file, and preview. The **Zone name** is
+    On **DNS → Zones**, click **Import zones**, add the file, and preview. The **Zone name** is
     optional if the file has `$ORIGIN`. The preview says it **creates local zone** *name*.
 
     This needs both `zones.write` and `records.write`.
@@ -102,6 +103,73 @@ until you confirm.
 
   </Tab>
 </Tabs>
+
+## Import many zones at once
+
+Bring back the zip from **Export all**, or move a whole BIND, Knot or PowerDNS server in one go.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    <Steps>
+      <Step title="Open the import dialog">
+        On **DNS → Zones**, click **Import zones** and open the **Many zones** tab.
+      </Step>
+      <Step title="Choose the files">
+        Click **Choose files** and pick the zip (any zip of BIND zone files), or several zone files
+        at once.
+      </Step>
+      <Step title="Choose what happens to zones that already exist">
+        **Skip** leaves them as they are (only new zones are created). **Merge** adds the file's
+        records next to the zone's own. **Replace records** deletes the zone's records and keeps the
+        file's.
+      </Step>
+      <Step title="Preview">
+        Click **Preview**. Every file is listed with what it does: **New zone**, **Adds to the zone**,
+        **Replaces its records**, skipped or can't be imported (with the reason). Open **Skipped** on
+        a zone to see the records it leaves out. Untick zones you don't want.
+      </Step>
+      <Step title="Import">
+        Click **Import N zones**. Each zone succeeds or fails on its own; **Open** goes to a zone.
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz zone import-bundle dnz-zones-20261027.zip             # previewed, then asks
+    dnz zone import-bundle /etc/bind/zones --division it      # every file in a folder
+    dnz zone import-bundle zones.zip --existing merge --dry-run
+    dnz zone import-bundle zones.zip --only example.com,example.org
+    ```
+
+  </Tab>
+  <Tab title="API">
+
+    ```bash
+    curl -X POST -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/zip" \
+      --data-binary @dnz-zones.zip \
+      "https://dns.example.com/api/divisions/1/zones/import-bundle?existing=skip&apply=true"
+    ```
+
+    Leave out `apply=true` to preview. See [Zones API](/api/zones#import-many-zones).
+
+  </Tab>
+</Tabs>
+
+- Each file becomes a zone named by its `$ORIGIN`, else by the file name (`example.com.zone`,
+  `db.example.com`, `example.com`).
+- A leading `$TTL` in seconds becomes the new zone's [default TTL](/dns/zones#default-ttl); DNZ's own
+  export writes it that way, so an export comes back as it was. Otherwise the default is 300.
+- A file that names the same zone as an earlier one is skipped. A zone that exists in another division
+  can't be imported.
+- With [change approval](/dns/history#change-approval) on, a merge or replace waits as a change request per
+  zone.
+- Up to 64 MB per import, 128 MB unpacked and 1,000 files. Hidden files and macOS `__MACOSX` folders
+  in a zip are ignored.
+- Creating zones needs `zones.write` and `records.write`; merging or replacing needs `records.write`
+  on those zones.
 
 ## What an import skips
 

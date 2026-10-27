@@ -35,11 +35,19 @@ dnz zone add --file example.com.zone          # a new zone from a BIND file (nam
 dnz zone export example.com -o example.com.zone
 dnz zone import example.com extra.zone --dry-run
 dnz zone import example.com extra.zone --replace
+dnz zone import-bundle dnz-zones.zip          # many zones at once (like export --all gives)
+dnz zone import-bundle /etc/bind/zones --existing merge --dry-run
 ```
 
 `zone import` adds records from a BIND zone file and shows a preview first. `--dry-run` only shows
 what would change; `--replace` deletes the zone's current records first. Use `-` as the file name to
 read from standard input. `zone export` prints to standard output unless you give `-o`.
+
+`zone import-bundle` imports many zones in one go: a zip of BIND files, a folder of them, or several
+files. Each file becomes a zone (named by `$ORIGIN`, else by the file name). Zones the division
+already has are skipped unless `--existing merge` or `--existing replace`; `--only a.com,b.com` takes
+just those zones and `--division` picks the division. It shows a table of what each file would do and
+asks first; `--dry-run` only shows it.
 
 ### Turning a zone off
 
