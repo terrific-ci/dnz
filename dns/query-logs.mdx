@@ -23,6 +23,11 @@ Open **DNS → Query Logs**. Viewing it needs the `logs.read` permission.
 | **Latency** | Time to answer, in milliseconds |
 
 - Type in **Filter by name or client** to search.
+- Pick how far back the list and its search go: **Last hour**, **Last 24 hours** (the default),
+  **Last 7 days**, **All days** or **Custom…** (a From and To time, in your browser's time zone).
+  The log's index on time keeps a search inside that window, so a day's search reads a day of
+  the log. **All days** reads the whole log: on a busy server with a few GB of log that can take
+  minutes, and the page warns about it and pauses Live. Rows from another day show their date.
 - Turn on **Live** to refresh the list every 5 seconds, or click **Refresh**.
 - Click **Live capture** to watch the queries matching your search as they arrive, grouped by
   domain, and block them from there (see [Live capture](/dns/live-capture)).
@@ -94,6 +99,8 @@ and scripts can call `DELETE /api/logs` with a superadmin session, which answers
     | `--client` | Only this client address |
     | `--source` | `local`, `forwarded`, `cached`, `blocked`, `error`, or one source such as `conditional` |
     | `-d`, `--division` | Only this division's queries: its zones and its client networks. Superadmins see every query without it. |
+    | `--range` | How far back: `1h`, `24h` (default), `7d` or `all` |
+    | `--since`, `--until` | A window of RFC 3339 times instead, e.g. `--since 2026-10-20T00:00:00+07:00` |
     | `--clear` | Delete every logged query instead (superadmins), see [Clear the log](#clear-the-log) |
 
   </Tab>
