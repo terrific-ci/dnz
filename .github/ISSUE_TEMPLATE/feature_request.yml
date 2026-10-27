@@ -1,0 +1,53 @@
+name: 🚀 Feature request
+description: Suggest something new for DNZ, or a change to something that exists
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the idea. Please search the existing issues first.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve?
+      description: What you are trying to do and what gets in the way today.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to happen?
+      description: How it could work, in the UI, CLI or API.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - DNS answers / zones / records
+        - Forwarding / cache / filtering
+        - Secondaries / replication / cluster
+        - Proxy (dnz-proxy, Caddy, Traefik)
+        - Web UI
+        - CLI
+        - HTTP API / MCP
+        - Integrations (Cloudflare, ExternalDNS, ...)
+        - Query logs / metrics
+        - Install / upgrade
+        - Other
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Workarounds you use now, or how other tools solve it.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Links, examples, screenshots.
