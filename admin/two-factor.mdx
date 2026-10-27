@@ -90,6 +90,12 @@ Servers sharing one database share everything. A secondary that copies its prima
 copies their second factors too: the authenticator app and recovery codes work there as well;
 a copied passkey only works on the same host name.
 
+A copied account can add its own passkeys on the secondary, for the secondary's host name, under
+**Account → Two-factor**; syncs keep them. Add one on every secondary you might promote: after a
+promote, the passkeys copied from the old primary only work if the server is reached under the old
+primary's name. The sign-in page then offers no passkey and names the hosts yours belong to; sign in
+with the authenticator app or a recovery code and add a passkey for the new address.
+
 ## What DNZ stores
 
 The authenticator app's secret (it has to be readable to check codes; protect the database and its
