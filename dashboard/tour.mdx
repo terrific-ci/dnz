@@ -15,6 +15,10 @@ From left to right:
   You only see the divisions you're assigned to; superadmins see them all.
 - **The menu**: Overview, Topology, DNS, Proxy, Access, Settings.
 - **Find** (`⌘K` on macOS, `Ctrl+K` elsewhere): jump to any page, zone or setting by typing.
+  Settings open their page and scroll to the card, and each knows the words people search by:
+  `clear cache` finds **DNS cache**, `whitelist` finds the block and allow rules, `2fa`, `doh`,
+  `tsig` or `grafana` find theirs. Words match in any order (`cache dns`). Find also runs **Clear
+  DNS cache** and opens **your account** (password, two-factor).
 - **Health** (superadmins): whether the forward DNS upstreams are up, which one is resolving now
   and which takes over next.
 - **Create New**: a zone, user, role, division or notification provider, depending on what you may
