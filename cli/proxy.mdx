@@ -115,6 +115,8 @@ every zone, or one the proxy already routes, is refused, and the closest names a
 | `--rate-limit` | Requests a second per visitor, optionally with a burst: `100` or `100/300` |
 | `--user` | `NAME:PASSWORD` for a password; repeat for more. Only a bcrypt hash is kept |
 | `--allow` | Only these addresses or ranges get through; repeat for more |
+| `--request-header` | `NAME=VALUE` set on requests to the upstreams; `NAME=` removes the header; repeat for more |
+| `--response-header` | `NAME=VALUE` set on answers to visitors; `NAME=` removes the header; repeat for more |
 | `-m`, `--middleware` | Another middleware by name or id, in order; repeat for more |
 | `--no-dns` | Leave the DNS record alone |
 | `--strategy` | How the upstreams share visits: `wrr` (default), `p2c`, `hrw` or `leasttime` |
@@ -125,7 +127,12 @@ every zone, or one the proxy already routes, is refused, and the closest names a
 `routes edit` changes only what you pass: `--add-host`, `--remove-host`, `-u` (replacing the
 upstreams), `--https on|off`, `--redirect on|off`, `--path`, `--enabled on|off`, the switches above,
 and `--no-cache`, `--no-firewall`, `--no-challenge`, `--no-waiting-room`, `--no-rate-limit`, `--no-password`,
-`--remove-user NAME`, `--no-allow`. A route set up under **Advanced** is refused with the reason.
+`--remove-user NAME`, `--no-allow`, `--drop-request-header NAME`, `--drop-response-header NAME`,
+`--no-headers`. A route set up under **Advanced** is refused with the reason.
+
+```bash
+dnz proxy routes edit edge app.example.com --request-header X-Env=production --response-header Server=
+```
 
 HTTPS with a redirect from `http://` is the default. On a dnz-proxy proxy its certificate comes by
 itself once [automatic certificates](#certificates) are set up; until then it gets a temporary one.

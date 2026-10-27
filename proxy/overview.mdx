@@ -139,11 +139,13 @@ The switches are each the route's own middleware, made and removed with it:
 | **Rate limit** | Requests a second per visitor, with a burst |
 | **Password** | Users added by name and password; only a bcrypt hash is kept |
 | **Only from these addresses** | Addresses or ranges; everyone else gets 403 |
+| **Custom headers** | Headers set on requests **to the servers** and on answers **to visitors**; an empty value removes the header (e.g. `Server`) |
 | **Under attack check** (dnz-proxy) | Browsers solve a short check once |
 | **Waiting room** (dnz-proxy) | Past a number of visitors in at once, new ones wait in line; or everyone waits until you open. See [Waiting room](/proxy/dnz-proxy#waiting-room-dnzwaitingroom) |
 
-They run with the address list, firewall and check first, then the waiting room, rate limit and
-password, and the cache last, so only visits let through ever see a cached answer. A route's ⋯ menu
+They run with the address list, firewall and check first, then the waiting room, rate limit,
+password and custom headers, and the cache last, so only visits let through ever see a cached
+answer (and cached answers get the custom headers too). Custom headers work on every proxy kind. A route's ⋯ menu
 also sets a hostname's [status page](/proxy/status-pages) and clears its cache.
 
 DNZ then:
