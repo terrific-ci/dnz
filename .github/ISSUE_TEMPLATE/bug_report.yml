@@ -1,0 +1,105 @@
+name: 🐛 Bug report
+description: Something in DNZ doesn't work as it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please search the existing issues first.
+        Remove secrets (API tokens, join secrets, passwords) from anything you paste.
+
+  - type: input
+    id: version
+    attributes:
+      label: DNZ version
+      description: The output of `dnz --version`, or the image tag you run.
+      placeholder: dnz 1.16.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run DNZ?
+      options:
+        - Docker / Docker Compose
+        - Docker Swarm
+        - Binary with systemd
+        - Binary, other
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      options:
+        - SQLite (default)
+        - PostgreSQL
+        - MySQL / MariaDB
+        - Redis / Valkey
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - DNS answers / zones / records
+        - Forwarding / cache / filtering
+        - Secondaries / replication / cluster
+        - Proxy (dnz-proxy, Caddy, Traefik)
+        - Web UI
+        - CLI
+        - HTTP API / MCP
+        - Integrations (Cloudflare, ExternalDNS, ...)
+        - Query logs / metrics
+        - Install / upgrade
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: For Linux and macOS, the output of `uname -mprs`.
+      placeholder: Linux 6.8.0-45-generic x86_64
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you did, step by step. Commands, `dig` queries or API calls are best.
+      placeholder: |
+        1. Create a zone `example.com` with an A record `www` → 10.0.0.5
+        2. Run `dig @dnz-host www.example.com A`
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Please paste text rather than a screenshot where you can.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Please paste text rather than a screenshot where you can.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant server output (`docker logs dnz`, `journalctl -u dnz`). Formatted as code automatically.
+      render: shell
