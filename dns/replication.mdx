@@ -265,6 +265,16 @@ For example, the primary's DNS is `10.0.100.201` and its UI is served at
 
 - In Docker (bridge network) the interfaces are the container's own. Set the Device address (or
   `DNZ_ADVERTISE`) on both servers to the host's LAN IP.
+- An address that is the secondary's own (one of its interfaces, its Device address or loopback,
+  on its DNS port) is never where it copies from. Two Docker hosts give their containers the same
+  bridge address (`172.18.0.2`), so a primary that reports its container's address would point a
+  secondary in a container on another host at itself. When that is all the primary reports, the
+  join is refused and asks for the primary's Device address.
+- A secondary that can't copy (the catalog or a zone fails) hears at its check-in, every minute,
+  where the primary's DNS answers now. When none of the addresses it copies from answers any more
+  and a reported one does, it copies from that one instead. So setting the primary's Device
+  address afterwards is enough; the secondary picks it up within a minute. Both need DNZ 1.17 or
+  later.
 - With the proxy in `DNZ_TRUSTED_PROXIES` (and sending `X-Forwarded-For`), the primary sees the
   secondary's real address directly.
 
@@ -403,7 +413,9 @@ step, and nothing has to be re-joined by hand.
     The secondary asks the primary to hold changes (edits there are refused for up to five minutes,
     so none is lost; DNS UPDATEs from DHCP or ACME get SERVFAIL so they are sent again, and DNSSEC
     rollovers wait) and to list its zones' serials and its other secondaries. The primary first
-    checks it can reach the secondary's web address; if not, nothing changes.
+    checks it can reach the secondary's web address, and its DNS over TCP (where it copies the
+    zones from afterwards: the web address's host and the secondary's Device address, else its
+    interfaces, never the primary's own addresses); if not, nothing changes.
   </Step>
   <Step title="Catch up">
     Every zone is transferred until its serial matches the primary's, and the secondary takes each
@@ -434,6 +446,13 @@ It is refused, with nothing changed, when:
   it is read-only, the zones it took over too. Leave the other primary first.
 - another of the primary's secondaries is taking over already. Only the secondary that asked for
   the hold can go on with it or cancel it.
+- both servers have the **same name** (`DNZ_INSTANCE_NAME`, else the host name): the check that
+  the web address leads to the secondary would prove nothing. Rename one and restart it.
+- the primary **can't reach the secondary's DNS**: typically the web address is a reverse proxy
+  (`https://localdns.example.com`) and the secondary runs in a container without a Device address,
+  so all it reports is its container address, which on the primary's host may even be the
+  primary's own container. Set the secondary's Device address (Settings → General, or
+  `DNZ_ADVERTISE`) to the IP the primary reaches its DNS at, with TCP port 53 published.
 
 Everyone keeps signing in: the new primary already has every **account** with its divisions and
 roles, and they become its own. On the old primary the accounts are managed by the new primary from
@@ -450,7 +469,9 @@ that name both of them stay right.
 <Tabs>
   <Tab title="Dashboard">
     On the secondary, open **DNS → Replication → Copied from other primaries**, open the primary's
-    menu and pick **Take over as primary**. The dialog shows each step, and so does the
+    menu and pick **Take over as primary**. The dialog asks for the address the primary reaches
+    this server's web API at (prefilled with the one the browser uses; behind a reverse proxy the
+    proxy's address works for the API). It shows each step, and so does the
     [connections diagram](#connections-diagram) on both servers.
   </Tab>
   <Tab title="CLI">
