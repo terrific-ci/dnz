@@ -388,6 +388,17 @@ each). As before, the first search through the whole log after the cache is drop
 (65 to 89 s for 1.8 GB on this server's disk, 4 s from the cache). Answering DNS queries doesn't
 touch this code.
 
+Since v1.15.1 a search also stays inside a time window, the last 24 hours unless asked otherwise:
+the window becomes a range of ids through the index on `created_at`. The same 1.8 GB log (six
+days), a search that matches nothing, the file's cache dropped before each run (2026-10-27):
+
+| Window | Time | Read into the cache |
+| --- | ---: | ---: |
+| None (before) | 65.0 s, 71.6 s | 1,262 MiB |
+| Last 24 hours | 4.7 s, 4.5 s | 197 MiB |
+| Last hour | 0.01 s | 0 MiB |
+| All days | 31.0 s | 1,262 MiB |
+
 ## Threat detection on and off
 
 [Threat detection](/dns/threats) looks at a copy of the query log, on its own task. The same release
