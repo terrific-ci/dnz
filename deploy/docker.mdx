@@ -100,7 +100,10 @@ the query log for 10 minutes, DNZ drops its cached pages of the database file, s
 close to what DNZ itself uses. Answering queries never reads that file. The first search through
 the whole log after such a pause reads it from disk; later ones are as fast as before. The *Live*
 list on **Query Logs** and the dashboard's recent queries read only the newest rows, so leaving them
-open doesn't keep the cache. The **Server** tab shows both: **Memory** under *DNZ process* is the
+open doesn't keep the cache. **Settings → General → Release database file cache** changes the 10
+minutes (up to a day), or turns it off to leave the cache to the kernel: every search stays fast,
+and `docker stats` counts the file again (`dnz settings file-cache on --idle-minutes 30`, or
+`off`). The **Server** tab shows both: **Memory** under *DNZ process* is the
 process, and **Container** is the number `docker stats` shows, with the part of it that is file
 cache (on cgroup v2 and v1 hosts, hybrid ones such as Ubuntu 20.04 included).
 

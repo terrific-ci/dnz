@@ -145,6 +145,21 @@ Decided change requests follow the days limit.
 dnz settings history --keep-days 90 --keep-versions 500
 ```
 
+## Release database file cache
+
+Searching the [query log](/dns/query-logs) reads DNZ's SQLite file, and the kernel keeps what it read
+in memory, which `docker stats` counts as the container's. With this switch on (the default), DNZ
+drops that cache once nobody has searched the log for **Minutes after the last search** (10 by
+default, up to 1440); the next search reads the disk again. Off, the kernel keeps it: searches stay
+fast, and it still gives the memory back when the host runs short. Only a SQLite database on Linux
+has such a cache. Each server applies the setting within a minute, a cluster's other servers too.
+
+```bash
+dnz settings file-cache                         # show
+dnz settings file-cache on --idle-minutes 30    # drop it 30 minutes after the last search
+dnz settings file-cache off                     # leave it to the kernel
+```
+
 ## Prometheus metrics
 
 The **Prometheus metrics** card turns on `/metrics` for Prometheus: on a listen address of its
