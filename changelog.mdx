@@ -6,18 +6,28 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.16.0**, released October 27, 2026. To install or upgrade to it:
+The latest release is **v1.16.1**, released October 27, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.16.0
-docker pull terrificci/dnz-proxy:1.16.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.16.0
+docker pull terrificci/dnz:1.16.1
+docker pull terrificci/dnz-proxy:1.16.1   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.16.1
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.16.0" description="October 27, 2026" tags={["Latest"]}>
+<Update label="v1.16.1" description="October 27, 2026" tags={["Latest"]}>
+
+- Upgrade: set the old query log aside instead of deleting it during the start
+- Replication diagram: edges on the right side, a promoted server shown as primary
+- Passkeys after a promote: offered only for this host, a secondary's own ones kept
+- Promote without the primary: the failed take over no longer shows, the UI unlocks
+- Easier password rules: 8 characters, no letter/number mix required
+
+</Update>
+
+<Update label="v1.16.0" description="October 27, 2026">
 
 - dnz-proxy: DNS filtering's block page for hosts no router serves
 - DNS filtering: a block page mode that points blocked names at a proxy
