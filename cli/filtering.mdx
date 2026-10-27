@@ -31,6 +31,7 @@ dnz filter list add "Games" https://example.com/games.txt --clients "Kids tablet
 dnz filter list add "School" --file blocked.txt          # your own list from a text file (- = stdin)
 dnz filter list show 5 > blocked.txt                     # a file-based list's domains, to edit
 dnz filter list edit 5 --file blocked.txt                # replace them
+dnz filter list export 2 --out hagezi.txt               # what any list blocks, as a .txt DNZ reads back
 dnz filter list limit 3 --clients 192.168.1.0/24 --schedule none   # only these clients, always
 dnz filter list limit 3 --clients "" --schedule none               # back to every client, always
 dnz filter list set 2 off                     # turn a list off (or on)

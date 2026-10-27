@@ -149,6 +149,37 @@ https://www.example.net/some/page
   </Tab>
 </Tabs>
 
+### Export a list
+
+**⋯ → Export as .txt** (or right-click a list) downloads what DNZ currently blocks from it, for a
+list downloaded from a URL as well as one of your own. The file starts with a short `#` header
+(name, source, date, counts), then one entry per line, sorted: blocked names as plain domains,
+exceptions as `@@||ok.example^`, whole top-level domains as `*.xxx`. Upload it as a list of your
+own, here or on another server, and it reads back the same.
+
+It is the list as DNZ parsed it, not the original text: comments, skipped lines and duplicates are
+gone. Exporting changes nothing, so it also works on a secondary.
+
+<Tabs>
+  <Tab title="Dashboard">
+    **DNS → Filtering → Blocklists → ⋯ → Export as .txt**.
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz filter list export 5 > school.txt               # or --out school.txt
+    ```
+
+  </Tab>
+  <Tab title="API">
+
+    ```bash
+    curl -H "Authorization: Bearer $TOKEN" https://dnz.example.com/api/filtering/lists/5/export
+    ```
+
+  </Tab>
+</Tabs>
+
 ## Your own rules
 
 **Your rules** block or always allow single domains on top of the lists. Each rule can carry a
