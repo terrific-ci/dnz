@@ -6,18 +6,41 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.15.0**, released October 26, 2026. To install or upgrade to it:
+The latest release is **v1.16.0**, released October 27, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.15.0
-docker pull terrificci/dnz-proxy:1.15.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.15.0
+docker pull terrificci/dnz:1.16.0
+docker pull terrificci/dnz-proxy:1.16.0   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.16.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.15.0" description="October 26, 2026" tags={["Latest"]}>
+<Update label="v1.16.0" description="October 27, 2026" tags={["Latest"]}>
+
+- dnz-proxy: DNS filtering's block page for hosts no router serves
+- DNS filtering: a block page mode that points blocked names at a proxy
+- Block page on Traefik and Caddy proxies, over plain HTTP
+- Block page: settings in the UI, dnz filter block-page, topology
+- Traefik config: drop the connection info before awaiting
+- RRL: exempt networks as tags
+- Records: filter by view, searchable type picker
+- Live capture: stream the queries matching keywords, by domain
+- Live Capture page: keywords, by domain or live, block from the results
+- Find: settings cards with search words, clear the DNS cache from Find
+- Memory: a Live query log no longer holds the database's file cache; container memory on hybrid cgroup hosts
+- Settings: release database file cache, a switch and the minutes after the last search
+- Query log: a time window, the last 24 hours by default
+- Replication: a joining secondary's seeded Default division becomes the primary's first
+- Routes: a custom headers switch on every proxy kind
+- Query log store: daily SQLite files per server, bounded searches
+- Proxy: styled pages when a password, rate limit, allow list or firewall turns a visitor away
+- Query log: two more readers per day file than searches
+
+</Update>
+
+<Update label="v1.15.0" description="October 26, 2026">
 
 - Add proxy: Docker Compose guide for dnz-proxy nodes
 - Drop the "orange cloud" wording; describe proxied records by what they do
@@ -123,7 +146,6 @@ The `latest` image tag and the install script without `--version` always get thi
 
 <Update label="v1.9.0" description="October 25, 2026">
 
-- CI: quote the Redis test step
 - Overview: Replication tab with each replica's sync status
 - Replication: promote a secondary to primary
 - Zone page: secondary zones show DNSSEC read-only; update keys and the DHCP guide skip them
