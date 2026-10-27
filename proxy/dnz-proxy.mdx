@@ -551,7 +551,7 @@ not**, **in range**, **contains**, **starts with** or **matches** (a regular exp
 
 | Action | What it does |
 | --- | --- |
-| **Block** | Answers with a status (403 by default) and an optional message |
+| **Block** | Answers with a status (403 by default) and an optional message. Without a message, visitors get a styled block page |
 | **Challenge** | The under attack check, below |
 | **Allow** | Skips the rules after it |
 | **Log** | Notes it in the request log and goes on |
@@ -566,6 +566,7 @@ Browsers get a short page that solves a small proof of work. A cookie, signed fo
 network and valid for **Valid for**, then lets them through.
 
 - Bots can be let through by user agent and by address.
+- The page shows **Checking your browser** in the style of the [status pages](/proxy/status-pages), with a request ID.
 - Requests that aren't a browser page (APIs, forms) get a 403 until a page has been visited.
 - **Difficulty** is in bits: each one doubles the work. 16 takes well under a second.
 

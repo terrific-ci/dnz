@@ -184,6 +184,35 @@ with no setup:
 
 These can't be set by hand.
 
+## Pages for visitors a middleware turns away
+
+A route's protections answer with the same kind of page, in the same three forms, instead of a bare
+status line. They need no setup.
+
+| Code | Title | When | Proxies |
+| --- | --- | --- | --- |
+| 401 | **Sign in to continue** | **Password**: the browser's sign-in was cancelled or wrong. **Try again** asks again | dnz-proxy, Caddy |
+| 429 | **Too many requests** | **Rate limit**, saying how long to wait. `Retry-After` stays | dnz-proxy |
+| 403 | **Not open to your address** | **Only from these addresses**, naming the visitor's address | dnz-proxy, Caddy |
+| 403 | **Access blocked** | A **Firewall** block rule, with the rule's status. **Not available in your region** when the rule checks the country | dnz-proxy |
+| 403 | **Browser check failed** | The **Under attack** check wasn't solved, or the visit isn't a browser page | dnz-proxy |
+
+Some answers stay as they are written:
+
+- A firewall rule with its own **message** sends exactly that text.
+- An allow list with a **reject status** other than 403 (a 404, say, to hide the site) sends just
+  that status.
+- A backend's own 401, 403 or 429 is never replaced.
+
+<Note>
+  Traefik answers these middlewares itself, with its own plain replies. Its `errors` middleware
+  would also replace the backend's own errors, so DNZ doesn't add one.
+</Note>
+
+The **Under attack** check and the **Waiting room** have pages of their own in the same style: the
+check shows **Checking your browser** while the browser solves it, and the waiting room shows the
+visitor's place in line and the estimated wait.
+
 ## HTML, JSON or text
 
 The page comes in the form the visitor asks for with `Accept`:

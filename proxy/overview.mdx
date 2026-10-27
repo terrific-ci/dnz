@@ -138,7 +138,7 @@ The switches are each the route's own middleware, made and removed with it:
 | **Cache** (dnz-proxy) | Keeps answers on the nodes; **Clear cache** right next to it when editing |
 | **Firewall** (dnz-proxy) | Runs one of the proxy's firewall middlewares |
 | **Rate limit** | Requests a second per visitor, with a burst |
-| **Password** | Users added by name and password; only a bcrypt hash is kept |
+| **Password** | Any number of users, each added by name and password; only a bcrypt hash is kept |
 | **Only from these addresses** | Addresses or ranges; everyone else gets 403 |
 | **Under attack check** (dnz-proxy) | Browsers solve a short check once |
 | **Waiting room** (dnz-proxy) | Past a number of visitors in at once, new ones wait in line; or everyone waits until you open. See [Waiting room](/proxy/dnz-proxy#waiting-room-dnzwaitingroom) |
