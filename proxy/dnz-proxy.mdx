@@ -306,6 +306,13 @@ without dropping connections.
 A node stores the last configuration on disk and keeps serving it while DNZ is away or restarting. It
 reconnects by itself.
 
+The node list keeps two things apart:
+
+- **Version**: the dnz-proxy release the node runs. DNZ and dnz-proxy share one version number, so a
+  node on an older release is marked **Older than DNZ** until you upgrade it. Nodes built before the
+  shared version report `0.1.0`.
+- **Config**: whether the node serves the proxy's current configuration, with its short hash.
+
 <Warning>
   If DNZ is behind a reverse proxy, it must not buffer responses, or the stream stalls. DNZ sends
   `X-Accel-Buffering: no`. See [HTTPS](/deploy/https).
