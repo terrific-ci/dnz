@@ -6,18 +6,36 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.16.1**, released October 27, 2026. To install or upgrade to it:
+The latest release is **v1.17.0**, released October 27, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.16.1
-docker pull terrificci/dnz-proxy:1.16.1   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.16.1
+docker pull terrificci/dnz:1.17.0
+docker pull terrificci/dnz-proxy:1.17.0   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.17.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.16.1" description="October 27, 2026" tags={["Latest"]}>
+<Update label="v1.17.0" description="October 27, 2026" tags={["Latest"]}>
+
+- Replication: take over from the header, hide the card for the side this server isn't on
+- Replication: never copy from this server itself, check the new primary's DNS before a take over
+- Filtering: export a blocklist as .txt
+- Zones: import many at once from a zip of BIND files, a folder or several files
+- Replication: refuse joins to a secondary; leaving removes the secondary from its primary
+- Replication map: right-click a server for its actions, this server for a take over
+- Replication: a primary joining another hands over its zones and secondaries first
+- Replication tests: own DNS per server, no shared settings snapshot between test servers
+- Replication: Set as primary asks a secondary to take over at its next check-in
+- Replication UI: Set as primary, its request on the page, the join dialog says what a primary hands over
+- Replication docs and CLI: set-primary, a primary joining another, leaving tells the primary
+- Replication: clippy
+- Replication map: nodes take right-clicks; header menu at the end, take over only from DNZ primaries
+
+</Update>
+
+<Update label="v1.16.1" description="October 27, 2026">
 
 - Upgrade: set the old query log aside instead of deleting it during the start
 - Replication diagram: edges on the right side, a promoted server shown as primary
