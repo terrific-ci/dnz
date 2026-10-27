@@ -126,9 +126,18 @@ A proxy's page opens on **Routes**: one row per hostname, with where it goes, it
 certificate, whether DNS answers with the proxy (**Add DNS record** when not), and its switches.
 **Add route** is the one button, and the same dialog edits a route later.
 
-The dialog has the **Hostname** (and **Another hostname**), the **Upstreams**, **HTTPS** with a
+The dialog has the **Hostname** (and **Another hostname**), where it goes, **HTTPS** with a
 redirect from `http://`, the switches under **Protect and speed up**, and **Advanced** for a path,
 other middlewares and the DNS record.
+
+Where it goes has two tabs under the hostname:
+
+- **Upstreams**: servers of the route's own, with weights. DNZ keeps them in a service of the
+  route's own.
+- **Service**: one of the proxy's services (**Advanced → Services**), picked from a list that shows
+  where each goes. The route uses it as it is: the dialog never changes it, several routes can share
+  it, and deleting the route leaves it. Switching back to **Upstreams** gives the route its own
+  service again.
 
 The switches are each the route's own middleware, made and removed with it:
 
@@ -170,8 +179,9 @@ certificate's progress; a failure says why, with a fix, a retry and the full log
 
 Everything behind the routes (routers, services, middlewares, TLS, TCP and UDP) is under
 **Advanced** on the page. A router made there shows in Routes too; one the dialog can't hold (extra
-conditions, a priority, TLS options, a weighted or shared service) is marked **Set up in Advanced**.
-**Delete** removes the route's routers, its service and its switches, and its DNS records stop going
+conditions, a priority, TLS options) is marked **Set up in Advanced**; one on a weighted or shared
+service opens on the **Service** tab.
+**Delete** removes the route's routers, its own service (a picked one stays) and its switches, and its DNS records stop going
 through the proxy.
 
 As you type the hostname, the field offers:
