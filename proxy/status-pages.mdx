@@ -244,7 +244,7 @@ visitor's place in line and the estimated wait.
 ## Logo and label
 
 **Settings → Profile** (superadmins) sets who runs the sites: a **label** such as
-"RSUP Prof. Dr. R. D. Kandou" or "Perusahaan A" (one line, up to 120 characters) and a **logo**.
+"Company" or "Perusahaan A" (one line, up to 120 characters) and a **logo**.
 Both go in a strip at the top of every page visitors get: statuses, the proxy's own failure pages,
 DNS filtering's block page, the waiting room, the browser check and the sign-in pages. The browser
 tab's title ends with the label, and "Powered by DNZ" stays in the footer. Either can be left empty.
@@ -263,7 +263,7 @@ its configuration for every page, so a logo given as an address keeps that confi
 settings page shows a preview of what you type before you save.
 
 ```bash
-dnz settings profile --label "RSUP Prof. Dr. R. D. Kandou" --logo https://example.com/logo.png
+dnz settings profile --label "Company" --logo https://example.com/logo.png
 dnz settings profile --logo "$(base64 < logo.png)"
 ```
 
