@@ -1,0 +1,108 @@
+---
+title: "Upload limits"
+description: "Decide what multipart uploads to a route may hold, and shield an old PHP from php2shell, before the servers ever see the body."
+---
+
+A route's **Upload limits** decide what `multipart/form-data` uploads to it may hold: how big, how
+many fields and files, which fields, and at which paths. A [dnz-proxy](/proxy/dnz-proxy) proxy checks
+them while the body streams in and refuses what breaks a limit **before your servers see it**. An
+app that can't be upgraded (an old PHP, a CMS nobody maintains) is shielded at the proxy, and
+ordinary uploads keep working.
+
+Upload limits are off until you turn them on for a route. Requests that aren't uploads aren't
+slowed down.
+
+## Shield an old PHP from php2shell
+
+php2shell (CVE-2026-109618 and CVE-2026-109619) is a memory corruption bug in PHP's upload handling,
+reached through `session.upload_progress` with crafted uploads. The real fix is a PHP upgrade. For an
+app that is stuck on an old PHP, turn on the **php2shell shield**:
+
+<Steps>
+  <Step title="Open the route">
+    On the proxy's page, open the route in front of the PHP app (**Routes** → the route).
+  </Step>
+  <Step title="Turn on Upload limits">
+    Switch on **Upload limits**, tick **php2shell shield** and set **Largest upload** to the largest
+    file your app takes.
+  </Step>
+  <Step title="Save">
+    Every node has it within a second.
+  </Step>
+</Steps>
+
+Or from the terminal:
+
+```bash
+dnz proxy routes edit edge shop.example.com --php2shell --upload-max 20M
+```
+
+The shield refuses every upload holding PHP's upload progress field (`PHP_SESSION_UPLOAD_PROGRESS`,
+or the name your `session.upload_progress.name` is set to), and keeps the limits you leave empty
+tight: at most 100 fields and files, form fields up to 64 KiB, short part headers. The field never
+reaches PHP: the proxy holds each part's headers until they are checked, and answers the visitor
+with a `400` page instead.
+
+<Tip>
+  On WordPress, also take uploads only where WordPress takes them:
+
+  ```bash
+  dnz proxy routes edit edge blog.example.com --php2shell --upload-max 64M \
+    --upload-path /wp-admin/async-upload.php --upload-path /wp-admin/media-new.php --upload-method POST
+  ```
+</Tip>
+
+## What you can limit
+
+| Setting | Visitors get |
+|---|---|
+| **Take no uploads at all** | `415` |
+| **Only at these paths** (and below them), **Methods** | `403` elsewhere |
+| **Largest upload** | `413` |
+| **At most … fields and files** | `413` |
+| **Largest file**, **Largest field** | `413` |
+| **Refuse uploads with these fields** (any case) | `400` |
+
+Paths are prefixes: `/upload` takes `/upload` and `/upload/photo`, not `/uploads`. Paths that try
+to climb out (`/upload/../admin.php`, encoded slashes) never count as a listed path.
+
+The proxy also refuses, with `400`, uploads that a server could read differently from the proxy:
+malformed multipart, a boundary twice, a field named twice, header lines PHP would split or join,
+and the like. Browsers never send these, so real uploads aren't affected.
+
+Under **Advanced → Middlewares** the route's `dnzMultipart` middleware has every limit, including
+part headers, file name length and boundary length.
+
+## How the upload reaches your servers
+
+Your servers get the upload unchanged, as it streams in: each part once its headers are checked,
+each form field once it is whole, and file data straight away. Nothing is buffered, so large uploads
+stream through. When an upload breaks a limit halfway, the proxy cuts the request to your servers off
+and shows the visitor an **Upload refused** page saying what was too big or not allowed (HTML, JSON or
+text, like the [status pages](/proxy/status-pages)).
+
+## Every route at once
+
+On a dnz-proxy proxy, **Settings → Every route → Upload limits** applies to every route that has no
+upload limits of its own.
+
+```bash
+dnz proxy defaults edge --uploads --upload-max 50M
+```
+
+## Traefik and Caddy
+
+Traefik and Caddy proxies get **Largest upload** alone:
+
+- Traefik as its `buffering` middleware, for every request body on the route;
+- Caddy as `request_body` with `max_size` for uploads.
+
+The php2shell shield, fields, paths and the other checks need a dnz-proxy proxy.
+
+## See what was refused
+
+- The request log shows each refused upload with `block upload <check>`, and the analytics count it
+  as blocked.
+- `dnz proxy routes refusals edge` lists refusals since each node started, per check.
+- Prometheus: `dnz_proxy_upload_refusals_total{proxy, node, middleware, check}`.
+- AI assistants: the MCP tools `proxy_upload_refusals` and, with write access, `set_upload_limits`.
