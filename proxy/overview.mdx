@@ -122,9 +122,12 @@ upgrade:
 
 ### Adding a route
 
-A proxy's page opens on **Routes**: one row per hostname, with where it goes, its HTTPS and
-certificate, whether DNS answers with the proxy (**Add DNS record** when not), and its switches.
-**Add route** is the one button, and the same dialog edits a route later.
+The **Proxy** menu has **Proxies**, **Routes**, **Nodes** (dnz-proxy), **Analytics** and
+**Certificates**. **Proxy → Routes** lists the routes of every proxy (or of the one picked above the
+list), and a proxy's own page opens on the same list: one row per hostname, with where it goes, its
+HTTPS and certificate, whether DNS answers with the proxy (**Add DNS record** when not), and its
+switches. **By zone** puts the rows under the zone of their hostname. **Add route** is the one
+button, and the same dialog edits a route later.
 
 The dialog has the **Hostname** (and **Another hostname**), where it goes, **HTTPS** with a
 redirect from `http://`, the switches under **Protect and speed up**, and **Advanced** for a path,
@@ -200,7 +203,7 @@ A record without a router links straight to this dialog, with its name filled in
 <Tabs>
   <Tab title="Dashboard">
 
-    **Proxy** → open the proxy → **Routes** → **Add route**.
+    **Proxy → Routes** → **Add route** (pick the proxy when there are several).
 
   </Tab>
   <Tab title="CLI">
