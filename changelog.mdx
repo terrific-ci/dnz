@@ -6,18 +6,37 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.20.0**, released October 28, 2026. To install or upgrade to it:
+The latest release is **v1.21.0**, released October 28, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.20.0
-docker pull terrificci/dnz-proxy:1.20.0   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.20.0
+docker pull terrificci/dnz:1.21.0
+docker pull terrificci/dnz-proxy:1.21.0   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.21.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.20.0" description="October 28, 2026" tags={["Latest"]}>
+<Update label="v1.21.0" description="October 28, 2026" tags={["Latest"]}>
+
+- Back links lead to the list a page was opened from; Analytics first
+- Routes: hostname opens the app, copy icon, Solar icons, proxies per row
+- Toasts show in front of dialogs
+- Routes: a redirect route shows where it goes; the Proxy picker opens a proxy
+- Status pages move to the Proxy menu
+- Proxies: cards as a mini overview; the setup guide stays reachable
+- Copy buttons work over plain http and inside dialogs
+- DNZ Proxy nodes report their server: CPU, memory, load, disk
+- Sign in with Google: link a DNZ account to Google and sign in with it
+- UI: Sign in with Google on the sign-in page, Account and Integrations
+- CLI: dnz settings google-sign-in and dnz user unlink-google
+- Settings → Profile: a logo and label on every status page; pages fit the screen
+- Profile preview: draw the page at 1000 px so it reads at card size
+- Profile: a generic "Company" as the label's placeholder and example
+
+</Update>
+
+<Update label="v1.20.0" description="October 28, 2026">
 
 - Say DNZ Proxy, not dnz-proxy, wherever the proxy is named
 - Routes across proxies, Serve on, and redirect routes
