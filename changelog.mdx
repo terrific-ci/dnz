@@ -6,18 +6,28 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.17.0**, released October 27, 2026. To install or upgrade to it:
+The latest release is **v1.17.2**, released October 28, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.17.0
-docker pull terrificci/dnz-proxy:1.17.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.17.0
+docker pull terrificci/dnz:1.17.2
+docker pull terrificci/dnz-proxy:1.17.2   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.17.2
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.17.0" description="October 27, 2026" tags={["Latest"]}>
+<Update label="v1.17.2" description="October 28, 2026" tags={["Latest"]}>
+
+- Take over: use the old primary's current name, no second node on the map
+- Menu: High availability group, Topology in Overview, Access in Settings
+- Routes: Upstreams or Service tab, to use one of the proxy's services
+- Status pages: links reach the nodes, labels line up
+- dnz-proxy reports DNZ's version; nodes list shows version and config apart
+
+</Update>
+
+<Update label="v1.17.0" description="October 27, 2026">
 
 - Replication: take over from the header, hide the card for the side this server isn't on
 - Replication: never copy from this server itself, check the new primary's DNS before a take over
