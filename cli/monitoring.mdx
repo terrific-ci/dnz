@@ -236,6 +236,10 @@ dnz settings nsid on --value dns-1.jkt        # tell `dig +nsid` which server an
 dnz settings file-cache                       # is the query log's file cache dropped, and after how long
 dnz settings file-cache on --idle-minutes 30  # drop it 30 minutes after the last search (default 10)
 dnz settings file-cache off                   # leave it to the kernel: searches stay fast
+dnz settings profile                          # the logo and label on status pages
+dnz settings profile --label "Perusahaan A" --logo https://example.com/logo.png
+dnz settings profile --logo "$(base64 < logo.png)"   # the image itself (base64, base64url or a data: URL)
+dnz settings profile --clear-logo             # remove it (--clear-label for the label)
 dnz settings metrics on --addr 0.0.0.0:9153   # Prometheus /metrics on a listen address of its own
 dnz settings metrics --new-token              # bearer token for scrapers (printed once)
 dnz settings metrics --api on                 # also at /metrics on the HTTP API
@@ -251,6 +255,9 @@ dnz settings metrics --api on                 # also at /metrics on the HTTP API
 - **File cache**: on Linux, whether DNZ drops the kernel's cache of the query log files once nobody
   has searched the log for `--idle-minutes` (1 to 1440, default 10), or leaves it to the kernel
   (`off`). See [Query log file cache](/admin/settings#query-log-file-cache).
+- **Profile**: the logo and label at the top of every status page. `--logo` takes an image address,
+  a data URL, or the image's base64 / base64url (up to 48 KB). See
+  [Logo and label](/proxy/status-pages#logo-and-label).
 - **Metrics**: `on`/`off`, `--addr` a listen address of their own (`off` for none), `--api on|off`
   for `/metrics` on the HTTP API, `--new-token` (printed once) and `--remove-token`. See
   [Prometheus and Grafana](/dashboard/prometheus).

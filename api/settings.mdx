@@ -1,6 +1,6 @@
 ---
 title: "Settings"
-description: "API endpoints for server settings: response rate limiting (RRL), the query log file cache, the GeoIP database and the cluster."
+description: "API endpoints for server settings: response rate limiting (RRL), the query log file cache, the profile on status pages, the GeoIP database and the cluster."
 ---
 
 These endpoints change server-wide settings under **Settings → General**. They need a signed-in
@@ -15,6 +15,9 @@ GeoIP lookup, which any signed-in user may call.
 | `PUT` | `/api/settings/rrl` | superadmin | Replace the RRL settings |
 | `GET` | `/api/settings/file-cache` | superadmin | Whether the query log's file cache is dropped, and after how many minutes |
 | `PUT` | `/api/settings/file-cache` | superadmin | Change either |
+| `GET` | `/api/settings/profile` | superadmin | The logo and label on status pages |
+| `PUT` | `/api/settings/profile` | superadmin | Change either |
+| `POST` | `/api/settings/profile/preview` | superadmin | A status page with a logo and label that aren't saved yet (HTML) |
 | `GET` | `/api/geoip` | superadmin | The GeoIP database in use, where it comes from, automatic updates |
 | `PUT` | `/api/geoip` | superadmin | Where to download from and whether to update monthly |
 | `POST` | `/api/geoip/download` | superadmin | Download the database now |
@@ -74,6 +77,36 @@ object. An `idle_minutes` outside the range gets `400`. Every change is in the
 ```json
 { "release": true, "idle_minutes": 30 }
 ```
+
+## Profile
+
+`GET /api/settings/profile` answers:
+
+```json
+{ "logo": "https://example.com/logo.png", "label": "RSUP Prof. Dr. R. D. Kandou", "max_logo_bytes": 48000, "max_label_chars": 120 }
+```
+
+| Field | What it is |
+| --- | --- |
+| `logo` | An image address (`http://` or `https://`) or a `data:image/…;base64,…` URL; empty for none |
+| `label` | One line of up to `max_label_chars` characters; empty for none |
+| `max_logo_bytes` | The largest image kept as a data URL, decoded |
+| `max_label_chars` | The longest label |
+
+`PUT /api/settings/profile` takes `logo`, `label` or both; a field left out stays as it is, and an
+empty one removes it. `logo` may also be a data URL in base64url, or the bare base64 or base64url of
+a PNG, JPEG, GIF, WebP, SVG, AVIF or ICO file; DNZ reads its type and stores a data URL. Anything
+else, or an image over `max_logo_bytes`, gets `400` with the reason. Every change is in the
+[audit log](/admin/audit-log) as `settings.profile`, with the logo's address or its type and size,
+not the image itself.
+
+```json
+{ "label": "Perusahaan A", "logo": "iVBORw0KGgoAAAANSUhEUgAA…" }
+```
+
+`POST /api/settings/profile/preview` takes `logo`, `label` and `kind` (a [status](/proxy/status-pages#statuses),
+`maintenance` by default) and answers with that status page as HTML, or `400` when the logo or label
+isn't accepted. See [Logo and label](/proxy/status-pages#logo-and-label).
 
 ## GeoIP database
 

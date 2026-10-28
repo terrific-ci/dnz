@@ -9,6 +9,7 @@ to the backend, with the right HTTP status code and, where it fits, a `Retry-Aft
 
 The page shows:
 
+- your [logo and label](#logo-and-label) at the top, when set
 - an icon for the status, the error code, a title and a message
 - the chain **You → Proxy → Destination**, with how each hop is doing (for maintenance: your
   browser *connected*, the proxy *connected*, the site *maintenance*)
@@ -18,8 +19,15 @@ The page shows:
 - **Try again** and **More information** buttons
 - a request ID and the time, and "Powered by DNZ"
 
-It is one self-contained page (no fonts, scripts or images from elsewhere) in light and dark, and
-search engines are told not to index it.
+It is one self-contained page (no fonts or scripts from elsewhere; the only outside image is a logo
+given as an address) in light and dark, and search engines are told not to index it.
+
+The page fits the screen without scrolling. On a laptop or wider (820 px and up) the card has two
+columns: the message, buttons and tips on the left, the chain on the right. On a phone it is one
+column with a compact chain, and the tips fold into a **What you can do** button; on very short
+phone screens (under 620 px tall) the chain is left out. It was measured from 360 × 570 (a small
+phone in its browser) to 1920 × 950; only a 320 px wide phone may scroll a maintenance page that
+has both an end time and a link.
 
 Every kind of proxy shows them: [DNZ Proxy](/proxy/dnz-proxy) nodes render the page themselves, a
 [Caddy](/proxy/caddy) answers with it straight from its configuration, and a
@@ -232,6 +240,36 @@ Some answers stay as they are written:
 The **Under attack** check and the **Waiting room** have pages of their own in the same style: the
 check shows **Checking your browser** while the browser solves it, and the waiting room shows the
 visitor's place in line and the estimated wait.
+
+## Logo and label
+
+**Settings → Profile** (superadmins) sets who runs the sites: a **label** such as
+"RSUP Prof. Dr. R. D. Kandou" or "Perusahaan A" (one line, up to 120 characters) and a **logo**.
+Both go in a strip at the top of every page visitors get: statuses, the proxy's own failure pages,
+DNS filtering's block page, the waiting room, the browser check and the sign-in pages. The browser
+tab's title ends with the label, and "Powered by DNZ" stays in the footer. Either can be left empty.
+
+The logo is text; nothing is uploaded. It can be:
+
+- an image address, such as `https://example.com/logo.png`. Visitors' browsers load it from there,
+  so it must be reachable from where they are. An `http://` image doesn't load on a page served over
+  HTTPS.
+- a data URL, such as `data:image/png;base64,iVBORw0…`, in base64 or base64url
+- the bare base64 or base64url string of the file. DNZ reads its type from the bytes and stores it as
+  a data URL.
+
+PNG, JPEG, GIF, WebP, SVG, AVIF and ICO are accepted, up to 48 KB. Caddy keeps a copy of the page in
+its configuration for every page, so a logo given as an address keeps that configuration small. The
+settings page shows a preview of what you type before you save.
+
+```bash
+dnz settings profile --label "RSUP Prof. Dr. R. D. Kandou" --logo https://example.com/logo.png
+dnz settings profile --logo "$(base64 < logo.png)"
+```
+
+Like the statuses, the profile follows the primary on DNZ secondaries. DNZ Proxy nodes get it with
+their next configuration (within seconds) and Caddy at its next fetch. Traefik already gets its
+pages from DNZ.
 
 ## DNS filtering's block page
 
