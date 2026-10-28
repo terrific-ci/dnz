@@ -121,6 +121,7 @@
               "proxy/certificates",
               "proxy/status-pages",
               "proxy/upload-limits",
+              "proxy/sign-in",
               "proxy/benchmarks"
             ]
           },

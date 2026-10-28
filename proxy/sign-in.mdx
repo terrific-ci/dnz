@@ -1,0 +1,108 @@
+---
+title: "Sign-in for routes"
+description: "Require visitors of a proxied route to sign in with Google, Microsoft Entra ID, Keycloak, Okta or any OpenID Connect provider, and let only the people, domains or groups you list through."
+---
+
+A proxied route can ask its visitors to **sign in** before they get through, like Cloudflare
+Access. They sign in with the provider your people already use, and only the emails, email domains
+or groups you list get in. The servers behind the route learn who it is from headers, so an
+internal app needs no login of its own.
+
+It works on every proxy kind: [dnz-proxy](/proxy/dnz-proxy) nodes check visitors themselves; a
+[Traefik](/proxy/traefik) or [Caddy](/proxy/caddy) asks DNZ on every visit (forward auth).
+
+## How it works
+
+<Steps>
+  <Step title="Visitor without a session">
+    The proxy sends the browser to DNZ's **sign-in address**, e.g.
+    `https://dnz.example.com/api/proxy/access/start`.
+  </Step>
+  <Step title="Off to the provider">
+    DNZ sends it on to the provider (authorization code flow with PKCE and a nonce).
+  </Step>
+  <Step title="Back to DNZ">
+    The provider returns to DNZ's **redirect URI**. DNZ reads the email, name and groups and checks
+    the route's policy. Someone not listed sees "Not allowed in".
+  </Step>
+  <Step title="Back to the site">
+    The browser returns to `https://app.example.com/.dnz/access/callback` with a two-minute ticket,
+    which the site turns into its own session cookie, then goes on to the page it asked for.
+  </Step>
+</Steps>
+
+Every later visit carries the cookie, and the servers get:
+
+| Header | Value |
+|---|---|
+| `X-Dnz-User-Email` | `ana@example.com` |
+| `X-Dnz-User-Name` | `Ana` (when the provider says) |
+| `X-Dnz-User-Groups` | `ops,dev` (when the provider says) |
+
+Copies of these headers a visitor sends are always removed first, so the servers can trust them.
+`/.dnz/access/logout` on the site signs the visitor out. An API call without a session gets **401**
+and the "Sign in to continue" page as HTML, JSON or text.
+
+<Note>
+Changing who may come in signs everyone out of that route: a session names the policy it was let
+in by. Sessions last 5 minutes to 30 days (24 hours by default).
+</Note>
+
+## Set it up
+
+### 1. The sign-in address
+
+**Settings → Proxy → Sign-in**: DNZ's address as visitors' browsers reach it. DNZ suggests the
+address you opened it on and warns about `localhost` / `127.0.0.1`. The page shows the **redirect
+URI** to give your provider, with a copy button.
+
+```bash
+dnz proxy sign-in url https://dnz.example.com
+```
+
+### 2. A provider
+
+**Add provider** picks a guide with the steps at the provider, the redirect URI filled in. Paste
+the client ID and secret; DNZ tests the issuer right away.
+
+| Provider | Issuer | Groups |
+|---|---|---|
+| Google | `https://accounts.google.com` | none: allow emails or domains |
+| Microsoft Entra ID | `https://login.microsoftonline.com/<tenant>/v2.0` | add a groups claim: group object IDs |
+| Keycloak | `https://sso.example.com/realms/<realm>` | Group Membership mapper, claim `groups` |
+| Authentik | `https://auth.example.com/application/o/<slug>` | `groups` by default |
+| Okta | `https://example.okta.com` | scope `groups` and a Groups claim |
+| GitLab | `https://gitlab.com` (or yours) | claim `groups_direct` |
+
+```bash
+DNZ_SIGN_IN_SECRET=… dnz proxy sign-in add Keycloak \
+  --issuer https://sso.example.com/realms/staff --client-id dnz
+```
+
+### 3. A route
+
+In the route dialog, switch on **Require sign-in**, pick the provider and session length, and list
+**these people**, **anyone at** (email domains, exact) and **anyone in group**. At least one is
+needed: a provider like Google signs in anyone with an account.
+
+```bash
+dnz proxy routes edit edge app.example.com --sign-in Keycloak \
+  --allow-domain example.com --allow-group ops --session 8h
+```
+
+## Each proxy kind
+
+- **dnz-proxy**: each node gets the route's own key and checks the cookie itself; a signed-in visit
+  never waits on DNZ.
+- **Traefik**: DNZ sends a `forwardAuth` middleware pointing at its check, at the address Traefik
+  polls DNZ on.
+- **Caddy**: a `reverse_proxy` to DNZ's check with `handle_response` copying the identity headers.
+
+With Traefik and Caddy every visit is a round trip to DNZ, so they must reach it. Over HTTPS they
+check DNZ's certificate as usual.
+
+## Audit, metrics and MCP
+
+Sign-ins are in the audit log as `access.sign_in` and `access.denied`, by the email that signed in.
+`dnz_access_sign_ins_total{result}` counts them. The MCP tool `sign_in_providers` lists the
+providers and the hosts each signs in to; assistants can't change who may get in.
