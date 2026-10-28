@@ -62,12 +62,14 @@ dnz capture tiktok facebook                   # every matching query, until Ctrl
 dnz capture tiktok --group                    # each domain once, when it first shows up
 dnz capture --client 192.168.1.20 --for 2m    # everything one device asks, for two minutes
 dnz capture ads --division it --json          # one JSON object per query
+dnz capture --list "Social media" -l Games    # the keywords of saved keyword lists
 ```
 
 | Flag | Meaning |
 | --- | --- |
 | *keywords* | A name holding any of them is shown; none shows every query |
 | `--division`, `-d` | Only that division's queries: names in its zones and what clients in its client networks ask. Superadmins capture the whole server by default |
+| `--list`, `-l` | Add a keyword list's keywords, by name or id (repeatable) |
 | `--client` | Only this client address |
 | `--for` | Stop after this long (`90s`, `10m`, `1h`); default: until Ctrl-C |
 | `--group`, `-g` | Print each domain once, when it first shows up, instead of every query |
@@ -75,6 +77,23 @@ dnz capture ads --division it --json          # one JSON object per query
 When the capture ends (Ctrl-C or `--for`), the domains it saw are listed busiest first, with query,
 name, client and blocked counts. Block one with `dnz filter rule block <domain>` (see
 [Filtering](/cli/filtering)).
+
+### Keyword lists
+
+`dnz capture-list` keeps the named keyword lists that `--list` picks. See
+[Keyword lists](/dns/live-capture#keyword-lists).
+
+```bash
+dnz capture-list list [--division it]                          # server-wide lists, and the division's
+dnz capture-list add "Social media" tiktok facebook instagram  # server-wide for superadmins
+dnz capture-list add Games steam roblox --division it          # the division's
+dnz capture-list edit "Social media" --keywords tiktok facebook instagram snapchat
+dnz capture-list edit Games --name Gaming --division it
+dnz capture-list rm Gaming --division it
+```
+
+A division's list is found before a server-wide one of the same name. Changing lists takes
+**Manage blocklists** in the division (server-wide: **Manage server-wide filtering**).
 
 ## Query explain
 

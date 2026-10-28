@@ -1,6 +1,6 @@
 ---
 title: "Live capture"
-description: "Watch the queries holding a few keywords as the server answers them, grouped by domain or one by one, and block a domain straight from the results."
+description: "Watch the queries holding a few keywords (typed, or saved keyword lists) as the server answers them, grouped by domain or one by one, and block a domain straight from the results."
 ---
 
 **Live capture** shows the queries the server answers as they arrive, filtered by keywords, so you
@@ -28,16 +28,18 @@ The results come two ways:
         Open **DNS → Live Capture**, or click **Live capture** on **DNS → Query Logs**, which carries
         the log's search over.
       </Step>
-      <Step title="Enter keywords">
-        Type the keywords, for example `tiktok, facebook`. Optionally give a **client** address to
-        watch one device, and, if you can see all queries, pick the scope.
+      <Step title="Pick a keyword list or enter keywords">
+        Click one or more [keyword lists](#keyword-lists) under the keyword field, or type keywords,
+        for example `tiktok, facebook` (or both). Optionally give a **client** address to watch one
+        device, and, if you can see all queries, pick the scope.
       </Step>
       <Step title="Start">
         Click **Start capture**. Matching queries show up within a second. **Stop** ends it.
       </Step>
     </Steps>
 
-    `?q=` and `?client=` in the page's address fill the form, so a capture can be shared as a link.
+    `?q=`, `?lists=` (keyword list ids) and `?client=` in the page's address fill the form, so a
+    capture can be shared as a link.
 
   </Tab>
   <Tab title="CLI">
@@ -47,6 +49,7 @@ The results come two ways:
     dnz capture tiktok --group                  # each domain once, when it first shows up
     dnz capture --client 192.168.1.20 --for 2m  # everything one device asks, for two minutes
     dnz capture ads --division it --json        # one JSON object per query
+    dnz capture --list "Social media" -l Games  # the keywords of saved keyword lists
     ```
 
     `--division` captures that division's queries; superadmins capture the whole server by default.
@@ -61,6 +64,8 @@ The results come two ways:
 
     > What is 192.168.1.20 talking to right now? Suggest what to block.
 
+    Its `lists` argument takes keyword list names; `capture_keyword_lists` lists them.
+
   </Tab>
 </Tabs>
 
@@ -70,7 +75,47 @@ The results come two ways:
   `tiktok.com`, `tiktokcdn.com` and `tiktokv.com`.
 - Matching is on the name as asked, in lowercase. A leading `*.` or a trailing dot is ignored.
 - No keywords captures every query. Use it with a client address to see everything one device asks.
-- Up to 20 keywords per capture.
+- Up to 50 keywords per capture, typed and from keyword lists together.
+
+## Keyword lists
+
+Keywords you watch for often can be saved once under a name and then picked instead of typed: a
+**Social media** list holding `tiktok facebook instagram snapchat`, a **Games** list holding
+`steam epicgames roblox`. On **DNS → Live Capture** the lists show as buttons under the keyword
+field. Click one or more (and type extra keywords if you like), then start the capture: it watches
+for every keyword of the picked lists plus the typed ones.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    - **New list** saves a list; with keywords typed, the button reads **Save keywords as list** and
+      starts from them.
+    - The pencil button next to it edits or deletes a list.
+    - A list holds up to 50 keywords (one per line, or separated by commas or spaces) and a name of
+      up to 64 characters, unique within its scope.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz capture-list list [--division it]                          # server-wide lists, and the division's
+    dnz capture-list add "Social media" tiktok facebook instagram  # server-wide for superadmins
+    dnz capture-list add Games steam roblox --division it          # the division's
+    dnz capture-list edit "Social media" --keywords tiktok facebook instagram snapchat
+    dnz capture-list rm Games --division it
+    ```
+
+  </Tab>
+</Tabs>
+
+| List | Who can pick it | Who can change it |
+| --- | --- | --- |
+| A division's | Captures of that division (**View query logs** in it) | **Manage blocklists** in the division |
+| Server-wide (globe icon, *Every division*) | Every capture | **Manage server-wide filtering** |
+
+Changes are in the [audit log](/admin/audit-log) as `capture_list.create`, `capture_list.update` and
+`capture_list.delete`; a capture's `capture.start` entry names the lists it used. On a DNZ secondary
+the lists are the primary's, copied with its other settings, and read-only there.
 
 ## Block from the results
 
@@ -113,6 +158,7 @@ their division. See [Access](/admin/access) for roles and permissions.
   **Stop** is pressed, or its time runs out. Starting one is in the audit log as `capture.start`.
 - At most **16 captures** run at once on a server. A viewer that falls behind gets a count of the
   queries it skipped instead of slowing anything down.
+- Live capture works on every server, a DNZ secondary included.
 - In a [cluster](/deploy/cluster), a capture shows the queries answered by the server you are
   connected to, like the query log. Queries a client sends to another server show up in a capture
   there.
@@ -126,12 +172,13 @@ their division. See [Access](/admin/access) for roles and permissions.
 ```bash
 curl -N -X POST https://dns.example.com/api/capture \
   -H "Authorization: Bearer $DNZ_TOKEN" -H "Content-Type: application/json" \
-  -d '{"keywords": "tiktok, facebook", "division_id": null, "client": "", "seconds": 60}'
+  -d '{"keywords": "tiktok, facebook", "lists": [3], "division_id": null, "client": "", "seconds": 60}'
 ```
 
 | Field | Meaning |
 | --- | --- |
 | `keywords` | Keywords, separated by commas or spaces; empty for every query |
+| `lists` | Keyword list ids whose keywords are added |
 | `division_id` | A division, or `null` for the whole server |
 | `client` | One client address, or empty for all |
 | `seconds` | How long to run; empty runs until the client disconnects (at most 24 hours) |
@@ -140,12 +187,24 @@ Events:
 
 | Event | Data |
 | --- | --- |
-| `start` | `{"keywords": ["tiktok", "facebook"], "division_id": null, "client": null, "seconds": 60, "node": "…"}` |
+| `start` | `{"keywords": ["tiktok", "facebook"], "lists": ["Social media"], "division_id": null, "client": null, "seconds": 60, "node": "…"}` |
 | `hits` | `{"at": "2026-10-27T08:55:03.120Z", "hits": [{"name": "api.tiktok.com", "domain": "tiktok.com", "qtype": "A", "client": "192.168.1.20", "rcode": "NOERROR", "source": "upstream", "duration_ms": 12}], "dropped": 0}` |
 | `end` | `{"reason": "time"}` when `seconds` ran out |
 
 A comment line (`: ping`) every 15 seconds keeps idle streams open through proxies. When too many
 captures are running, the answer is `429`.
+
+Keyword lists:
+
+| Method | Path | Body or query |
+| --- | --- | --- |
+| `GET` | `/api/capture/lists?division_id=2` | Server-wide lists and division 2's (`logs.read` there); without `division_id`, the server-wide ones (`logs.server`) |
+| `POST` | `/api/capture/lists` | `{"name": "Social media", "keywords": "tiktok facebook", "division_id": 2}`; `division_id` `null` is server-wide |
+| `PATCH` | `/api/capture/lists/{id}` | `{"name": "…", "keywords": "…"}`, either one |
+| `DELETE` | `/api/capture/lists/{id}` | |
+
+A list comes back as `{"id": 3, "division_id": null, "name": "Social media", "keywords": ["tiktok", "facebook"], "created_at": "…"}`.
+API tokens with `logs.read` can read and use their division's lists.
 
 ## Next steps
 
