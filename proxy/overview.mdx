@@ -123,11 +123,15 @@ upgrade:
 ### Adding a route
 
 The **Proxy** menu has **Proxies**, **Routes**, **Nodes** (DNZ Proxy), **Analytics** and
-**Certificates**. **Proxy → Routes** lists the routes of every proxy (or of the one picked above the
-list), and a proxy's own page opens on the same list: one row per hostname, with where it goes, its
-HTTPS and certificate, whether DNS answers with the proxy (**Add DNS record** when not), and its
-switches. **By zone** puts the rows under the zone of their hostname. **Add route** is the one
-button, and the same dialog edits a route later.
+**Certificates**. **Proxy → Routes** lists the routes of every proxy in one list (or of the one picked above it), and a
+proxy's own page opens on the same list: one row per hostname, with where it goes and its switches.
+A hostname served by several proxies is one row whose **Proxy** column names them. Small icons next
+to the hostname show how its certificate and DNS are doing; hover one for the details and what to do
+(**Add DNS record**, **Try again now**, the certificate log). Hover **Goes to** for every server.
+**By zone** gives each zone a list of its own. **Add route** is the one button: on Proxy → Routes it
+asks which proxies (one or several, with a search), and the same dialog edits a route later. Its
+**Serve on** saves the route on every proxy picked; each keeps its own service, firewall and other
+middlewares, and **Remove from …** in the row's menu takes it off one proxy.
 
 The dialog has the **Hostname** (and **Another hostname**), where it goes, **HTTPS** with a
 redirect from `http://`, the switches under **Protect and speed up**, and **Advanced** for a path,
@@ -219,6 +223,48 @@ A record without a router links straight to this dialog, with its name filled in
     ```
 
     `edge` is the proxy's name. See [Proxy commands](/cli/proxy#proxy-routes) for every option.
+
+  </Tab>
+</Tabs>
+
+### Redirect routes
+
+A hostname can send every visit to another address instead of to servers: an old domain moved to a
+new one, a short name for a long URL, a campaign page.
+
+- **Add route → Redirect** makes the route with no upstreams: the router, an empty service of its
+  own, the DNS record and HTTPS (with its certificate) as for any route, and a
+  [moved status page](/proxy/status-pages#moved) on each of its hostnames.
+- **Redirect to…** in a route's ⋯ menu does the same for a route that has servers. The dialog takes
+  the address, **Keep the path and query** (`/docs?page=2` goes to `<address>/docs?page=2`),
+  **Permanent (301)** (off by default: a temporary 302) and **On**. A hostname's other status page
+  (maintenance, blocked, …) is replaced, with a warning first. **Remove redirect** sends visitors to
+  the route's servers again; a redirect route without servers shows the "no server" page (503) until
+  it gets one.
+
+<Warning>
+  Browsers remember a 301 and stop asking the proxy, so a permanent redirect can't be switched off
+  for visitors who already got it. Keep **Permanent** off unless the move is final. See
+  [Permanent or temporary](/proxy/status-pages#permanent-301-or-temporary-302).
+</Warning>
+
+The address must be `http://` or `https://` and can't be one of the route's own hostnames (a loop).
+DNZ Proxy answers the redirect itself, Caddy gets it in its configuration, and a Traefik gets it from
+DNZ like any status page.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    **Proxy → Routes** → **Add route** → **Redirect**, or a route's ⋯ menu → **Redirect to…**.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz proxy routes add edge old.example.com --redirect-to https://new.example.com --keep-path
+    dnz proxy routes redirect edge app.example.com --to https://status.example.com --temporary
+    dnz proxy routes redirect edge app.example.com --off
+    ```
 
   </Tab>
 </Tabs>

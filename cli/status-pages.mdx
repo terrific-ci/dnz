@@ -34,6 +34,7 @@ dnz status-page set app.example.com maintenance --for 2h --allow 203.0.113.7,10.
 dnz status-page set app.example.com maintenance --from "2026-10-25 22:00" --until "2026-10-26 01:00" \
   --message "We're upgrading the database. Back by 01:00." --link https://status.example.com
 dnz status-page set old.example.com moved --to https://new.example.com --keep-path
+dnz status-page set promo.example.com moved --to https://shop.example.com/sale --temporary  # a 302
 dnz status-page set beta.example.com coming_soon --off  # saved, but off for now
 ```
 
@@ -51,6 +52,7 @@ The status is one of `maintenance`, `coming_soon`, `unreachable`, `blocked`, `un
 | `--link` | The *More information* button, e.g. `https://status.example.com` |
 | `--to` | `moved`: the new address |
 | `--keep-path` | `moved`: keep the path and query (`/a?b` → `<to>/a?b`) |
+| `--temporary` | `moved`: a temporary 302 instead of the permanent 301 (browsers remember a 301, so turning it off wouldn't reach visitors who saw it) |
 | `--off` | Save it turned off |
 
 Times are RFC 3339 (`2026-10-25T22:00:00+07:00`) or `"YYYY-MM-DD HH:MM"` in this machine's time

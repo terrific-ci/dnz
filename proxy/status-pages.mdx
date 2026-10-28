@@ -49,7 +49,7 @@ wildcard covers it too, its own status wins. A host has at most one status.
 | `suspended` | 403 | **Site suspended**: the site has been suspended |
 | `rate_limited` | 429 | **Too many requests**: wait a moment and try again (`Retry-After: 60` by default) |
 | `geo_blocked` | 451 | **Not available in your region** |
-| `moved` | 301 | A redirect to the new address (`Location`), with a page linking to it |
+| `moved` | 301 or 302 | A redirect to the new address (`Location`), with a page linking to it: 301 when permanent (the default), 302 when temporary |
 | `gone` | 410 | **Site retired**: the site has been shut down and won't be coming back (no Try again button) |
 
 Each status can get its own **title** and **message** instead of the usual ones (up to 120 and 2000
@@ -72,7 +72,7 @@ example your status page or an announcement.
       </Step>
       <Step title="Fine-tune it">
         Optionally give a title, a message, a schedule, allowed addresses and a link. For **Moved**,
-        give the new address and whether to keep the path. The preview shows the page as visitors
+        give the new address, whether to keep the path, and whether it is **Permanent (301)**. The preview shows the page as visitors
         will see it.
       </Step>
       <Step title="Save">
@@ -142,9 +142,25 @@ over (the entry point's **PROXY protocol from** and **Trusted forwarders**, see
 
 ## Moved
 
-`moved` needs the new address (`https://new.example.com`). Visitors get a `301` with
+`moved` needs the new address (`https://new.example.com`). Visitors get a redirect with
 `Location: <new address>`. With **keep path**, the path and query come along:
 `https://old.example.com/docs?page=2` goes to `https://new.example.com/docs?page=2`.
+
+### Permanent (301) or temporary (302)
+
+A moved status is **permanent** unless you say otherwise, and answers `301 Moved Permanently`.
+
+<Warning>
+  Browsers remember a 301: a visitor who got it goes straight to the new address next time without
+  asking the proxy, so turning the status off (or removing it) doesn't reach them until their
+  browser forgets it. Uncheck **Permanent (301)** (`--temporary`, `"permanent": false`) for a
+  `302 Found`: every visit asks the proxy, so turning the redirect off works for everybody at once.
+</Warning>
+
+Use a 302 for anything you may switch back; keep the 301 for a move that is final (search engines
+move their ranking to the new address only for a 301). DNZ Proxy, Caddy and Traefik all answer with
+the same code. Statuses saved before this choice existed stay permanent. A route can be a redirect
+from the start: see [Redirect routes](/proxy/overview#redirect-routes).
 
 ## How each proxy shows it
 

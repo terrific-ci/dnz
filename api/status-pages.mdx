@@ -42,6 +42,7 @@ The body of `POST` and `PUT`:
   "link": "https://status.example.com",
   "redirect_to": "",
   "keep_path": false,
+  "permanent": true,
   "enabled": true
 }
 ```
@@ -56,6 +57,7 @@ The body of `POST` and `PUT`:
 | `link` | The *More information* button (`http://` or `https://`) |
 | `redirect_to` | `moved`: the new address (required for it) |
 | `keep_path` | `moved`: keep the path and query |
+| `permanent` | `moved`: `true` (the default) answers 301, which browsers remember; `false` a temporary 302. The status's `code` says which |
 | `enabled` | Default `true` |
 
 Answers add `id`, `zone_id`, `zone`, `state` (`active`, `scheduled`, `ended` or `off`), `code`,
@@ -78,7 +80,7 @@ curl -X POST https://dns.example.com/api/status-pages \
 ## Preview
 
 `GET /api/status-pages/preview` renders the page with `kind` and, optionally, `host`, `title`,
-`message`, `link`, `redirect_to`, `ends_at` and `proxy`. It answers HTML, JSON or text by `Accept`,
+`message`, `link`, `redirect_to`, `permanent`, `ends_at` and `proxy`. It answers HTML, JSON or text by `Accept`,
 like the proxy does.
 
 ## Errors

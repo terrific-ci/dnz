@@ -60,7 +60,7 @@ as on (`traefik`, `dnz`) or off.
 | `GET` | `/api/proxies/{id}/routes/entry-points` | The proxy's HTTP entry points for the router and Add route dialogs: `{"list": [{"name", "address"}], "http", "https", "from", "http_found", "https_found", "error"}` |
 | `GET` | `/api/proxies/{id}/routes` | `{"routes": [...], "auto_certificates"}`: each route's `id` (its router), `hosts`, `path_prefix`, `tls`, `cert_resolver`, `redirect_router`, `service_id`, `service_name`, `own_service` (false: a service of the proxy's it uses), `servers`, `options` (the switches), other `middlewares`, `simple` / `advanced` and, on DNZ Proxy, `certificate` |
 | `POST` | `/api/proxies/{id}/routes` | One step: `{"host" or "hosts", "servers" or "service_id" (one of the proxy's services, used as it is), "tls", "redirect_http", "options", "middlewares", "path_prefix", "dns_record"}` adds the service, router(s), switches and proxied DNS records |
-| `PUT` | `/api/proxies/{id}/routes/{router}` | The same body: changes the route (409 for one set up under Advanced) |
+| `PUT` | `/api/proxies/{id}/routes/{router}` | The same body: changes the route (409 for one set up under Advanced); also `"clear_redirect": true` |
 | `DELETE` | `/api/proxies/{id}/routes/{router}[?unproxy=true]` | Deletes its routers, its own service (a picked one stays) and switches; `unproxy` takes the proxy off its DNS records instead of refusing |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/routers[/{router}]` | Add, change, delete a router |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/services[/{service}]` | Add, change, delete a service |
@@ -72,6 +72,13 @@ as on (`traefik`, `dnz`) or off.
 Traefik it lists the ones its API lists. `from` says which (`dnz-proxy` / `traefik`). Without either,
 and always under Caddy, it offers `web` (:80) and `websecure` (:443). `http` and `https` are the ones on port 80 and 443 that
 a new route uses.
+
+**Redirects.** `POST` and `PUT` on a route take `"redirect": {"to": "https://new.example.com",
+"keep_path": true, "permanent": false}`: every visit to the route's hosts goes to `to` (a `moved`
+[status page](/api/status-pages) on each, replacing another kind), and `servers` may be empty.
+`permanent` defaults to `true` (301); `false` answers 302. `to` must be `http://` or `https://` and
+not one of the route's hosts. `PUT` with `"clear_redirect": true` deletes the hosts' `moved` status.
+Both answer with the statuses in `redirects`.
 
 **Routes.** In `POST /api/proxies/{id}/routes`, `http_entry_point` and `https_entry_point` default
 to the `http` and `https` entry points above, and `cert_resolver` to DNZ's automatic certificates on

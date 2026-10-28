@@ -153,9 +153,10 @@ with OAuth isn't possible.
 | `create_zone` ✎ | Creates an empty primary zone |
 | `clear_dns_cache` ✎ | Empties the forwarding and recursive caches (superadmin) |
 | `clear_proxy_cache` ✎ | Drops what a DNZ Proxy's nodes cached for a hostname (superadmin) |
-| `set_status_page` ✎ | Sets or replaces a host's status page: maintenance, moved, blocked…, with a schedule and allowed addresses |
+| `set_status_page` ✎ | Sets or replaces a host's status page: maintenance, moved, blocked…, with a schedule and allowed addresses; `moved` is a 301 unless `permanent: false` (a 302) |
 | `switch_status_page` ✎ | Turns a host's status page on or off |
 | `delete_status_page` ✎ | Removes a host's status page |
+| `set_route_redirect` ✎ | Redirects every visit to a route's hostnames to another address (`to`, `keep_path`, `permanent`), or removes the redirect (`off`); the rest of the route stays |
 
 ✎ marks the tools that change DNS or what visitors see. They are only offered with **read and change** access (OAuth),
 `--allow-writes` (stdio) or an API token. A change that needs approval isn't made: the tool answers
@@ -171,8 +172,8 @@ The token an assistant gets acts as the user who allowed it, with their division
 - **Read only** reads what that user can read in the API, except accounts, sessions, users, API
   tokens, DNS update keys, backups, settings, notification providers, Cloudflare connections, ACME
   credentials and the cluster.
-- **Read and change** also creates, changes and deletes records, creates zones, clears the cache
-  and sets, switches and removes status pages.
+- **Read and change** also creates, changes and deletes records, creates zones, clears the cache,
+  sets, switches and removes status pages, and changes a route's upload limits and redirect.
   Nothing else: no zone deletion, no rollbacks, no approvals, no settings.
 
 Access tokens last an hour; the assistant renews them with a refresh token that lasts 30 days from

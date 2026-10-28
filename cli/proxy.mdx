@@ -86,6 +86,7 @@ dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000=3 -u http://1
 dnz proxy routes add edge api.example.com -u http://10.0.2.11:8080 --rate-limit 100/300 --firewall office
 dnz proxy routes add edge intranet.example.com -u http://10.0.9.4 --http        # HTTP only
 dnz proxy routes add edge shop.example.com --service shop                       # to one of edge's services
+dnz proxy routes add edge old.example.com --redirect-to https://new.example.com --keep-path   # a redirect, no upstream
 dnz proxy routes edit edge app.example.com --no-cache --user ops:other-pass --remove-user admin
 dnz proxy routes edit edge app.example.com --https off
 dnz proxy routes cert edge app.example.com        # the certificate's state and latest steps; --renew gets it again
@@ -104,8 +105,11 @@ every zone, or one the proxy already routes, is refused, and the closest names a
 
 | Option (`add`) | What it does |
 | --- | --- |
-| `-u`, `--upstream` | Upstream URL with scheme and port; repeat for more. Append `=WEIGHT` to share visits unevenly, e.g. `http://10.0.0.10:8080=3`. Required unless `--service` |
+| `-u`, `--upstream` | Upstream URL with scheme and port; repeat for more. Append `=WEIGHT` to share visits unevenly, e.g. `http://10.0.0.10:8080=3`. Required unless `--service` or `--redirect-to` |
 | `--service` | Send the visits to one of the proxy's services instead, by name or id. The route uses it as it is, and deleting the route leaves it |
+| `--redirect-to` | Redirect every visit to this address instead of upstreams (a [redirect route](/proxy/overview#redirect-routes)) |
+| `--keep-path` | With `--redirect-to`: keep the path and query (`/a?b` → `<URL>/a?b`) |
+| `--temporary` | With `--redirect-to`: a temporary 302 instead of a permanent 301 |
 | `--also` | Another hostname of the same route; repeat for more |
 | `--http` | Plain HTTP only: no HTTPS router and no redirect |
 | `--no-redirect` | Keep `http://` as it is instead of redirecting to `https://` |
@@ -140,6 +144,19 @@ dnz proxy routes edit edge app.example.com --request-header X-Env=production --r
 
 HTTPS with a redirect from `http://` is the default. On a DNZ Proxy its certificate comes by
 itself once [automatic certificates](#certificates) are set up; until then it gets a temporary one.
+
+### Redirects
+
+```bash
+dnz proxy routes redirect edge app.example.com --to https://status.example.com --temporary
+dnz proxy routes redirect edge app.example.com --to https://new.example.com --keep-path   # a permanent 301
+dnz proxy routes redirect edge app.example.com --off                                       # its servers again
+```
+
+Every visit to the route's hostnames goes to the address (a `moved` status page on each, replacing
+another status page they have). It is a permanent 301 unless `--temporary`: browsers remember a
+301, so turning it off wouldn't reach visitors who already got it. `dnz status-page off|on <host>`
+switches it without removing it.
 
 ### Entry points
 
