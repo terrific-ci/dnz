@@ -9,9 +9,12 @@ to the backend, with the right HTTP status code and, where it fits, a `Retry-Aft
 
 The page shows:
 
-- the error code, a title and a message
+- an icon for the status, the error code, a title and a message
 - the chain **You → Proxy → Destination**, with how each hop is doing (for maintenance: your
   browser *connected*, the proxy *connected*, the site *maintenance*)
+- for blocked pages, **What you can do**: check the address, or ask the administrator with the request ID
+- for unreachable, bad gateway, gateway timeout and no server pages, what to do *if you're visiting*
+  and *if you run this site*
 - **Try again** and **More information** buttons
 - a request ID and the time, and "Powered by DNZ"
 
@@ -116,7 +119,8 @@ A status is on from the moment it is saved until it is turned off, unless it has
 
 - **Starts at**: it waits until then (*scheduled*), and visitors reach the backend as usual.
 - **Ends at**: it stops on its own (*ended*). Until then, the page shows **Expected back** with that
-  time, and `Retry-After` counts down the seconds to it.
+  time and how long until then (the page reloads itself when the time comes), and `Retry-After`
+  counts down the seconds to it.
 
 Without an end time, `Retry-After` is only sent for `rate_limited` (60 seconds).
 
