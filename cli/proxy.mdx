@@ -205,7 +205,8 @@ TXT record first and keeps the credential only when that works. `DNZ_CLOUDFLARE_
 ## DNZ Proxy nodes
 
 ```bash
-dnz proxy nodes                                   # every node: proxy, state, addresses, version, config
+dnz proxy nodes                                   # every node: proxy, state, addresses, version, config, CPU, memory
+dnz proxy nodes show jkt-1                        # one node: its report and its server's CPU, load, memory, disk
 dnz proxy approve jkt-1 --proxy "Edge JKT" --ipv4 203.0.113.10
 dnz proxy ignore node-10-0-0-9                    # turn a waiting node away
 dnz proxy drain jkt-1                             # out of DNS answers, still serving
@@ -223,6 +224,11 @@ with. New nodes wait for approval; they can only join DNZ Proxies. `approve` tak
 | `--name` | A new name for the node |
 
 Nodes are named by name or id.
+
+`nodes` shows each node's CPU (a share of the CPUs it may use: its container's limit, else the
+machine's) and its process's memory. `nodes show` adds the load average, the container's and the
+machine's memory, the free disk and TCP sockets, from the node's last report (see
+[Servers](/proxy/dnz-proxy#servers)). With `--json`, `report.system` holds the raw numbers.
 
 ### Clearing the cache
 

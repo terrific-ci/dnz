@@ -159,6 +159,24 @@ groups:
           summary: "DNZ Proxy node {{ $labels.node }} ({{ $labels.proxy }}) is down"
           description: "The node stopped reporting or cannot be reached; DNS no longer answers with its addresses."
 
+      - alert: DnzProxyNodeDiskFull
+        expr: dnz_proxy_node_disk_available_bytes / dnz_proxy_node_disk_total_bytes < 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DNZ Proxy node {{ $labels.node }} ({{ $labels.proxy }}) is running out of disk"
+          description: "Less than 5% is free on {{ $labels.path }} ({{ $labels.role }}): its analytics, request log or disk cache can't grow."
+
+      - alert: DnzProxyNodeMemoryHigh
+        expr: dnz_proxy_node_container_memory_used_bytes / dnz_proxy_node_container_memory_limit_bytes > 0.9 or dnz_proxy_node_host_memory_used_bytes / dnz_proxy_node_host_memory_total_bytes > 0.95
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DNZ Proxy node {{ $labels.node }} ({{ $labels.proxy }}) is short of memory"
+          description: "Its container is above 90% of its memory limit, or its machine above 95% of its memory: it may be killed for memory."
+
       - alert: DnzTraefikDisconnected
         expr: dnz_traefik_connected == 0
         for: 5m

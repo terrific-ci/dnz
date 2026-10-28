@@ -142,6 +142,7 @@ They cover:
 | `DnzSecondaryZoneFailing`, `DnzSecondaryZoneExpiring` | A secondary zone cannot reach its primaries, or is about to expire |
 | `DnzDomainExpiring`, `DnzDomainExpired` | A [monitored domain](/dns/domain-expiry) expires within 14 days, or has expired |
 | `DnzProxyNodeDown`, `DnzTraefikDisconnected` | A DNZ Proxy node or a Traefik stopped reporting |
+| `DnzProxyNodeDiskFull`, `DnzProxyNodeMemoryHigh` | A DNZ Proxy node has less than 5% disk free, or its container is above 90% of its memory limit (its machine above 95%) |
 | `DnzHealthCheckFailing`, `DnzSyncFailing` | A GeoDNS health check, or a Caddy/Traefik record sync, fails |
 | `DnzClusterNodeBehind`, `DnzClusterNoLeader` | A cluster node has not loaded the latest changes, or no node holds the leader lease |
 | `DnzBackupFailing`, `DnzBackupOverdue` | [Backups](/admin/backups) to a target failed twice in a row, or a scheduled one is more than an hour overdue |
@@ -172,6 +173,11 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_domain_expiry_days{zone,domain}` | Days until a [monitored domain](/dns/domain-expiry) expires |
 | `dnz_certificate_expiry_timestamp_seconds` | Certificate expiry |
 | `dnz_proxy_enabled`, `dnz_proxies{kind}` | Whether proxying is on (1), and approved proxies by kind (`traefik`, `dnz`, `caddy`) |
+| `dnz_proxy_node_memory_bytes`, `dnz_proxy_node_cpu_ratio`, `dnz_proxy_node_cpus` `{proxy,node}` | A DNZ Proxy node's [server](/proxy/dnz-proxy#servers): its process's memory (RSS), its CPU use as a share (0 to 1) of the CPUs it may use, and those CPUs (container limit, else the machine's). Also `dnz_proxy_node_uptime_seconds`, `dnz_proxy_node_host_cpus` and `dnz_proxy_node_tcp_sockets` |
+| `dnz_proxy_node_load1`, `…_load5`, `…_load15` `{proxy,node}` | The node's machine's load average |
+| `dnz_proxy_node_host_memory_total_bytes`, `…_used_bytes`, `…_available_bytes` `{proxy,node}` | The node's machine's memory |
+| `dnz_proxy_node_container_memory_used_bytes`, `…_limit_bytes` `{proxy,node}` | The node's container (or systemd unit) memory, counted like `docker stats`, and its limit |
+| `dnz_proxy_node_disk_total_bytes`, `…_available_bytes` `{proxy,node,role,path}` | The node's state volume (`role="state"`) and its cache's disk tier (`role="cache"`, when on another volume) |
 | `dnz_proxy_waiting_room_active`, `…_queued`, `…_max_active` `{proxy,node,middleware,host}` | A DNZ Proxy [waiting room](/proxy/dnz-proxy#waiting-room-dnzwaitingroom): visitors in, visitors in line, and the limit, per node and hostname. With Redis every node reports the shared totals: take the max, not the sum |
 | `dnz_traefik_connected{proxy}`, `dnz_caddy_proxy_connected{proxy}` | 1 while a Traefik or Caddy proxy fetched its configuration in the last minute (`…_last_seen_timestamp_seconds` says when) |
 | `dnz_caddy_sync_success{id,caddy,kind}` | [Sites in DNS](/integrations/caddy): 1 when the last sync worked, `kind` `caddy` or `traefik` (not proxies; `dnz_caddy_sync_timestamp_seconds` says when) |

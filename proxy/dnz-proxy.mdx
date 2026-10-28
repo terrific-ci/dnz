@@ -319,7 +319,34 @@ The node list keeps two things apart:
 </Warning>
 
 Nodes report every 5 seconds: the configuration they serve, their listeners, the health of each
-upstream, cache use, warnings (a rule or middleware they couldn't use), and their traffic.
+upstream, cache use, warnings (a rule or middleware they couldn't use), and the server they run on.
+
+### Servers
+
+With each report a node says how its process and the machine it runs on are doing:
+
+- the node process's memory (resident) and CPU since its previous report
+- the machine's CPUs and, in a container, its CPU limit
+- the load average over 1, 5 and 15 minutes (a container shares its host's)
+- the machine's memory and, in a container or a systemd unit, the container's memory and limit,
+  counted the way `docker stats` counts it (cgroup v2, else v1)
+- size and free space of the state directory's volume, and of the cache's disk tier when it's on
+  another one
+- TCP sockets in use in the node's network namespace
+
+On Linux the node reads them from `/proc` and the cgroup files once per report, on a background
+thread, so serving traffic costs nothing extra. On macOS and other platforms it reports what it can
+(CPUs and disk). Nodes before 1.21 report none of it.
+
+**Proxy → Analytics** opens with a **Servers** card per node, following the page's proxy filter: CPU
+as a share of the CPUs the node may use, the node process's memory against what it may have, the
+container's memory against its limit (or the machine's memory), the fullest disk, the load average,
+TCP sockets, version and uptime. Bars turn amber from 75% and red from 90% (disk from 85% and 95%,
+load from 1 and 2 per CPU). Hover a number for the details. The proxy's **Nodes** tab shows the
+same in short.
+
+Prometheus gets them as `dnz_proxy_node_*` gauges (see [Prometheus](/dashboard/prometheus)), with
+alerts for a full disk and a node short of memory.
 
 ### DNS and health
 
@@ -340,7 +367,8 @@ it.
 
 ```bash
 dnz proxy show                                    # proxying on/off, proxies, connect key
-dnz proxy nodes                                   # every node: proxy, state, addresses, config
+dnz proxy nodes                                   # every node: proxy, state, addresses, config, CPU, memory
+dnz proxy nodes show jkt-1                        # one node and its server: CPU, load, memory, disk
 dnz proxy approve jkt-1 --proxy "Edge JKT" --ipv4 203.0.113.10
 dnz proxy ignore node-10-0-0-9
 dnz proxy drain jkt-1                             # out of DNS answers, still serving
@@ -650,7 +678,8 @@ None of it goes into DNZ's database, so a busy proxy never competes with DNS for
 open **Proxy → Analytics**, DNZ asks each node over its configuration stream and adds the answers
 up. No port on the node has to be reachable from DNZ.
 
-The page shows, per DNZ Proxy and hostname, over the last hour to 30 days:
+The page opens with the [servers](#servers) the nodes run on. Below them it shows, per DNZ Proxy and
+hostname, over the last hour to 30 days:
 
 - requests by status class, bandwidth, and latency (p50, p95, p99)
 - cache hit ratio, blocked and challenged visits

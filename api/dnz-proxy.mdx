@@ -29,7 +29,7 @@ The stream stays open and must not be buffered by a reverse proxy in front of DN
 
 | Method and path | What it does |
 | --- | --- |
-| `GET /api/proxy/dnz` | All nodes, the connect key |
+| `GET /api/proxy/dnz` | All nodes with their last report (`report.system`: the [server's](/proxy/dnz-proxy#servers) CPU, memory, load and disk), the connect key |
 | `POST /api/proxy/dnz/nodes` | Add a node |
 | `PUT /api/proxy/dnz/nodes/{id}` | Edit a node |
 | `DELETE /api/proxy/dnz/nodes/{id}` | Remove a node (revokes its token) |
