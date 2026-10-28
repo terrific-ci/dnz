@@ -79,6 +79,7 @@ The first argument is the proxy, by name or id. In the output, **DNS** shows a n
 
 ```bash
 dnz proxy routes list edge                        # hostnames, where they go, HTTPS / certificate, switches
+dnz proxy routes list edge --by-zone              # the same under the zone of each hostname (no zone last)
 dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000
 dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000=3 -u http://10.0.1.21:3000 \
   --also www.example.com --cache 10m --user admin:s3cret --allow 10.0.0.0/8
