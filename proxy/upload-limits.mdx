@@ -81,6 +81,12 @@ stream through. When an upload breaks a limit halfway, the proxy cuts the reques
 and shows the visitor an **Upload refused** page saying what was too big or not allowed (HTML, JSON or
 text, like the [status pages](/proxy/status-pages)).
 
+## What it costs
+
+Routes without upload limits don't pay anything. With them, on one CPU of a dnz-proxy node, a small
+form takes 9 µs more per request at the same rate, a 1 MiB file 14% more CPU at the same rate, and a
+16 MiB file, where the CPU is full, 6% fewer uploads a second. See [Proxy benchmarks](/proxy/benchmarks).
+
 ## Every route at once
 
 On a dnz-proxy proxy, **Settings → Every route → Upload limits** applies to every route that has no

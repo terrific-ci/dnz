@@ -119,6 +119,36 @@ Under a burst of 1,000 connections fetching 64 KiB answers for 30 s:
 glibc keeps what a burst took; mimalloc gives it back within a minute, at a peak 3 to 8 MiB
 higher. Its purge delay, commit-on-demand and page-retain options didn't lower that peak.
 
+## 1.18: upload limits
+
+[Upload limits](/proxy/upload-limits) (`dnzMultipart`) read multipart bodies as they stream in. A route
+without them doesn't pay for it: the 1.18 build against the one before it, taking turns, median of
+4 rounds, on the scenarios above:
+
+| | Before | With upload limits in the build | Change |
+| --- | ---: | ---: | ---: |
+| HTTP, 1 KiB | 13,196 | 13,231 | +0.3% |
+| HTTPS, 1 KiB | 12,645 | 12,707 | +0.5% |
+| HTTPS, new connection per request | 2,506 | 2,500 | −0.2% |
+| HTTP, 64 KiB | 7,574 | 7,584 | +0.1% |
+| Latency p50 / p99 at 5,000/s | 0.59 / 1.55 ms | 0.55 / 1.56 ms | |
+| CPU per request | 98.6 µs | 96.0 µs | |
+
+A route with them: multipart POSTs through dnz-proxy (one CPU) to an origin that reads the whole
+body, 32 connections, with the php2shell shield and a 64 MiB limit on and off, taking turns,
+median of 4 rounds:
+
+| Upload | Off | On | Change |
+| --- | ---: | ---: | ---: |
+| A form (2 fields, 1 KiB) | 6,249/s, 116 µs CPU | 6,241/s, 125 µs CPU | +9 µs a request |
+| A 1 MiB file | 620/s, 941 µs CPU | 618/s, 1,076 µs CPU | same rate, +14% CPU |
+| A 16 MiB file | 54.6/s (874 MiB/s), 18.9 ms CPU | 51.1/s (818 MiB/s), 20.3 ms CPU | −6% (the CPU is full) |
+
+File data goes on as the slice of the buffer it came in; only the bytes at a chunk's end that may
+begin a boundary wait for the next one. The first version copied every byte into a buffer and out
+again, and always held a boundary's length back: 16 MiB uploads ran at 46.6/s (−13%) with 16% more
+CPU, 1 MiB ones with 23% more CPU.
+
 ## Method
 
 - Each proxy runs in its own container on one Docker network, started on its own, and forwards to
