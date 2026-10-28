@@ -111,6 +111,30 @@ Without filters, `import` takes every record it can. `--type` and `--name` (rela
 `@` for the apex) narrow it, and zones without matching records are left alone. Copying needs
 `records.write` too, and `zones.write` when a new zone is created.
 
+## Compare with Cloudflare
+
+The **Cloudflare** tab of a local zone puts it beside the Cloudflare zone of the same name: each
+name and type in one row, with what DNZ answers clients in your network next to what Cloudflare
+answers the internet. Handy for split horizon, where `app` is `192.168.10.21` inside and
+`203.0.113.45` outside.
+
+| Status | Meaning |
+|---|---|
+| **Split** | Different values inside and outside: normal for split horizon |
+| **Same** | Both answer the same |
+| **Only local** | Not on Cloudflare: **Add to Cloudflare** (DNS only, asks first) |
+| **Only Cloudflare** | Not in DNZ: **Copy to DNZ** |
+| **Conflict** | Cloudflare publishes a private address (10/8, 172.16/12, 192.168/16, 100.64/10, fc00::/7): it leaks your internal network |
+
+Proxied Cloudflare records are marked **Proxied**: the internet gets Cloudflare's addresses, and
+Cloudflare connects to the one shown. Records in views, switched-off records, the SOA and the apex
+NS are left out. Nothing changes on either side unless you use a row's button.
+
+```bash
+dnz cf compare example.com
+dnz cf compare example.com --status split,conflict --refresh
+```
+
 ## Keep a local zone in sync
 
 **Keep in sync with Cloudflare** on a local zone pushes it to the Cloudflare zone of the same name

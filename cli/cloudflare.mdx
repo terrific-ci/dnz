@@ -82,6 +82,16 @@ dnz cf push example.com --dry-run
   skips the question.
 </Note>
 
+## Comparing with Cloudflare
+
+```bash
+dnz cf compare example.com                        # local and Cloudflare values side by side, with a status
+dnz cf compare example.com --status split,conflict --refresh
+```
+
+Records pair by name and type. Statuses: `same`, `split` (different inside and outside),
+`only-local`, `only-cloudflare` and `conflict` (a private address published on Cloudflare).
+
 ## Keeping a zone in sync
 
 ```bash
