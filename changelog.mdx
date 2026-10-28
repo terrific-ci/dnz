@@ -6,18 +6,35 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.18.0**, released October 28, 2026. To install or upgrade to it:
+The latest release is **v1.19.0**, released October 28, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.18.0
-docker pull terrificci/dnz-proxy:1.18.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.18.0
+docker pull terrificci/dnz:1.19.0
+docker pull terrificci/dnz-proxy:1.19.0   # a server that only runs dnz-proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.19.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.18.0" description="October 28, 2026" tags={["Latest"]}>
+<Update label="v1.19.0" description="October 28, 2026" tags={["Latest"]}>
+
+- Live capture: keyword lists to pick instead of typing keywords
+- Live capture keyword lists: dnz capture --list, dnz capture-list, MCP
+- Live capture keyword lists: picker and editor on the page, docs
+- Keyword list dialog: the keyword count beside its label
+- Phone layout: the setup banner's buttons wrap under its text, the capture's client field is full width
+- Login page: split layout with a globe showcase beside the form, show-password toggle
+- Loading feedback: spinners on server-side searches and busy buttons
+- Searchable selects for lists that can grow long
+- Proxy menu: Proxies, Routes, Nodes, Analytics, Certificates; routes by zone
+- Sidebar: menu items keep their height when the menu scrolls
+- CLI: dnz proxy routes list --by-zone
+- Cloudflare: compare a local zone with its Cloudflare zone, one row per name
+
+</Update>
+
+<Update label="v1.18.0" description="October 28, 2026">
 
 - Dependencies: security updates for rustls-webpki, webpki-root-certs, crypto-bigint, ctutils
 - HTTP/3 for dnz-proxy: research and plan
