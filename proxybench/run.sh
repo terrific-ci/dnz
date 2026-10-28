@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Reverse proxy benchmark: dnz-proxy against nginx, HAProxy, Envoy, Caddy and
+# Reverse proxy benchmark: DNZ Proxy against nginx, HAProxy, Envoy, Caddy and
 # Traefik, each forwarding to the same nginx origin, on one Docker network.
-# dnz-proxy joins a DNZ that pushes its configuration, as in production; both
+# DNZ Proxy joins a DNZ that pushes its configuration, as in production; both
 # come from the release image on Docker Hub (DNZ_IMAGE, default
 # terrificci/dnz:latest). The others are the upstream images (versions in
 # docker-compose.yml).
@@ -12,7 +12,7 @@
 #   BENCH_PROXY_CPUS=1,2 ./run.sh             # two CPUs for the proxy under test
 #   BENCH_KEEP=1 ./run.sh                     # leave the origin, tools and last proxy running
 #   DNZ_IMAGE=terrificci/dnz:1.6.1 ./run.sh   # a given release
-#   BENCH_BUILD=1 ./run.sh                    # DNZ and dnz-proxy built from source (source repository only)
+#   BENCH_BUILD=1 ./run.sh                    # DNZ and DNZ Proxy built from source (source repository only)
 #
 # Scenarios, each a wrk run of BENCH_DURATION seconds with BENCH_CONNECTIONS
 # keep-alive connections, BENCH_RUNS times (the median counts):
@@ -52,7 +52,7 @@ ip() {
 }
 label() {
     case $1 in
-        dnzproxy) echo dnz-proxy ;; nginx) echo nginx ;; haproxy) echo HAProxy ;;
+        dnzproxy) echo "DNZ Proxy" ;; nginx) echo nginx ;; haproxy) echo HAProxy ;;
         envoy) echo Envoy ;; caddy) echo Caddy ;; traefik) echo Traefik ;;
     esac
 }
@@ -94,7 +94,7 @@ fi
 perf sh -c 'cd /bench/work/tls && cat cert.pem key.pem >haproxy.pem && chmod 644 *.pem'
 
 
-# --- dnz-proxy: DNZ, a proxy, a route and a node ----------------------------------
+# --- DNZ Proxy: DNZ, a proxy, a route and a node ----------------------------------
 API=http://172.28.54.20:8080/api
 api() {
     local body=()
@@ -232,7 +232,7 @@ done
     done <work/raw/summary.tsv
     echo
     if [ -n "${BENCH_BUILD:-}" ]; then
-        echo "Versions: DNZ and dnz-proxy $(git -C ../.. describe --always --dirty 2>/dev/null || echo '?'),"
+        echo "Versions: DNZ and DNZ Proxy $(git -C ../.. describe --always --dirty 2>/dev/null || echo '?'),"
     else
         echo "Versions: DNZ and dnz-proxy $DNZ_IMAGE ($(docker run --rm --entrypoint /usr/local/bin/dnz-proxy "$DNZ_IMAGE" --version 2>/dev/null || echo '?')),"
     fi

@@ -1,4 +1,4 @@
-# Reverse proxy benchmark: dnz-proxy against nginx, HAProxy, Envoy, Caddy and
+# Reverse proxy benchmark: DNZ Proxy against nginx, HAProxy, Envoy, Caddy and
 # Traefik, each in front of the same nginx origin on one Docker network. Run it
 # with ./run.sh, which starts one proxy at a time.
 #
@@ -33,9 +33,9 @@ services:
       - ./work:/bench/work:ro
     networks: { bench: { ipv4_address: 172.28.54.10 } }
 
-  # DNZ: the control plane dnz-proxy joins. It only pushes the configuration;
+  # DNZ: the control plane DNZ Proxy joins. It only pushes the configuration;
   # no traffic goes through it.
-  # The release image from Docker Hub (it holds dnz-proxy too); run.sh sets
+  # The release image from Docker Hub (it holds DNZ Proxy too); run.sh sets
   # DNZ_IMAGE (BENCH_BUILD=1 builds both from source instead).
   dnz:
     image: ${DNZ_IMAGE:-terrificci/dnz:latest}

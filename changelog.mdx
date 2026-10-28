@@ -6,18 +6,26 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.19.0**, released October 28, 2026. To install or upgrade to it:
+The latest release is **v1.20.0**, released October 28, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.19.0
-docker pull terrificci/dnz-proxy:1.19.0   # a server that only runs dnz-proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.19.0
+docker pull terrificci/dnz:1.20.0
+docker pull terrificci/dnz-proxy:1.20.0   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.20.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.19.0" description="October 28, 2026" tags={["Latest"]}>
+<Update label="v1.20.0" description="October 28, 2026" tags={["Latest"]}>
+
+- Say DNZ Proxy, not dnz-proxy, wherever the proxy is named
+- Routes across proxies, Serve on, and redirect routes
+- Web: a right-click menu on every table and row list
+
+</Update>
+
+<Update label="v1.19.0" description="October 28, 2026">
 
 - Live capture: keyword lists to pick instead of typing keywords
 - Live capture keyword lists: dnz capture --list, dnz capture-list, MCP
@@ -37,11 +45,11 @@ The `latest` image tag and the install script without `--version` always get thi
 <Update label="v1.18.0" description="October 28, 2026">
 
 - Dependencies: security updates for rustls-webpki, webpki-root-certs, crypto-bigint, ctutils
-- HTTP/3 for DNZ Proxy: research and plan
+- HTTP/3 for dnz-proxy: research and plan
 - Sign-in for routes: visitors sign in with an OpenID Connect provider
 - Cloudflare: zone settings, DNSSEC, purges, traffic, tunnels; keep a zone in sync
 - Log push: stream the query log and audit log to HTTP, Loki, S3 or syslog
-- DNZ Proxy: upload limits middleware (dnzMultipart)
+- dnz-proxy: upload limits middleware (dnzMultipart)
 - Upload limits: route switch, route defaults, Traefik and Caddy, CLI, MCP, docs
 - Upload limits: a chip in the routes list, the dialog's fields on one line each
 - Visitor pages: a card with the status's icon, what to do next, the line as a ring
@@ -59,7 +67,7 @@ The `latest` image tag and the install script without `--version` always get thi
 - Menu: High availability group, Topology in Overview, Access in Settings
 - Routes: Upstreams or Service tab, to use one of the proxy's services
 - Status pages: links reach the nodes, labels line up
-- DNZ Proxy reports DNZ's version; nodes list shows version and config apart
+- dnz-proxy reports DNZ's version; nodes list shows version and config apart
 
 </Update>
 
@@ -91,7 +99,7 @@ The `latest` image tag and the install script without `--version` always get thi
 
 <Update label="v1.16.0" description="October 27, 2026">
 
-- DNZ Proxy: DNS filtering's block page for hosts no router serves
+- dnz-proxy: DNS filtering's block page for hosts no router serves
 - DNS filtering: a block page mode that points blocked names at a proxy
 - Block page on Traefik and Caddy proxies, over plain HTTP
 - Block page: settings in the UI, dnz filter block-page, topology
@@ -114,15 +122,15 @@ The `latest` image tag and the install script without `--version` always get thi
 
 <Update label="v1.15.0" description="October 26, 2026">
 
-- Add proxy: Docker Compose guide for DNZ Proxy nodes
+- Add proxy: Docker Compose guide for dnz-proxy nodes
 - Drop the "orange cloud" wording; describe proxied records by what they do
 - Blocked answers carry an Extended DNS Error (RFC 8914)
 - Set status pages from a router's hostnames on a proxy's page
 - MCP: status page tools
-- DNZ Proxy: waiting room middleware (dnzWaitingRoom)
+- dnz-proxy: waiting room middleware (dnzWaitingRoom)
 - Waiting room: form with live counts, CLI, MCP tool and docs
-- Routes API and automatic certificates for DNZ Proxy
-- Route defaults for DNZ Proxies
+- Routes API and automatic certificates for dnz-proxy
+- Route defaults for dnz-proxy proxies
 - Proxy page: Routes first, a simple route dialog, certificates step by step
 - MCP: proxy_routes and clear_proxy_cache
 - Routes: a waiting room switch, status pages from a route's menu
@@ -156,8 +164,8 @@ The `latest` image tag and the install script without `--version` always get thi
 - Replication: take over as primary while the old primary is still there
 - Replication: take over from the dashboard, with each step shown
 - Replication: secondaries copy divisions, roles and every account
-- DNZ Proxy: analytics stay on each node, every path counted
-- DNZ Proxy analytics: say an old node may need updating when it doesn't answer
+- dnz-proxy: analytics stay on each node, every path counted
+- dnz-proxy analytics: say an old node may need updating when it doesn't answer
 
 </Update>
 
@@ -207,7 +215,7 @@ The `latest` image tag and the install script without `--version` always get thi
 
 - Replication: copy zones from the primary's DNS when its API is behind a reverse proxy
 - Replication: removing a DNZ secondary can factory reset it
-- Proxy: DNZ with Caddy or DNZ Proxy in one compose file
+- Proxy: DNZ with Caddy or dnz-proxy in one compose file
 - Proxy settings: Add proxy → Caddy asks whether DNZ configures it or only keeps DNS records
 - Sites in DNS: Traefik too, chosen under Add proxy → Traefik → Keep my Traefik config
 
@@ -239,23 +247,23 @@ The `latest` image tag and the install script without `--version` always get thi
 <Update label="v1.7.3" description="October 24, 2026">
 
 - Cache test: count full sweeps instead of timing inserts
-- DNZ Proxy: mimalloc, without transparent huge pages
+- dnz-proxy: mimalloc, without transparent huge pages
 
 </Update>
 
 <Update label="v1.7.2" description="October 24, 2026">
 
-- Proxy settings: a DNZ Proxy's state comes from its nodes
+- Proxy settings: a dnz-proxy proxy's state comes from its nodes
 - Backups: a target tile opens the dialog on its kind
 - Proxy benchmarks: 1.7.1, and latency at an evenly spaced rate
-- DNZ Proxy: test the X-Forwarded-* headers from visitors and trusted forwarders
+- dnz-proxy: test the X-Forwarded-* headers from visitors and trusted forwarders
 - Proxy benchmarks: what was tried and not kept
 
 </Update>
 
 <Update label="v1.7.1" description="October 24, 2026">
 
-- DNZ Proxy: one write for an answer's head and small body; log lines only when kept
+- dnz-proxy: one write for an answer's head and small body; log lines only when kept
 - Proxy benchmarks: after 1.7.0, one write per answer and fewer allocations
 
 </Update>
@@ -269,7 +277,7 @@ The `latest` image tag and the install script without `--version` always get thi
 - Status pages without panels
 - Memory: big inserts not kept prepared, cached answers without spare room
 - Blocklists and threat feeds as packed domain sets
-- Proxy benchmark: DNZ Proxy against nginx, HAProxy, Envoy, Caddy and Traefik
+- Proxy benchmark: dnz-proxy against nginx, HAProxy, Envoy, Caddy and Traefik
 - Threats: few-name pairs kept small, the baseline's memory fixed
 - Caddy: upstream URLs split without an else-if chain
 
@@ -401,25 +409,25 @@ The `latest` image tag and the install script without `--version` always get thi
 - Proxy: full router rules, TLS options and domains, router observability
 - Proxy: TLS certificates and options, servers transports, TCP and UDP
 - Proxy: reachability marks, certificate progress, DNS records from the proxy
-- DNZ Proxy: workspace, node binary skeleton, nodes joining a proxy and the configuration stream
-- DNZ Proxy: the HTTP data plane on Pingora and Traefik's HTTP middlewares
-- DNZ Proxy: traffic analytics from the nodes' reports
-- Proxy: DNZ Proxy's own middleware types, kept from Traefik
-- Settings → Proxy: pick DNZ Proxy, with a copy-paste node setup guide
-- DNZ Proxy: caching, firewall rules and the "under attack" challenge
-- DNZ Proxy: TCP and UDP (L4) routers and services
-- DNZ Proxy: DNZ runs a node on its own server; packaging
-- DNZ Proxy: clippy clean-up; compress honors its encodings; transport and mirroring limits reported
-- Proxy: DNZ Proxy nodes, entry points, cache and settings
-- Middlewares: DNZ Proxy's cache, firewall and challenge forms
+- dnz-proxy: workspace, node binary skeleton, nodes joining a proxy and the configuration stream
+- dnz-proxy: the HTTP data plane on Pingora and Traefik's HTTP middlewares
+- dnz-proxy: traffic analytics from the nodes' reports
+- Proxy: dnz-proxy's own middleware types, kept from Traefik
+- Settings → Proxy: pick dnz-proxy, with a copy-paste node setup guide
+- dnz-proxy: caching, firewall rules and the "under attack" challenge
+- dnz-proxy: TCP and UDP (L4) routers and services
+- dnz-proxy: DNZ runs a node on its own server; packaging
+- dnz-proxy: clippy clean-up; compress honors its encodings; transport and mirroring limits reported
+- Proxy: dnz-proxy nodes, entry points, cache and settings
+- Middlewares: dnz-proxy's cache, firewall and challenge forms
 - Proxy analytics: traffic, latency, cache and the request log
 - dnz proxy CLI: nodes, approve, ignore, drain, remove, purge; nodes that stop reporting count as disconnected
-- DNZ Proxy: certificates over ACME, issued and renewed by DNZ
-- DNZ Proxy UI: fixes from trying it against a running node
-- DNZ Proxy: DNS follows what it would answer, so a node's new address reaches DNS too
-- DNZ Proxy setup: Docker from the DNZ image, and a node on DNZ's own server
+- dnz-proxy: certificates over ACME, issued and renewed by DNZ
+- dnz-proxy UI: fixes from trying it against a running node
+- dnz-proxy: DNS follows what it would answer, so a node's new address reaches DNS too
+- dnz-proxy setup: Docker from the DNZ image, and a node on DNZ's own server
 - Certificates: ACME accounts, DNS credentials, resolvers and certificates
-- DNZ Proxy: name the DNS answers type
+- dnz-proxy: name the DNS answers type
 - CLI: notifications, Cloudflare, settings, audit log, sessions and a private CA
 - Proxied records: one record through several proxies
 - Proxy routers: line every cell up on one row height
@@ -431,11 +439,11 @@ The `latest` image tag and the install script without `--version` always get thi
 - CLI: dnz proxy route finds the proxy's entry points
 - Add route: one place picks the entry points, for the UI and the CLI
 - Router dialog: the same entry points as Add route and the CLI
-- DNZ Proxy: encodedCharacters middleware
-- DNZ Proxy: client certificates and passTLSClientCert
-- DNZ Proxy: grpcWeb middleware
-- DNZ Proxy: rate limits shared through Redis
-- DNZ Proxy: 421 for client certificates on reused connections, docs
+- dnz-proxy: encodedCharacters middleware
+- dnz-proxy: client certificates and passTLSClientCert
+- dnz-proxy: grpcWeb middleware
+- dnz-proxy: rate limits shared through Redis
+- dnz-proxy: 421 for client certificates on reused connections, docs
 - Cloudflare import: all records, or only the ones ticked
 - Import a zone: Raw zone file and From Cloudflare tabs
 - Zones: forward names they don't have to the upstreams
@@ -461,12 +469,12 @@ The `latest` image tag and the install script without `--version` always get thi
 - Database: Postgres and MySQL besides SQLite
 - dnz db migrate-from-sqlite, data_dir, the backend in config check
 - Faster cache hits: wire-format answers in a sharded cache
-- Docker: DNZ Proxy image of its own, published with each release
-- DNZ Proxy on Docker Swarm: stack file and docs
-- Setup guide: a Docker Swarm tab for DNZ Proxy
+- Docker: dnz-proxy image of its own, published with each release
+- dnz-proxy on Docker Swarm: stack file and docs
+- Setup guide: a Docker Swarm tab for dnz-proxy
 - Cluster: several DNZ servers on one Postgres or MySQL database
 - Nodes starting together on an empty database seed it once
-- Cluster page: new nodes run the DNZ image, not DNZ Proxy's
+- Cluster page: new nodes run the DNZ image, not dnz-proxy's
 - ExternalDNS webhook provider, Kubernetes guide
 - Change approval: read DNZ's 202 answer, check the request's status
 - Zone history and change approval: versions, diff, rollback, change requests

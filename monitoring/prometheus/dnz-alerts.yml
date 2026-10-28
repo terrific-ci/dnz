@@ -156,7 +156,7 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "dnz-proxy node {{ $labels.node }} ({{ $labels.proxy }}) is down"
+          summary: "DNZ Proxy node {{ $labels.node }} ({{ $labels.proxy }}) is down"
           description: "The node stopped reporting or cannot be reached; DNS no longer answers with its addresses."
 
       - alert: DnzTraefikDisconnected
