@@ -82,6 +82,37 @@ dnz cf push example.com --dry-run
   skips the question.
 </Note>
 
+## Keeping a zone in sync
+
+```bash
+dnz cf sync example.com on --proxied              # push every change of the local zone to Cloudflare
+dnz cf sync example.com now
+dnz cf sync example.com                           # last sync, added, removed, last error
+dnz cf sync example.com off                       # what was pushed stays on Cloudflare
+```
+
+`sync` only removes records it added itself (comment *Synced from DNZ*); records made on Cloudflare
+are never changed or deleted.
+
+## Zone settings, cache, traffic and tunnels
+
+```bash
+dnz cf settings example.com                       # SSL/TLS mode, Always HTTPS, min TLS, HTTP/3, security level, DNSSEC
+dnz cf settings example.com --set ssl=strict
+dnz cf settings example.com --dnssec on           # then add the DS record it shows at the registrar
+dnz cf purge example.com https://www.example.com/app.css
+dnz cf purge example.com --hosts www.example.com
+dnz cf purge example.com --prefixes www.example.com/blog
+dnz cf purge example.com --everything
+dnz cf traffic example.com --range 7d
+dnz cf tunnel ls example.com
+dnz cf tunnel add example.com office app.example.com http://localhost:8080
+dnz cf tunnel rm example.com office app.example.com
+```
+
+Each needs its token permission (Zone Settings, Cache Purge, Analytics, Cloudflare Tunnel); one
+that's missing says which to add.
+
 ## The OAuth client
 
 "Sign in with Cloudflare" needs an OAuth client registered in Cloudflare. A superadmin sets it once

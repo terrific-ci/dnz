@@ -132,6 +132,7 @@
               "integrations/caddy",
               "integrations/dhcp",
               "integrations/notifications",
+              "integrations/logpush",
               "integrations/acme",
               "integrations/dynamic-dns",
               "integrations/terraform",

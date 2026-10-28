@@ -1,0 +1,101 @@
+---
+title: "Log push"
+description: "Stream DNZ's query log or audit log to a SIEM, Grafana Loki, S3-compatible storage or syslog as it is written, one JSON object per line."
+---
+
+DNZ can send its **query log** or **audit log** somewhere else as it is written, like Cloudflare
+Logpush: an HTTP endpoint (a SIEM, Vector, Fluent Bit, Logstash, Splunk), Grafana Loki,
+S3-compatible storage or syslog. Set it up under **Settings → Integrations → Log push**
+(superadmins).
+
+## What is sent
+
+```json Query log
+{"dataset":"query_log","id":205840000000123,"time":"2026-10-28T09:15:02Z","server":"ns1","name":"www.example.com","type":"A","client":"10.0.4.21","rcode":"NOERROR","source":"cache","duration_ms":0,"zone_id":null,"division_id":2}
+```
+
+```json Audit log
+{"dataset":"audit_log","id":5123,"time":"2026-10-28T09:16:40Z","user":"ana","division":"IT","action":"record.update","target":"www.example.com A","details":{},"ip":"10.0.4.7"}
+```
+
+A query log job can take only some answers: local, forwarded, cached, blocked, error.
+
+## Destinations
+
+<CardGroup cols={2}>
+  <Card title="HTTP" icon="globe">
+    The batch as NDJSON (optionally gzipped) with your headers. Vector, Fluent Bit, Logstash and
+    Splunk HEC (`/services/collector/raw`) take it.
+  </Card>
+  <Card title="Grafana Loki" icon="chart-line">
+    `/loki/api/v1/push` with labels `job=dnz`, `dataset`, `server` and yours; tenant and basic auth.
+  </Card>
+  <Card title="S3-compatible" icon="bucket">
+    One gzipped NDJSON object per batch, by day: AWS S3, Cloudflare R2, Backblaze B2, MinIO.
+  </Card>
+  <Card title="Syslog" icon="server">
+    RFC 5424 over UDP, or TCP with octet counting; the JSON is the message.
+  </Card>
+</CardGroup>
+
+<Warning>
+`localhost` or `127.0.0.1` is DNZ's own machine (in Docker, its container). Use the address DNZ
+reaches the destination on; the form warns otherwise.
+</Warning>
+
+## Try it with Vector
+
+<Steps>
+  <Step title="Run a receiver">
+    ```yaml vector.yaml
+    sources:
+      dnz:
+        type: http_server
+        address: 0.0.0.0:9000
+        decoding: { codec: json }
+        framing: { method: newline_delimited }
+    sinks:
+      out:
+        type: console
+        inputs: [dnz]
+        encoding: { codec: json }
+    ```
+
+    ```bash
+    docker run -d --name vector -p 9000:9000 -v $PWD/vector.yaml:/etc/vector/vector.yaml:ro timberio/vector:0.41.1-alpine
+    ```
+  </Step>
+  <Step title="Point a job at it">
+    ```bash
+    dnz logpush add try-it --dataset query-log --to http --url http://<that machine>:9000/
+    ```
+
+    `add` sends a test line right away; `docker logs -f vector` shows the queries as they come.
+  </Step>
+</Steps>
+
+## Delivery
+
+- Every 30 seconds by default (5 to 3600), in batches of 5,000 lines.
+- A new job starts with what is logged from then on.
+- Each job keeps a cursor: a push that fails is sent again from the same place, so nothing is lost
+  or sent twice while the log still has it.
+- Every server pushes its own query log (`"server"` tells them apart); only the cluster's leader
+  pushes the shared audit log.
+
+## CLI
+
+```bash
+dnz logpush ls
+dnz logpush add siem --dataset query-log --to http --url https://siem.example.com/ingest \
+  --header "Authorization=Bearer …" --source blocked
+dnz logpush add loki --dataset audit-log --to loki --url http://loki:3100 --label env=prod
+DNZ_LOGPUSH_SECRET_KEY=… dnz logpush add archive --to s3 --endpoint https://s3.eu-central-1.amazonaws.com \
+  --bucket logs --prefix dnz --access-key AKIA…
+dnz logpush add syslog --to syslog --address 10.0.0.5:514 --protocol tcp
+dnz logpush test siem
+dnz logpush disable siem
+```
+
+`dnz_logpush_lines_total` and `dnz_logpush_failures_total` are on the [metrics](/dashboard/prometheus)
+endpoint, and the MCP tool `logpush_jobs` lists the jobs.

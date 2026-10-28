@@ -165,6 +165,9 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_query_log_searches_rejected_total`, `dnz_query_log_dropped_total` | Searches turned away with 429 because two were still running, and log entries dropped because the writer fell behind |
 | `dnz_live_captures` | [Live captures](/dns/live-capture) running on this server |
 | `dnz_ratelimit_limited_total`, `dnz_rrl_responses_total` | Rate limiting |
+| `dnz_access_sign_ins_total` | Sign-ins to proxied routes (allowed, denied, failed) |
+| `dnz_cloudflare_syncs_total`, `dnz_cloudflare_sync_records_total` | Local zones pushed to Cloudflare |
+| `dnz_logpush_lines_total`, `dnz_logpush_failures_total` | Log push |
 | `dnz_dnssec_validations_total{result}` | DNSSEC validation |
 | `dnz_domain_expiry_days{zone,domain}` | Days until a [monitored domain](/dns/domain-expiry) expires |
 | `dnz_certificate_expiry_timestamp_seconds` | Certificate expiry |

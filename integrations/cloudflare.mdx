@@ -111,6 +111,57 @@ Without filters, `import` takes every record it can. `--type` and `--name` (rela
 `@` for the apex) narrow it, and zones without matching records are left alone. Copying needs
 `records.write` too, and `zones.write` when a new zone is created.
 
+## Keep a local zone in sync
+
+**Keep in sync with Cloudflare** on a local zone pushes it to the Cloudflare zone of the same name
+right away, then within a minute of every change.
+
+- Local records Cloudflare lacks are added with the comment **Synced from DNZ** (optionally the A,
+  AAAA and CNAME ones behind Cloudflare's proxy).
+- Records with that comment that are gone locally are removed.
+- Records made on Cloudflare are never changed or deleted; a clash with one shows as the sync's
+  error.
+- Turning it off leaves what was pushed.
+
+```bash
+dnz cf sync example.com on --proxied
+dnz cf sync example.com now
+```
+
+## More of a Cloudflare zone
+
+Below a Cloudflare zone's records:
+
+<CardGroup cols={2}>
+  <Card title="Traffic" icon="chart-column">
+    Requests per hour or day, cached vs origin, bandwidth and threats (24 hours, 7 or 30 days).
+  </Card>
+  <Card title="SSL/TLS and security" icon="lock">
+    SSL/TLS mode, Always use HTTPS, minimum TLS, TLS 1.3, HTTP/3, security level, development mode.
+  </Card>
+  <Card title="DNSSEC" icon="shield-check">
+    On or off, with the DS record to add at your registrar.
+  </Card>
+  <Card title="Purge cache" icon="broom">
+    URLs, hostnames or prefixes (30 at a time), or everything.
+  </Card>
+  <Card title="Cloudflare Tunnels" icon="route">
+    Route a public hostname through a tunnel to a service: DNZ adds the tunnel rule and a proxied
+    CNAME to it.
+  </Card>
+</CardGroup>
+
+Each part needs its own token permission, and **Create token on Cloudflare** asks for all of them:
+Zone Read, DNS Edit, Zone Settings Edit, Cache Purge, Analytics Read and Account Cloudflare Tunnel
+Edit. A part the token can't do says which permission to add, and the rest keeps working.
+
+```bash
+dnz cf settings example.com --set ssl=strict --dnssec on
+dnz cf purge example.com --hosts www.example.com
+dnz cf traffic example.com --range 7d
+dnz cf tunnel add example.com office app.example.com http://localhost:8080
+```
+
 See [Import and export](/dns/import-export) for BIND zone files, and the full
 [CLI reference](/cli/cloudflare).
 
