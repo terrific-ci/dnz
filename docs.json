@@ -145,6 +145,7 @@
             "pages": [
               "admin/access",
               "admin/two-factor",
+              "admin/google-sign-in",
               "admin/audit-log",
               "admin/backups",
               "admin/settings",

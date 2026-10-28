@@ -1,0 +1,90 @@
+---
+title: "Sign in with Google"
+description: "Link your DNZ account to your Google account once, then sign in with Google. Only linked accounts can, and the second factor stays."
+---
+
+People sign in to DNZ with their Google account instead of the password. Each person links their
+own DNZ account to a Google account once; after that the sign-in page shows **Continue with
+Google**. It's off until a superadmin sets up a Google OAuth client.
+
+- **Only linked accounts sign in with Google.** An email address alone never matches an account.
+- **The second factor stays.** With an authenticator app or passkey on, DNZ still asks for it after Google.
+- **The password keeps working.** Google is a second way in, not a replacement.
+
+## Set it up
+
+You need to be a superadmin. Open **Settings → Integrations → Sign in with Google → Set up**: the
+guide fills in the redirect URI for the address you type and has a copy button for each value.
+
+<Steps>
+  <Step title="Consent screen">
+    In Google Cloud, open [Google Auth Platform](https://console.cloud.google.com/auth/overview). If the
+    project has no consent screen yet, set one up: audience **Internal** for your Google Workspace
+    organisation only, otherwise **External**.
+  </Step>
+  <Step title="Create a client">
+    [Clients → Create client](https://console.cloud.google.com/auth/clients/create): application type
+    **Web application**, name `DNZ`. Under **Authorized redirect URIs**, add the address people open
+    DNZ at plus `/api/auth/google/callback`:
+
+    ```text
+    https://dnz.example.com/api/auth/google/callback
+    ```
+
+    Opened at more than one address (a secondary, a second name)? Add one URI for each.
+  </Step>
+  <Step title="Paste it into DNZ">
+    **Create**, then paste the client ID (`….apps.googleusercontent.com`) and the client secret, and
+    **Save**.
+  </Step>
+</Steps>
+
+<Note>
+  Google only sends the browser back to `https://` addresses (or `http://localhost`). Put DNZ behind
+  HTTPS first if people open it over plain HTTP.
+</Note>
+
+**Only these Google domains** (optional) limits it to your Google Workspace domain, so personal
+Gmail accounts can neither be linked nor sign in.
+
+## Link your account
+
+Open the user menu (top right) → **Account** → **Sign in with Google**. Confirm your password and
+click **Link Google account**; Google asks which account to use and sends you back. The same place
+shows the linked account, when it was last used, and **Unlink**.
+
+A Google account can be linked to one DNZ account only. Linking asks for your password, so a stolen
+session alone can't add a way in.
+
+## Sign in
+
+Click **Continue with Google** on the sign-in page. If your account has a second factor, DNZ asks
+for it next. A deactivated account doesn't sign in, linked or not.
+
+The [audit log](/admin/audit-log) records each sign-in as `user.login` with method `google`, refused
+ones as `user.login_failed`, and links as `user.google_link` / `user.google_unlink`.
+
+## Manage links
+
+Superadmins see a **Google** badge on linked accounts under **Settings → Users**, and
+**Unlink Google** in each one's menu.
+
+## Secondaries
+
+A DNZ secondary copies the Google client and everyone's links from its primary, so the same people
+sign in with Google on both. Add the secondary's address to the client's redirect URIs in Google
+Cloud too. Copied accounts link and unlink on the primary.
+
+## From the CLI
+
+```bash
+dnz settings google-sign-in                     # on or off, the client, how many accounts are linked
+DNZ_GOOGLE_CLIENT_SECRET=GOCSPX-… dnz settings google-sign-in set \
+  --client-id 1234-abc.apps.googleusercontent.com --domain example.com
+dnz settings google-sign-in set --client-id … --any-domain   # drop the domain limit
+dnz settings google-sign-in off                 # links stay, for when it is back on
+dnz user list                                   # the GOOGLE column
+dnz user unlink-google budi
+```
+
+Linking itself happens in the dashboard: it needs a browser.

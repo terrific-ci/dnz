@@ -109,6 +109,16 @@ dnz settings two-factor on         # superadmins must use it
 dnz user reset-2fa alice           # lost phone and recovery codes
 ```
 
+[Sign in with Google](/admin/google-sign-in), for superadmins (each person links their own Google
+account in the dashboard):
+
+```bash
+dnz settings google-sign-in set --client-id ID.apps.googleusercontent.com --domain example.com
+dnz settings google-sign-in        # the client and how many accounts are linked
+dnz settings google-sign-in off
+dnz user unlink-google budi        # they sign in with the password only
+```
+
 ## Sessions
 
 You can be signed in from several places: the dashboard in a browser, the CLI on your laptop, the CLI
