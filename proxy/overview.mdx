@@ -53,6 +53,12 @@ my Caddyfile** / **Keep my Traefik config**, which only reads it and goes to
 from DNZ. Then it asks for the name and the addresses visitors reach the proxy at, and shows that
 kind's setup, ready to copy. A proxy's kind can't be changed once it is added.
 
+That setup stays a click away: **Connect** on the proxy's card (shown while nothing runs it yet), in
+its menu and on its page (**Set up a node** for a DNZ Proxy, also in its empty Nodes tab) opens it
+again, and closing it right after adding offers **Open guide**. Each card on **Proxy → Proxies** is a
+short overview: how the proxy is doing (nodes, or when it last called), how many routers and proxied
+names it has; the routers themselves are on its page.
+
 Each proxy in the list shows where it stands. A Traefik or Caddy is **Connected** while it fetches
 its configuration, and shows when it was last seen once it stops. A DNZ Proxy is only as up as
 its nodes: **No node yet** until DNZ Proxy runs somewhere and joins, **A node is waiting for
