@@ -4,7 +4,7 @@ description: "Get DNZ as a Docker image or as a Linux binary."
 ---
 
 DNZ is one program, `dnz`, that contains the DNS server, the API and the web dashboard. All data
-lives in one SQLite file, or in [Postgres, MySQL or Redis](/deploy/database). It comes with `dnz-proxy`, the optional
+lives in one SQLite file, or in [Postgres, MySQL or Redis](/deploy/database). It comes with DNZ Proxy (`dnz-proxy`), the optional
 [reverse proxy](/proxy/dnz-proxy).
 
 <CardGroup cols={2}>
@@ -35,7 +35,7 @@ Pre-releases (versions with a `-`, such as `1.1.0-rc.1`) never get the `latest` 
 
 A server that only runs the proxy uses `terrificci/dnz-proxy`, with the same tags and only the
 `dnz-proxy` binary (published from the release after 1.1.0); see
-[dnz-proxy](/proxy/dnz-proxy).
+[DNZ Proxy](/proxy/dnz-proxy).
 
 ## Linux binary
 
@@ -54,7 +54,7 @@ again to upgrade; it tells you to restart the services if they're running.
 | --- | --- |
 | `--service` | Also run `dnz` as a systemd service and start it; see [systemd](/deploy/systemd) |
 | `--version 1.0.0` | One exact version instead of the latest release (also `1.0` for the newest patch) |
-| `--only dnz` | Only `dnz`; `--only dnz-proxy` for a [dnz-proxy](/proxy/dnz-proxy) node |
+| `--only dnz` | Only `dnz`; `--only dnz-proxy` for a [DNZ Proxy](/proxy/dnz-proxy) node |
 | `--dir DIR` | Install into another directory |
 
 Pass options after `sh -s --`:

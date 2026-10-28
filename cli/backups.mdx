@@ -74,7 +74,7 @@ dnz backup restore offsite:latest                    # asks before replacing eve
 dnz backup restore ./dnz-backup-20261022-030000Z.zip --yes
 dnz backup restore offsite:latest --zone example.com # one zone, as a new history version
 dnz backup restore nas:latest --zone old.example --division 2   # a deleted zone, into division 2
-dnz backup restore offsite:latest --no-files         # leave the GeoIP database and dnz-proxy state
+dnz backup restore offsite:latest --no-files         # leave the GeoIP database and DNZ Proxy state
 ```
 
 Encrypted archives ask for the passphrase, or read `DNZ_BACKUP_PASSPHRASE`. A full restore signs

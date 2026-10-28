@@ -8,7 +8,7 @@ Access. They sign in with the provider your people already use, and only the ema
 or groups you list get in. The servers behind the route learn who it is from headers, so an
 internal app needs no login of its own.
 
-It works on every proxy kind: [dnz-proxy](/proxy/dnz-proxy) nodes check visitors themselves; a
+It works on every proxy kind: [DNZ Proxy](/proxy/dnz-proxy) nodes check visitors themselves; a
 [Traefik](/proxy/traefik) or [Caddy](/proxy/caddy) asks DNZ on every visit (forward auth).
 
 ## How it works
@@ -92,7 +92,7 @@ dnz proxy routes edit edge app.example.com --sign-in Keycloak \
 
 ## Each proxy kind
 
-- **dnz-proxy**: each node gets the route's own key and checks the cookie itself; a signed-in visit
+- **DNZ Proxy**: each node gets the route's own key and checks the cookie itself; a signed-in visit
   never waits on DNZ.
 - **Traefik**: DNZ sends a `forwardAuth` middleware pointing at its check, at the address Traefik
   polls DNZ on.

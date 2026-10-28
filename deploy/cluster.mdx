@@ -42,7 +42,7 @@ underneath: see [On Redis or Valkey](#on-redis-or-valkey).
 | Traefik and Caddy record syncs, proxy reachability checks | Forward DNS health probes and their incidents |
 | Secondary zone transfers and catalog syncs | Rate limiting, the answer cache, query logging |
 | DNSSEC key rollovers | The GeoIP database download (each node keeps its own file) |
-| RPZ and blocklist downloads | dnz-proxy configuration streams, the local dnz-proxy |
+| RPZ and blocklist downloads | DNZ Proxy configuration streams, the local DNZ Proxy |
 | GeoDNS health checks (the others load each up/down flip) | |
 | Session cleanup, old hourly counts and top lists; the daily summary and NXDOMAIN alert | Deleting its own old [query log](/dns/query-logs) days |
 | Cluster alerts | |
@@ -279,8 +279,8 @@ soon after.
   [Query logs](/dns/query-logs#in-a-cluster).
 - **GeoIP**: each node keeps its own GeoIP database in its data folder; automatic updates download
   it on every node.
-- **dnz-proxy**: each dnz-proxy node streams its configuration from the DNZ node it connects to.
-  ACME HTTP-01 challenges are handed out by the leader, which runs the issuance: point dnz-proxy nodes
+- **DNZ Proxy**: each DNZ Proxy node streams its configuration from the DNZ node it connects to.
+  ACME HTTP-01 challenges are handed out by the leader, which runs the issuance: point DNZ Proxy nodes
   at the leader's address, or use DNS-01 through DNZ's own zones, which works from any node.
 - **NOTIFY from a primary** may arrive at any node; the leader transfers the zone within seconds.
 - **Removing a node**: stop it, then remove it under **High availability → Cluster** (or

@@ -56,7 +56,7 @@ sessions, sign-in lockouts, dynamic DNS, views and blocklists (DoH) use it.
 DNZ trusts three kinds of address:
 
 - **Proxies it already knows.** You don't have to set anything for approved Traefik, Caddy and
-  dnz-proxy [proxies](/proxy/overview), active dnz-proxy nodes or the Caddy and Traefik servers of
+  DNZ Proxy [proxies](/proxy/overview), active DNZ Proxy nodes or the Caddy and Traefik servers of
   Sites in DNS. DNZ trusts the address each one calls from, the addresses DNS answers with, and the
   Traefik API's host. It reads them again every 30 seconds and right after one changes.
 - **Addresses you add** under **Settings → General → Trusted reverse proxies**, or from the terminal:
@@ -89,7 +89,7 @@ small network that holds only the proxy).
   `X-Forwarded-Proto: https`.
 - Behind a proxy, `/dns-query` (DNS over HTTPS) works through the plain HTTP port too, so DoH can
   sit behind the same reverse proxy.
-- For [dnz-proxy](/proxy/dnz-proxy) nodes, the proxy in front of DNZ must not buffer responses (DNZ
+- For [DNZ Proxy](/proxy/dnz-proxy) nodes, the proxy in front of DNZ must not buffer responses (DNZ
   sends `X-Accel-Buffering: no`).
 - Other DNZ servers can only find this one on the [replication](/dns/replication) radar when its
   HTTP port listens on the network (`DNZ_HTTP_ADDR=0.0.0.0:8080`).

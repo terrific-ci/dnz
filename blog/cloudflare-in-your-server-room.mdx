@@ -30,7 +30,7 @@ certificate expires at 3 a.m.
 flowchart LR
   V["Visitor"] -->|"1. Where is app.example.com?"| D["DNZ<br/>(authoritative DNS)"]
   D -->|"2. The proxy's address"| V
-  V -->|"3. HTTPS"| P["dnz-proxy nodes<br/>cache · firewall · challenge"]
+  V -->|"3. HTTPS"| P["DNZ Proxy nodes<br/>cache · firewall · challenge"]
   P -->|"4. Forwarded"| O["Your servers<br/>(never exposed)"]
   D -. "configuration and certificates,<br/>within a second" .-> P
 ```
@@ -48,7 +48,7 @@ That is the whole trick behind a proxied record. It just never had to be a SaaS.
 | --- | --- |
 | Authoritative DNS with a friendly record editor | [Zones and records](/dns/zones): the same style of editor, plus the `dnz` CLI and an API |
 | Proxied records | [Proxied records](/proxy/overview): a toggle on the record, or a list of proxies to spread it over |
-| Edge servers | [dnz-proxy](/proxy/dnz-proxy) nodes, built on Cloudflare's own [Pingora](https://github.com/cloudflare/pingora); run as many as you like, anywhere |
+| Edge servers | [DNZ Proxy](/proxy/dnz-proxy) nodes, built on Cloudflare's own [Pingora](https://github.com/cloudflare/pingora); run as many as you like, anywhere |
 | Universal SSL | [Certificates](/proxy/certificates) from Let's Encrypt, ZeroSSL or your own step-ca, issued by DNZ and handed to every node |
 | Caching and Purge Cache | The [`dnzCache`](/proxy/dnz-proxy#cache-dnzcache) middleware, with stale-while-revalidate and purges by host, URL or prefix |
 | WAF custom rules | The [`dnzFirewall`](/proxy/dnz-proxy#firewall-dnzfirewall) middleware: rules on address, country, path, header, user agent and more |
@@ -163,10 +163,10 @@ at once:
 - **[Traefik](/proxy/traefik)**, which polls DNZ for its routes, and can also feed DNS from the
   Docker and Kubernetes routers it already knows about.
 - **[Caddy](/proxy/caddy)**, which loads its configuration from DNZ and keeps its automatic HTTPS.
-- **[dnz-proxy](/proxy/dnz-proxy)**, which adds the caching, firewall, challenge and analytics.
+- **[DNZ Proxy](/proxy/dnz-proxy)**, which adds the caching, firewall, challenge and analytics.
 
 You set up routers, services and middlewares once, in DNZ, and every proxy gets them in the shape it
-understands. Migrating from Traefik to dnz-proxy, or running both side by side for a while, is
+understands. Migrating from Traefik to DNZ Proxy, or running both side by side for a while, is
 just ticking another proxy on the record.
 
 ## Is it fast?
@@ -177,7 +177,7 @@ We measured, on a dedicated server, against the tools you would otherwise reach 
 same league as NSD, Knot DNS and PowerDNS, and well ahead of most all-in-one DNS servers. See
 [Benchmarks](/deploy/benchmarks).
 
-**As a proxy**, pinned to one CPU, dnz-proxy forwards about **11,500 HTTPS requests a second**: ahead
+**As a proxy**, pinned to one CPU, DNZ Proxy forwards about **11,500 HTTPS requests a second**: ahead
 of Traefik, Envoy and Caddy, behind nginx and HAProxy on keep-alive traffic. It is **first on new TLS
 connections** and on large responses, and holds the least memory of the six: **2 MiB idle, 8 MiB
 under load**. The full numbers, including where it loses, are on
@@ -211,7 +211,7 @@ Putting an edge in front of your servers was always a good idea. Now it can live
   <Card title="Proxied records" icon="cloud" href="/proxy/overview">
     How proxying works in DNZ.
   </Card>
-  <Card title="dnz-proxy" icon="bolt" href="/proxy/dnz-proxy">
+  <Card title="DNZ Proxy" icon="bolt" href="/proxy/dnz-proxy">
     Nodes, caching, the firewall and analytics.
   </Card>
   <Card title="Cloudflare integration" icon="cloudflare" href="/integrations/cloudflare">

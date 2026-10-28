@@ -1,9 +1,9 @@
 ---
-title: "DNZ and dnz-proxy in one compose file"
-description: "Start DNZ and a dnz-proxy node from one docker-compose.yml: the node joins with a connect key you pick, without approval."
+title: "DNZ and DNZ Proxy in one compose file"
+description: "Start DNZ and a DNZ Proxy node from one docker-compose.yml: the node joins with a connect key you pick, without approval."
 ---
 
-DNZ and a [dnz-proxy](/proxy/dnz-proxy) node can start together from one `docker-compose.yml`, with
+DNZ and a [DNZ Proxy](/proxy/dnz-proxy) node can start together from one `docker-compose.yml`, with
 the node joined from the first start:
 
 - `DNZ_PROXY_CONNECT_KEY` sets the **connect key**, which DNZ otherwise makes up on first use. The
@@ -88,7 +88,7 @@ Then point the LAN's devices (or the router's DHCP) at this host for DNS. See
 
 <Steps>
   <Step title="DNZ sets itself up">
-    DNZ creates the admin, makes `home.example.com`, stores the connect key and adds the dnz-proxy
+    DNZ creates the admin, makes `home.example.com`, stores the connect key and adds the DNZ Proxy
     proxy `edge`, approved, with **Let nodes join without approval** on.
   </Step>
   <Step title="The node joins">
@@ -120,7 +120,7 @@ The node has the route within a second.
 
 ## Certificates
 
-DNZ gets the certificates for a dnz-proxy proxy itself and hands them to its nodes: set up an ACME
+DNZ gets the certificates for a DNZ Proxy itself and hands them to its nodes: set up an ACME
 account and a certificate resolver under **Proxy → Certificates**, then add routes without `--http`.
 For names that aren't reachable from the internet, use DNS-01: through DNZ's own zone when DNZ is the
 domain's public nameserver, or a Cloudflare token. See [Certificates](/proxy/certificates).

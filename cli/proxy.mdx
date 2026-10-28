@@ -1,14 +1,14 @@
 ---
 title: "Proxy"
-description: "Turn proxying on or off, add proxies and routes, and manage dnz-proxy nodes from the terminal."
+description: "Turn proxying on or off, add proxies and routes, and manage DNZ Proxy nodes from the terminal."
 ---
 
-`dnz proxy` covers turning proxying on or off, adding **proxies** (Traefik, dnz-proxy or Caddy),
+`dnz proxy` covers turning proxying on or off, adding **proxies** (Traefik, DNZ Proxy or Caddy),
 adding a **route** (one hostname through a proxy) and managing the **nodes** of DNZ's own reverse
-proxy, dnz-proxy. All `dnz proxy` commands need a superadmin.
+proxy, DNZ Proxy. All `dnz proxy` commands need a superadmin.
 
 For the concepts, see [Proxy overview](/proxy/overview), [Routing](/proxy/routing) and
-[dnz-proxy](/proxy/dnz-proxy).
+[DNZ Proxy](/proxy/dnz-proxy).
 
 ## Proxying and proxies
 
@@ -17,7 +17,7 @@ dnz proxy show                                    # proxying on/off, proxies, co
 dnz proxy on                                      # or: dnz proxy off
 dnz proxy add edge-1 --ipv4 203.0.113.10          # a Traefik (the default kind)
 dnz proxy add edge-2 --kind caddy --ipv4 203.0.113.20 --connects-from 10.0.0.20
-dnz proxy add "Edge JKT" --kind dnz --ipv4 203.0.113.30   # dnz-proxy nodes join it
+dnz proxy add "Edge JKT" --kind dnz --ipv4 203.0.113.30   # DNZ Proxy nodes join it
 dnz proxy caddy edge-2                            # what the Caddy is sent, and what it can't take
 ```
 
@@ -34,7 +34,7 @@ A proxy declared with `DNZ_PROXY_SEED_*` shows **environment** under
 | `--connects-from` | The address a Traefik or Caddy calls DNZ from, when it isn't one of the above |
 
 See [Connecting Traefik](/proxy/traefik), [Connecting Caddy](/proxy/caddy) and
-[dnz-proxy](/proxy/dnz-proxy).
+[DNZ Proxy](/proxy/dnz-proxy).
 
 ## Records from Traefik's routers
 
@@ -109,12 +109,12 @@ every zone, or one the proxy already routes, is refused, and the closest names a
 | `--also` | Another hostname of the same route; repeat for more |
 | `--http` | Plain HTTP only: no HTTPS router and no redirect |
 | `--no-redirect` | Keep `http://` as it is instead of redirecting to `https://` |
-| `--cert-resolver` | Certificate resolver for HTTPS; default: DNZ's automatic certificates on dnz-proxy |
+| `--cert-resolver` | Certificate resolver for HTTPS; default: DNZ's automatic certificates on DNZ Proxy |
 | `--path` | Only paths under this, e.g. `/api` |
-| `--cache [TTL]` | Cache answers on the nodes (dnz-proxy), default `10m` |
-| `--firewall` | Run one of the proxy's firewall middlewares first (dnz-proxy) |
-| `--challenge` | The "under attack" browser check (dnz-proxy) |
-| `--waiting-room` | A waiting room letting this many visitors in at once (dnz-proxy); `--queue-all` makes everyone wait |
+| `--cache [TTL]` | Cache answers on the nodes (DNZ Proxy), default `10m` |
+| `--firewall` | Run one of the proxy's firewall middlewares first (DNZ Proxy) |
+| `--challenge` | The "under attack" browser check (DNZ Proxy) |
+| `--waiting-room` | A waiting room letting this many visitors in at once (DNZ Proxy); `--queue-all` makes everyone wait |
 | `--rate-limit` | Requests a second per visitor, optionally with a burst: `100` or `100/300` |
 | `--user` | `NAME:PASSWORD` for a password; repeat for more. Only a bcrypt hash is kept |
 | `--allow` | Only these addresses or ranges get through; repeat for more |
@@ -138,14 +138,14 @@ and `--no-cache`, `--no-firewall`, `--no-challenge`, `--no-waiting-room`, `--no-
 dnz proxy routes edit edge app.example.com --request-header X-Env=production --response-header Server=
 ```
 
-HTTPS with a redirect from `http://` is the default. On a dnz-proxy proxy its certificate comes by
+HTTPS with a redirect from `http://` is the default. On a DNZ Proxy its certificate comes by
 itself once [automatic certificates](#certificates) are set up; until then it gets a temporary one.
 
 ### Entry points
 
 The server picks the entry points, the same ones the dashboard's **Add route** uses:
 
-- under **dnz-proxy**, the proxy's own HTTP and HTTPS entry points;
+- under **DNZ Proxy**, the proxy's own HTTP and HTTPS entry points;
 - under **Traefik**, the ones its API lists, when the proxy has **Traefik API** set;
 - under **Caddy**, `web` (:80) and `websecure` (:443).
 
@@ -153,9 +153,9 @@ The one on port 80 serves `http://` and the one on 443 serves `https://`; the co
 picked. Without either, or when no entry point is on that port, it uses `web` and `websecure`.
 `--http-entry` and `--https-entry` name them yourself.
 
-### Route defaults (dnz-proxy)
+### Route defaults (DNZ Proxy)
 
-What every route of a dnz-proxy proxy gets, live on its nodes:
+What every route of a DNZ Proxy gets, live on its nodes:
 
 ```bash
 dnz proxy defaults edge                           # show them
@@ -167,7 +167,7 @@ See [Route defaults](/proxy/dnz-proxy#route-defaults).
 
 ### Certificates
 
-DNZ's automatic certificates for dnz-proxy routes:
+DNZ's automatic certificates for DNZ Proxy routes:
 
 ```bash
 dnz proxy certs show                              # on or not, the account, the credentials in use
@@ -185,7 +185,7 @@ TXT record first and keeps the credential only when that works. `DNZ_CLOUDFLARE_
 `DNZ_ACME_SECRET` keep secrets off the command line. See
 [Automatic certificates](/proxy/certificates#automatic-certificates).
 
-## dnz-proxy nodes
+## DNZ Proxy nodes
 
 ```bash
 dnz proxy nodes                                   # every node: proxy, state, addresses, version, config
@@ -197,7 +197,7 @@ dnz proxy remove jkt-1                            # it can't connect any more
 ```
 
 `dnz proxy show` prints whether proxying is on, the proxies and the **connect key** new nodes join
-with. New nodes wait for approval; they can only join dnz-proxy proxies. `approve` takes:
+with. New nodes wait for approval; they can only join DNZ Proxies. `approve` takes:
 
 | Option | What it does |
 | --- | --- |

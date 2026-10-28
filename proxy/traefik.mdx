@@ -203,7 +203,7 @@ When DNS filtering's [block page](/dns/filtering#block-page) uses this Traefik, 
 also gets a `dnz-block-page` router, below every other on the plain HTTP entry point. It sends visits
 to hosts no other router takes to DNZ, which answers with the block page, so Traefik has to reach
 DNZ's HTTP port (it already does to poll). HTTPS visits to blocked names get a certificate warning
-instead: only dnz-proxy can show the page over HTTPS.
+instead: only DNZ Proxy can show the page over HTTPS.
 
 A password, rate limit or address list that turns a visitor away gets Traefik's own plain reply,
 not a styled [status page](/proxy/status-pages#pages-for-visitors-a-middleware-turns-away): Traefik's

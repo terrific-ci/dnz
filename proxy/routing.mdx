@@ -11,7 +11,7 @@ Everything a proxy serves is set up in DNZ the way Traefik sees it:
 - **Middlewares** change or check a visit on its way.
 
 This page applies to every kind of proxy. A Traefik gets these objects in its configuration
-([What Traefik gets](/proxy/traefik#what-traefik-gets)); dnz-proxy reads the same objects as
+([What Traefik gets](/proxy/traefik#what-traefik-gets)); DNZ Proxy reads the same objects as
 Traefik v3 does, with a few differences listed under [Routing](/proxy/dnz-proxy#routing); a Caddy
 gets them translated into Caddy's own configuration, with what it can't do left out
 ([What Caddy gets](/proxy/caddy#what-caddy-gets)).
@@ -90,8 +90,8 @@ Traefik 3, grouped and searchable, and each has its own form.
 | Headers & content | Headers (custom, CORS, security and host headers), compress, content type, **error pages** (from one of the proxy's services), gRPC-Web |
 | Limits & reliability | Rate limit (in memory or shared through Redis), in-flight requests, circuit breaker, retry, buffering |
 
-On a dnz-proxy proxy, **Add middleware** also has a **dnz-proxy** group: cache, firewall and
-under attack. See [dnz-proxy's middlewares](/proxy/dnz-proxy#dnz-proxys-middlewares).
+On a DNZ Proxy, **Add middleware** also has a **DNZ Proxy** group: cache, firewall and
+under attack. See [DNZ Proxy's middlewares](/proxy/dnz-proxy#dnz-proxys-middlewares).
 
 How the forms work:
 
@@ -133,7 +133,7 @@ A router decides what the proxy serves. Its form has tabs:
 A router can be turned off without deleting it.
 
 <Info>
-  With dnz-proxy, the certificate resolver can be one of DNZ's own resolvers, and DNZ issues the
+  With DNZ Proxy, the certificate resolver can be one of DNZ's own resolvers, and DNZ issues the
   certificate; routes use DNZ's `auto` resolver by themselves. See [Certificates](/proxy/certificates).
 </Info>
 
@@ -144,7 +144,7 @@ Use two routers on the same hostnames:
 1. one on the HTTPS entry point, with TLS;
 2. one on the HTTP entry point, with a *Redirect to HTTPS* middleware.
 
-**Add route** sets this up for you when you choose HTTPS with a redirect. On dnz-proxy, the proxy's
+**Add route** sets this up for you when you choose HTTPS with a redirect. On DNZ Proxy, the proxy's
 [route defaults](/proxy/dnz-proxy#route-defaults) can redirect every route at once instead.
 
 ## HTTP transports
@@ -197,7 +197,7 @@ example:
 --entrypoints.dns.address=:53/udp
 ```
 
-dnz-proxy has its entry points in DNZ. See [Entry points](/proxy/dnz-proxy#entry-points). A Caddy
+DNZ Proxy has its entry points in DNZ. See [Entry points](/proxy/dnz-proxy#entry-points). A Caddy
 proxy has `web` (:80) and `websecure` (:443), and no TCP or UDP routing.
 
 ## What can't be deleted
@@ -265,6 +265,6 @@ Records can still be added and proxied from the DNS pages. See
     Routers, services, middlewares and objects over HTTP.
   </Card>
   <Card title="Certificates" icon="certificate" href="/proxy/certificates">
-    Let DNZ issue certificates for dnz-proxy.
+    Let DNZ issue certificates for DNZ Proxy.
   </Card>
 </CardGroup>

@@ -6,7 +6,7 @@ description: "Scheduled, encrypted backups of the whole install to a folder, S3-
 DNZ backs up the whole install on a schedule: zones and records, users, divisions, roles and API
 tokens, settings, DNSSEC and TSIG keys, certificates and ACME accounts, filtering, forwarding,
 replication, proxies, notification providers, zone history and the audit log, plus the GeoIP
-database and the local dnz-proxy's state. Archives go to a folder, S3-compatible storage or an SFTP
+database and the local DNZ Proxy's state. Archives go to a folder, S3-compatible storage or an SFTP
 server, encrypted if you like, and old ones are pruned by a retention policy.
 
 A backup restores onto SQLite, Postgres, MySQL or Redis, whichever it was made on, and onto a newer DNZ:
@@ -156,7 +156,7 @@ What a full restore does:
   <Step title="Replace">
     Every table is replaced in one transaction: if anything fails, nothing changed. DNS answers,
     forwarding and filtering are loaded again, on every node of a cluster, and the GeoIP database and
-    dnz-proxy state are put back (unless you leave them out).
+    DNZ Proxy state are put back (unless you leave them out).
   </Step>
   <Step title="Sign in again">
     Everyone is signed out: users, roles and API tokens are the backup's now.

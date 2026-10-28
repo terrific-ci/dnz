@@ -15,8 +15,8 @@ start. Nothing is set up in the dashboard:
 - Traefik gets its **certificates** itself, here a Let's Encrypt wildcard through Cloudflare DNS-01.
 
 <Tip>
-  Using Caddy or dnz-proxy instead? See [DNZ and Caddy in one compose file](/proxy/compose-caddy) and
-  [DNZ and dnz-proxy in one compose file](/proxy/compose-dnz-proxy).
+  Using Caddy or DNZ Proxy instead? See [DNZ and Caddy in one compose file](/proxy/compose-caddy) and
+  [DNZ and DNZ Proxy in one compose file](/proxy/compose-dnz-proxy).
 </Tip>
 
 The example below is split-horizon: the domain stays on Cloudflare, devices on your LAN resolve
@@ -173,7 +173,7 @@ the file. DNZ asks for a new one.
 `DNZ_ZONES` names zones, comma-separated, that DNZ makes at start when they don't exist yet, in the
 first division. They are never changed or deleted after that.
 
-`DNZ_PROXY_SEED_*` declares one Traefik, Caddy or dnz-proxy proxy. DNZ writes it at every start: it adds it when
+`DNZ_PROXY_SEED_*` declares one Traefik, Caddy or DNZ Proxy. DNZ writes it at every start: it adds it when
 there is no proxy of that name, else it writes the fields that are set over the one there.
 
 | Environment | File key | Description |

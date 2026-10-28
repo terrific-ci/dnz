@@ -118,10 +118,10 @@ downloading the certificate authority.
 | Field | Meaning |
 | --- | --- |
 | `proxy_id` | An approved proxy that shows the page, or `null` |
-| `ipv4`, `ipv6` | What blocked names answer. Both empty: the proxy's addresses (a dnz-proxy's healthy nodes) |
+| `ipv4`, `ipv6` | What blocked names answer. Both empty: the proxy's addresses (a DNZ Proxy's healthy nodes) |
 | `title`, `message` | Empty for the usual ones; `{host}` in the message is the blocked name |
 | `link` | A *More information* button, or empty |
-| `https` | HTTPS with DNZ's own certificate authority; dnz-proxy only |
+| `https` | HTTPS with DNZ's own certificate authority; DNZ Proxy only |
 
 `GET` and `PUT` answer with `mode`, `settings` (the fields above), `ready` (a proxy and addresses are
 set), `proxy_missing`, `proxying_enabled`, `proxies` (each approved proxy with `id`, `name`, `kind`

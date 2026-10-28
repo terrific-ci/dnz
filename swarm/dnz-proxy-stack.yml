@@ -1,4 +1,4 @@
-# dnz-proxy on Docker Swarm: one node on every server labelled dnz-proxy=true.
+# DNZ Proxy on Docker Swarm: one node on every server labelled dnz-proxy=true.
 #
 #   docker node update --label-add dnz-proxy=true <server>     # each server that serves
 #   DNZ_PROXY_KEY=dnzp_… docker stack deploy -c dnz-proxy-stack.yml dnz-proxy

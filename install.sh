@@ -61,8 +61,8 @@ case "$ONLY" in
   *) fail "--only takes dnz or dnz-proxy, not $ONLY" ;;
 esac
 if [ -n "$SERVICE" ]; then
-  # dnz-proxy needs its DNZ address and token first; the dashboard shows its
-  # setup (Settings → Proxy → Set up dnz-proxy).
+  # DNZ Proxy needs its DNZ address and token first; the dashboard shows its
+  # setup (Settings → Proxy → Set up DNZ Proxy).
   [ "$ONLY" != dnz-proxy ] || fail "--service sets up dnz; for dnz-proxy use Settings → Proxy → Set up dnz-proxy in the dashboard"
   BINARIES=dnz
 fi

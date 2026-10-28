@@ -4,7 +4,7 @@ description: "Decide what multipart uploads to a route may hold, and shield an o
 ---
 
 A route's **Upload limits** decide what `multipart/form-data` uploads to it may hold: how big, how
-many fields and files, which fields, and at which paths. A [dnz-proxy](/proxy/dnz-proxy) proxy checks
+many fields and files, which fields, and at which paths. A [DNZ Proxy](/proxy/dnz-proxy) proxy checks
 them while the body streams in and refuses what breaks a limit **before your servers see it**. An
 app that can't be upgraded (an old PHP, a CMS nobody maintains) is shielded at the proxy, and
 ordinary uploads keep working.
@@ -83,13 +83,13 @@ text, like the [status pages](/proxy/status-pages)).
 
 ## What it costs
 
-Routes without upload limits don't pay anything. With them, on one CPU of a dnz-proxy node, a small
+Routes without upload limits don't pay anything. With them, on one CPU of a DNZ Proxy node, a small
 form takes 9 µs more per request at the same rate, a 1 MiB file 14% more CPU at the same rate, and a
 16 MiB file, where the CPU is full, 6% fewer uploads a second. See [Proxy benchmarks](/proxy/benchmarks).
 
 ## Every route at once
 
-On a dnz-proxy proxy, **Settings → Every route → Upload limits** applies to every route that has no
+On a DNZ Proxy, **Settings → Every route → Upload limits** applies to every route that has no
 upload limits of its own.
 
 ```bash
@@ -103,7 +103,7 @@ Traefik and Caddy proxies get **Largest upload** alone:
 - Traefik as its `buffering` middleware, for every request body on the route;
 - Caddy as `request_body` with `max_size` for uploads.
 
-The php2shell shield, fields, paths and the other checks need a dnz-proxy proxy.
+The php2shell shield, fields, paths and the other checks need a DNZ Proxy.
 
 ## See what was refused
 

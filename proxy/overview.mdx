@@ -23,7 +23,7 @@ DNZ's zones and send them to a **service** (your servers), through **middlewares
 Each proxy is run by one of three kinds, picked when you add it. All of them serve the same routers,
 services and middlewares, set up in DNZ.
 
-| | Traefik | dnz-proxy | Caddy |
+| | Traefik | DNZ Proxy | Caddy |
 | --- | --- | --- | --- |
 | What it is | A [Traefik](https://traefik.io/) v3 you run | DNZ's own reverse proxy, built on Cloudflare's Pingora; ships with DNZ | A [Caddy](https://caddyserver.com/) 2.7 or newer you run |
 | How it gets its routes | Polls DNZ through Traefik's HTTP provider | DNZ pushes the configuration to every node within a second | Polls DNZ every 10 seconds through Caddy's HTTP config loader |
@@ -33,29 +33,29 @@ services and middlewares, set up in DNZ.
 | Extras | [Records from Traefik's routers](/proxy/traefik-records), from its other providers | Caching, a firewall, an "under attack" challenge, analytics and request logs | – |
 | TCP and UDP | Yes | Yes | No (Caddy needs the layer4 plugin) |
 | [Status pages](/proxy/status-pages) | Yes | Yes | Yes |
-| Set up | [Connecting Traefik](/proxy/traefik) | [dnz-proxy](/proxy/dnz-proxy) | [Connecting Caddy](/proxy/caddy) |
+| Set up | [Connecting Traefik](/proxy/traefik) | [DNZ Proxy](/proxy/dnz-proxy) | [Connecting Caddy](/proxy/caddy) |
 
 Pick Traefik when you already run it, or want its providers (Docker, Kubernetes) to feed DNS. Pick
-dnz-proxy when you want DNZ to run the whole path, from certificates to analytics. Pick Caddy when
+DNZ Proxy when you want DNZ to run the whole path, from certificates to analytics. Pick Caddy when
 you'd rather run Caddy and let it get its own certificates.
 
-Kinds can be mixed. A record can go through a Traefik and a dnz-proxy proxy at once, and DNS answers
+Kinds can be mixed. A record can go through a Traefik and a DNZ Proxy at once, and DNS answers
 with all of their addresses.
 
 ## Turning proxying on
 
 **Settings → Proxy** has one switch: proxying on or off. Below it, **Proxies** lists the proxies.
 
-**Add proxy** first asks what runs the proxy: **Traefik**, **dnz-proxy** or **Caddy**. For a Caddy
+**Add proxy** first asks what runs the proxy: **Traefik**, **DNZ Proxy** or **Caddy**. For a Caddy
 or a Traefik it then asks whether DNZ configures it: **Caddy proxy** / **Traefik proxy**, or **Keep
 my Caddyfile** / **Keep my Traefik config**, which only reads it and goes to
-[Sites in DNS](/integrations/caddy) instead. dnz-proxy has no such step: its routes always come
+[Sites in DNS](/integrations/caddy) instead. DNZ Proxy has no such step: its routes always come
 from DNZ. Then it asks for the name and the addresses visitors reach the proxy at, and shows that
 kind's setup, ready to copy. A proxy's kind can't be changed once it is added.
 
 Each proxy in the list shows where it stands. A Traefik or Caddy is **Connected** while it fetches
-its configuration, and shows when it was last seen once it stops. A dnz-proxy proxy is only as up as
-its nodes: **No node yet** until dnz-proxy runs somewhere and joins, **A node is waiting for
+its configuration, and shows when it was last seen once it stops. A DNZ Proxy is only as up as
+its nodes: **No node yet** until DNZ Proxy runs somewhere and joins, **A node is waiting for
 approval** after one joined with the connect key, then **Running** (or how many nodes are healthy),
 **Node down** when none reports. Adding the proxy alone doesn't install anything.
 
@@ -91,12 +91,12 @@ where DNZ reads its settings from.
 
 ### Upgrading from the backend picker
 
-Earlier versions had one **backend** (Off, Traefik or dnz-proxy) that ran every proxy. When you
+Earlier versions had one **backend** (Off, Traefik or DNZ Proxy) that ran every proxy. When you
 upgrade:
 
-- every existing proxy gets the kind of the backend that was in use: `dnz` if it was dnz-proxy,
+- every existing proxy gets the kind of the backend that was in use: `dnz` if it was DNZ Proxy,
   else `traefik`;
-- with proxying off, proxies that have dnz-proxy nodes become `dnz`;
+- with proxying off, proxies that have DNZ Proxy nodes become `dnz`;
 - the switch stays on if a backend was on.
 
 ## Using it
@@ -108,7 +108,7 @@ upgrade:
   <Step title="Add a proxy">
     **Add proxy**, pick its kind and follow its setup: connect a Traefik
     ([Connecting Traefik](/proxy/traefik)) or a Caddy ([Connecting Caddy](/proxy/caddy)), or run
-    dnz-proxy nodes ([dnz-proxy](/proxy/dnz-proxy)). The proxy then shows up on the **Proxy** page.
+    DNZ Proxy nodes ([DNZ Proxy](/proxy/dnz-proxy)). The proxy then shows up on the **Proxy** page.
   </Step>
   <Step title="Add a route">
     On the proxy's page, **Add route** does it in one step. See [Adding a route](#adding-a-route)
@@ -122,7 +122,7 @@ upgrade:
 
 ### Adding a route
 
-The **Proxy** menu has **Proxies**, **Routes**, **Nodes** (dnz-proxy), **Analytics** and
+The **Proxy** menu has **Proxies**, **Routes**, **Nodes** (DNZ Proxy), **Analytics** and
 **Certificates**. **Proxy → Routes** lists the routes of every proxy (or of the one picked above the
 list), and a proxy's own page opens on the same list: one row per hostname, with where it goes, its
 HTTPS and certificate, whether DNS answers with the proxy (**Add DNS record** when not), and its
@@ -146,21 +146,21 @@ The switches are each the route's own middleware, made and removed with it:
 
 | Switch | What it does |
 | --- | --- |
-| **Cache** (dnz-proxy) | Keeps answers on the nodes; **Clear cache** right next to it when editing |
-| **Firewall** (dnz-proxy) | Runs one of the proxy's firewall middlewares |
+| **Cache** (DNZ Proxy) | Keeps answers on the nodes; **Clear cache** right next to it when editing |
+| **Firewall** (DNZ Proxy) | Runs one of the proxy's firewall middlewares |
 | **Rate limit** | Requests a second per visitor, with a burst |
 | **Password** | Any number of users, each added by name and password; only a bcrypt hash is kept. A user typed but not added yet is added on save |
 | **Only from these addresses** | Addresses or ranges; everyone else gets 403 |
 | **Custom headers** | Headers set on requests **to the servers** and on answers **to visitors**; an empty value removes the header (e.g. `Server`) |
-| **Under attack check** (dnz-proxy) | Browsers solve a short check once |
-| **Waiting room** (dnz-proxy) | Past a number of visitors in at once, new ones wait in line; or everyone waits until you open. See [Waiting room](/proxy/dnz-proxy#waiting-room-dnzwaitingroom) |
+| **Under attack check** (DNZ Proxy) | Browsers solve a short check once |
+| **Waiting room** (DNZ Proxy) | Past a number of visitors in at once, new ones wait in line; or everyone waits until you open. See [Waiting room](/proxy/dnz-proxy#waiting-room-dnzwaitingroom) |
 
 They run with the address list, firewall and check first, then the waiting room, rate limit,
 password and custom headers, and the cache last, so only visits let through ever see a cached
 answer (and cached answers get the custom headers too). Custom headers work on every proxy kind. A route's ⋯ menu
 also sets a hostname's [status page](/proxy/status-pages) and clears its cache.
 
-On dnz-proxy (and on Caddy for the password and the address list), a visitor these switches turn
+On DNZ Proxy (and on Caddy for the password and the address list), a visitor these switches turn
 away gets a styled page, such as **Sign in to continue** or **Not open to your address**, instead of
 a bare status line. See
 [Pages for visitors a middleware turns away](/proxy/status-pages#pages-for-visitors-a-middleware-turns-away).
@@ -169,11 +169,11 @@ DNZ then:
 
 - adds the service, the router and the switches' middlewares,
 - adds a second router on the HTTP entry point with a *Redirect to HTTPS* middleware, when you chose
-  HTTPS with a redirect (unless a dnz-proxy proxy's [route defaults](/proxy/dnz-proxy#route-defaults)
+  HTTPS with a redirect (unless a DNZ Proxy's [route defaults](/proxy/dnz-proxy#route-defaults)
   already redirect),
 - proxies the name's DNS record, and makes an A record pointing at the proxy when there is none.
 
-On a dnz-proxy proxy, HTTPS gets a Let's Encrypt certificate by itself. When DNZ needs something
+On a DNZ Proxy, HTTPS gets a Let's Encrypt certificate by itself. When DNZ needs something
 first, the dialog asks for it in a **Certificate** step before saving: Let's Encrypt's agreement the
 first time, and a way to prove a name DNZ can't prove yet (a Cloudflare token, another DNS provider,
 or HTTP through the nodes), tested before it is saved. See
@@ -194,7 +194,7 @@ As you type the hostname, the field offers:
   it;
 - a name outside every zone is tagged **no zone**, and one the proxy already routes **has router**.
 
-The routers go on the proxy's entry points on port 80 and 443. Under dnz-proxy these are its own
+The routers go on the proxy's entry points on port 80 and 443. Under DNZ Proxy these are its own
 entry points. Under Traefik they are the ones its API lists (when the proxy has **Traefik API**
 set), else `web` and `websecure`. Under Caddy they are `web` (:80) and `websecure` (:443).
 
@@ -273,12 +273,12 @@ of every proxy its records go through, whatever their kinds. One proxy gives its
 both, and so on. An address two proxies share is answered once.
 
 - A Traefik or Caddy proxy gives its own addresses.
-- A dnz-proxy proxy gives the public addresses of its healthy nodes, or its own addresses while it
+- A DNZ Proxy gives the public addresses of its healthy nodes, or its own addresses while it
   has none.
 
 - The record's own value is never handed out, and a proxied CNAME is not answered as a CNAME.
 - Other record types at the name (TXT, MX, and so on) are answered as usual.
-- The answer uses the lowest TTL of the name's proxied records and, with dnz-proxy, the lowest DNS
+- The answer uses the lowest TTL of the name's proxied records and, with DNZ Proxy, the lowest DNS
   TTL cap among its proxies.
 
 While proxying is off, proxied records answer with their own value. Every Traefik gets an empty
@@ -318,7 +318,7 @@ Objects that other objects use are protected too. See
   <Card title="Connecting Caddy" icon="lock" href="/proxy/caddy">
     Let DNZ configure a Caddy through its config loader.
   </Card>
-  <Card title="dnz-proxy" icon="server" href="/proxy/dnz-proxy">
+  <Card title="DNZ Proxy" icon="server" href="/proxy/dnz-proxy">
     Run DNZ's own proxy on any number of servers.
   </Card>
   <Card title="Routers, services and middlewares" icon="route" href="/proxy/routing">

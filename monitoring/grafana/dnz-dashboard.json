@@ -2355,7 +2355,7 @@
     },
     {
       "type": "table",
-      "title": "dnz-proxy nodes",
+      "title": "DNZ Proxy nodes",
       "id": 38,
       "datasource": {
         "type": "prometheus",

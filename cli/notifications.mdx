@@ -61,8 +61,8 @@ replaces them all.
 | `rate_limited` | Queries over the per-client rate limit in 5 minutes pass the threshold |
 | `cache_full` | Answers are pushed out of the cache before their TTL (`cache_size` is too small) |
 | `daily_summary` | Once a day, at the summary hour: yesterday's traffic, outages, top names and clients |
-| `certificate_failed` | A dnz-proxy certificate failed 3 times in a row |
-| `certificate_expiring` | A dnz-proxy certificate in use ends within 14 days (once per certificate) |
+| `certificate_failed` | A DNZ Proxy certificate failed 3 times in a row |
+| `certificate_expiring` | A DNZ Proxy certificate in use ends within 14 days (once per certificate) |
 | `cluster_node` | A [cluster](/deploy/cluster) node stops heartbeating or falls behind, and when it is back |
 | `threat` | A new [threat finding](/dns/threats), at most one per client every 30 minutes |
 | `domain_expiry` | A [monitored domain](/dns/domain-expiry) near a threshold, expired, on hold, or not looked up |

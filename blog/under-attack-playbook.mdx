@@ -1,5 +1,5 @@
 ---
-title: "Your Site Is Under Attack. Now What? A Playbook for dnz-proxy"
+title: "Your Site Is Under Attack. Now What? A Playbook for DNZ Proxy"
 sidebarTitle: "Your site is under attack. Now what?"
 description: "A step-by-step playbook for a bad day: find the traffic in analytics, cut it with firewall rules, challenge the rest, keep the origin alive with cache and limits, and fall back to a status page."
 ---
@@ -10,12 +10,12 @@ It's a Tuesday morning. The helpdesk phone starts ringing: the patient portal is
 times out. The servers behind it are pinned at 100% CPU. Nothing was deployed. Something out there
 is hammering the site.
 
-This post is the playbook for that morning, using what [dnz-proxy](/proxy/dnz-proxy) already has:
+This post is the playbook for that morning, using what [DNZ Proxy](/proxy/dnz-proxy) already has:
 analytics, a firewall, an under-attack challenge, a cache, rate limits and status pages. Every step
 reaches every node within seconds, and none of them needs a restart.
 
 <Note>
-  Everything here assumes the site already goes through a dnz-proxy proxy. If it doesn't yet, see
+  Everything here assumes the site already goes through a DNZ Proxy. If it doesn't yet, see
   [Proxied records](/proxy/overview) and the [five-step setup](/blog/cloudflare-in-your-server-room#building-it-in-five-steps).
 </Note>
 
@@ -117,7 +117,7 @@ Middlewares are set up under the proxy's **Middlewares** tab and attached in the
 
 If a node itself is struggling (high CPU, its own link full), there are two moves:
 
-- **Add nodes.** Start dnz-proxy on another server with the connect key and approve it. DNS starts
+- **Add nodes.** Start DNZ Proxy on another server with the connect key and approve it. DNS starts
   answering with its address too.
 - **Drain a node.** It drops out of DNS answers but keeps serving the visitors already on it, so you
   can look at it, or restart it, without cutting anyone off:
@@ -169,17 +169,17 @@ See [Status pages](/proxy/status-pages) for the other statuses, such as `rate_li
 
 ## What this doesn't stop
 
-dnz-proxy works on requests that reach it. A volumetric flood that fills your internet link
+DNZ Proxy works on requests that reach it. A volumetric flood that fills your internet link
 before it gets to any server can't be fixed by anything behind that link: no firewall rule helps when
 the pipe itself is full. For that you need your upstream provider's filtering, or a network built to
 absorb it in front of you.
 
 Everything above the network layer, the floods of HTTP requests, the scrapers, the login attacks,
-the one script someone forgot to rate limit, is where dnz-proxy does its job, on servers you own,
+the one script someone forgot to rate limit, is where DNZ Proxy does its job, on servers you own,
 with every change live within seconds.
 
 <CardGroup cols={2}>
-  <Card title="dnz-proxy" icon="bolt" href="/proxy/dnz-proxy">
+  <Card title="DNZ Proxy" icon="bolt" href="/proxy/dnz-proxy">
     Nodes, the firewall, the challenge, the cache and analytics.
   </Card>
   <Card title="Routing" icon="route" href="/proxy/routing">

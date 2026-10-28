@@ -1,10 +1,10 @@
 ---
-title: "Certificates for dnz-proxy"
+title: "Certificates for DNZ Proxy"
 sidebarTitle: "Certificates"
-description: "Let DNZ get TLS certificates over ACME and hand them to every dnz-proxy node, or upload your own."
+description: "Let DNZ get TLS certificates over ACME and hand them to every DNZ Proxy node, or upload your own."
 ---
 
-For **dnz-proxy** proxies, DNZ gets TLS certificates itself over ACME and hands them to the
+For **DNZ Proxy** proxies, DNZ gets TLS certificates itself over ACME and hands them to the
 proxy's nodes with their configuration. A Traefik or Caddy proxy gets its own. Nodes never talk to a CA, and every node serves the same
 certificate. Certificates can also be uploaded by hand.
 
@@ -20,7 +20,7 @@ certificate are under **Proxy → Certificates**.
 
 ## Automatic certificates
 
-Most setups need nothing here: an HTTPS route on a dnz-proxy proxy gets a Let's Encrypt certificate
+Most setups need nothing here: an HTTPS route on a DNZ Proxy gets a Let's Encrypt certificate
 by itself, through DNZ's resolver `auto`.
 
 <Steps>
@@ -127,7 +127,7 @@ DNZ_ACME_CA_ROOTS=/etc/dnz/step-ca-root.pem
 
 | | HTTP-01 | DNS-01 |
 | --- | --- | --- |
-| How | DNZ sends the token to every node of every dnz-proxy proxy with a router for the name. It waits up to 60 s until each healthy node confirms it answers `/.well-known/acme-challenge/` on its HTTP entry points, then lets the CA check. | DNZ adds `_acme-challenge.<name>` TXT records, waits until they are visible, lets the CA check, and removes them. |
+| How | DNZ sends the token to every node of every DNZ Proxy with a router for the name. It waits up to 60 s until each healthy node confirms it answers `/.well-known/acme-challenge/` on its HTTP entry points, then lets the CA check. | DNZ adds `_acme-challenge.<name>` TXT records, waits until they are visible, lets the CA check, and removes them. |
 | Needs | The name must point at the nodes, and port 80 must be reachable. | A DNS credential, or the name in one of DNZ's zones |
 | Wildcards | No | Yes |
 | Names not reachable from the internet | No | Yes |

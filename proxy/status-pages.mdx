@@ -21,7 +21,7 @@ The page shows:
 It is one self-contained page (no fonts, scripts or images from elsewhere) in light and dark, and
 search engines are told not to index it.
 
-Every kind of proxy shows them: [dnz-proxy](/proxy/dnz-proxy) nodes render the page themselves, a
+Every kind of proxy shows them: [DNZ Proxy](/proxy/dnz-proxy) nodes render the page themselves, a
 [Caddy](/proxy/caddy) answers with it straight from its configuration, and a
 [Traefik](/proxy/traefik) fetches it from DNZ. See [How each proxy shows it](#how-each-proxy-shows-it).
 
@@ -76,7 +76,7 @@ example your status page or an announcement.
         will see it.
       </Step>
       <Step title="Save">
-        Every dnz-proxy node serving the host shows the page within seconds.
+        Every DNZ Proxy node serving the host shows the page within seconds.
       </Step>
     </Steps>
 
@@ -125,7 +125,7 @@ A status is on from the moment it is saved until it is turned off, unless it has
 Without an end time, `Retry-After` is only sent for `rate_limited` (60 seconds).
 
 Schedules are evaluated by the proxy nodes themselves, so a status starts and ends on time even
-while a node can't reach DNZ. A change made in DNZ reaches every dnz-proxy node within seconds.
+while a node can't reach DNZ. A change made in DNZ reaches every DNZ Proxy node within seconds.
 
 ## Letting some visitors through
 
@@ -136,7 +136,7 @@ office network, or the team checking the site after maintenance:
 203.0.113.7, 10.0.0.0/8, 2001:db8::/32
 ```
 
-The visitor's address is the one dnz-proxy sees, or the one a load balancer in front of it hands
+The visitor's address is the one DNZ Proxy sees, or the one a load balancer in front of it hands
 over (the entry point's **PROXY protocol from** and **Trusted forwarders**, see
 [Entry points](/proxy/dnz-proxy#entry-points)).
 
@@ -149,7 +149,7 @@ over (the entry point's **PROXY protocol from** and **Trusted forwarders**, see
 ## How each proxy shows it
 
 <AccordionGroup>
-  <Accordion title="dnz-proxy">
+  <Accordion title="DNZ Proxy">
     The statuses come with the configuration DNZ pushes to the nodes, within seconds of a change.
     Each node renders the page itself and starts and ends scheduled statuses on its own clock. The
     page is checked after the router matches and before its middlewares, so Let's Encrypt's HTTP-01
@@ -177,7 +177,7 @@ routers (Docker labels, Kubernetes, files) can't have a status page.
 
 ## Automatic pages for the proxy's own failures
 
-dnz-proxy also shows a styled page when it can't get an answer from the backend, for every host and
+DNZ Proxy also shows a styled page when it can't get an answer from the backend, for every host and
 with no setup:
 
 | Code | Title | When |
@@ -195,11 +195,11 @@ A route's protections answer with the same kind of page, in the same three forms
 
 | Code | Title | When | Proxies |
 | --- | --- | --- | --- |
-| 401 | **Sign in to continue** | **Password** (`basicAuth`, `digestAuth`): the browser's sign-in was cancelled or wrong. The `WWW-Authenticate` header stays, so **Try again** asks again | dnz-proxy, Caddy (`basicAuth`) |
-| 429 | **Too many requests** | **Rate limit** (`rateLimit`, `inFlightReq`), saying how long to wait; `Retry-After` stays | dnz-proxy |
-| 403 | **Not open to your address** | **Only from these addresses** (`ipAllowList`), naming the visitor's address | dnz-proxy, Caddy |
-| 403 | **Access blocked** | A **Firewall** block rule, with the rule's status; **Not available in your region** when the rule checks the country | dnz-proxy |
-| 403 | **Browser check failed** / **Browser check needed** | The **Under attack** check wasn't solved, or the visit isn't a browser page (an API call, a form) | dnz-proxy |
+| 401 | **Sign in to continue** | **Password** (`basicAuth`, `digestAuth`): the browser's sign-in was cancelled or wrong. The `WWW-Authenticate` header stays, so **Try again** asks again | DNZ Proxy, Caddy (`basicAuth`) |
+| 429 | **Too many requests** | **Rate limit** (`rateLimit`, `inFlightReq`), saying how long to wait; `Retry-After` stays | DNZ Proxy |
+| 403 | **Not open to your address** | **Only from these addresses** (`ipAllowList`), naming the visitor's address | DNZ Proxy, Caddy |
+| 403 | **Access blocked** | A **Firewall** block rule, with the rule's status; **Not available in your region** when the rule checks the country | DNZ Proxy |
+| 403 | **Browser check failed** / **Browser check needed** | The **Under attack** check wasn't solved, or the visit isn't a browser page (an API call, a form) | DNZ Proxy |
 
 Some answers stay as they are written:
 
@@ -221,7 +221,7 @@ visitor's place in line and the estimated wait.
 
 When DNS filtering answers blocked names with the [block page](/dns/filtering#block-page), the
 proxy it points at shows them a page in the same style: 403 **Blocked by network policy**, the
-blocked name, and the message and link set there. A dnz-proxy shows it for every host none of its
+blocked name, and the message and link set there. A DNZ Proxy shows it for every host none of its
 routes serve (over HTTPS too, with DNZ's own certificate authority); a Traefik or Caddy over plain
 HTTP only.
 

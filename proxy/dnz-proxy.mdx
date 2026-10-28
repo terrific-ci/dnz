@@ -1,12 +1,12 @@
 ---
-title: "dnz-proxy"
+title: "DNZ Proxy"
 description: "Run DNZ's own Pingora-based reverse proxy on any number of servers, with certificates, caching, a firewall and analytics."
 ---
 
-dnz-proxy is DNZ's own reverse proxy, built on Cloudflare's
+DNZ Proxy is DNZ's own reverse proxy, built on Cloudflare's
 [Pingora](https://github.com/cloudflare/pingora). It is one of the three kinds of proxy, next to
 [Traefik](/proxy/traefik) and [Caddy](/proxy/caddy). Kinds can be mixed, so a name can go through a
-dnz-proxy proxy and a Traefik at once.
+DNZ Proxy and a Traefik at once.
 
 It serves the same routers, services and middlewares you set up for a proxy in DNZ (the same objects a
 Traefik would get), and adds what DNZ can do because it controls the proxy:
@@ -31,13 +31,13 @@ Traefik would get), and adds what DNZ can do because it controls the proxy:
 
 <Note>
   Proxying is off by default. Turn it on under **Settings → Proxy** (or with `DNZ_PROXY_BACKEND=on`),
-  then **Add proxy** and pick **dnz-proxy**. See
+  then **Add proxy** and pick **DNZ Proxy**. See
   [Turning proxying on](/proxy/overview#turning-proxying-on).
 </Note>
 
-The work only dnz-proxy needs (the node hub, ACME certificates for dnz-proxy, HTTP-01 answered by
-nodes, the node on DNZ's own server) runs while proxying is on and at least one approved dnz-proxy
-proxy exists. Nodes can only join, or be approved into, dnz-proxy proxies.
+The work only DNZ Proxy needs (the node hub, ACME certificates for DNZ Proxy, HTTP-01 answered by
+nodes, the node on DNZ's own server) runs while proxying is on and at least one approved DNZ Proxy
+proxy exists. Nodes can only join, or be approved into, DNZ Proxies.
 
 How it compares with nginx, HAProxy, Envoy, Caddy and Traefik on one CPU: see
 [Proxy benchmarks](/proxy/benchmarks).
@@ -50,7 +50,7 @@ address. It never has to be on the same machine.
 
 ### Running a node
 
-**Add proxy → dnz-proxy** shows these commands filled in, for systemd, Docker, Docker
+**Add proxy → DNZ Proxy** shows these commands filled in, for systemd, Docker, Docker
 Compose, Docker Swarm and a plain command line.
 
 <Tabs>
@@ -63,7 +63,7 @@ Compose, Docker Swarm and a plain command line.
   </Tab>
   <Tab title="systemd">
 
-    This unit runs dnz-proxy as its own throwaway user, with its state in `/var/lib/dnz-proxy` and
+    This unit runs DNZ Proxy as its own throwaway user, with its state in `/var/lib/dnz-proxy` and
     permission to bind ports 80 and 443. Install the binary first (see
     [Linux binary](/deploy/install#linux-binary)):
 
@@ -291,7 +291,7 @@ A node joins with the connect key, in one of three ways:
   every node that names it.
 
 To start DNZ and a node from one compose file with nothing to approve, see
-[DNZ and dnz-proxy in one compose file](/proxy/compose-dnz-proxy).
+[DNZ and DNZ Proxy in one compose file](/proxy/compose-dnz-proxy).
 
 Once joined, a node gets a token of its own, kept in its state directory. The connect key isn't
 needed any more, and replacing the connect key doesn't affect joined nodes. Removing a node revokes
@@ -308,7 +308,7 @@ reconnects by itself.
 
 The node list keeps two things apart:
 
-- **Version**: the dnz-proxy release the node runs. DNZ and dnz-proxy share one version number, so a
+- **Version**: the DNZ Proxy release the node runs. DNZ and DNZ Proxy share one version number, so a
   node on an older release is marked **Older than DNZ** until you upgrade it. Nodes built before the
   shared version report `0.1.0`.
 - **Config**: whether the node serves the proxy's current configuration, with its short hash.
@@ -323,7 +323,7 @@ upstream, cache use, warnings (a rule or middleware they couldn't use), and thei
 
 ### DNS and health
 
-With dnz-proxy, a proxied name is answered with the public addresses of the proxy's **healthy**
+With DNZ Proxy, a proxied name is answered with the public addresses of the proxy's **healthy**
 nodes and a short TTL, so a node that goes down leaves the answers quickly. The TTL is **TTL of
 proxied answers** on the proxy's **Settings** tab, 60 seconds by default.
 
@@ -352,7 +352,7 @@ These need a superadmin. See [Proxy commands](/cli/proxy).
 
 ### Running one on DNZ's server
 
-**Settings → Proxy → Run dnz-proxy on this server** starts a node as a child of DNZ, joined to the
+**Settings → Proxy → Run DNZ Proxy on this server** starts a node as a child of DNZ, joined to the
 chosen proxy as `local`. DNZ uses the `dnz-proxy` next to its own binary, or on the `PATH`, or the
 one `DNZ_PROXY_BIN` names. It restarts the node if it exits and shows its last log lines.
 
@@ -363,7 +363,7 @@ one `DNZ_PROXY_BIN` names. It restarts the node if it exits and shows its last l
 
 ## The proxy's page
 
-A dnz-proxy proxy's page has **Routes** ([Adding a route](/proxy/overview#adding-a-route)),
+A DNZ Proxy's page has **Routes** ([Adding a route](/proxy/overview#adding-a-route)),
 **Nodes**, **Analytics**, **Settings** and **Advanced** (the routers, services, middlewares and TLS,
 TCP and UDP objects behind the routes). **Settings** holds:
 
@@ -426,7 +426,7 @@ Per entry point:
 ## Routing
 
 Routers, services and middlewares work as described in
-[Routers, services and middlewares](/proxy/routing). dnz-proxy reads them as Traefik v3 does:
+[Routers, services and middlewares](/proxy/routing). DNZ Proxy reads them as Traefik v3 does:
 
 - **Rules**: `Host`, `HostRegexp`, `Path`, `PathPrefix`, `PathRegexp`, `Method`, `Header`,
   `HeaderRegexp`, `Query`, `QueryRegexp`, `ClientIP` with `&&`, `||`, `!` and parentheses. Priority
@@ -502,9 +502,9 @@ circuitBreaker, buffering.
 - **UDP routers** on `udp` entry points send each client's datagrams to one server of their service.
   Sessions end after 3 seconds without traffic.
 
-## dnz-proxy's middlewares
+## DNZ Proxy's middlewares
 
-These appear under **dnz-proxy** in **Add middleware** on a dnz-proxy proxy. Traefik and Caddy never
+These appear under **DNZ Proxy** in **Add middleware** on a DNZ Proxy. Traefik and Caddy never
 get them.
 
 ### Cache (`dnzCache`)
@@ -614,7 +614,7 @@ show` lists them, and Prometheus gets `dnz_proxy_waiting_room_active`, `…_queu
 <Tabs>
   <Tab title="Dashboard">
 
-    **Proxy** → open the proxy → **Add middleware** → **dnz-proxy** → **Waiting room**, then add the
+    **Proxy** → open the proxy → **Add middleware** → **DNZ Proxy** → **Waiting room**, then add the
     middleware to the hostname's route.
 
   </Tab>
@@ -650,7 +650,7 @@ None of it goes into DNZ's database, so a busy proxy never competes with DNS for
 open **Proxy → Analytics**, DNZ asks each node over its configuration stream and adds the answers
 up. No port on the node has to be reachable from DNZ.
 
-The page shows, per dnz-proxy proxy and hostname, over the last hour to 30 days:
+The page shows, per DNZ Proxy and hostname, over the last hour to 30 days:
 
 - requests by status class, bandwidth, and latency (p50, p95, p99)
 - cache hit ratio, blocked and challenged visits
@@ -730,7 +730,7 @@ again after 30 days). Those visits are counted in [analytics](#analytics) as one
   <Card title="Certificates" icon="certificate" href="/proxy/certificates">
     Let DNZ issue and renew certificates for the nodes.
   </Card>
-  <Card title="dnz-proxy API" icon="code" href="/api/dnz-proxy">
+  <Card title="DNZ Proxy API" icon="code" href="/api/dnz-proxy">
     Nodes, entry points, analytics and purges over HTTP.
   </Card>
 </CardGroup>

@@ -131,7 +131,7 @@ How it works, and what is different from Postgres and MySQL: [Cluster → On Red
 - DNZ keeps up to 16 connections to Postgres or MySQL open.
 - The password never shows up in `dnz config show`, `dnz config check` or the log.
 - Files DNZ keeps besides the database (the query log's day files in `logs/`, the GeoIP database
-  and the local dnz-proxy's state) go in
+  and the local DNZ Proxy's state) go in
   `database.data_dir` (`DNZ_DATA_DIR`). With SQLite that's the database file's folder. With Postgres
   or MySQL it's the working directory: `/var/lib/dnz` with the [systemd unit](/deploy/systemd), `/data`
   in the Docker image.
@@ -154,7 +154,7 @@ services:
       - "53:53/tcp"
       - "8080:8080"
     volumes:
-      # The query log (logs/), the GeoIP database and the local dnz-proxy's state (DNZ_DATA_DIR).
+      # The query log (logs/), the GeoIP database and the local DNZ Proxy's state (DNZ_DATA_DIR).
       - dnz-data:/data
     environment:
       TZ: Asia/Jakarta

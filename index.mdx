@@ -63,7 +63,7 @@ several departments. Each department is a **division** with its own zones, membe
   </Accordion>
   <Accordion title="Proxied records" icon="cloud">
     DNS answers with a proxy's address and the origin stays hidden.
-    Use Traefik, Caddy, or DNZ's own Pingora-based **dnz-proxy** with certificates, caching, a
+    Use Traefik, Caddy, or DNZ's own Pingora-based **DNZ Proxy** with certificates, caching, a
     firewall and analytics, and mix them. See [Proxy](/proxy/overview).
   </Accordion>
   <Accordion title="Automation and integrations" icon="plug">
@@ -83,13 +83,13 @@ DNZ is a single program with the dashboard built in. It keeps all of its data in
 SQLite file, so a backup is one file, or in [Postgres, MySQL or Redis](/deploy/database) for large
 installations. It runs on Linux (amd64 and arm64), as a
 [Docker image](/deploy/docker) or a [systemd service](/deploy/systemd). The optional reverse
-proxy, `dnz-proxy`, comes with it.
+proxy, DNZ Proxy (the `dnz-proxy` binary), comes with it.
 
 ## Source and releases
 
 DNZ is on GitHub at [terrific-ci/dnz](https://github.com/terrific-ci/dnz). Every release is
 published there with its binaries for Linux amd64 and arm64, next to the install script, the
-Prometheus and Grafana files, the benchmark harnesses and the dnz-proxy Swarm stack. Report bugs
+Prometheus and Grafana files, the benchmark harnesses and the DNZ Proxy Swarm stack. Report bugs
 and ask for features in its [issues](https://github.com/terrific-ci/dnz/issues).
 
 <CardGroup cols={2}>

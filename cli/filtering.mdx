@@ -205,7 +205,7 @@ dnz filter block-page set --proxy edge                     # addresses: the prox
 dnz filter block-page set --ipv4 10.0.0.80 --ipv6 ""       # devices reach it here
 dnz filter block-page set --proxy-addresses                # back to the proxy's
 dnz filter block-page set --message "{host} is blocked. Ask IT at ext. 123." --link https://intranet.example.com/rules
-dnz filter block-page set --https on                       # dnz-proxy: HTTPS with DNZ's own authority
+dnz filter block-page set --https on                       # DNZ Proxy: HTTPS with DNZ's own authority
 dnz filter mode block_page
 dnz filter block-page ca > dnz-block-page-ca.crt           # for devices to trust (--der --out ca.cer)
 dnz filter block-page rotate-ca                            # a new authority; devices must trust it again
@@ -221,7 +221,7 @@ dnz filter block-page rotate-ca                            # a new authority; de
 | `--title` | The page's title (`""` for the usual one, "Blocked by network policy") |
 | `--message` | The page's message; `{host}` is the blocked name (`""` for the usual one) |
 | `--link` | A *More information* button, such as the network's rules or a help desk (`""` for none) |
-| `--https on\|off` | HTTPS visits get a certificate from DNZ's authority. dnz-proxy only; devices must trust the authority |
+| `--https on\|off` | HTTPS visits get a certificate from DNZ's authority. DNZ Proxy only; devices must trust the authority |
 
 `show` lists the proxy, the addresses, the text, whether blocked names answer with the page, and the
 certificate authority's fingerprint. `ca` prints the authority as PEM; `--der` gives DER (`.cer`) and

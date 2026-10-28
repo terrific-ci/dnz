@@ -22,7 +22,7 @@ npx mint broken-links
 - `changelog.mdx`: the Changelog tab, written by the DNZ release workflow after every release; don't
   edit it here
 - `monitoring/`, `bench/`, `proxybench/`, `swarm/`: files the pages tell readers to download (Prometheus + Grafana,
-  the benchmark harnesses, the dnz-proxy Swarm stack). The DNZ release workflow copies them here after
+  the benchmark harnesses, the DNZ Proxy Swarm stack). The DNZ release workflow copies them here after
   every release; don't edit them here
 
 Pages are MDX. Link between pages with root-relative paths without the extension

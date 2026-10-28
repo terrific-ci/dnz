@@ -1,9 +1,9 @@
 ---
 title: "Proxy benchmarks"
-description: "How fast dnz-proxy forwards requests compared with nginx, HAProxy, Envoy, Caddy and Traefik on one CPU, how much memory each holds, and how to measure it yourself."
+description: "How fast DNZ Proxy forwards requests compared with nginx, HAProxy, Envoy, Caddy and Traefik on one CPU, how much memory each holds, and how to measure it yourself."
 ---
 
-[dnz-proxy](/proxy/dnz-proxy) was measured against the reverse proxies people run (nginx, HAProxy,
+[DNZ Proxy](/proxy/dnz-proxy) was measured against the reverse proxies people run (nginx, HAProxy,
 Envoy, Caddy and Traefik), each pinned to one CPU in front of the same origin.
 
 ## Results
@@ -17,7 +17,7 @@ with 64 connections.
 | --- | ---: | ---: | ---: | ---: |
 | nginx 1.30.6 | 24,624 | 17,772 | 1,356 | 6,769 |
 | HAProxy 3.4.7 | 22,999 | 17,803 | 1,238 | 5,872 |
-| **dnz-proxy 1.7.1** | **11,668** | **11,476** | **2,441** | **7,216** |
+| **DNZ Proxy 1.7.1** | **11,668** | **11,476** | **2,441** | **7,216** |
 | Traefik 3.7.16 | 8,586 | 8,097 | 1,433 | 5,128 |
 | Envoy 1.40.1 | 8,584 | 8,010 | 1,930 ¹ | 5,487 |
 | Caddy 2.11.7 | 6,692 | 6,211 | 1,336 | 4,565 |
@@ -28,12 +28,12 @@ At a steady 5,000 requests a second over HTTP, one every 0.2 ms (well below ever
 | --- | ---: | ---: | ---: | ---: | ---: |
 | nginx | 0.44 ms | 1.38 ms | 75 µs | 17 MiB | 21 MiB |
 | HAProxy | 0.40 ms | 1.25 ms | 68 µs | 17 MiB | 21 MiB |
-| **dnz-proxy** | **0.60 ms** | **1.54 ms** | **100 µs** | **2 MiB** | **8 MiB** |
+| **DNZ Proxy** | **0.60 ms** | **1.54 ms** | **100 µs** | **2 MiB** | **8 MiB** |
 | Traefik | 0.83 ms | 13.16 ms | 137 µs | 13 MiB | 42 MiB |
 | Envoy | 1.22 ms | 16.54 ms | 152 µs | 14 MiB | 23 MiB |
 | Caddy | 1.28 ms | 40.32 ms | 163 µs | 9 MiB | 21 MiB |
 
-dnz-proxy is the release image `terrificci/dnz:1.7.1`. The origin alone answers 36,883 requests a
+DNZ Proxy is the release image `terrificci/dnz:1.7.1`. The origin alone answers 36,883 requests a
 second for 1 KiB and 30,139 for 64 KiB, so every number above is the proxy's own limit; on its own
 it answers the steady load in 0.3 ms (p99 1.0 ms). No run had a failed or non-200 answer.
 
@@ -42,29 +42,29 @@ it answers the steady load in 0.3 ms (p99 1.0 ms). No run had a failed or non-20
 
 What it shows:
 
-- **nginx and HAProxy** forward keep-alive HTTP about twice as fast as dnz-proxy and HTTPS about 1.5
-  times as fast, and use 68 to 75 µs of CPU per request against dnz-proxy's 100 µs.
-- **dnz-proxy** comes third on keep-alive HTTP and HTTPS, ahead of Traefik, Envoy and Caddy, and
+- **nginx and HAProxy** forward keep-alive HTTP about twice as fast as DNZ Proxy and HTTPS about 1.5
+  times as fast, and use 68 to 75 µs of CPU per request against DNZ Proxy's 100 µs.
+- **DNZ Proxy** comes third on keep-alive HTTP and HTTPS, ahead of Traefik, Envoy and Caddy, and
   first on 64 KiB answers and on new TLS connections (rustls with *ring*, against OpenSSL in nginx
   and HAProxy).
-- **Latency**: nginx and HAProxy add about 0.1 ms to the origin's 0.3 ms, dnz-proxy 0.3 ms; all
+- **Latency**: nginx and HAProxy add about 0.1 ms to the origin's 0.3 ms, DNZ Proxy 0.3 ms; all
   three keep p99 near 1.5 ms. Traefik, Envoy and Caddy have p99s of 13 to 40 ms.
-- **Memory**: dnz-proxy holds the least, 2 MiB idle and 8 MiB under load, against 21 to 42 MiB for
+- **Memory**: DNZ Proxy holds the least, 2 MiB idle and 8 MiB under load, against 21 to 42 MiB for
   the others.
 
 <Note>
   Until 2026-10-24 this page measured latency with `hey`, whose workers send in step: up to 50
   requests arrived at once, so the latency mostly showed how long a proxy takes to work through 50
-  requests (dnz-proxy 1.6.1: 3.5 ms p50). The harness now spaces requests evenly with `oha`.
+  requests (DNZ Proxy 1.6.1: 3.5 ms p50). The harness now spaces requests evenly with `oha`.
 </Note>
 
 ## After 1.7.0: one write per answer, fewer allocations
 
-A profile of dnz-proxy under this load (`perf`, 1 CPU) showed no hot spot in dnz-proxy's own code,
+A profile of DNZ Proxy under this load (`perf`, 1 CPU) showed no hot spot in DNZ Proxy's own code,
 but nearly half the CPU in the kernel's network path, and two causes worth fixing:
 
 - **Each answer's header and body went out in two writes.** Pingora gives a connection a write
-  buffer of one TCP segment only in its own listeners; connections from dnz-proxy's listener had
+  buffer of one TCP segment only in its own listeners; connections from DNZ Proxy's listener had
   none, so a 1 KiB answer took two packets, each a full trip through the TCP stack. Now they leave
   in one. Event streams and WebSockets aren't held back: each chunk and each message on an upgraded
   connection is still sent right away.
@@ -72,7 +72,7 @@ but nearly half the CPU in the kernel's network path, and two causes worth fixin
   **Logged per second, per node** of them are kept. The traffic counters now take what they need
   from the visit, and a line is made only when it is kept.
 
-Measured against 1.7.0 (its dnz-proxy is the same as 1.6.1's) on the same server, both builds taking
+Measured against 1.7.0 (its DNZ Proxy is the same as 1.6.1's) on the same server, both builds taking
 turns, median of 4 rounds:
 
 | | 1.7.0 | After | Change |
@@ -91,9 +91,9 @@ These changes are in 1.7.1, the release in the tables above.
 
 ## 1.7.3: mimalloc
 
-From 1.7.3, dnz-proxy uses [mimalloc](https://github.com/microsoft/mimalloc) (v3) instead of glibc's
+From 1.7.3, DNZ Proxy uses [mimalloc](https://github.com/microsoft/mimalloc) (v3) instead of glibc's
 allocator: Pingora makes many small allocations per request, and the allocator was the largest
-part of dnz-proxy's CPU after the kernel. mimalloc's default asks the kernel for transparent huge
+part of DNZ Proxy's CPU after the kernel. mimalloc's default asks the kernel for transparent huge
 pages, which made a few touched bytes cost 2 MiB (15 MiB idle instead of 2); it is built with
 `no_thp`, which keeps memory where glibc had it.
 
@@ -134,7 +134,7 @@ without them doesn't pay for it: the 1.18 build against the one before it, takin
 | Latency p50 / p99 at 5,000/s | 0.59 / 1.55 ms | 0.55 / 1.56 ms | |
 | CPU per request | 98.6 µs | 96.0 µs | |
 
-A route with them: multipart POSTs through dnz-proxy (one CPU) to an origin that reads the whole
+A route with them: multipart POSTs through DNZ Proxy (one CPU) to an origin that reads the whole
 body, 32 connections, with the php2shell shield and a 64 MiB limit on and off, taking turns,
 median of 4 rounds:
 
@@ -156,7 +156,7 @@ CPU, 1 MiB ones with 23% more CPU.
 - **CPUs are pinned** (`cpuset`), not limited by a quota, so each proxy sizes its worker threads to
   the one CPU it may use, as it would on a one-CPU server. Envoy, which counts the host's CPUs,
   gets `--concurrency 1`.
-- **dnz-proxy** joins a DNZ that pushes it the routers, the service and the certificate over its
+- **DNZ Proxy** joins a DNZ that pushes it the routers, the service and the certificate over its
   configuration stream, as in production. It runs with its defaults: analytics and request logs on.
   The DNZ control plane shares the origin's CPU; no traffic goes through it.
 - **The others** run the official images with a minimal configuration (in `proxybench/conf/`): one
@@ -178,7 +178,7 @@ CPU, 1 MiB ones with 23% more CPU.
 ## Run it yourself
 
 The harness is in [`proxybench/`](https://github.com/terrific-ci/dnz/tree/main/proxybench) on the
-public repository. It needs Docker and runs DNZ and dnz-proxy from the release image on Docker Hub
+public repository. It needs Docker and runs DNZ and DNZ Proxy from the release image on Docker Hub
 (`terrificci/dnz:latest`), next to the other proxies' official images:
 
 ```bash
@@ -193,7 +193,7 @@ own.
 
 | Variable | Default | What it sets |
 | --- | --- | --- |
-| `DNZ_IMAGE` | `terrificci/dnz:latest` | The DNZ image (DNZ and dnz-proxy), e.g. `terrificci/dnz:1.7.1` |
+| `DNZ_IMAGE` | `terrificci/dnz:latest` | The DNZ image (DNZ and DNZ Proxy), e.g. `terrificci/dnz:1.7.1` |
 | `BENCH_PROXIES` | all | Only these, e.g. `"dnzproxy nginx"` |
 | `BENCH_DURATION`, `BENCH_RUNS` | `20`, `3` | Seconds per run, and runs per scenario |
 | `BENCH_CONNECTIONS` | `64` | wrk's connections |

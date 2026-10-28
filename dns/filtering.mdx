@@ -384,7 +384,7 @@ in their format.
       </Step>
       <Step title="Check the addresses">
         **IPv4** and **IPv6** are what blocked names answer. They start as the proxy's addresses (a
-        dnz-proxy's healthy nodes). Change them when devices reach the proxy on another address, such
+        DNZ Proxy's healthy nodes). Change them when devices reach the proxy on another address, such
         as a node's LAN address for clients inside your network. Without an IPv6 address, AAAA gets
         an empty answer, so clients use IPv4.
       </Step>
@@ -414,7 +414,7 @@ How each kind of proxy shows it:
 
 | Proxy | Shows the block page |
 | --- | --- |
-| [dnz-proxy](/proxy/dnz-proxy) | For every host none of its routes serve, over HTTP, and over HTTPS with **HTTPS** on |
+| [DNZ Proxy](/proxy/dnz-proxy) | For every host none of its routes serve, over HTTP, and over HTTPS with **HTTPS** on |
 | [Traefik](/proxy/traefik) | Over plain HTTP: a router below every other on its HTTP entry point asks DNZ for the page |
 | [Caddy](/proxy/caddy) | Over plain HTTP, in place of its closing 404 |
 
@@ -424,7 +424,7 @@ The addresses are stored, so [secondaries](/dns/replication) answer blocked name
 #### HTTPS
 
 Most visits are HTTPS, and a proxy can't hold a valid certificate for a name it doesn't own. With
-**HTTPS** on (dnz-proxy only), DNZ makes its own certificate authority, **DNZ block page CA**, and the
+**HTTPS** on (DNZ Proxy only), DNZ makes its own certificate authority, **DNZ block page CA**, and the
 proxy's nodes make a certificate for each blocked name on the spot, signed by it. Devices that trust
 the authority see the page over HTTPS. Others get a certificate warning instead of the page, as they
 do with Traefik and Caddy.
@@ -439,7 +439,7 @@ To trust the authority:
 
 <Warning>
   Whoever holds the authority's key can make certificates those devices trust for any site. DNZ keeps
-  it in its database, sends it only to the block page's dnz-proxy nodes, and never to secondaries.
+  it in its database, sends it only to the block page's DNZ Proxy nodes, and never to secondaries.
   **Replace** (or `dnz filter block-page rotate-ca`) makes a new one; devices must then trust the new
   one.
 </Warning>
