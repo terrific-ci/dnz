@@ -139,8 +139,12 @@ to the hostname show how its certificate and DNS are doing; hover one for the de
 **By zone** gives each zone a list of its own, and **By group** each [route group](#route-groups);
 the list shows 25 routes a page (50 or 100 can be picked below it). **Add route** is the one button: on Proxy → Routes it
 asks which proxies (one or several, with a search), and the same dialog edits a route later. Its
-**Serve on** saves the route on every proxy picked; each keeps its own service, firewall and other
-middlewares. A route on several proxies has a submenu per proxy in its row menu (traffic, check now,
+**Serve on** saves the route on every proxy picked; each keeps its own firewall and other
+middlewares. A route that goes to a service from the list goes to the service of the same name on
+each proxy (made there from the same servers when a proxy has none), so the same servers never become
+a second service. A route saved before that, with upstreams of its own on one proxy while another uses
+a service from its list, gets **Use … on …** in its row menu: that copy moves onto the service of
+that name, and its own service goes. A route on several proxies has a submenu per proxy in its row menu (traffic, check now,
 clear cache, certificate log, and **Remove from …**, which takes it off that proxy).
 
 The dialog has the **Hostname** (and **Another hostname**), where it goes, **HTTPS** with a
