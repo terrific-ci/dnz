@@ -114,6 +114,7 @@
               "proxy/caddy",
               "proxy/routing",
               "proxy/route-history",
+              "proxy/config-as-code",
               "proxy/traefik-records",
               "proxy/compose",
               "proxy/compose-caddy",

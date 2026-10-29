@@ -142,6 +142,8 @@ with OAuth isn't possible.
 | `proxy_visitors` | Distinct visitors of each hostname DNZ Proxy serves over the last hours, total and per hour |
 | `proxy_request_log` | DNZ Proxy request log lines, filtered by hostname, status, client or text |
 | `proxy_routes` | A proxy's routes: hostnames, servers, HTTPS and certificate progress, DNS, switches (custom headers and the web application firewall included) |
+| `proxy_config_export` | A proxy's configuration as the YAML file kept in Git ([configuration as code](/proxy/config-as-code)); passwords by user name only |
+| `proxy_config_plan` | What applying a proxy YAML file would change, or why it can't be applied. Writes nothing: people apply |
 | `proxy_waiting_rooms` | DNZ Proxy waiting rooms now: visitors in, the limit and visitors waiting, per hostname |
 | `proxy_waf_rules` | The [web application firewall](/proxy/waf)'s rules (id, category, level, what each catches), optionally only those a sensitivity runs |
 | `proxy_waf_hits` | Requests the web application firewall matched since each node started, per proxy, middleware, rule and action (`block` or `log`) |

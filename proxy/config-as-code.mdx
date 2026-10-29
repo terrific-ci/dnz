@@ -1,0 +1,187 @@
+---
+title: "Configuration as code"
+description: "Keep a proxy's routes in Git as YAML: export them, see what a file would change, and apply it from the dashboard, the CLI or a CI job."
+---
+
+A proxy's configuration can live in Git. Export it as a YAML file, change the file in a pull
+request, and apply it again: DNZ shows what the file would **add, change and remove** before
+anything is written, like `terraform plan`. Applying a file the proxy already matches changes
+nothing, so a CI job can apply it on every push.
+
+It works the same for Traefik, DNZ Proxy and Caddy.
+
+## What the file holds
+
+- **Routes**, as the route dialog shows them: hostnames, path, where they go (upstreams of their own
+  or one of the proxy's services), HTTPS, every switch (cache, firewall, rate limit, password,
+  sign-in, address list, custom headers, upload limits, under attack, waiting room,
+  [web application firewall](/proxy/waf)), the redirect and the group. Routes set up under
+  **Advanced** come along with their conditions, priority and entry points.
+- **Services** and **middlewares** the routes use, by name.
+- **Route defaults** of a DNZ Proxy: redirect to https://, compression, security headers, the
+  firewall on every route, upload limits.
+
+Everything is named, never numbered: services, middlewares, the firewall and sign-in providers.
+
+```yaml edge.yaml
+version: 1
+proxy: edge
+kind: dnz-proxy
+defaults:
+  redirect_https: true
+  compress: true
+  security_headers: false
+routes:
+- name: app-example-com
+  hosts:
+  - app.example.com
+  servers:
+  - http://10.0.1.20:3000
+  - url: http://10.0.1.21:3000
+    weight: 3
+  https: true
+  group: Web app
+  cache: 10m
+  basic_auth:
+  - admin
+- name: api
+  hosts:
+  - api.example.com
+  path: /v1
+  service: backend
+  https: true
+  rate_limit:
+    average: 50
+    burst: 100
+services:
+- name: backend
+  servers:
+  - http://10.0.2.11:8080
+  health_check:
+    path: /health
+    interval: 10
+```
+
+A route without a `name` is named after its first hostname (`app.example.com` becomes
+`app-example-com`); the name is how a route is found again, so the same name updates the same route.
+Unknown keys are refused, so a typo such as `cahce: 10m` is an error instead of being ignored.
+
+## Export and import in the dashboard
+
+<Steps>
+  <Step title="Export">
+    On the proxy's page, open **YAML → Export**. The file downloads as `<proxy>.yaml`.
+  </Step>
+  <Step title="Change it">
+    Edit it, or keep it in a Git repository and change it there.
+  </Step>
+  <Step title="Import">
+    Open **YAML → Import…**, choose the file or paste it, and click **Show changes**. Each route,
+    service and middleware that would change is listed with its fields before and after.
+  </Step>
+  <Step title="Apply">
+    Click **Apply**. Turn on **Remove what the file doesn't have** to delete routes, services and
+    middlewares the file leaves out.
+  </Step>
+</Steps>
+
+## From the CLI
+
+```bash
+dnz proxy export edge > edge.yaml           # one proxy
+dnz proxy export --all > proxies.yaml       # every proxy, --- between them
+dnz proxy plan -f edge.yaml                 # what would change; nothing is written
+dnz proxy apply -f edge.yaml                # apply it
+dnz proxy apply -f edge.yaml --prune        # and remove what the file doesn't have
+dnz proxy apply -f edge.yaml --proxy edge-2 # the same routes on another proxy
+```
+
+```text
+edge: 1 to add, 1 to change, 0 to remove.
+
++ route shop-example-com
+    hosts: ["shop.example.com"]
+    servers: ["http://10.0.3.5:8080"]
+    https: true
+~ route app-example-com
+    cache: 10m → 1h
++ dns shop.example.com
+    a new record pointing at edge
+```
+
+## How applying works
+
+- **Nothing half applied.** Every check the route dialog makes runs first: hostnames in your zones,
+  one route per hostname, services and middlewares that exist, sign-in providers, switches the
+  proxy's kind runs. An error names the route and its line, for example
+  `route shop-example-com (line 14): unknown key cahce`, and nothing changes.
+- **Nothing removed unless you ask.** Routes, services and middlewares the file leaves out stay;
+  `--prune` (or **Remove what the file doesn't have**) deletes them, and their hostnames stop going
+  through the proxy. A service or middleware a route still uses is never removed.
+- **DNS follows.** A new route's hostnames go through the proxy, with a new record pointing at it
+  when a name has none. `dns_record: false` on a route leaves DNS alone.
+- **Applying twice changes nothing.**
+- **History kept.** Each route a file adds, changes or removes gets a version in
+  [route history](/proxy/route-history), and every apply is in the audit log.
+
+## Secrets
+
+<Note>
+  Password hashes are left out of an export: each basic auth user is listed by name only, and
+  applying keeps the hash the proxy already has for that user. A user the proxy doesn't have needs
+  one, written `name:HASH` (`htpasswd -nbB name password` makes it). **Export with password
+  hashes** (`--secrets`) puts them in, for a copy that recreates the users on another server. Keep
+  such a file out of public repositories.
+</Note>
+
+Sign-in routes name their provider; the provider and its client secret stay under
+**Settings → Proxy → Sign-in** and are never exported. The proxy itself (its addresses and token),
+DNZ Proxy's node settings, TLS certificates and TCP/UDP routers aren't in the file and are never
+touched by it.
+
+## GitOps with GitHub Actions
+
+Keep the files in a repository. Pull requests show the plan; a merge to `main` applies it. Give the
+job an [API token](/cli/authentication) of a user who manages proxies and your DNZ server's address.
+
+```yaml .github/workflows/proxies.yml
+name: proxies
+on:
+  pull_request:
+    paths: ["proxies/**"]
+  push:
+    branches: [main]
+    paths: ["proxies/**"]
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    env:
+      DNZ_SERVER: https://dnz.example.com
+      DNZ_TOKEN: ${{ secrets.DNZ_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dnz
+        run: curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sudo sh
+      - name: Plan
+        run: for f in proxies/*.yaml; do dnz proxy plan -f "$f"; done
+      - name: Apply
+        if: github.event_name == 'push'
+        run: for f in proxies/*.yaml; do dnz proxy apply -f "$f"; done
+```
+
+<Tip>
+  A scheduled `dnz proxy plan -f proxies/edge.yaml --exit-code` exits with 2 when someone changed
+  the proxy in the dashboard and it no longer matches the file: a drift check.
+</Tip>
+
+## API
+
+| Call | What it does |
+|---|---|
+| `GET /api/proxies/{id}/export` | The proxy as YAML (`?secrets=true`: with password hashes) |
+| `GET /api/proxies/export` | Every proxy, one YAML document each |
+| `POST /api/proxies/{id}/plan` | `{"content": "<YAML>", "prune": false}`: what would change, nothing written |
+| `POST /api/proxies/{id}/apply` | The same body: applies it and answers with what changed |
+
+An AI assistant can export a proxy and plan a file it drafted (`proxy_config_export`,
+`proxy_config_plan`); applying stays with people. See [AI assistants](/integrations/ai-assistants).

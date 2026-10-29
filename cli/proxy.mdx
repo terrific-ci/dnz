@@ -233,6 +233,21 @@ The one on port 80 serves `http://` and the one on 443 serves `https://`; the co
 picked. Without either, or when no entry point is on that port, it uses `web` and `websecure`.
 `--http-entry` and `--https-entry` name them yourself.
 
+### Configuration as code
+
+A proxy's routes, the services and middlewares they use and its route defaults as one YAML file to
+keep in Git:
+
+```bash
+dnz proxy export edge > edge.yaml                 # passwords by user name only (--secrets: with hashes)
+dnz proxy plan -f edge.yaml                       # what would change; nothing is written
+dnz proxy plan -f edge.yaml --exit-code           # exit 2 when the proxy differs from the file
+dnz proxy apply -f edge.yaml                      # apply it; routes the file leaves out stay
+dnz proxy apply -f edge.yaml --prune              # and remove them
+```
+
+See [Configuration as code](/proxy/config-as-code).
+
 ### Route defaults (DNZ Proxy)
 
 What every route of a DNZ Proxy gets, live on its nodes:
