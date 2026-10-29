@@ -145,6 +145,16 @@ Decided change requests follow the days limit.
 dnz settings history --keep-days 90 --keep-versions 500
 ```
 
+## Route history
+
+How long [route history](/proxy/route-history) is kept is under **Settings → Proxy → Route
+history**: versions older than **Days** (default 365), and beyond the newest **Versions per proxy**
+(default 1000), are dropped every hour. `0` means no limit.
+
+```bash
+dnz settings route-history --keep-days 90 --keep-versions 500
+```
+
 ## Query log file cache
 
 Searching the [query log](/dns/query-logs) reads its day files, and the Linux kernel keeps what it

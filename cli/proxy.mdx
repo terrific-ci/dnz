@@ -98,6 +98,21 @@ dnz proxy routes clear-cache edge app.example.com
 dnz proxy routes rm edge app.example.com          # its DNS records stop going through edge
 ```
 
+### History and restore
+
+Every add, edit, delete and group move of a route is kept as a version ([Route history](/proxy/route-history)).
+
+```bash
+dnz proxy routes history edge                     # every change to edge's routes, newest first (deleted ones too)
+dnz proxy routes history edge app.example.com     # one hostname's route; -n 100 for more
+dnz proxy routes history edge app.example.com 7   # what version 7 changed, part by part
+dnz proxy routes restore edge app.example.com 7   # the route as it was right after version 7 (asks first; -y)
+dnz settings route-history --keep-days 365 --keep-versions 1000   # how long versions are kept (superadmin)
+```
+
+Restoring a *Deleted* version makes the route again. A restore is kept as a new version, and never
+takes a DNS record off the proxy.
+
 ### Route groups
 
 Groups (*Web app*, *REST API*, …) only sort the Routes page; no proxy's configuration changes.

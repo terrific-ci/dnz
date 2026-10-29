@@ -157,6 +157,7 @@ with OAuth isn't possible.
 | `create_zone` ✎ | Creates an empty primary zone |
 | `clear_dns_cache` ✎ | Empties the forwarding and recursive caches (superadmin) |
 | `clear_proxy_cache` ✎ | Drops what a DNZ Proxy's nodes cached for a hostname (superadmin) |
+| `proxy_route_history` | A proxy's route versions (or one hostname's): who changed which route when, and what changed part by part; with `version`, the route before and after and what restoring would change. Restoring is left to people ([Route history](/proxy/route-history)) |
 | `proxy_route_group` ✎ | Puts a hostname's route in a group (Web app, REST API, …) on every proxy serving it (or one), or in none (`group: ""`); only sorts the Routes page |
 | `set_status_page` ✎ | Sets or replaces a host's status page: maintenance, moved, blocked…, with a schedule and allowed addresses; `moved` is a 301 unless `permanent: false` (a 302) |
 | `switch_status_page` ✎ | Turns a host's status page on or off |
@@ -166,7 +167,7 @@ with OAuth isn't possible.
 
 ✎ marks the tools that change DNS or what visitors see. They are only offered with **read and change** access (OAuth),
 `--allow-writes` (stdio) or an API token. A change that needs approval isn't made: the tool answers
-with the change request's number instead. No tool approves changes, deletes zones or rolls back.
+with the change request's number instead. No tool approves changes, deletes zones, rolls back or restores a route version.
 
 Each zone is also a resource, `dnz://zone/<name>`, with its zone file. And there are three prompts
 (slash commands in clients that show them): `audit_zone`, `troubleshoot_name` and `recent_changes`.

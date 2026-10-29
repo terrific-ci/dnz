@@ -62,6 +62,7 @@ as on (`traefik`, `dnz`) or off.
 | `POST` | `/api/proxies/{id}/routes` | One step: `{"host" or "hosts", "servers" or "service_id" (one of the proxy's services, used as it is), "tls", "redirect_http", "options", "middlewares", "path_prefix", "dns_record"}` adds the service, router(s), switches and proxied DNS records |
 | `PUT` | `/api/proxies/{id}/routes/{router}` | The same body: changes the route (409 for one set up under Advanced); also `"clear_redirect": true` |
 | `DELETE` | `/api/proxies/{id}/routes/{router}[?unproxy=true]` | Deletes its routers, its own service (a picked one stays) and switches; `unproxy` takes the proxy off its DNS records instead of refusing |
+| `GET` | `/api/proxies/{id}/route-history[?host=]` | The proxy's route versions, newest first; `/{version}` one with the route before and after; `POST …/{version}/restore` puts it back ([Route history](/proxy/route-history#api)) |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/routers[/{router}]` | Add, change, delete a router |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/services[/{service}]` | Add, change, delete a service |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/middlewares[/{middleware}]` | Add, change, delete a middleware |

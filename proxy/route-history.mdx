@@ -1,0 +1,101 @@
+---
+title: "Route history"
+description: "Every change to a proxy route kept as a version: who changed what and when, part by part, with one-click restore, deleted routes included."
+---
+
+DNZ keeps every change to a proxy's route as a **version**: who made it, when, from where, and the
+route as the route dialog shows it before and after. Any version can be put back with one click,
+a deleted route included, and the restore is kept as a new version. It works the same for Traefik,
+DNZ Proxy and Caddy. Zones have the same safety net: [History](/dns/history).
+
+## Where to find it
+
+- **History…** in a route's menu (its **⋯** button, or right-click the row) on **Proxy → Routes** or
+  a proxy's page opens the route's versions in a side panel. A route that several proxies serve has
+  the item once per proxy: each proxy keeps its own history.
+- **History** on a proxy's page lists the versions of all its routes, deleted ones included,
+  newest first. Type a hostname above the list to keep only that route's.
+- From the terminal:
+
+```bash
+dnz proxy routes history edge                     # every change to edge's routes, newest first
+dnz proxy routes history edge app.example.com     # one hostname's route
+dnz proxy routes history edge app.example.com 7   # what version 7 changed, part by part
+dnz proxy routes restore edge app.example.com 7   # back to version 7 (shows the changes, asks first)
+```
+
+## What a version holds
+
+- **What it did**: *Added*, *Edited*, *Deleted*, *Group* (moved to or out of a route group) or
+  *Restored*, with the version it went back to.
+- **Who** and **from where**: the UI, the CLI, an API token or an AI assistant (MCP), and the
+  address the change came from.
+- **What changed**, a line per part of the route, named as the route dialog names it:
+
+| Part | Shows |
+| --- | --- |
+| Hostnames, Path, Route | The hostnames, the path prefix, on or off |
+| Goes to, Load balancing | The route's own servers with their weights, or the proxy's service it uses; round robin or fewest connections, sticky |
+| HTTPS, HTTP to HTTPS | On or off, the certificate resolver, the redirect from `http://` |
+| Redirect | The address every visit goes to, 301 or 302, keeping the path |
+| Group, DNS proxied | Its route group; which hostnames' DNS records go through the proxy |
+| Switches | Cache, firewall, under attack, waiting room, rate limit, password (user names only, never the hashes), sign-in, address list, request and response headers, upload limits |
+| Web application firewall | Mode and sensitivity, skipped paths, skipped rules, allowed addresses |
+| Other middlewares | Middlewares besides the switches, by name |
+
+A new route lists what it has, a deleted one what it had. Saving a route unchanged keeps no
+version. The newest version of a route reads *as it is now*.
+
+<Note>
+  A version is anything the route dialog, `dnz proxy routes add|edit|rm|group|redirect`, the MCP
+  route tools or the route endpoints of the API change. Changes made under **Advanced** (routers,
+  services and middlewares one by one) aren't versions of a route.
+</Note>
+
+## Restore a version
+
+<Steps>
+  <Step title="Open the history">
+    **History…** in the route's menu, or **History** on the proxy's page for a deleted route.
+  </Step>
+  <Step title="Pick the version">
+    Click a version to see what it changed, then **Restore** next to it.
+  </Step>
+  <Step title="Check and confirm">
+    DNZ shows what restoring changes, part by part. **Restore** saves the route as it was right
+    after that version, checked like any edit, as a new version.
+  </Step>
+</Steps>
+
+- **A deleted route** comes back from its *Deleted* version, as it was before it was deleted, with
+  its DNS records going through the proxy again.
+- **DNS records stay proxied**: a restore makes records of hostnames it adds go through the proxy,
+  but never takes a record off it.
+- **Middlewares, the firewall and a service the route used** are found by name. One deleted since
+  must be added again under Advanced first; the restore says which.
+- Another route that holds one of the hostnames now is refused, as in the route dialog.
+- Restoring needs the same rights as editing routes and is in the audit log
+  (`proxy.route.restore`). AI assistants can read route history but not restore it: an older
+  version may drop a route's password or sign-in.
+
+## Retention
+
+Versions are kept for 365 days, and at most the newest 1,000 per proxy. Change both under
+**Settings → Proxy → Route history**, or:
+
+```bash
+dnz settings route-history --keep-days 90 --keep-versions 500   # 0 means no limit
+```
+
+Old versions are dropped every hour. Route history lives in DNZ's database next to the routes:
+backups include it, and a [Redis/Valkey cluster](/deploy/cluster) shares it like the routes.
+Deleting a proxy deletes its history.
+
+## API
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/proxies/{id}/route-history?host=&before=&limit=` | Versions newest first, each with `version`, `created_at`, `source`, `action`, `actor`, `host`, `hosts`, `summary`, `restore_of`, `changes` (`label`, `kind`, `before`, `after`), `current` and `restorable` |
+| `GET` | `/api/proxies/{id}/route-history/{version}` | One version with the route `before` and `after` it, and `restore_changes` |
+| `POST` | `/api/proxies/{id}/route-history/{version}/restore` | Puts it back: `{"version", "restore_of", "id", "host"}` |
+| `GET` / `PUT` | `/api/settings/route-history` | `{"keep_days", "keep_versions"}` (superadmin) |

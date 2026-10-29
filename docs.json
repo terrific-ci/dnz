@@ -113,6 +113,7 @@
               "proxy/traefik",
               "proxy/caddy",
               "proxy/routing",
+              "proxy/route-history",
               "proxy/traefik-records",
               "proxy/compose",
               "proxy/compose-caddy",
