@@ -80,6 +80,7 @@ The first argument is the proxy, by name or id. In the output, **DNS** shows a n
 ```bash
 dnz proxy routes list edge                        # hostnames, where they go, HTTPS / certificate, switches
 dnz proxy routes list edge --by-zone              # the same under the zone of each hostname (no zone last)
+dnz proxy routes list edge --by-group             # the same under each route's group (no group last)
 dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000
 dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000=3 -u http://10.0.1.21:3000 \
   --also www.example.com --cache 10m --user admin:s3cret --allow 10.0.0.0/8
@@ -92,6 +93,19 @@ dnz proxy routes edit edge app.example.com --https off
 dnz proxy routes cert edge app.example.com        # the certificate's state and latest steps; --renew gets it again
 dnz proxy routes clear-cache edge app.example.com
 dnz proxy routes rm edge app.example.com          # its DNS records stop going through edge
+```
+
+### Route groups
+
+Groups (*Web app*, *REST API*, …) only sort the Routes page; no proxy's configuration changes.
+`add` and `edit` also take `--group NAME` (`edit --no-group` takes it out).
+
+```bash
+dnz proxy routes group app.example.com "Web app"  # on every proxy serving it (--proxy: only one)
+dnz proxy routes group app.example.com --none     # out of its group
+dnz proxy routes groups                           # the groups in use, with their routes
+dnz proxy routes groups rename "Web app" Apps     # on every proxy; another group's name merges the two
+dnz proxy routes groups rm Apps                   # its routes stay, in no group
 ```
 
 What happens to DNS:

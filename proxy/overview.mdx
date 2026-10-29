@@ -136,7 +136,8 @@ pick the proxies serving it: ticking one copies the route there, unticking delet
 hostname opens the app; the icon beside it copies the name. Small icons next
 to the hostname show how its certificate and DNS are doing; hover one for the details and what to do
 (**Add DNS record**, **Try again now**, the certificate log). Hover **Goes to** for every server.
-**By zone** gives each zone a list of its own. **Add route** is the one button: on Proxy → Routes it
+**By zone** gives each zone a list of its own, and **By group** each [route group](#route-groups);
+the list shows 25 routes a page (50 or 100 can be picked below it). **Add route** is the one button: on Proxy → Routes it
 asks which proxies (one or several, with a search), and the same dialog edits a route later. Its
 **Serve on** saves the route on every proxy picked; each keeps its own service, firewall and other
 middlewares. A route on several proxies has a submenu per proxy in its row menu (traffic, check now,
@@ -235,6 +236,26 @@ A record without a router links straight to this dialog, with its name filled in
 
   </Tab>
 </Tabs>
+
+### Route groups
+
+Put routes in groups such as *Web app* or *REST API* to keep a long list sorted. **By group** gives
+each group a list of its own (routes in none last, under *No group*), and a group filter next to the
+proxy filter shows one group; **Add route** while it shows one puts the new route in it. In **All**
+and **By zone** a route's group shows under its hostname.
+
+- **Move to group** in a row's menu (⋯ or right-click): a group in use, **No group**, or
+  **New group…**. A route that several proxies serve moves on all of them.
+- The route dialog has a **Group** field, suggesting the groups in use.
+- A group's ⋯ menu renames it on every proxy, or removes it (its routes stay, in no group).
+
+Groups only sort the Routes page: no proxy's configuration changes, so nothing reloads on the proxy.
+Like routes, they stay on the server they were made on; a DNZ secondary doesn't copy proxies.
+
+```bash
+dnz proxy routes group app.example.com "Web app"   # on every proxy serving it; --none takes it out
+dnz proxy routes groups rename "Web app" Apps
+```
 
 ### Redirect routes
 
