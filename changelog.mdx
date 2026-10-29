@@ -6,18 +6,25 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.21.0**, released October 28, 2026. To install or upgrade to it:
+The latest release is **v1.21.1**, released October 29, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.21.0
-docker pull terrificci/dnz-proxy:1.21.0   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.21.0
+docker pull terrificci/dnz:1.21.1
+docker pull terrificci/dnz-proxy:1.21.1   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.21.1
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.21.0" description="October 28, 2026" tags={["Latest"]}>
+<Update label="v1.21.1" description="October 29, 2026" tags={["Latest"]}>
+
+- Route dialog: your own certificate; UI shows outside logo images
+- Routes: a submenu per proxy in a route's menu when several serve it
+
+</Update>
+
+<Update label="v1.21.0" description="October 28, 2026">
 
 - Back links lead to the list a page was opened from; Analytics first
 - Routes: hostname opens the app, copy icon, Solar icons, proxies per row
