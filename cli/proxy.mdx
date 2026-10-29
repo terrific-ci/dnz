@@ -194,11 +194,14 @@ dnz proxy certs check edge app.example.com shop.example.org
 dnz proxy certs credential shop.example.org --cloudflare-token …
 dnz proxy certs credential shop.example.org --rfc2136 192.0.2.53:53 --key-name acme. --secret …
 dnz proxy certs credential shop.example.org --webhook https://hooks.example.com/acme --suffix example.org
+dnz proxy certs upload --cert fullchain.pem --key privkey.pem   # your own certificate; DNZ asks no CA for its names
 ```
 
 `certs check` says per name how DNZ would prove it: DNZ's own zone, a Cloudflare connection, a DNS
-credential, HTTP-01 through the nodes, or **needs a way**. `certs credential` adds and removes a test
-TXT record first and keeps the credential only when that works. `DNZ_CLOUDFLARE_TOKEN` and
+credential, HTTP-01 through the nodes, an uploaded certificate covering it (`uploaded`), or **needs a
+way**. `certs credential` adds and removes a test TXT record first and keeps the credential only when
+that works. `certs upload` takes a certificate you bought or got from your own CA (PEM chain, leaf
+first, and its key); nodes serve it as it is, and it isn't renewed. `DNZ_CLOUDFLARE_TOKEN` and
 `DNZ_ACME_SECRET` keep secrets off the command line. See
 [Automatic certificates](/proxy/certificates#automatic-certificates).
 

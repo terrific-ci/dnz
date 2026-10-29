@@ -53,7 +53,13 @@ In the certificate step, a Cloudflare token (the link opens Cloudflare's form wi
 **DNS · Edit** filled in) or another DNS provider (RFC 2136, a webhook) is tested first: a TXT record
 is added and removed, and only when that works is it saved, as a DNS credential with a rule for every
 name under its domain. **Through the nodes** is offered once DNZ sees the name pointing at the
-proxy's nodes and port 80 answering.
+proxy's nodes and port 80 answering. **I have my own certificate** takes a certificate you bought or
+got from your company's CA (PEM chain and private key, pasted or picked as files); it must cover the
+name.
+
+A name an uploaded certificate already covers skips the certificate step: DNZ shows it as **Your
+certificate** and asks no CA for it while the upload is valid. Delete the upload, or let it expire,
+and the `auto` resolver gets the name a certificate again.
 
 <Tabs>
   <Tab title="Dashboard">
@@ -209,7 +215,10 @@ There are three kinds:
   names exists. When no router asks for one any more, it is kept (marked unused) but not renewed.
 - **Requested by hand.** Names and a resolver; issued right away.
 - **Uploaded.** A PEM chain and its private key (PKCS#8, RSA or EC). The key must match the
-  certificate. Uploaded certificates aren't renewed.
+  certificate. Uploaded certificates aren't renewed: upload the next one before it expires (DNZ
+  alerts 14 days before). While one is valid, routers' names it covers get no `auto` certificate.
+  Upload under **Certificates**, in the route dialog's certificate step, or with
+  `dnz proxy certs upload --cert FILE --key FILE`.
 
 Nodes get every valid certificate covering a hostname of one of their proxy's TLS routers: an exact
 name, or a wildcard covering one label.
