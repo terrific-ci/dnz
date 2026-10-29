@@ -168,6 +168,12 @@ High, already there when idle (the compiled rules), +2.8 / +4.4 MiB after load. 
 WAF on any route is within the noise of the 1.18 numbers above (13,124/s, 96.1 µs, p50/p99
 0.55/1.49 ms).
 
+Tried and not kept: decoding only the values that have something to decode (`%`, `&`, `+`), into
+buffers kept for the visit, instead of new ones for each value. Old build against the new, taking
+turns, 4 rows each: the browser-like request at Medium 115.0 → 111.1 µs, at High 111.3 → 111.9 µs,
+requests a second ±0.5%, memory the same, all inside the noise of the route without a WAF (±3.6%
+between the two builds). The cost is the rules' scans themselves.
+
 ## Method
 
 - Each proxy runs in its own container on one Docker network, started on its own, and forwards to
