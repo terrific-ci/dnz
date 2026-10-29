@@ -766,8 +766,8 @@ Browsers get HTML, `Accept: application/json` gets JSON, anything else plain tex
 When DNS filtering's [block page](/dns/filtering#block-page) uses the proxy, a visit to a host no
 route serves gets the block page (403) instead of a 404. With **HTTPS** on, a name no certificate
 covers gets one made on the spot by DNZ's block page authority (kept for up to 10,000 names, made
-again after 30 days). Those visits are counted in [analytics](#analytics) as one host,
-`(block page)`; the request log keeps the real name.
+again after 30 days). Those visits are counted in [analytics](#analytics) as one row,
+**Blocked by DNS filtering**, and get no line in the request log.
 
 ## Troubleshooting
 

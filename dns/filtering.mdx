@@ -447,8 +447,9 @@ To trust the authority:
 Apps that pin their certificates still fail, as they do with any blocked answer.
 
 Visits answered with the block page show up in the proxy's
-[analytics](/proxy/dnz-proxy#analytics) as one host, `(block page)`, so the names it blocks don't
-crowd out the ones it serves. The request log keeps the real name.
+[analytics](/proxy/dnz-proxy#analytics) as one row, **Blocked by DNS filtering**, so the names it
+blocks don't crowd out the ones it serves. They get no line in the proxy's request log: the blocked
+apps and sites calling home aren't the proxy's traffic.
 
 ## Check and monitor
 
