@@ -146,7 +146,7 @@ that matches nothing, nearly all of them, costs one pass of the rules over what 
 
 ## What it costs
 
-Measured cost: see [Proxy benchmarks](/proxy/benchmarks).
+Next to nothing for ordinary requests (−1 to −3% requests a second on one CPU); a request carrying many query parameters and cookies costs about 13 µs more CPU (−13%). +2.3 MiB of memory per node at Medium, +4.2 MiB at High. Details in [Proxy benchmarks](/proxy/benchmarks).
 
 ## Traefik and Caddy
 

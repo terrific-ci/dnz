@@ -149,6 +149,25 @@ begin a boundary wait for the next one. The first version copied every byte into
 again, and always held a boundary's length back: 16 MiB uploads ran at 46.6/s (−13%) with 16% more
 CPU, 1 MiB ones with 23% more CPU.
 
+## 1.22: web application firewall
+
+The [web application firewall](/proxy/waf) (`dnzWaf`) runs only on routes that have it on. Three
+HTTP routes on one DNZ Proxy (one CPU) to the same origin: without a WAF, with it at Medium and at
+High (block mode), taking turns (A B C, then C B A), median of 4 rounds; req/s with wrk (64
+connections), CPU per request and latency at 5,000 requests a second with oha. Every answer was 200
+(no false positive, High included, on the browser-like request).
+
+| Request | No WAF | Medium | High | CPU per request (none / Medium / High) |
+| --- | ---: | ---: | ---: | ---: |
+| `GET /` | 13,124/s | 12,965/s (−1.2%) | 12,827/s (−2.3%) | 96.1 / 96.5 / 96.6 µs |
+| `/products?id=7&sort=price&page=2` | 13,068/s | 12,838/s (−1.8%) | 12,704/s (−2.8%) | 99.1 / 103.4 / 104.4 µs |
+| A browser's: 11 query parameters, 8 cookies, user agent, referer | 12,734/s | 11,173/s (−12.3%) | 11,053/s (−13.2%) | 99.4 / 113.2 / 111.8 µs |
+
+Latency p50 rises by 0.02–0.07 ms. Memory (anonymous, per node): +2.3 MiB at Medium and +4.2 MiB at
+High, already there when idle (the compiled rules), +2.8 / +4.4 MiB after load. The build without a
+WAF on any route is within the noise of the 1.18 numbers above (13,124/s, 96.1 µs, p50/p99
+0.55/1.49 ms).
+
 ## Method
 
 - Each proxy runs in its own container on one Docker network, started on its own, and forwards to
