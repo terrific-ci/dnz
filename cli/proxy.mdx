@@ -300,7 +300,8 @@ Each node keeps its own analytics. These commands ask the nodes, like **Proxy â†
 say on stderr which nodes didn't answer.
 
 ```bash
-dnz proxy analytics                               # last 24 h, every proxy: totals, active users now (per proxy), most requested URLs, top lists
+dnz proxy analytics                               # last 24 h, every proxy: totals, active users now (per proxy), most requested URLs, top lists,
+                                                  # and what the web application firewall blocked and logged, with its top rules and addresses
 dnz proxy analytics -p "Edge JKT" --since 7d      # 1h, 6h, 24h, 7d or 30d
 dnz proxy analytics --host app.example.com -n 50  # that hostname's 50 busiest paths
 dnz proxy logs                                    # newest 50 request log lines

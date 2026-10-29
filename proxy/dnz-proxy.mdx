@@ -695,7 +695,13 @@ hostname, over the last hour to 30 days:
 - the **most requested URLs**, per hostname and path: requests, 4xx and 5xx share, bytes sent and
   average time. Pick a hostname to list its paths, or a path to filter the request log
 - top hostnames, clients, countries, user agents, status codes and firewall rules
+- what the [web application firewall](/proxy/waf) did, once a route has it on: blocked and logged
+  requests over time, the rules that matched, and the addresses and paths it matched most (click one
+  to show its requests in the request log)
 - a **request log** with filters and a live view
+
+A node counts the web application firewall's numbers only when it matches a request, so a request it
+doesn't match costs nothing more. Nodes older than 1.22 don't count them.
 
 **Active users now** sits above the totals: visitors (client addresses) with a request in the last 5
 minutes, for the proxy and hostname you picked, whatever the time range. A visitor that reached

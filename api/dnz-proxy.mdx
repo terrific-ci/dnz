@@ -69,7 +69,10 @@ nodes in `nodes`, with `answered: false` and an `error` for any that didn't answ
   come in hours). `top_paths` holds `host`, `path`, `requests`, `status_4xx`, `status_5xx`,
   `bytes_out` and `avg_ms`. `active_users` holds the visitors now, whatever the span: `count` (each
   visitor once), `window_secs` (300), `capped` (a floor) and `by_proxy` (`proxy_id`, `count`,
-  `capped`). It is `null` when every node answering is older than 1.22.
+  `capped`). It is `null` when every node answering is older than 1.22. `waf` is what the web
+  application firewall did: `blocked`, `logged`, `top_rules` (`key`, `action`, `rule`, `category`,
+  `requests`), `top_clients`, `top_paths` (`host`, `path`, `requests`) and `hosts` (`host`, `blocked`,
+  `logged`); each `series` point has `waf_blocked` and `waf_logged`.
 - `/api/proxy/visitors` takes `hours` (1 to 168, default 24). `hours` lists each hour's start;
   `hosts` maps every hostname DNZ Proxy serves (`*.example.com` for a wildcard route) to `total`,
   `series` (one count per hour) and `capped` (a floor). `available` is false when no node answered,
@@ -84,6 +87,7 @@ nodes in `nodes`, with `answered: false` and an `error` for any that didn't answ
 
 | Method and path | What it does |
 | --- | --- |
+| `GET /api/proxy/waf/counts` | What it blocked and logged per hostname over the last `hours` (default 24): `hosts` (`host`, `blocked`, `logged`) and `nodes` |
 | `GET /api/proxy/waf/rules` | The [web application firewall](/proxy/waf)'s rules (`id`, `category`, `category_label`, `level`, `about`) and `sensitivities` (`value`, `label`, `level`, `about`) |
 
 A route turns it on with `options.waf` (see [Proxy API](/api/proxy)).

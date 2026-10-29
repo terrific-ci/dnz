@@ -88,9 +88,16 @@ Each rule starts at one sensitivity and runs at every higher one:
 
 ## See what it matched
 
+- **Proxy → Analytics → Web application firewall**: blocked and logged requests, over time, the rules
+  that matched (`SQL injection · sqli-union`, Blocked or Logged), and the addresses and paths it matched
+  most. Click an address or a path to show its requests in the request log. It follows the page's
+  proxy, hostname and time range.
+- The **Routes** list: the WAF chip says what it did on the route's hostnames in the last 24 hours,
+  such as `WAF · 12 blocked` or `WAF · log only · 3`.
 - The **request log** (Proxy → Analytics) shows the rule on each line, such as
   `WAF blocked · SQL injection · sqli-union`. Open the line to see what the rule catches.
 - Analytics' **Firewall rules** list counts the rules that matched; blocked requests count as blocked.
+- `dnz proxy analytics` prints the blocked and logged counts with the top rules and addresses.
 - `dnz proxy routes waf-hits edge` lists matches since each node started, per rule and action.
 - Prometheus: `dnz_proxy_waf_hits_total{proxy, node, middleware, rule, action}`.
 - AI assistants: the MCP tools `proxy_waf_rules`, `proxy_waf_hits` and, with write access, `set_waf`.
@@ -112,7 +119,8 @@ turning the whole firewall off.
 
 <Steps>
   <Step title="Find the request">
-    In **Proxy → Analytics**, filter the request log by the hostname and the visitor's address. The
+    In **Proxy → Analytics → Web application firewall**, click the visitor's address (or the path)
+    to show its requests in the request log, or filter the log by the hostname and the address. The
     line names the rule; **Copy rule id** copies it.
 
     ```bash
