@@ -170,6 +170,7 @@ DNZ translates the proxy's routers, services and middlewares into Caddy's own JS
 | Mirroring | The main service only |
 | redirectScheme, basicAuth (bcrypt users only, which DNZ's form makes), stripPrefix, addPrefix, replacePath, ipAllowList, compress, chain | The matching Caddy handlers |
 | headers: custom request and response headers, HSTS, frame deny, nosniff, XSS filter, referrer policy, CSP, permissions policy | `headers` |
+| Route [rules](/proxy/rules) (all but a country condition) | routes with matchers, `static_response`, `rewrite` and `headers`; a route whose rules Caddy can't run is left out whole |
 
 ### Left out
 

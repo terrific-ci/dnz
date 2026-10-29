@@ -124,6 +124,7 @@
               "proxy/certificates",
               "proxy/status-pages",
               "proxy/waf",
+              "proxy/rules",
               "proxy/upload-limits",
               "proxy/sign-in",
               "proxy/benchmarks"

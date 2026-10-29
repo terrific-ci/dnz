@@ -174,6 +174,40 @@ turns, 4 rows each: the browser-like request at Medium 115.0 → 111.1 µs, at H
 requests a second ±0.5%, memory the same, all inside the noise of the route without a WAF (±3.6%
 between the two builds). The cost is the rules' scans themselves.
 
+## 1.22: route rules
+
+[Route rules](/proxy/rules) (`dnzRules`) are one middleware on the routes that have them; a route
+without rules doesn't have it. Measured on 103 with one DNZ Proxy on one CPU.
+
+**Without rules: no cost.** The build with rules against its base (main before it), the proxybench
+scenarios in turns (A B, then B A), median of 6 rounds each. The firewall shares its condition code
+with the rules now (ASCII comparisons without a lowercase copy), and no route has rules:
+
+| Build | HTTP 1 KiB | HTTPS 1 KiB | New connection | HTTP 64 KiB | p50 / p99 at 5,000/s | CPU per request | Memory idle / loaded |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Before | 13,125/s | 12,589/s | 2,481/s | 7,606/s | 0.59 / 1.51 ms | 99.5 µs | 5 / 10 MiB |
+| With rules | 13,437/s | 12,725/s | 2,531/s | 7,553/s | 0.57 / 1.50 ms | 96.0 µs | 5 / 10 MiB |
+
+**With rules.** Three HTTP routes to the same origin on the build with rules, taking turns (A B C,
+then C B A), median of 8 rounds; req/s with wrk (64 connections) on
+`/products?id=7&sort=price&page=2`, CPU per request and latency at 5,000 requests a second with oha.
+Every answer was 200.
+
+| Route | req/s | CPU per request | p50 / p99 at 5,000/s |
+| --- | ---: | ---: | ---: |
+| No rules | 13,001/s | 96.5 µs | 0.58 / 1.54 ms |
+| 5 rules, none holding (a "starts with" on two prefixes, a regular expression, a header that is there, method and path, a query parameter) | 12,768/s (−1.8%) | 99.8 µs (+3.3) | 0.64 / 1.48 ms |
+| 4 rules, all acting (a path rewrite, a request header set, one removed, a response header) | 12,355/s (−5.0%) | 102.7 µs (+6.2) | 0.63 / 1.55 ms |
+
+A first run of 4 rounds gave −4.1% and −6.6% (CPU within the noise): a few rules that don't hold cost
+a visit 2–3 µs, rules that act 5–6 µs (the rewrite parses a new URI; headers are copied in). Memory
+is the same (10 MiB after load).
+
+The same rules were checked on a real Traefik 3.7.16 and Caddy 2.11.7, fed by DNZ through their
+providers: redirects with `{rest}` and regular-expression groups, the query kept or dropped,
+rewrites, header changes and (Caddy) query, header, address and "is not" conditions all answered as
+DNZ Proxy does.
+
 ## Method
 
 - Each proxy runs in its own container on one Docker network, started on its own, and forwards to

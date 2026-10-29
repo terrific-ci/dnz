@@ -165,6 +165,7 @@ with OAuth isn't possible.
 | `switch_status_page` ✎ | Turns a host's status page on or off |
 | `delete_status_page` ✎ | Removes a host's status page |
 | `set_route_redirect` ✎ | Redirects every visit to a route's hostnames to another address (`to`, `keep_path`, `permanent`), or removes the redirect (`off`); the rest of the route stays |
+| `set_route_rules` ✎ | Sets a route's [rules](/proxy/rules) (redirects, rewrites and header changes when conditions hold, in order), or removes them (`off`); the rest of the route stays. Answers with each rule in plain words; a rule a Traefik or Caddy can't run is refused with its number |
 | `set_waf` ✎ | Sets or turns off a DNZ Proxy route's web application firewall (`mode`, `sensitivity`, `skip_paths`, `skip_rules`, `allow_ips`); the rest of the route stays. Refused on Traefik and Caddy |
 
 ✎ marks the tools that change DNS or what visitors see. They are only offered with **read and change** access (OAuth),

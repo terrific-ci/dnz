@@ -1,0 +1,131 @@
+---
+title: "Rules"
+description: "Redirect, rewrite or change the headers of requests that match, right in the route dialog: an ordered list of if-this-then-that rules on a route."
+---
+
+A route's **Rules** are a short list of "if these conditions hold, do this", like Cloudflare's Rules:
+move old links to new ones, send `/api/` to the servers as `/v2/`, hide the `Server` header, add a
+header for one country. You set them in the route dialog, with no middleware to write under Advanced.
+
+Every proxy kind takes them. [DNZ Proxy](/proxy/dnz-proxy) runs all of them; Traefik and Caddy get
+what they can express, and DNZ tells you, rule by rule, what one of them can't run before you save.
+
+## Add a rule
+
+<Steps>
+  <Step title="Open the route">
+    On the proxy's page, open the route (**Routes** → the route).
+  </Step>
+  <Step title="Switch on Rules">
+    Under **Redirects and rewrites**, switch on **Rules**. The first rule opens.
+  </Step>
+  <Step title="Say when">
+    **Every request**, **All of these** or **Any of these**, then the conditions: what to look at
+    (path, query parameter, header, method, country, visitor address, hostname), how (is, starts
+    with, matches…) and the values.
+  </Step>
+  <Step title="Say what to do">
+    **Redirect**, **Rewrite**, **Request header** or **Response header**, and fill in the fields.
+    The rule's line reads it back in plain words: *If the path starts with /old/, redirect to
+    https://shop.example.com/new/{rest} (301)*.
+  </Step>
+  <Step title="Save">
+    Add more rules with **Add rule**; drag one by its handle (or use the arrows) to change the order.
+    The Routes list shows **Rules · 3** on the route.
+  </Step>
+</Steps>
+
+Or from the terminal:
+
+```bash
+dnz proxy routes rules add edge shop.example.com --if 'path starts-with /old/' --redirect 'https://{host}/new/{rest}' --status 301
+dnz proxy routes rules add edge shop.example.com --if 'query debug missing' --remove-response-header Server
+dnz proxy routes rules list edge shop.example.com
+```
+
+## Conditions
+
+| Look at | How | Values |
+| --- | --- | --- |
+| **Path** | is, is not, starts with, contains, matches (a regular expression) | `/old/`, `/shop` |
+| **Query parameter** (by name) | the same, plus is there / is missing | `newsletter` |
+| **Header** (by name) | the same, plus is there / is missing | `staging` |
+| **Method** | is, is not | `POST`, `PUT` |
+| **Country** | is, is not | `ID`, `SG` (two letters, from the visitor's address) |
+| **Visitor address** | is in, is not in | `10.0.0.0/8`, `203.0.113.7` |
+| **Hostname** | is, is not, matches | one of the route's hostnames |
+
+A condition can take several values: any of them matches. Case never matters. With no condition a
+rule acts on every request.
+
+## Actions
+
+| Action | What it does |
+| --- | --- |
+| **Redirect** | Sends the visitor to a URL or a path. **302** (the default: browsers ask again, so you can change it), **301** (browsers remember it), **307** or **308** (these two keep the method, so a POST stays a POST). **Keep the visitor's query** is on by default |
+| **Rewrite** | Asks the servers for another path, and keeps, replaces or drops the query. The address in the visitor's browser doesn't change |
+| **Request header** | Sets a header the servers get, or removes one (`Cookie`, `X-Internal`) |
+| **Response header** | Sets a header visitors get (`X-Frame-Options: DENY`), or removes one (`Server`) |
+
+### Placeholders
+
+A redirect address and a rewrite's path and query can hold:
+
+| Placeholder | Is |
+| --- | --- |
+| `{host}` | the hostname the visitor asked for |
+| `{path}` | the path, `/old/shoes` |
+| `{query}` | the query without the `?`, `size=42` |
+| `{rest}` | what follows the prefix of the rule's "path starts with": `shoes` for `/old/` |
+| `{1}` … `{9}` | the groups of the rule's "path matches": `^/p/([0-9]+)$` makes `{1}` the number |
+
+For example, **path starts with** `/blog/` → **Redirect** to `https://news.example.com/{rest}` moves
+a whole section, and **path matches** `^/p/([0-9]+)$` → **Rewrite** to `/post.php` with the query
+`id={1}` serves short links from an old app.
+
+## Order
+
+Rules run from the top down, and **every** rule whose conditions hold acts: one can rewrite the path,
+the next set a header. A **redirect** answers right away, so the rules below it don't run. A rule sees
+the request as the rules above left it: after a rewrite to `/v2/…`, a later "path starts with
+`/v2/`" holds.
+
+The rules come after the route's access checks (address list, firewalls, the browser check, the
+waiting room, rate limit, password, sign-in), upload limits and custom headers, and before the cache.
+So a redirect only reaches visitors who got in.
+
+## On Traefik and Caddy
+
+| | DNZ Proxy | Caddy | Traefik |
+| --- | --- | --- | --- |
+| Conditions | all | all but country | one path condition (is, starts with, matches) and, for a redirect, one "hostname is" |
+| Redirect | 301, 302, 307, 308 | 301, 302, 307, 308 | 301 or 302 |
+| Rewrite | path and query | path and query | the path only |
+| Headers | with conditions | with conditions | on every request only |
+
+Traefik gets each rule as one of its own middlewares (`redirectRegex`, `replacePathRegex`,
+`headers`), with the path and hostname checks folded into the redirect's expression; Caddy gets
+routes with matchers. A rule a proxy can't run is refused with its number and why, for example
+*rule 2 for Traefik: Traefik can't tell a visitor's country; DNZ Proxy and Caddy can*. The route
+dialog shows it under the rule, so nothing is saved half done.
+
+## What it costs
+
+A route without rules has nothing extra to run. With rules, a DNZ Proxy checks each rule's conditions
+and runs the actions that apply: on one CPU, five rules that don't hold cost a visit about 3 µs
+(−1.8% requests a second), four rules that act about 6 µs (−5%), with no extra memory. See
+[Benchmarks](/proxy/benchmarks).
+
+## From the terminal and assistants
+
+```bash
+dnz proxy routes rules list edge shop.example.com          # numbered, each in plain words
+dnz proxy routes rules add edge shop.example.com --if 'path matches ^/p/([0-9]+)$' --rewrite /post.php --query 'id={1}'
+dnz proxy routes rules add edge shop.example.com --if 'country is ID,SG' --if 'header X-Region is asia' --any --rewrite '/asia{path}'
+dnz proxy routes rules add edge shop.example.com --set-response-header 'X-Frame-Options: DENY' --at 1
+dnz proxy routes rules move edge shop.example.com 3 1       # rule 3 becomes the first
+dnz proxy routes rules remove edge shop.example.com 2       # removing the last one turns rules off
+```
+
+See [the proxy commands](/cli/proxy#rules) for every flag. AI assistants set them with the MCP tool
+`set_route_rules` (see [AI assistants](/integrations/ai-assistants)).

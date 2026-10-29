@@ -208,6 +208,36 @@ it on first (`--waf block` or `--waf log`). Turning it off and on again starts w
 Traefik or Caddy route refuses it. `routes list` shows it as `WAF (block, medium)` or
 `WAF (log only, …)`.
 
+### Rules
+
+A route's [rules](/proxy/rules): redirects, rewrites and header changes when conditions hold, run from
+the top down. Every proxy kind takes them; a rule a Traefik or Caddy can't run is refused with its
+number and why.
+
+```bash
+dnz proxy routes rules list edge shop.example.com          # numbered, each in plain words
+dnz proxy routes rules add edge shop.example.com --if 'path starts-with /old/' --redirect 'https://{host}/new/{rest}' --status 301
+dnz proxy routes rules add edge shop.example.com --if 'path matches ^/p/([0-9]+)$' --rewrite /post.php --query 'id={1}'
+dnz proxy routes rules add edge shop.example.com --if 'country is ID,SG' --if 'header X-Region is asia' --any --rewrite '/asia{path}'
+dnz proxy routes rules add edge shop.example.com --set-response-header 'X-Frame-Options: DENY' --at 1 --note 'no frames'
+dnz proxy routes rules move edge shop.example.com 3 1       # rule 3 becomes the first
+dnz proxy routes rules remove edge shop.example.com 2       # removing the last one turns rules off
+```
+
+| Option | What it does |
+| --- | --- |
+| `--if 'FIELD [NAME] OP [VALUES]'` | A condition; repeat for more (all must hold). Fields: `path`, `query NAME`, `header NAME`, `method`, `country`, `ip`, `host`. Operators: `is`, `is-not`, `starts-with`, `contains`, `matches` (the rest is the regular expression), `exists`, `missing`. Values are comma-separated |
+| `--any` | One condition is enough |
+| `--redirect URL` | Redirect; `--status 301\|302\|307\|308` (302 by default), `--drop-query` leaves the visitor's query out |
+| `--rewrite PATH` | The path sent to the servers; `--query Q` the query (`''` drops it) |
+| `--set-request-header 'Name: value'`, `--remove-request-header NAME` | A header the servers get |
+| `--set-response-header 'Name: value'`, `--remove-response-header NAME` | A header visitors get |
+| `--at N` | The rule's place (1 is first); at the end without |
+| `--note TEXT` | A note shown with the rule |
+
+Targets take `{host}`, `{path}`, `{query}`, `{rest}` and `{1}` … `{9}`. `routes list` shows
+`rules (3)`; `routes list --type rules` lists the routes with rules.
+
 ### Redirects
 
 ```bash

@@ -178,9 +178,10 @@ The switches are each the route's own middleware, made and removed with it:
 | **Custom headers** | Headers set on requests **to the servers** and on answers **to visitors**; an empty value removes the header (e.g. `Server`) |
 | **Under attack check** (DNZ Proxy) | Browsers solve a short check once |
 | **Waiting room** (DNZ Proxy) | Past a number of visitors in at once, new ones wait in line; or everyone waits until you open. See [Waiting room](/proxy/dnz-proxy#waiting-room-dnzwaitingroom) |
+| **Rules** (under *Redirects and rewrites*) | An ordered list of "if these conditions hold, do this": redirect, rewrite what the servers get, or set or remove a header. See [Rules](/proxy/rules) |
 
 They run with the address list, firewall, web application firewall and check first, then the waiting room, rate limit,
-password and custom headers, and the cache last, so only visits let through ever see a cached
+password and custom headers, then the rules, and the cache last, so only visits let through ever see a cached
 answer (and cached answers get the custom headers too). Custom headers work on every proxy kind. A route's ⋯ menu
 also sets a hostname's [status page](/proxy/status-pages) and clears its cache.
 
