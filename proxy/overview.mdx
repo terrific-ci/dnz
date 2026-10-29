@@ -139,7 +139,8 @@ to the hostname show how its certificate and DNS are doing; hover one for the de
 **By zone** gives each zone a list of its own. **Add route** is the one button: on Proxy → Routes it
 asks which proxies (one or several, with a search), and the same dialog edits a route later. Its
 **Serve on** saves the route on every proxy picked; each keeps its own service, firewall and other
-middlewares, and **Remove from …** in the row's menu takes it off one proxy.
+middlewares. A route on several proxies has a submenu per proxy in its row menu (traffic, check now,
+clear cache, certificate log, and **Remove from …**, which takes it off that proxy).
 
 The dialog has the **Hostname** (and **Another hostname**), where it goes, **HTTPS** with a
 redirect from `http://`, the switches under **Protect and speed up**, and **Advanced** for a path,
