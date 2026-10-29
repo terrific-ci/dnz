@@ -179,6 +179,7 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_proxy_node_container_memory_used_bytes`, `…_limit_bytes` `{proxy,node}` | The node's container (or systemd unit) memory, counted like `docker stats`, and its limit |
 | `dnz_proxy_node_disk_total_bytes`, `…_available_bytes` `{proxy,node,role,path}` | The node's state volume (`role="state"`) and its cache's disk tier (`role="cache"`, when on another volume) |
 | `dnz_proxy_waiting_room_active`, `…_queued`, `…_max_active` `{proxy,node,middleware,host}` | A DNZ Proxy [waiting room](/proxy/dnz-proxy#waiting-room-dnzwaitingroom): visitors in, visitors in line, and the limit, per node and hostname. With Redis every node reports the shared totals: take the max, not the sum |
+| `dnz_proxy_waf_hits_total` `{proxy,node,middleware,rule,action}` | Requests a DNZ Proxy [web application firewall](/proxy/waf) matched, by rule id and action (`block`: refused, `log`: only logged). Starts at 0 when a node restarts |
 | `dnz_traefik_connected{proxy}`, `dnz_caddy_proxy_connected{proxy}` | 1 while a Traefik or Caddy proxy fetched its configuration in the last minute (`…_last_seen_timestamp_seconds` says when) |
 | `dnz_caddy_sync_success{id,caddy,kind}` | [Sites in DNS](/integrations/caddy): 1 when the last sync worked, `kind` `caddy` or `traefik` (not proxies; `dnz_caddy_sync_timestamp_seconds` says when) |
 | `dnz_health_findings{status}` | [Health check](/admin/health-check) findings by status |

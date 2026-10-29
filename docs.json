@@ -120,6 +120,7 @@
               "proxy/dnz-proxy",
               "proxy/certificates",
               "proxy/status-pages",
+              "proxy/waf",
               "proxy/upload-limits",
               "proxy/sign-in",
               "proxy/benchmarks"

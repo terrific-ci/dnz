@@ -21,7 +21,8 @@ Traefik would get), and adds what DNZ can do because it controls the proxy:
   middlewares on every router) is a switch on the proxy, live on every node. See
   [Route defaults](#route-defaults).
 - **Analytics and request logs** for every proxied hostname.
-- **Caching**, a **firewall**, an **"under attack"** challenge and a **waiting room** as middlewares.
+- **Caching**, a **firewall**, a [web application firewall](/proxy/waf), an **"under attack"**
+  challenge and a **waiting room** as middlewares.
 - **TCP and UDP** routing.
 - **Status pages**: switch a host to maintenance, blocked, moved and more, and every node shows
   visitors a styled page instead of the backend. See [Status pages](/proxy/status-pages).
@@ -597,6 +598,14 @@ not**, **in range**, **contains**, **starts with** or **matches** (a regular exp
 Countries need a GeoIP database. Set **GeoIP database URL** on the proxy's **Settings** tab to an
 `.mmdb` (or `.mmdb.gz`) file, such as MaxMind GeoLite2 Country or DB-IP's IP to Country Lite. Each
 node downloads it.
+
+### Web application firewall (`dnzWaf`)
+
+Ready-made rules against well-known attacks (SQL injection, XSS, path traversal, command injection,
+Log4Shell, attack tools…) on the path, query parameters, `User-Agent`, `Referer` and cookies, decoded
+first. **Low**, **Medium** or **High** sensitivity; **Block attacks** (a `403` page) or **Log only**;
+paths, rules and addresses it leaves alone. A route turns it on with its **Web application firewall**
+switch. See [Web application firewall](/proxy/waf).
 
 ### Under attack (`dnzChallenge`)
 

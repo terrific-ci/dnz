@@ -140,8 +140,10 @@ with OAuth isn't possible.
 | `threat_findings` | What threat detection found |
 | `proxy_analytics` | DNZ Proxy traffic: totals, most requested URLs per hostname and path, top lists |
 | `proxy_request_log` | DNZ Proxy request log lines, filtered by hostname, status, client or text |
-| `proxy_routes` | A proxy's routes: hostnames, servers, HTTPS and certificate progress, DNS, switches (custom headers included) |
+| `proxy_routes` | A proxy's routes: hostnames, servers, HTTPS and certificate progress, DNS, switches (custom headers and the web application firewall included) |
 | `proxy_waiting_rooms` | DNZ Proxy waiting rooms now: visitors in, the limit and visitors waiting, per hostname |
+| `proxy_waf_rules` | The [web application firewall](/proxy/waf)'s rules (id, category, level, what each catches), optionally only those a sensitivity runs |
+| `proxy_waf_hits` | Requests the web application firewall matched since each node started, per proxy, middleware, rule and action (`block` or `log`) |
 | `proxy_nodes` | DNZ Proxy nodes and their servers: state, version, uptime, upstreams, and the node's CPU and memory, the machine's or container's memory, load average and free disk |
 | `audit_log` | Who changed what |
 | `pending_changes` | Change requests waiting for approval |
@@ -159,6 +161,7 @@ with OAuth isn't possible.
 | `switch_status_page` ✎ | Turns a host's status page on or off |
 | `delete_status_page` ✎ | Removes a host's status page |
 | `set_route_redirect` ✎ | Redirects every visit to a route's hostnames to another address (`to`, `keep_path`, `permanent`), or removes the redirect (`off`); the rest of the route stays |
+| `set_waf` ✎ | Sets or turns off a DNZ Proxy route's web application firewall (`mode`, `sensitivity`, `skip_paths`, `skip_rules`, `allow_ips`); the rest of the route stays. Refused on Traefik and Caddy |
 
 ✎ marks the tools that change DNS or what visitors see. They are only offered with **read and change** access (OAuth),
 `--allow-writes` (stdio) or an API token. A change that needs approval isn't made: the tool answers

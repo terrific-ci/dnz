@@ -91,12 +91,16 @@ DNZ Proxy (once set up). `options` holds the switches:
   "challenge": true,
   "rate_limit": { "average": 100, "burst": 300 },
   "basic_auth": ["admin:$2y$05$…"],
-  "allow_ips": ["10.0.0.0/8"]
+  "allow_ips": ["10.0.0.0/8"],
+  "waf": { "mode": "block", "sensitivity": "medium", "skip_paths": ["/admin/editor"], "skip_rules": ["xss-tags"], "allow_ips": ["192.0.2.0/24"] }
 }
 ```
 
-Each is the route's own middleware (`cache`, `firewall` and `challenge` on DNZ Proxy only; `firewall`
-names one of the proxy's firewall middlewares). A route's `certificate` has `state`, `not_after`,
+Each is the route's own middleware (`cache`, `firewall`, `challenge` and `waf` on DNZ Proxy only; `firewall`
+names one of the proxy's firewall middlewares). `waf` is the [web application firewall](/proxy/waf):
+`mode` `block` (default) or `log`, `sensitivity` `low`, `medium` (default) or `high`, and up to 100
+each of `skip_paths`, `skip_rules` (ids from `GET /api/proxy/waf/rules`) and `allow_ips`; a Traefik
+or Caddy route with it gets `400`. A route's `certificate` has `state`, `not_after`,
 `last_error`, `next_attempt_at` and its latest `events`.
 
 **Auth users.** `POST /api/proxy/auth-user` with `{"user", "password"}` returns `{"line"}` for basic

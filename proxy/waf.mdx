@@ -1,0 +1,154 @@
+---
+title: "Web application firewall"
+description: "Stop SQL injection, XSS, path traversal, Log4Shell and attack tools at the proxy with ready-made rules, before your servers see them."
+---
+
+A route's **Web application firewall** checks every request against ready-made rules for
+well-known attacks: SQL injection, cross-site scripting (XSS), path traversal, command injection,
+Log4Shell, attack tools and the like. A [DNZ Proxy](/proxy/dnz-proxy) blocks a match with a `403`
+page, or only logs it, before your servers see the request.
+
+It is off until you turn it on for a route, and it needs a DNZ Proxy. The
+[Firewall](/proxy/dnz-proxy#firewall-dnzfirewall) holds your own rules; these are DNZ's, the same
+for every route.
+
+## Turn it on
+
+<Steps>
+  <Step title="Open the route">
+    On the proxy's page, open the route (**Routes** → the route).
+  </Step>
+  <Step title="Switch on Web application firewall">
+    Pick **Block attacks** or **Log only**, and a **Sensitivity**. **Medium** is the usual choice.
+  </Step>
+  <Step title="Save">
+    Every node has it within seconds.
+  </Step>
+</Steps>
+
+Or from the terminal:
+
+```bash
+dnz proxy routes edit edge app.example.com --waf block
+```
+
+<Tip>
+  Not sure it suits your site? Start with **Log only** (`--waf log`): nothing is blocked, and every
+  match shows in Analytics and the request log. Switch to **Block attacks** once only attacks show up.
+</Tip>
+
+## What it checks
+
+- the path,
+- every query parameter, its name and its value,
+- the `User-Agent` and `Referer` headers and the cookies' values.
+
+Each is decoded first, the way attacks hide: percent-encoding (twice), `+` as a space, HTML
+entities such as `&lt;`, and SQL comments (`UNION/**/SELECT`). Case doesn't matter.
+
+<Warning>
+  The request **body isn't checked yet**: a form POST or a JSON body goes through unseen. For
+  uploads, [Upload limits](/proxy/upload-limits) check what multipart bodies may hold, and your own
+  [Firewall](/proxy/dnz-proxy#firewall-dnzfirewall) rules can refuse methods or paths that should take
+  no body at all.
+</Warning>
+
+## Sensitivity
+
+| Sensitivity | Rules | What it means |
+| --- | --- | --- |
+| **Low** | 23 | Clear attacks only. Almost never blocks a real visitor |
+| **Medium** (default) | 37 | The usual choice: more attacks caught, rarely a real visitor |
+| **High** | 43 | Catches the most, but may block unusual normal requests (any HTML tag in a parameter, `SELECT … FROM`, line breaks). Try it with **Log only** first |
+
+Each rule starts at one sensitivity and runs at every higher one:
+
+| Category | Low and up | Medium and up | High |
+| --- | --- | --- | --- |
+| SQL injection | `sqli-union`, `sqli-tautology`, `sqli-stacked`, `sqli-time`, `sqli-schema` | `sqli-tautology-number`, `sqli-functions`, `sqli-comment` | `sqli-select-from` |
+| Cross-site scripting (XSS) | `xss-script`, `xss-event-handler`, `xss-js-call` | `xss-js-uri`, `xss-handler-attribute`, `xss-tags`, `xss-dom`, `xss-data-uri` | `xss-alert`, `xss-any-tag` |
+| Path traversal | `traversal-deep`, `traversal-system-files` | `traversal` | |
+| Sensitive files | `files-secrets` | `files-backups` | |
+| Remote file inclusion | `rfi-wrapper` | `rfi-file-uri` | `rfi-script-url` |
+| Command injection | `rce-log4shell`, `rce-substitution`, `rce-commands` | `rce-chained`, `rce-windows` | |
+| PHP code injection | `php-tag`, `php-functions` | `php-decoders` | |
+| Java code injection | `java-injection` | | |
+| Server-side request forgery | `ssrf-metadata`, `ssrf-schemes` | | `ssrf-local` |
+| Attack tools | `scanner` | | |
+| Protocol attacks | `protocol-null-byte`, `protocol-header-injection` | | `protocol-newline` |
+
+`dnz proxy waf rules` lists every rule with what it catches.
+
+## Block or log only
+
+- **Block attacks** (default): the visitor gets an **Access blocked** page with the `403` status,
+  saying the site's firewall stopped the request, and a request ID to send you (HTML, JSON or text,
+  like the [status pages](/proxy/status-pages)). The request never reaches your servers.
+- **Log only**: the request goes on as usual; the request log notes `log waf:<rule>`.
+
+## See what it matched
+
+- The **request log** (Proxy → Analytics) shows the rule on each line, such as
+  `WAF blocked · SQL injection · sqli-union`. Open the line to see what the rule catches.
+- Analytics' **Firewall rules** list counts the rules that matched; blocked requests count as blocked.
+- `dnz proxy routes waf-hits edge` lists matches since each node started, per rule and action.
+- Prometheus: `dnz_proxy_waf_hits_total{proxy, node, middleware, rule, action}`.
+- AI assistants: the MCP tools `proxy_waf_rules`, `proxy_waf_hits` and, with write access, `set_waf`.
+
+## Exceptions
+
+Under **Exceptions** in the route dialog:
+
+| Exception | For | CLI |
+| --- | --- | --- |
+| **Skip these paths** (and below them) | Pages where people send code or markup on purpose, such as a CMS editor | `--waf-skip-path /admin/editor` |
+| **Skip these rules** | A rule that trips on a normal request of your site; the rest keep checking | `--waf-skip-rule xss-tags` |
+| **Never check these addresses** | Your office, or a security scanner you run yourself | `--waf-allow 10.0.0.0/8` |
+
+Paths are plain prefixes: `/admin` also covers `/administrator`. Skipping one rule is safer than
+turning the whole firewall off.
+
+## When a real visitor gets blocked
+
+<Steps>
+  <Step title="Find the request">
+    In **Proxy → Analytics**, filter the request log by the hostname and the visitor's address. The
+    line names the rule; **Copy rule id** copies it.
+
+    ```bash
+    dnz proxy logs --host app.example.com --client 198.51.100.7 --status 403
+    ```
+  </Step>
+  <Step title="Pick the narrowest exception">
+    Skip the rule when a normal page trips it, the path when one page takes code or markup on
+    purpose, or the address when it is your own tool.
+  </Step>
+  <Step title="Add it">
+    In the route dialog (**Web application firewall → Exceptions**), or:
+
+    ```bash
+    dnz proxy routes edit edge app.example.com --waf-skip-rule xss-tags
+    ```
+  </Step>
+  <Step title="Watch">
+    Not sure what else it stops? Switch the route to **Log only** for a while, check the hits, then
+    go back to **Block attacks**.
+  </Step>
+</Steps>
+
+## Where it runs
+
+It runs right after the route's address list and your own Firewall, so your rules decide first. A
+Firewall **Allow** rule doesn't skip these rules: use **Never check these addresses** instead.
+
+The rules are compiled once on each node (per sensitivity) and shared by every route. A request
+that matches nothing, nearly all of them, costs one pass of the rules over what it sent.
+
+## What it costs
+
+Measured cost: see [Proxy benchmarks](/proxy/benchmarks).
+
+## Traefik and Caddy
+
+Traefik and Caddy proxies have no web application firewall: a route with it is refused there. A
+route saved on several proxies gets it on the DNZ Proxies only.

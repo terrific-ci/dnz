@@ -223,6 +223,7 @@ A route's protections answer with the same kind of page, in the same three forms
 | 429 | **Too many requests** | **Rate limit** (`rateLimit`, `inFlightReq`), saying how long to wait; `Retry-After` stays | DNZ Proxy |
 | 403 | **Not open to your address** | **Only from these addresses** (`ipAllowList`), naming the visitor's address | DNZ Proxy, Caddy |
 | 403 | **Access blocked** | A **Firewall** block rule, with the rule's status; **Not available in your region** when the rule checks the country | DNZ Proxy |
+| 403 | **Access blocked** | The **Web application firewall** blocked an attack, saying so | DNZ Proxy |
 | 403 | **Browser check failed** / **Browser check needed** | The **Under attack** check wasn't solved, or the visit isn't a browser page (an API call, a form) | DNZ Proxy |
 
 Some answers stay as they are written:

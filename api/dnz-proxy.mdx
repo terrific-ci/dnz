@@ -72,6 +72,14 @@ nodes in `nodes`, with `answered: false` and an `error` for any that didn't answ
   path or user agent) and `limit`. Pass `before=<next_before>` for older lines, `after=<newest>` for
   the lines since (the live tail). Line ids are `<node id>.<line id>`.
 
+## Web application firewall
+
+| Method and path | What it does |
+| --- | --- |
+| `GET /api/proxy/waf/rules` | The [web application firewall](/proxy/waf)'s rules (`id`, `category`, `category_label`, `level`, `about`) and `sensitivities` (`value`, `label`, `level`, `about`) |
+
+A route turns it on with `options.waf` (see [Proxy API](/api/proxy)).
+
 ## From the CLI
 
 Most of these have a `dnz` command:
