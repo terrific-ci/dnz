@@ -709,6 +709,29 @@ per hostname in 5 seconds, the count shows as a floor (`1,234+`). Nodes older th
 them, and the page shows `—`. Prometheus has the per-node count as `dnz_proxy_node_active_users`
 (a visitor that reached two nodes counts on both there).
 
+### Visitors per hostname and zone
+
+**Proxy → Routes** and **DNS → Zones** have a **Visitors 24h** column, like Cloudflare's domain list:
+the distinct visitors over the last 24 hours as a small line per hour, and the total (`1.9K`). Hover
+a cell for the exact number, the busiest hour and this hour so far.
+
+- A route counts its hostnames. A zone counts every hostname in it that DNZ Proxy serves (its routes
+  and proxied records) together: someone who opened `app.example.com` and `api.example.com` is one
+  visitor of the zone, and so is someone who reached two nodes.
+- Routes served by Traefik or Caddy, and zones with no name on DNZ Proxy, show `—`. The Zones list has
+  the column only while DNZ Proxy is in use.
+- Each node keeps one HyperLogLog sketch per hostname and hour (at most 4 KiB, a few bytes for a quiet
+  name) for 90 days. It adds each take's client addresses every 5 seconds and writes the sketch only
+  when it changed: nothing more happens per request, and no address is stored.
+- DNZ merges the nodes' sketches (an hour is about 6.5% off for large counts, the total about 1.6%)
+  and keeps the result for 30 seconds. Past 1,000 addresses per hostname in 5 seconds the count shows
+  as a floor (`≥1.9K`). Nodes older than 1.22 aren't asked, and their visitors are left out.
+
+```bash
+dnz proxy routes list edge --visitors   # VISITORS (24H): 5.4K ▂▄▇█▆▃…
+dnz zone list --visitors
+```
+
 Every request is counted: totals, paths and top lists aren't sampled. Paths are counted without the
 query string. For each finished ten minutes and hour a node keeps the 200 busiest paths (and
 clients, user agents, and so on) per hostname and adds the rest up as `(other)`, so a scan of

@@ -57,6 +57,8 @@ The stream stays open and must not be buffered by a reverse proxy in front of DN
 | --- | --- |
 | `GET /api/proxy/analytics` | Traffic, the most requested URLs and top lists, added up over the nodes |
 | `GET /api/proxy/logs` | Request log, newest first |
+| `GET /api/proxy/visitors` | Distinct visitors of every hostname DNZ Proxy serves, per hour |
+| `GET /api/divisions/{id}/zones/visitors` | The same per zone of a division |
 | `GET /api/proxy/analytics/settings` | How long nodes keep request logs |
 | `PUT /api/proxy/analytics/settings` | Change it |
 
@@ -68,6 +70,12 @@ nodes in `nodes`, with `answered: false` and an `error` for any that didn't answ
   `bytes_out` and `avg_ms`. `active_users` holds the visitors now, whatever the span: `count` (each
   visitor once), `window_secs` (300), `capped` (a floor) and `by_proxy` (`proxy_id`, `count`,
   `capped`). It is `null` when every node answering is older than 1.22.
+- `/api/proxy/visitors` takes `hours` (1 to 168, default 24). `hours` lists each hour's start;
+  `hosts` maps every hostname DNZ Proxy serves (`*.example.com` for a wildcard route) to `total`,
+  `series` (one count per hour) and `capped` (a floor). `available` is false when no node answered,
+  `dnz_proxy` false when DNZ Proxy isn't in use. `/api/divisions/{id}/zones/visitors` (zones read
+  permission) has `zones` by id instead, only zones with a hostname on DNZ Proxy, and
+  `nodes_asked` / `nodes_answered` instead of `nodes`.
 - `/api/proxy/logs` takes `proxy_id`, `host`, `status` (`404` or `4xx`), `client_ip`, `q` (text in the
   path or user agent) and `limit`. Pass `before=<next_before>` for older lines, `after=<newest>` for
   the lines since (the live tail). Line ids are `<node id>.<line id>`.
