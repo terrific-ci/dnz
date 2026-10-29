@@ -1,0 +1,104 @@
+---
+title: "Uptime API"
+description: "Endpoints for uptime monitors, incidents and the public status page."
+---
+
+For what monitors, incidents and the public status page do, see
+[Uptime and public status page](/dashboard/uptime). The endpoints take a signed-in session or an API
+token (see [API overview](/api/overview)).
+
+<Note>
+  Reading needs `monitoring.manage` or `proxy.manage`; changing needs `monitoring.manage`. On a DNZ
+  secondary following a primary, changes are refused: manage monitors on the primary.
+</Note>
+
+## Endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/uptime` | Monitors (state, 90 days, last checks, uptime), incidents of the last 90 days and open ones, the page's settings, who runs the checks |
+| `POST` | `/api/uptime/monitors` | Add a monitor (201; 409 when the name is taken) |
+| `GET` | `/api/uptime/monitors/{id}` | One monitor and its incidents |
+| `PUT` | `/api/uptime/monitors/{id}` | Replace a monitor (send every field) |
+| `DELETE` | `/api/uptime/monitors/{id}` | Remove a monitor and its history (204) |
+| `POST` | `/api/uptime/monitors/{id}/check` | One check now, not kept |
+| `POST` | `/api/uptime/test` | One check of an unsaved monitor (a monitor body), not kept |
+| `GET` | `/api/uptime/hosts` | Hostnames proxies serve, `dnz_proxy` when a DNZ Proxy serves one |
+| `GET` | `/api/uptime/incidents?days=30&monitor=3` | Incidents: open ones and those of the last days |
+| `POST` | `/api/uptime/incidents` | Write an incident (201) |
+| `GET` | `/api/uptime/incidents/{id}` | One incident and its updates |
+| `PUT` | `/api/uptime/incidents/{id}` | Change its title, impact, monitors or `on_page` |
+| `POST` | `/api/uptime/incidents/{id}/updates` | Add to its timeline: `{"status": "identified", "message": "…"}` |
+| `DELETE` | `/api/uptime/incidents/{id}` | Delete it and its updates (204) |
+| `GET`, `PUT` | `/api/uptime/page` | The public page's settings |
+| `GET` | `/status`, `/status.json` | The public page and its JSON; no sign-in |
+
+## A monitor
+
+```json
+{
+  "name": "Website",
+  "kind": "http",
+  "url": "https://www.example.com/",
+  "host": "",
+  "method": "GET",
+  "expect_status": "",
+  "keyword": "Welcome",
+  "degraded_ms": 0,
+  "interval_secs": 60,
+  "timeout_secs": 10,
+  "confirm": 2,
+  "skip_tls_verify": false,
+  "enabled": true,
+  "on_page": true,
+  "public_name": "Website",
+  "public_group": "Web",
+  "position": 0
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `kind` | `http` (DNZ requests `url`) or `service` (the DNZ Proxy servers behind `host`) |
+| `expect_status` | Codes that pass, e.g. `200,301-302`; empty: 200–399 |
+| `keyword` | Text the answer must contain (not with `HEAD`) |
+| `degraded_ms` | Slower answers count as degraded; 0: never |
+| `interval_secs`, `timeout_secs` | 20–3600 seconds; the timeout 1–60 and shorter than the interval |
+| `confirm` | Failed checks in a row before down, 1–10 |
+| `on_page`, `public_name`, `public_group` | On the public page under this name (required when `on_page`) and group |
+
+Answers add `status` (`up`, `degraded`, `down`, `unknown`, `paused`), `state_since`, `checked_at`,
+`latency_ms`, `status_code`, `error`, `recent` (`[unix seconds, ms or null]`, newest last), `days`
+(90 days: `checks`, `down`, `degraded`, `uptime`, `latency_ms`, `level`, `incidents`), `uptime_24h`,
+`uptime_7d`, `uptime_30d`, `uptime_90d`, `avg_latency_ms` and `open_incident`.
+
+A check (`/check`, `/test`) answers `{"ok": true, "slow": false, "latency_ms": 42, "status_code": 200, "error": ""}`.
+
+## An incident
+
+```json
+{
+  "title": "Database maintenance",
+  "status": "investigating",
+  "impact": "maintenance",
+  "monitors": [3],
+  "on_page": true,
+  "started_at": "2026-10-29T15:00:00Z",
+  "message": "Planned, 22:00–23:00."
+}
+```
+
+`impact` is `minor`, `major`, `critical` or `maintenance`; `status` is `investigating`,
+`identified`, `monitoring` or `resolved`; `message` is the first update. Answers add `automatic`,
+`cause` (what a failing check saw, never on the public page), `resolved_at`, `duration_secs` and
+`updates` (newest first: `status`, `message`, `at`, `author`; an empty author is DNZ).
+
+## The public page's settings
+
+```json
+{ "enabled": true, "title": "Company status", "description": "", "hostname": "status.example.com", "incident_days": 14 }
+```
+
+`/status.json` answers with `title`, `description`, `status` (`level`, `label`), `groups` of
+`components` (`name`, `status`, `uptime_90d`, `uptime_30d`, `days`), `incidents` (`active`,
+`past`) and `updated_at`, with `Access-Control-Allow-Origin: *`. A page that is off answers 404.

@@ -1,0 +1,69 @@
+---
+title: "Uptime"
+description: "Monitors, incidents and the public status page from the terminal."
+---
+
+These commands match **High availability → Uptime** in the dashboard. For what monitors, incidents
+and the public status page do, see [Uptime and public status page](/dashboard/uptime). Not
+`dnz status-page`, which switches a host to a maintenance or moved page.
+
+Reading needs **Manage monitoring** or **Manage proxies**; changing needs **Manage monitoring**.
+Monitors are named by their name or id.
+
+## Monitors
+
+```bash
+dnz uptime                                   # list: state, 24h/30d/90d uptime, response time, what it checks
+dnz uptime add Website --url https://www.example.com/ --keyword Welcome --public Website --group Web
+dnz uptime add "App servers" --service app.example.com --interval 30
+dnz uptime add Billing --url https://billing.internal/health --expect 200 --slow-ms 800 --insecure true --paused
+dnz uptime show Website                      # last check, uptime 24h/7d/30d/90d, last checks, 30 days, incidents
+dnz uptime check Website                     # one check now; shown, not kept
+dnz uptime edit Website --confirm 3 --timeout 5
+dnz uptime pause Website                     # no checks, history kept; `resume` checks it again
+dnz uptime rm Website                        # with its history
+```
+
+| Option | Meaning |
+| --- | --- |
+| `--url URL` | Check this http or https URL |
+| `--service HOSTNAME` | Watch the DNZ Proxy servers behind this hostname, from the nodes' health checks |
+| `--method GET\|HEAD` | The request (default `GET`) |
+| `--expect CODES` | Codes that pass, e.g. `200-299,301` (default 200–399) |
+| `--keyword TEXT` | Text the answer must contain |
+| `--slow-ms MS` | Slower answers count as degraded (0: never) |
+| `--interval SECS` | Seconds between checks, 20–3600 (default 60) |
+| `--timeout SECS` | Seconds a check waits (default 10) |
+| `--confirm N` | Failed checks in a row before down (default 2) |
+| `--insecure true` | Accept any certificate |
+| `--public NAME`, `--group GROUP` | Put it on the public status page under this name and group |
+| `--private` | Take it off the public status page (`edit`) |
+| `--paused` | Save it paused (`add`) |
+
+`edit` changes only the options you pass.
+
+## Incidents
+
+```bash
+dnz uptime incidents --days 90               # open ones and the last days; --monitor Website
+dnz uptime incident open "Database maintenance" --impact maintenance --monitor Website -m "Planned, 22:00–23:00."
+dnz uptime incident update 12 identified -m "A disk filled up; clearing it."
+dnz uptime incident resolve 12 -m "All good again."
+dnz uptime incident show 12                  # its timeline
+dnz uptime incident rm 12
+```
+
+`open` takes `--impact` (minor, major, critical, maintenance), `--status` (investigating,
+identified, monitoring, resolved), `--monitor` (repeat it for more), `-m` for the first update and
+`--hidden` to keep it off the public page.
+
+## The public status page
+
+```bash
+dnz uptime page                              # its settings and where it is
+dnz uptime page set --on --title "Company status" --hostname status.example.com --incident-days 30
+dnz uptime page set --off
+```
+
+For its own hostname, send the name to DNZ with a route first:
+`dnz proxy routes add edge status.example.com -u http://10.0.0.53:8080`.

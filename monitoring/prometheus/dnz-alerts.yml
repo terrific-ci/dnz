@@ -224,6 +224,15 @@ groups:
           summary: "No DNZ cluster node holds the leader lease"
           description: "Background jobs (ACME renewals, syncs, health checks) are not running anywhere."
 
+      - alert: DnzUptimeMonitorDown
+        expr: dnz_uptime_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Uptime monitor {{ $labels.monitor }} is down"
+          description: "Its checks keep failing; High availability → Uptime or `dnz uptime show \"{{ $labels.monitor }}\"` says what they see."
+
       - alert: DnzBackupFailing
         expr: dnz_backup_consecutive_failures >= 2
         for: 5m

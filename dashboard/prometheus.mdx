@@ -147,6 +147,7 @@ They cover:
 | `DnzClusterNodeBehind`, `DnzClusterNoLeader` | A cluster node has not loaded the latest changes, or no node holds the leader lease |
 | `DnzBackupFailing`, `DnzBackupOverdue` | [Backups](/admin/backups) to a target failed twice in a row, or a scheduled one is more than an hour overdue |
 | `DnzHealthFindingFailing`, `DnzHealthFindingsStale` | A [health check](/admin/health-check) finding fails, or the health check stopped running |
+| `DnzUptimeMonitorDown` | An [uptime monitor](/dashboard/uptime) has been down for 2 minutes |
 
 Add the file to `rule_files` in `prometheus.yml`. The rules expect the job to be called `dnz`.
 
@@ -183,6 +184,7 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_traefik_connected{proxy}`, `dnz_caddy_proxy_connected{proxy}` | 1 while a Traefik or Caddy proxy fetched its configuration in the last minute (`…_last_seen_timestamp_seconds` says when) |
 | `dnz_caddy_sync_success{id,caddy,kind}` | [Sites in DNS](/integrations/caddy): 1 when the last sync worked, `kind` `caddy` or `traefik` (not proxies; `dnz_caddy_sync_timestamp_seconds` says when) |
 | `dnz_health_findings{status}` | [Health check](/admin/health-check) findings by status |
+| `dnz_uptime_up{monitor,kind}`, `dnz_uptime_response_seconds{monitor}`, `dnz_uptime_ratio_30d{monitor}` | [Uptime monitors](/dashboard/uptime): 1 while up (0 while down), the last check's response time, and the share of the last 30 days' checks it was up. Also `dnz_uptime_status`, `dnz_uptime_last_check_timestamp_seconds` and `dnz_uptime_open_incidents` |
 | `dnz_dhcp_leases{server}`, `dnz_dhcp_read_success{server}` | DHCP servers' live leases, and whether DNZ can read them |
 | `dnz_ipam_conflicts{division}` | What [IPAM](/integrations/dhcp#ipam) found that doesn't add up |
 

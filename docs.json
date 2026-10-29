@@ -75,6 +75,7 @@
             "pages": [
               "dashboard/tour",
               "dashboard/monitoring",
+              "dashboard/uptime",
               "dashboard/prometheus",
               "dashboard/topology"
             ]
@@ -186,6 +187,7 @@
               "cli/cluster",
               "cli/proxy",
               "cli/status-pages",
+              "cli/uptime",
               "cli/cloudflare",
               "cli/caddy",
               "cli/dhcp",
@@ -223,6 +225,7 @@
               "api/proxy",
               "api/dnz-proxy",
               "api/status-pages",
+              "api/uptime",
               "api/certificates",
               "api/backups"
             ]

@@ -1,0 +1,126 @@
+---
+title: "Uptime and public status page"
+description: "Watch whether your services are up, keep their uptime per day, write incidents and publish a public status page like statuspage.io."
+---
+
+**High availability → Uptime** watches whether your services are up, keeps their uptime per day,
+records incidents and publishes a **public status page** anyone can open without signing in.
+
+<Note>
+  Not the same as [Status pages](/proxy/status-pages): those replace a site with a maintenance,
+  moved or blocked page. Uptime only watches and reports; it never changes what visitors of a site
+  get.
+</Note>
+
+## Monitors
+
+A monitor checks one of two things:
+
+| Kind | What it checks | Good for |
+| --- | --- | --- |
+| **A URL** | DNZ requests it: the status code (200–399 passes unless you list codes such as `200,301-302`), optionally a keyword the answer must contain, and how long the answer took. Redirects are followed. `GET` or `HEAD`, and "accept any certificate" for self-signed servers. | Any address: a route of Traefik, Caddy or DNZ Proxy, or a service DNZ has nothing to do with |
+| **A DNZ Proxy service** | The servers behind a hostname a DNZ Proxy route serves, from the upstream health the nodes already report every 5 seconds. Up while every server is healthy, degraded while some are, down when none is or no node reported in the last 30 seconds. Nothing extra is sent. | Proxied services, server by server. Turn on the route's health check for the clearest answer |
+
+Each monitor has an interval (20 seconds to an hour, 60 seconds by default), a timeout and how many
+**failed checks in a row** make it **down** (2 by default). A single failure shows it **degraded**
+until the next check; a URL monitor can also count answers slower than a limit as degraded.
+**Paused** monitors aren't checked and keep their history.
+
+The list shows each monitor's state and since when, 90 days of uptime bars (30 on a phone; hover a
+bar for that day), its uptime over 30 days, and a line of its last 60 checks' response times with
+failed checks in red. Open a monitor for its uptime over 24 hours, 7, 30 and 90 days, its last check
+and error. **Check now** runs one check and shows what it saw without keeping it; **Test** in the
+dialog does the same before you save.
+
+Uptime is the share of checks the monitor wasn't down (degraded counts as up). Days follow the
+display time zone and are kept 400 days.
+
+<Info>
+  Checks run on one server: the cluster's leader, so each runs once and alerts go out once. A DNZ
+  secondary following a primary checks nothing; monitors are the primary's, and the secondary is
+  read-only for them. URL monitors are requested from that server, so the URL must be reachable
+  from there.
+</Info>
+
+## Incidents
+
+When a monitor goes down, DNZ opens an incident ("*name* unavailable", status **investigating**)
+with what the failing check saw, and resolves it when the monitor is back ("Checks pass again
+after 4m 10s"). You can post updates to it in between.
+
+You can also write incidents yourself, for what monitors can't see or for planned work: a title, a
+status (**investigating**, **identified**, **monitoring**, **resolved**), an impact and the monitors
+it affects, then updates over time. Each update sets the incident's status: resolved ends it,
+another status opens it again.
+
+| Impact | The affected monitors show on the public page as |
+| --- | --- |
+| Minor | Degraded performance |
+| Major | Partial outage |
+| Critical | Major outage |
+| Maintenance | Under maintenance |
+
+An incident that affects no monitor is about everything, and the page's overall status shows it.
+An incident can be kept off the public page.
+
+## The public status page
+
+Turn it on in the **Public status page** card. It is at `http(s)://<your DNZ>/status`, its content
+as JSON at `/status.json`, and on its own hostname if you give one. It shows:
+
+- your logo and label from **Settings → Profile**, a title and description
+- the overall status: all systems operational, degraded performance, partial or major outage, under maintenance
+- open incidents with their timeline
+- the monitors you put on it, under the **public name** and **group** you give them, with their state, uptime bars and uptime
+- past incidents of the last 14 days (1 to 90), day by day
+
+Visitors see only what you chose for them: public names, groups, incident titles and the updates
+you write. Never a monitor's own name, URL, address, status code or error.
+
+The page is one self-contained document (no fonts or scripts from elsewhere; the only outside image
+is a logo given as an `https://` address), so it works over plain http and whatever else is down. It
+reloads itself every minute and shows times in the visitor's time zone.
+
+### On its own hostname
+
+Give the page a hostname, such as `status.example.com`, and DNZ answers requests for that name with
+the page alone: neither the DNZ dashboard nor its API is reachable under it. Point a route on any
+proxy at DNZ's HTTP address, as the proxy reaches it (not `localhost`, unless the proxy runs on the
+same machine):
+
+```bash
+dnz proxy routes add edge status.example.com -u http://10.0.0.53:8080
+dnz uptime page set --on --hostname status.example.com
+```
+
+The card builds this command for you with the proxy and address you pick. A DNS record pointing
+the name straight at DNZ works too when DNZ's HTTP port is 80.
+
+## Alerts
+
+Add the event **Uptime** to a [notification provider](/integrations/notifications). DNZ notifies
+when a monitor goes down, with what failed, and when it is up again, with how long it was down.
+Webhooks get the monitor, state, error, status code, response time and incident in `details`.
+
+## Prometheus
+
+| Metric | Labels | Meaning |
+| --- | --- | --- |
+| `dnz_uptime_up` | `monitor`, `kind` | 1 while up (or only degraded), 0 while down |
+| `dnz_uptime_status` | `monitor`, `state` | 1 for the state it is in |
+| `dnz_uptime_response_seconds` | `monitor` | How long its last check took (URL monitors) |
+| `dnz_uptime_ratio_30d` | `monitor` | Share of the last 30 days' checks it was up |
+| `dnz_uptime_last_check_timestamp_seconds` | `monitor` | When it was last checked |
+| `dnz_uptime_open_incidents` | | Incidents not resolved yet |
+
+The bundled alert rules include `DnzUptimeMonitorDown` (2 minutes down). See
+[Prometheus](/dashboard/prometheus).
+
+## From the terminal and assistants
+
+`dnz uptime` does all of this from the terminal (see [Uptime CLI](/cli/uptime)); the
+[API](/api/uptime) has the same. AI assistants connected over [MCP](/integrations/ai-assistants) can
+read monitors and incidents with `list_uptime_monitors` and `list_uptime_incidents`.
+
+Reading needs **Manage monitoring** or **Manage proxies**; changing needs **Manage monitoring**.
+Every change is in the [audit log](/admin/audit-log).
