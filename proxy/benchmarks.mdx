@@ -228,7 +228,9 @@ Proxy (`cargo build --release -p dnz-proxy` on its own):
 | Before the split | 12,492/s | 11,737/s | 2,286/s | 7,094/s | 0.60 / 1.45 ms | 100.2 µs | 5 / 10 MiB |
 | After | 12,607/s | 11,926/s | 2,234/s | 7,117/s | 0.58 / 1.45 ms | 99.0 µs | 5 / 10 MiB |
 
-Within ±2.3%, CPU per request 1.2% lower: the same.
+The two DNZ Proxy binaries came out byte for byte the same (its code didn't change and it is built
+on its own), so this is the same build twice: the ±2.3% between the columns is the noise of these
+runs, and the split costs DNZ Proxy nothing.
 
 **Route rules, again.** The build before route rules against 1.22 (rules, the split and everything
 between; no route has rules): HTTP −2.0%, HTTPS −6.8%, new connections −1.3%, 64 KiB −1.5%, CPU per
