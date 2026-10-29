@@ -8,49 +8,55 @@ Envoy, Caddy and Traefik), each pinned to one CPU in front of the same origin.
 
 ## Results
 
-Measured on 2026-10-24 on a dedicated server: a KVM virtual machine with 4 CPUs (Intel Xeon Silver
+Measured on 2026-10-30 on a dedicated server: a KVM virtual machine with 4 CPUs (Intel Xeon Silver
 4114, 2.2 GHz), x86_64, nothing else running. Each proxy pinned to **one CPU**, the origin to
 another, the load generators to the other two. Requests per second are the median of 3 runs of 20 s
 with 64 connections.
 
 | Proxy | HTTP, 1 KiB | HTTPS, 1 KiB | HTTPS, new connection per request | HTTP, 64 KiB |
 | --- | ---: | ---: | ---: | ---: |
-| nginx 1.30.6 | 24,624 | 17,772 | 1,356 | 6,769 |
-| HAProxy 3.4.7 | 22,999 | 17,803 | 1,238 | 5,872 |
-| **DNZ Proxy 1.7.1** | **11,668** | **11,476** | **2,441** | **7,216** |
-| Traefik 3.7.16 | 8,586 | 8,097 | 1,433 | 5,128 |
-| Envoy 1.40.1 | 8,584 | 8,010 | 1,930 ¹ | 5,487 |
-| Caddy 2.11.7 | 6,692 | 6,211 | 1,336 | 4,565 |
+| nginx 1.30.6 | 24,708 | 16,800 | 1,313 | 6,532 |
+| HAProxy 3.4.7 | 22,546 | 17,129 | 1,169 | 5,637 |
+| **DNZ Proxy 1.22.0** | **11,521** | **10,668** | **2,190** | **6,591** |
+| Envoy 1.40.1 | 8,079 | 7,659 | 1,845 ¹ | 5,403 |
+| Traefik 3.7.16 | 8,037 | 7,575 | 1,342 | 4,923 |
+| Caddy 2.11.7 | 6,287 | 5,847 | 1,245 | 4,106 |
 
 At a steady 5,000 requests a second over HTTP, one every 0.2 ms (well below every proxy's limit):
 
 | Proxy | Latency p50 | Latency p99 | CPU per request | Memory idle | Memory loaded |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| nginx | 0.44 ms | 1.38 ms | 75 µs | 17 MiB | 21 MiB |
-| HAProxy | 0.40 ms | 1.25 ms | 68 µs | 17 MiB | 21 MiB |
-| **DNZ Proxy** | **0.60 ms** | **1.54 ms** | **100 µs** | **2 MiB** | **8 MiB** |
-| Traefik | 0.83 ms | 13.16 ms | 137 µs | 13 MiB | 42 MiB |
-| Envoy | 1.22 ms | 16.54 ms | 152 µs | 14 MiB | 23 MiB |
-| Caddy | 1.28 ms | 40.32 ms | 163 µs | 9 MiB | 21 MiB |
+| nginx | 0.39 ms | 0.87 ms | 70 µs | 17 MiB | 22 MiB |
+| HAProxy | 0.35 ms | 0.66 ms | 57 µs | 17 MiB | 21 MiB |
+| **DNZ Proxy** | **0.61 ms** | **1.22 ms** | **102 µs** | **5 MiB** | **11 MiB** |
+| Envoy | 1.24 ms | 10.04 ms | 163 µs | 14 MiB | 23 MiB |
+| Traefik | 0.83 ms | 15.22 ms | 140 µs | 14 MiB | 37 MiB |
+| Caddy | 1.88 ms | 41.99 ms | 172 µs | 9 MiB | 19 MiB |
 
-DNZ Proxy is the release image `terrificci/dnz:1.7.1`. The origin alone answers 36,883 requests a
-second for 1 KiB and 30,139 for 64 KiB, so every number above is the proxy's own limit; on its own
-it answers the steady load in 0.3 ms (p99 1.0 ms). No run had a failed or non-200 answer.
+DNZ Proxy is the code released as 1.22.0 (built from its commit as the release workflow builds it),
+with the web application firewall, route rules and analytics in it but none on the route. One run
+of the suite varies by several percent: the same build answered 12,179 to 12,607 requests a second
+over HTTP and 11,126 to 11,926 over HTTPS in the side-by-side runs of the same night (below). No run
+had a failed or non-200 answer.
 
 1. Envoy didn't resume TLS sessions in the harness's check, so its new connections are full
    handshakes; the other five resumed.
 
 What it shows:
 
-- **nginx and HAProxy** forward keep-alive HTTP about twice as fast as DNZ Proxy and HTTPS about 1.5
-  times as fast, and use 68 to 75 µs of CPU per request against DNZ Proxy's 100 µs.
-- **DNZ Proxy** comes third on keep-alive HTTP and HTTPS, ahead of Traefik, Envoy and Caddy, and
-  first on 64 KiB answers and on new TLS connections (rustls with *ring*, against OpenSSL in nginx
-  and HAProxy).
-- **Latency**: nginx and HAProxy add about 0.1 ms to the origin's 0.3 ms, DNZ Proxy 0.3 ms; all
-  three keep p99 near 1.5 ms. Traefik, Envoy and Caddy have p99s of 13 to 40 ms.
-- **Memory**: DNZ Proxy holds the least, 2 MiB idle and 8 MiB under load, against 21 to 42 MiB for
+- **nginx and HAProxy** forward keep-alive HTTP about twice as fast as DNZ Proxy and HTTPS about 1.6
+  times as fast, and use 57 to 70 µs of CPU per request against DNZ Proxy's 102 µs.
+- **DNZ Proxy** comes third on keep-alive HTTP and HTTPS, ahead of Envoy, Traefik and Caddy, first
+  on new TLS connections (rustls with *ring*, against OpenSSL in nginx and HAProxy) and level with
+  nginx on 64 KiB answers.
+- **Latency**: nginx and HAProxy keep p99 under 1 ms, DNZ Proxy at 1.2 ms; Envoy, Traefik and Caddy
+  have p99s of 10 to 42 ms.
+- **Memory**: DNZ Proxy holds the least, 5 MiB idle and 11 MiB under load, against 19 to 37 MiB for
   the others.
+
+The run of 2026-10-24 (DNZ Proxy 1.7.1: 11,668 HTTP, 11,476 HTTPS, 2,441 new connections, 7,216 for
+64 KiB, 100 µs per request, 2 / 8 MiB) was measured with the same harness; nginx and HAProxy measured within
+a few percent of it again.
 
 <Note>
   Until 2026-10-24 this page measured latency with `hey`, whose workers send in step: up to 50
@@ -207,6 +213,35 @@ The same rules were checked on a real Traefik 3.7.16 and Caddy 2.11.7, fed by DN
 providers: redirects with `{rest}` and regular-expression groups, the query kept or dropped,
 rewrites, header changes and (Caddy) query, header, address and "is not" conditions all answered as
 DNZ Proxy does.
+
+## 1.22: after the crate split
+
+DNZ's server was split into several Rust crates for faster builds; DNZ Proxy's code didn't
+change, and these runs check that it is no slower and look for what to make faster. On 103, one
+DNZ Proxy on one CPU, the scenarios above in turns (A B, then B A), median of 6 rounds each.
+
+**The split.** The build before it against after, both built as the release workflow builds DNZ
+Proxy (`cargo build --release -p dnz-proxy` on its own):
+
+| Build | HTTP 1 KiB | HTTPS 1 KiB | New connection | HTTP 64 KiB | p50 / p99 at 5,000/s | CPU per request | Memory idle / loaded |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Before the split | 12,492/s | 11,737/s | 2,286/s | 7,094/s | 0.60 / 1.45 ms | 100.2 µs | 5 / 10 MiB |
+| After | 12,607/s | 11,926/s | 2,234/s | 7,117/s | 0.58 / 1.45 ms | 99.0 µs | 5 / 10 MiB |
+
+Within ±2.3%, CPU per request 1.2% lower: the same.
+
+**Route rules, again.** The build before route rules against 1.22 (rules, the split and everything
+between; no route has rules): HTTP −2.0%, HTTPS −6.8%, new connections −1.3%, 64 KiB −1.5%, CPU per
+request 100.9 → 101.6 µs (+0.7%), latency and memory the same. The build before rules came from
+the old build script, which built DNZ and DNZ Proxy in one `cargo build` (their dependencies'
+features merged); with CPU per request unchanged, the HTTPS gap is that and the noise rather than
+the rules, which a route without rules doesn't run.
+
+**Where the time goes.** A profile (`perf`, wrk over HTTP) of 1.22 found nothing in DNZ Proxy's own
+code above 2% of its CPU: 44% is in system calls, 37% of it sending (the kernel's TCP/IP stack,
+Docker's bridge and connection tracking), and the rest Pingora's HTTP/1 handling and mimalloc, as
+before ("Tried and not kept" above). There is no change in DNZ Proxy's code left that would move
+these numbers by more than the noise.
 
 ## Method
 
