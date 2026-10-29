@@ -202,7 +202,8 @@ A server that will only be a secondary doesn't need an admin of its own. It copi
 - The primary sends NOTIFY to the address the secondary joined from, on its DNS port, or to the
   secondary's own DNS address when that one doesn't answer DNS.
 - Every minute it checks in with the primary (`/api/replication/membership`), so it hears when the
-  primary removed it (see [Removing a secondary](#removing-a-secondary)).
+  primary removed it (see [Removing a secondary](#removing-a-secondary)), and reports what it
+  copied (`/api/replication/membership/report`, see [What else is copied](#what-else-is-copied)).
 - Every minute it copies the primary's resolver settings (`/api/replication/settings`), so it
   answers like the primary (see below).
 
@@ -728,7 +729,41 @@ sync, in percent of zones with the same SOA serial on both sides:
 
 The state is **In sync** (every zone current), **Behind** (some zones behind, missing or
 unanswered), **Unreachable** (no zone got an answer) or **Unknown** (no address to ask, or no
-zones). Open a row to see which zones aren't current, with both serials.
+zones). Open a row to see everything it copies, part by part (below), and which zones aren't
+current, with both serials.
+
+### What else is copied
+
+A DNZ secondary copies more than zones. Each row opens to one line per part, with a percentage, a
+bar, *N of M* and when it was last copied:
+
+| Part | What |
+|---|---|
+| **Zones** | SOA serials, as above |
+| **Record details (tags, views, proxies)** | each zone's copy; current when fetched at the zone's serial |
+| **Resolver settings** | the settings the secondary follows |
+| **Divisions and roles** | divisions, roles and which zone is in which division |
+| **Upstreams and forwarding** | upstreams, forwarding rules, negative trust anchors |
+| **Filtering** | lists, rules, schedules, clients, safe search, client networks |
+| **RPZ zones** | the RPZ zones and their sources |
+| **Threat protection** | allowed and blocked domains, mutes, feeds |
+| **Views** | views and their networks |
+| **Capture keyword lists** | the saved keyword lists |
+| **Accounts** | only when the secondary copies accounts |
+
+How it's measured: the secondary keeps a fingerprint of every row it copied last (a hash of the
+row as the primary sent it) and reports them at its check-in every minute
+(`POST /api/replication/membership/report`, with its join secret). The primary compares them with
+what it would hand out now, so a change made since shows as not copied yet until the next sync
+(within a minute). A row removed on the primary but still on the secondary counts as not current
+too. The primary answers with the parts, and the secondary shows them under **Primaries this
+server copies from**.
+
+- A part with nothing to copy shows *Nothing to copy* and no percentage.
+- A copy that failed shows on its part in red, with the error.
+- Both servers need DNZ 1.22 or newer. With an older one on either side only **Zones** is listed,
+  with a note saying so. BIND, Knot and other non-DNZ secondaries show **Zones** only.
+- Proxies and routes aren't a part: they aren't replicated, each server has its own.
 
 The check stays light: it runs only while the tab is open and the browser tab is visible (every
 30 seconds), one report is kept for 15 seconds and shared by every open dashboard, a replica that

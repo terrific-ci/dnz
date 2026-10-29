@@ -13,6 +13,14 @@ dnz replication show            # secondaries, join requests, primaries followed
 dnz replication status          # each replica's state and sync %, and the zones that are behind
 ```
 
+Below the table, `status` prints one line per replica with what it copies, part by part (see
+[What else is copied](/dns/replication#what-else-is-copied)). A part short of 100% shows *N of M*,
+a note or error in brackets:
+
+```text
+  ns2: Zones 100% · Record details (tags, views, proxies) 100% · Resolver settings 100% · Filtering 2 of 3 (66.7%) · …
+```
+
 ## On the primary: allow a secondary
 
 ```bash
