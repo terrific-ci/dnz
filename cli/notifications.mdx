@@ -1,6 +1,6 @@
 ---
 title: "Notifications"
-description: "Manage notification providers, alert thresholds and upstream incidents from the terminal."
+description: "Manage notification providers, alert thresholds, proxy alerts and incidents from the terminal."
 ---
 
 These commands match **Settings → Notifications** in the dashboard. They need a superadmin. For what
@@ -61,7 +61,10 @@ replaces them all.
 | `rate_limited` | Queries over the per-client rate limit in 5 minutes pass the threshold |
 | `cache_full` | Answers are pushed out of the cache before their TTL (`cache_size` is too small) |
 | `daily_summary` | Once a day, at the summary hour: yesterday's traffic, outages, top names and clients |
-| `certificate_failed` | A DNZ Proxy certificate failed 3 times in a row |
+| `proxy_attack` | Requests blocked on a hostname spike; and when it is over |
+| `proxy_origin` | A proxy service's server fails its health check; and when it answers again |
+| `proxy_node` | A DNZ Proxy node, Traefik or Caddy is gone; and when it is back |
+| `certificate_failed` | A DNZ Proxy certificate failed 3 times in a row; and when it is issued after all |
 | `certificate_expiring` | A DNZ Proxy certificate in use ends within 14 days (once per certificate) |
 | `cluster_node` | A [cluster](/deploy/cluster) node stops heartbeating or falls behind, and when it is back |
 | `threat` | A new [threat finding](/dns/threats), at most one per client every 30 minutes |
@@ -87,9 +90,30 @@ Traffic alerts are checked every minute and sent at most once an hour each. The 
 the server's time zone; see
 [`dnz settings timezone`](/cli/monitoring#settings).
 
+## Proxy alerts
+
+```bash
+dnz notify proxy-alerts                           # the settings and the incidents going on
+dnz notify proxy-alerts --attack-factor 10 --attack-min-per-minute 60 --origin-after 120
+dnz notify proxy-alerts --node off --repeat-minutes 60
+```
+
+| Option | What it sets |
+| --- | --- |
+| `--attack`, `--origin`, `--node`, `--certificate` | `on` or `off` |
+| `--attack-factor` | Blocked requests per minute must be this many times the hour before (default 5) |
+| `--attack-min-per-minute` | …and at least this many (default 30) |
+| `--origin-after`, `--node-after` | Seconds an origin or node must be down before it is told (default 60) |
+| `--certificate-failures` | Failed issuances or renewals in a row that send an alert (default 3) |
+| `--certificate-days` | Days before a certificate expires that send an alert (default 14) |
+| `--repeat-minutes` | Minutes between two messages about the same thing, at least (default 30) |
+
+See [Proxy alerts](/integrations/notifications#proxy-alerts) for what each one watches.
+
 ## Incidents
 
 ```bash
-dnz notify incidents                              # upstream outages and recoveries
+dnz notify incidents                              # outages and recoveries: forward DNS and proxies
+dnz notify incidents --source proxy               # only the proxies' (nodes, origins, attacks, certificates)
 dnz notify incidents --limit 200                  # default 50
 ```

@@ -1,6 +1,6 @@
 ---
 title: "Notifications"
-description: "Send outages, traffic alerts, certificate problems and a daily summary to Telegram, e-mail or webhooks."
+description: "Send outages, traffic alerts, proxy alerts (attacks, origins, nodes, certificates) and a daily summary to Telegram, e-mail or webhooks."
 ---
 
 Under **Settings → Notifications** (superadmins), add one or more **providers**. Each provider
@@ -28,7 +28,10 @@ automatically, and **Send test** checks a provider right away.
 | `rate_limited` | Clients go over the per-client rate limit |
 | `cache_full` | The cache drops answers before their TTL; `cache_size` is too small |
 | `daily_summary` | Yesterday's numbers, at the hour you choose |
-| `certificate_failed` | A [DNZ Proxy certificate](/proxy/certificates) failed 3 times in a row |
+| `proxy_attack` | Requests blocked on a hostname spike (see [Proxy alerts](#proxy-alerts)); and when it is over |
+| `proxy_origin` | A proxy service's server fails its health check; and when it answers again |
+| `proxy_node` | A DNZ Proxy node stops reporting, a Traefik or Caddy stops fetching its configuration; and when it is back |
+| `certificate_failed` | A [DNZ Proxy certificate](/proxy/certificates) failed 3 times in a row; and when it is issued after all |
 | `certificate_expiring` | A certificate in use ends within 14 days |
 | `change_requested` | An edit waits for approval as a [change request](/dns/history#change-approval) |
 | `change_decided` | A change request was approved or rejected |
@@ -41,6 +44,37 @@ automatically, and **Send test** checks a provider right away.
 Traffic alerts are checked every minute and sent at most once an hour each. Thresholds and the
 summary hour live under **Settings → Notifications → Alerts**. Incident history is kept for 90
 days.
+
+## Proxy alerts
+
+Problems with the [proxies](/proxy/overview) reach you even with the dashboard closed. Switch each
+one on or off and set its numbers under **Settings → Notifications → Proxy alerts**; new providers
+get them all, existing ones once you tick **Proxies** in the provider. They are listed in the bell
+and the incident history too.
+
+| Alert | When | Default |
+| --- | --- | --- |
+| **Attack spike** | Requests blocked on a hostname (firewall rules and the [WAF](/proxy/waf)) over 5 minutes reach a rate a minute, and a factor of the hour before. The message names the rules and addresses behind them. DNZ Proxy | 30 a minute, 5 × |
+| **Origin down** | A service's server fails its health check on every DNZ Proxy node that checks it, or Traefik marks it `DOWN` (with its API address set). Needs a health check on the service; Caddy doesn't tell | after 60 s |
+| **Node down** | A DNZ Proxy node stops reporting or DNZ can't reach its port (drained nodes left out), a Traefik or Caddy stops fetching its configuration | after 60 s |
+| **Certificates** | Issuing or renewing fails in a row; a certificate in use ends soon | 3 failures, 14 days |
+
+No alert storms:
+
+- a state must last before it is told (the times above, a minute for a recovery);
+- one message when an incident starts and one when it ends, nothing in between;
+- the same node, origin or hostname waits the **repeat** interval (30 minutes) after its last message,
+  so a flapping origin sends at most one down and one up per interval;
+- what changes in the same round shares one message ("3 origins are down").
+
+The counts behind attack spikes stay on the DNZ Proxy nodes: DNZ asks them for their minute counters
+once a minute, and for the top rules and addresses only when a spike starts. Only the cluster leader
+checks and sends; a DNZ [secondary](/dns/replication) sends none, its primary does.
+
+Webhooks get `proxy.attack`, `proxy.attack_over`, `proxy.origin_down`, `proxy.origin_recovered`,
+`proxy.node_down`, `proxy.node_recovered`, `certificate.failed`, `certificate.recovered` or
+`certificate.expiring` as `event`, with one entry per hostname, origin or node in `details.items`.
+Prometheus has `dnz_proxy_incidents_open{kind}`.
 
 ## Webhooks
 
@@ -57,6 +91,7 @@ dnz notify add Mail --kind smtp --set host=smtp.example.com --set port=587 --set
 dnz notify add Hook --kind webhook --config @webhook.json
 dnz notify test 1
 dnz notify alerts --nxdomain-percent 40 --rate-limited 500 --summary-hour 7
+dnz notify proxy-alerts --attack-factor 10 --origin-after 120
 ```
 
 See [CLI: notifications](/cli/notifications).
