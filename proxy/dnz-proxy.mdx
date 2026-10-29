@@ -707,7 +707,9 @@ doesn't match costs nothing more. Nodes older than 1.22 don't count them.
 minutes, for the proxy and hostname you picked, whatever the time range. A visitor that reached
 several nodes or proxies counts once: each node sends its own count with a small sketch of the
 addresses (HyperLogLog: exact for small counts, about 1.6% off for large ones), and DNZ merges them.
-With **All proxies** you also see each proxy's count; click one to show only that proxy.
+With **All proxies** you also see each proxy's count; click one to show only that proxy. An address
+whose requests were all blocked (firewall rules, WAF, upload limits) or challenged without passing
+isn't a visitor; it still shows in the top clients.
 
 A node notes the addresses every 5 seconds, when it stores what it counted, so nothing more happens
 per request. It remembers up to 100,000 hostname and address pairs; past that, or past 1,000 addresses
@@ -724,6 +726,8 @@ a cell for the exact number, the busiest hour and this hour so far.
 - A route counts its hostnames. A zone counts every hostname in it that DNZ Proxy serves (its routes
   and proxied records) together: someone who opened `app.example.com` and `api.example.com` is one
   visitor of the zone, and so is someone who reached two nodes.
+- Addresses the firewall only blocked or challenged (without passing) aren't visitors, as for
+  active users.
 - Routes served by Traefik or Caddy, and zones with no name on DNZ Proxy, show `—`. The Zones list has
   the column only while DNZ Proxy is in use.
 - Each node keeps one HyperLogLog sketch per hostname and hour (at most 4 KiB, a few bytes for a quiet
