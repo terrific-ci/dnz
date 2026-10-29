@@ -688,6 +688,18 @@ hostname, over the last hour to 30 days:
 - top hostnames, clients, countries, user agents, status codes and firewall rules
 - a **request log** with filters and a live view
 
+**Active users now** sits above the totals: visitors (client addresses) with a request in the last 5
+minutes, for the proxy and hostname you picked, whatever the time range. A visitor that reached
+several nodes or proxies counts once: each node sends its own count with a small sketch of the
+addresses (HyperLogLog: exact for small counts, about 1.6% off for large ones), and DNZ merges them.
+With **All proxies** you also see each proxy's count; click one to show only that proxy.
+
+A node notes the addresses every 5 seconds, when it stores what it counted, so nothing more happens
+per request. It remembers up to 100,000 hostname and address pairs; past that, or past 1,000 addresses
+per hostname in 5 seconds, the count shows as a floor (`1,234+`). Nodes older than 1.22 don't count
+them, and the page shows `—`. Prometheus has the per-node count as `dnz_proxy_node_active_users`
+(a visitor that reached two nodes counts on both there).
+
 Every request is counted: totals, paths and top lists aren't sampled. Paths are counted without the
 query string. For each finished ten minutes and hour a node keeps the 200 busiest paths (and
 clients, user agents, and so on) per hostname and adds the rest up as `(other)`, so a scan of

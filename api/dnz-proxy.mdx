@@ -65,7 +65,9 @@ nodes in `nodes`, with `answered: false` and an `error` for any that didn't answ
 
 - `/api/proxy/analytics` takes `proxy_id`, `host`, `from` and `to` (RFC 3339; spans over six hours
   come in hours). `top_paths` holds `host`, `path`, `requests`, `status_4xx`, `status_5xx`,
-  `bytes_out` and `avg_ms`.
+  `bytes_out` and `avg_ms`. `active_users` holds the visitors now, whatever the span: `count` (each
+  visitor once), `window_secs` (300), `capped` (a floor) and `by_proxy` (`proxy_id`, `count`,
+  `capped`). It is `null` when every node answering is older than 1.22.
 - `/api/proxy/logs` takes `proxy_id`, `host`, `status` (`404` or `4xx`), `client_ip`, `q` (text in the
   path or user agent) and `limit`. Pass `before=<next_before>` for older lines, `after=<newest>` for
   the lines since (the live tail). Line ids are `<node id>.<line id>`.
