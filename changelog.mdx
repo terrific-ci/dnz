@@ -6,18 +6,27 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.25.0**, released October 30, 2026. To install or upgrade to it:
+The latest release is **v1.26.0**, released October 30, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.25.0
-docker pull terrificci/dnz-proxy:1.25.0   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.25.0
+docker pull terrificci/dnz:1.26.0
+docker pull terrificci/dnz-proxy:1.26.0   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.26.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.25.0" description="October 30, 2026" tags={["Latest"]}>
+<Update label="v1.26.0" description="October 30, 2026" tags={["Latest"]}>
+
+- **Typo help ("Did you mean …?"):** a visitor who mistypes a name, such as `erm.example.com` for `emr.example.com`, gets a page with the right link instead of "This site can't be reached". It is a zone setting, off by default, under DNS → Zones → the zone → Typo help: *Similar names* answers only names one or two letters off a name behind a DNZ Proxy; *Every unknown name* (for internal zones) also shows "This name isn't registered" for anything else. Only names one label under the zone and only A/AAAA questions are affected, mail and other records answer as before, and names that exist answer exactly as fast as before. Works with *Forward missing names* (the upstream is asked first) and on DNZ secondaries. `dnz zone set --typo-help`, AI assistant tool `set_typo_help`, and the `dnz_dns_typo_answers_total` metric.
+- **Suggested sites on the "not registered" page:** pick names of the zone that a proxy serves, such as the portal and the e-mail web app, and the page lists them under "Sites you may be looking for". None by default, so the page never shows your internal names on its own. `dnz zone set --typo-suggest`.
+- **A record makes its route:** in Add record and Edit record, ticking a proxy that has no route for the name now shows the route's form (upstreams, HTTPS, redirect, group) right there, instead of sending you to Proxy → Routes first. Saving makes the route on each ticked proxy, then the record. `dnz record add|edit --proxy NAME --upstream URL` does the same.
+- **Search in Routes:** find routes by hostname (and by path, upstream or group); the search stays in the page's address, so it can be shared. `dnz proxy routes list --search`.
+
+</Update>
+
+<Update label="v1.25.0" description="October 30, 2026">
 
 - **One wildcard certificate per domain:** HTTPS routes of DNZ Proxy under the same domain (app.example.com, api.example.com) now share one `*.example.com` certificate instead of one each, when DNZ can prove it over DNS-01 (its own public zone, a Cloudflare connection or a DNS credential). Far fewer orders and renewals at Let's Encrypt, so a domain with many names stays clear of its rate limits, and a new route is served at once. The domain itself and deeper names (a.b.example.com) keep their own certificates; names keep theirs until the wildcard is issued, so nothing changes for visitors. On by default; switch it per resolver under Certificates → Resolvers, or with `dnz proxy certs wildcards on|off`.
 - **Uptime monitors watch your routes:** a monitor's URL must now be a hostname one of your proxies' routes serves; other sites and IP addresses are refused, and the Add monitor dialog lists the proxied names to pick. Monitors you already have keep working until you change their URL.
