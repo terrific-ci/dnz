@@ -6,18 +6,31 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.26.0**, released October 30, 2026. To install or upgrade to it:
+The latest release is **v1.27.0**, released October 30, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.26.0
-docker pull terrificci/dnz-proxy:1.26.0   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.26.0
+docker pull terrificci/dnz:1.27.0
+docker pull terrificci/dnz-proxy:1.27.0   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.27.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.26.0" description="October 30, 2026" tags={["Latest"]}>
+<Update label="v1.27.0" description="October 30, 2026" tags={["Latest"]}>
+
+- **Upstreams, one list for every proxy:** Proxy → Upstreams holds where routes send visits: servers with weights, how visits are shared, sticky sessions and the health check, for HTTP, TCP and UDP. A route on several proxies now uses the same upstream on each, so changing an upstream changes it everywhere it is used (the dialog says how many routes on which proxies first). An HTTP upstream can also split visits over other upstreams (canary), copy them to others (mirror) or fall back to another one while it is down. The list shows what uses each upstream, filters TCP, UDP, routes' own and unused ones, renames follow everywhere, deleting is refused while anything uses it, and **Merge…** points everything at the one kept. `dnz proxy upstreams list|show|add|edit|rm|merge`, AI assistant tools `proxy_upstreams` and `set_proxy_upstream`, the `dnz_proxy_upstreams` metric, and upstreams in the topology map.
+- **Your proxies' services become upstreams:** on upgrade, services that are identical in content (servers, weights, balancing, sticky sessions, health check) become one upstream, whatever their names and proxies; the same name with other servers stays apart, named after its proxy (for example `swarm-service-edge2`). Services nothing used are kept and shown as *Not used*; nothing is deleted and what visitors get doesn't change. Upstreams with the same servers but other settings are pointed out on Proxy → Upstreams with a merge button. The page says once what the upgrade did, and the audit log keeps it.
+- **The route dialog picks an upstream:** *Where it goes* is now **Servers of its own** (the route's own upstream, the same one on every proxy the route is on, removed with its last route) or **An upstream from the list**. Copying a route to another proxy takes its upstream along by name, and the proxy YAML's `upstreams:` and `upstream:` (older files with `services:` and `service:` still apply) say when a change reaches another proxy too.
+- **TCP and UDP routes:** a route can be TCP or UDP instead of HTTP, on Traefik and DNZ Proxy: it listens on an entry point and sends connections to a TCP or UDP upstream. TCP routes can end TLS at the proxy or pass it through, take only some hostnames (SNI), accept only some client addresses and have a priority. `dnz proxy routes add-tcp|add-udp`.
+- **No more Advanced tab:** everything it held has a place of its own. Routers are routes, with conditions, an extra rule, a priority and the entry points under *More → Matching* in the route dialog; services are on Proxy → Upstreams; middlewares, uploaded certificates, the default certificate, TLS options, transports, TCP middlewares, the route check ports and From Traefik are under each proxy's **Settings** (now for every kind of proxy). Firewalls and other middlewares can be made and edited from the route dialog. A route with settings the dialog can't hold is marked *Set up in YAML*, and **Edit as YAML…** downloads the proxy's YAML to change it; `dnz proxy advanced-check` and each proxy's Settings list such routes; the check also reads a copy of the database (`--database`) without changing it.
+- **Header:** the forward DNS chip now reads "DNS upstreams healthy", so it isn't confused with the proxies' upstreams. The proxy page's Analytics link is gone; Proxy → Analytics has the proxy filter.
+- **API:** `/api/proxy/upstreams` (list, add, edit, delete, merge, usage) and `/api/proxy/advanced-check`. Routes take `upstream_id` / `upstream` (`service_id` / `service_name` still work) and, for TCP/UDP, `protocol`. `/api/proxies/{id}/services` answers 410: use `/api/proxy/upstreams`.
+- **Going back:** DNZ v1.26 still finds every proxy as it is after the upgrade. A later release stops keeping that copy; its notes will say so.
+
+</Update>
+
+<Update label="v1.26.0" description="October 30, 2026">
 
 - **Typo help ("Did you mean …?"):** a visitor who mistypes a name, such as `erm.example.com` for `emr.example.com`, gets a page with the right link instead of "This site can't be reached". It is a zone setting, off by default, under DNS → Zones → the zone → Typo help: *Similar names* answers only names one or two letters off a name behind a DNZ Proxy; *Every unknown name* (for internal zones) also shows "This name isn't registered" for anything else. Only names one label under the zone and only A/AAAA questions are affected, mail and other records answer as before, and names that exist answer exactly as fast as before. Works with *Forward missing names* (the upstream is asked first) and on DNZ secondaries. `dnz zone set --typo-help`, AI assistant tool `set_typo_help`, and the `dnz_dns_typo_answers_total` metric.
 - **Suggested sites on the "not registered" page:** pick names of the zone that a proxy serves, such as the portal and the e-mail web app, and the page lists them under "Sites you may be looking for". None by default, so the page never shows your internal names on its own. `dnz zone set --typo-suggest`.
