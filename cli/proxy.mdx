@@ -80,6 +80,7 @@ The first argument is the proxy, by name or id. In the output, **DNS** shows a n
 ```bash
 dnz proxy routes list edge                        # hostnames, where they go, HTTPS / certificate, switches
 dnz proxy routes list edge --by-zone              # the same under the zone of each hostname (no zone last)
+dnz proxy routes list edge --search shop          # only routes whose hostname (or path, upstream, group) contains it
 dnz proxy routes list edge --by-group             # the same under each route's group (no group last)
 dnz proxy routes list edge --visitors             # plus VISITORS (24H): distinct visitors and a line per hour (DNZ Proxy)
 dnz proxy routes list edge --type redirect        # one type: on, off, redirect, https, http, cert-failing, dns-missing,

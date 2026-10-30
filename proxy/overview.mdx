@@ -254,6 +254,13 @@ A record without a router links straight to this dialog, with its name filled in
   </Tab>
 </Tabs>
 
+### Searching routes
+
+**Search hostnames…** at the top of the Routes page keeps the routes whose hostname contains what
+you type, also a path, an upstream address or a group's name, together with the other filters. The
+page's address keeps it (`?q=`), so a link opens with the same search. CLI:
+`dnz proxy routes list edge --search shop`.
+
 ### Route groups
 
 Put routes in groups such as *Web app* or *REST API* to keep a long list sorted. **By group** gives
