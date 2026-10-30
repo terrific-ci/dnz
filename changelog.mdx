@@ -19,70 +19,21 @@ The `latest` image tag and the install script without `--version` always get thi
 
 <Update label="v1.22.0" description="October 30, 2026" tags={["Latest"]}>
 
-- Routes: an "All proxies" choice when adding a route on several proxies
-- Routes: show the list a page at a time (25, 50 or 100 routes)
-- Proxy analytics: active users now, for all proxies or one
-- Menu: DNZ Proxy's sections (Analytics, Nodes, Certificates) only once a proxy is a DNZ Proxy
-- Replication status per part: zones, record details, settings, accounts
-- Routes: a route on several proxies uses the service of the same name on each; Use … on … moves an older copy onto it
-- Route groups: a group name per route, and the API to move, rename and remove groups
-- Routes: a By group view, a group filter, Move to group in a route's menu, and a Group field in the route dialog
-- Route groups in the CLI (dnz proxy routes group/groups, --group, list --by-group) and the MCP tool proxy_route_group
-- CLI: route groups across /proxies (approved only, no status field); routes edit no longer sends sign_in: \{emails: null\}
-- Route group dialog opens on its name field; lessons: serde_json IndexMut, dialog focus
-- Route groups: migration 0107 (0106 went to the replication sync report)
-- Routes: a type filter (on/off, redirects, HTTPS, HTTP only, certificate failing, DNS not proxied, Advanced, a switch) in ?type=
-- Route types: the same values on the page and in dnz proxy routes list --type; docs
-- DNZ Proxy: a web application firewall (dnzWaf) with managed rules, Low/Medium/High, block or log only
-- WAF: the route switch, rules API, CLI, MCP, Prometheus and the UI (dialog, routes list, analytics, request log)
-- Route dialog: switches grouped (Stop attacks, Who gets in, Speed and headers); WAF choices as option cards, not tabs
-- WAF: CLI tests match the boxed ProxyCmd on main
-- Proxy benchmarks: what the web application firewall costs
-- DNS filtering's block page visits get no line in the proxy's request log; Analytics names their row
-- DNZ Proxy: distinct visitors per host and hour (HyperLogLog sketches in analytics.db, Query::Visitors)
-- Visitors per hostname and zone: GET /api/proxy/visitors and /api/divisions/\{id\}/zones/visitors
-- CLI and MCP: visitors per route and zone (--visitors on dnz proxy routes list and dnz zone list; proxy_visitors tool)
-- Routes and Zones: a Visitors (24h) column (sparkline per hour and the total, the busiest hour on hover)
-- Visitors: clippy (is_multiple_of, map entry) and the spark test's expectation
-- Visitors: DNS filtering's block page visits aren't kept per host
-- Visitors and active users leave out addresses the firewall only blocked or challenged
-- DNZ Proxy analytics: WAF blocked/logged counters and top rules, clients and paths per node
-- Proxy analytics: the WAF's numbers, top rules, addresses and paths over all nodes; GET /api/proxy/waf/counts; dnz proxy analytics prints them
-- Proxy analytics: a Web application firewall section; the Routes list's WAF chip shows the last 24 hours
-- DNZ Proxy: a solved challenge's answer isn't counted as challenged
-- Visitors: as_chunks for the sparse sketch (clippy 1.99)
-- Route history: every change to a proxy route as a version, with one-click restore
-- Proxy alerts: attack spikes, origins and nodes down, certificates, through the notification providers
-- Debug builds: line tables for DNZ's code, no debug info for dependencies (faster builds, less memory and disk)
-- Proxy configuration as code: export a proxy as YAML, plan a file against it, apply it
-- Uptime: monitors, incidents and a public status page
-- Dev guide: next steps (audit fixes, splitting the dnz crate, v1.22.0) and today's lessons
-- Next steps: faster releases; the crate split may speed up release builds too (to measure)
-- Next steps: where the 48-minute release goes, step by step, and what to cut
-- Next steps: a ~10-15 minute release target and what it takes
-- Design: splitting the dnz crate (target crates, the dependencies to turn around, stages)
-- Next steps: the route rules benchmark is redone after the crate split
-- DNZ Proxy: route rules (dnzRules): redirect, rewrite and header changes when conditions hold, sharing the firewall's conditions
-- Route rules: the rules switch, translation for Traefik and Caddy (refused per rule where they can't), the check API, dnz proxy routes rules, MCP set_route_rules
-- Route dialog: Rules under Redirects and rewrites (plain-words lines, reorder, per-kind warnings); Routes chip Rules · N; Advanced editor
-- Proxy benchmarks: what route rules cost (none without rules; 5 rules that don't hold +3 µs, 4 that act +6 µs)
-- Route rules: in route history, clippy (boxed CLI args), the Caddy test counts the 404 route, newRouteRule (no clash with the firewall's newRule)
-- Next steps: the Mintlify docs commits waiting on the laptop
-- Next steps: the Mintlify docs are pushed
-- Next steps: h2 comes in through DNZ's own web server, which also serves DoH; don't turn HTTP/2 off
-- Dependency audit: serde-saphyr instead of serde_yaml, a CI audit job, audit.toml for what has no fix
-- Crate split, stage 1: dnz-util and dnz-externaldns
-- Crate split, stage 2: dnz-core
-- Logs: the default filters name every DNZ crate
-- Crate split, stage 3: dnz-server below the API
-- Crate split, stage 4: dnz-api and dnz-cli side by side, a thin dnz
-- UI CSP: hash inline scripts as browsers do, with LF line ends
-- Crate split: release build times per stage, and what is left in next steps
-- DNZ: mimalloc as the allocator, giving empty pages back at once
-- Uptime test: record checks in the time zone the API shows days in
-- Encrypted DNS: DNZ issues and renews its own certificate with its ACME engine
-- DNS: a busy UDP socket hands its worker over after 512 queries, not 128; query log maps on foldhash
-- Encrypted DNS test: the scheduler may try the certificate before the view is read
+- **Web application firewall:** DNZ Proxy routes can turn on ready-made rules against common attacks (SQL injection, cross-site scripting, path traversal, Log4Shell, attack tools and more), at Low, Medium or High sensitivity, blocking or only logging, with exceptions for paths, rules and addresses. Matches show in Proxy → Analytics (rules, addresses, paths attacked) and as a count on the route in the Routes list.
+- **Route rules:** redirect, rewrite and change headers when conditions hold (path, query, header, method, country, address, hostname), right in the route dialog, with no Advanced editing. Traefik and Caddy routes get them too wherever those proxies can express them.
+- **Uptime and a public status page:** monitors for any URL and for DNZ Proxy services, incident history with your own updates, 30 and 90-day uptime bars, and a public page to share with your users, with your logo.
+- **Proxy alerts:** notifications through your notification providers when attacks spike, an origin or a DNZ Proxy node goes down (and when it's back), or a certificate fails to renew.
+- **Route history:** every change to a route is kept, with who made it and what changed; restore any earlier version in one click, including a deleted route.
+- **Proxy configuration as code:** export a proxy's routes as YAML, see what a file would change before applying it, and apply it (`dnz proxy export`, `plan`, `apply`), for keeping routes in Git.
+- **Encrypted DNS certificate from DNZ:** DNZ can get and renew the certificate for DNS over TLS and HTTPS itself (Settings → General → Encrypted DNS, or `dnz settings certificate`).
+- **Visitors:** a Visitors (24h) column with an hourly chart on the Routes and Zones pages, and Active users now in Proxy → Analytics, for all proxies or one.
+- **Routes:** groups (a By group view and Move to group), a type filter (redirects, HTTP only, failing certificates, WAF and more), pages of 25, 50 or 100 routes, an "All proxies" choice when adding a route, and the route dialog's switches grouped by purpose.
+- **Routes on several proxies:** a route that uses a service from the list now uses the service of the same name on each proxy instead of a second copy of the same servers; "Use … on …" in the route's menu fixes routes saved before.
+- **Replication:** each replica shows how far each part is in sync (zones, record details, settings, accounts), with a percentage, when you open it.
+- **Proxy analytics:** visits to DNS filtering's block page no longer show up as requests in the proxy's request log; they are counted as one row, "Blocked by DNS filtering". A visitor who passed the "under attack" check is no longer counted as challenged.
+- **Menu:** DNZ Proxy's own sections (Analytics, Nodes, Certificates) appear once one of your proxies is a DNZ Proxy.
+- **Faster DNS:** up to about 10% more queries a second, with less CPU per query and lower latency.
+- **CLI, MCP and API:** everything above is also in `dnz` (for example `dnz proxy routes rules`, `group`, `history`, `dnz uptime`, `dnz proxy waf rules`) and in the MCP tools.
 
 </Update>
 
@@ -234,7 +185,6 @@ The `latest` image tag and the install script without `--version` always get thi
 
 <Update label="v1.14.3" description="October 26, 2026">
 
-- 2FA test: name TOTP steps instead of "now", so a step boundary can't flip the replay check
 - Forward missing names: a local name's missing type is NODATA, not the upstream's NXDOMAIN
 - Secondaries answer views and forward missing names as their primary does
 - Secondaries run filter schedules in the primary's time zone
@@ -327,7 +277,6 @@ The `latest` image tag and the install script without `--version` always get thi
 
 <Update label="v1.8.0" description="October 25, 2026">
 
-- Proxy benchmarks: mimalloc is in 1.7.3
 - Join a primary from the welcome page
 - Memory: drop the database file's page cache when the log sits unread; Server tab shows the container's memory
 - Redis / Valkey backend: shared data through a change stream
@@ -341,7 +290,6 @@ The `latest` image tag and the install script without `--version` always get thi
 
 <Update label="v1.7.3" description="October 24, 2026">
 
-- Cache test: count full sweeps instead of timing inserts
 - dnz-proxy: mimalloc, without transparent huge pages
 
 </Update>
@@ -350,16 +298,13 @@ The `latest` image tag and the install script without `--version` always get thi
 
 - Proxy settings: a dnz-proxy proxy's state comes from its nodes
 - Backups: a target tile opens the dialog on its kind
-- Proxy benchmarks: 1.7.1, and latency at an evenly spaced rate
 - dnz-proxy: test the X-Forwarded-* headers from visitors and trusted forwarders
-- Proxy benchmarks: what was tried and not kept
 
 </Update>
 
 <Update label="v1.7.1" description="October 24, 2026">
 
 - dnz-proxy: one write for an answer's head and small body; log lines only when kept
-- Proxy benchmarks: after 1.7.0, one write per answer and fewer allocations
 
 </Update>
 
@@ -512,7 +457,6 @@ The `latest` image tag and the install script without `--version` always get thi
 - dnz-proxy: caching, firewall rules and the "under attack" challenge
 - dnz-proxy: TCP and UDP (L4) routers and services
 - dnz-proxy: DNZ runs a node on its own server; packaging
-- dnz-proxy: clippy clean-up; compress honors its encodings; transport and mirroring limits reported
 - Proxy: dnz-proxy nodes, entry points, cache and settings
 - Middlewares: dnz-proxy's cache, firewall and challenge forms
 - Proxy analytics: traffic, latency, cache and the request log
