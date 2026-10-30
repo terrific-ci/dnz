@@ -121,7 +121,8 @@ Groups (*Web app*, *REST API*, …) only sort the Routes page; no proxy's config
 ```bash
 dnz proxy routes group app.example.com "Web app"  # on every proxy serving it (--proxy: only one)
 dnz proxy routes group app.example.com --none     # out of its group
-dnz proxy routes groups                           # the groups in use, with their routes
+dnz proxy routes groups                           # every group (empty ones too), with their routes
+dnz proxy routes groups add "REST API"            # a group with no routes yet
 dnz proxy routes groups rename "Web app" Apps     # on every proxy; another group's name merges the two
 dnz proxy routes groups rm Apps                   # its routes stay, in no group
 ```

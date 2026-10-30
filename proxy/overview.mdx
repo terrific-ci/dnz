@@ -255,19 +255,22 @@ each group a list of its own (routes in none last, under *No group*), and a grou
 proxy filter shows one group; **Add route** while it shows one puts the new route in it. In **All**
 and **By zone** a route's group shows under its hostname.
 
-- **New group** next to the filters: a name and the routes to put in it, picked from a list.
+- **New group** next to the filters: a name and, if you like, the routes to put in it. A group may
+  be empty; it stays until you remove it, also when its last route leaves.
 - In **By group**, drag a route onto another group to move it there; while dragging, **No group**
   and **New group…** show up at the top as drop targets too.
 - **Move to group** in a row's menu (⋯ or right-click): a group in use, **No group**, or
   **New group…**. A route that several proxies serve moves on all of them.
-- The route dialog has a **Group** field, suggesting the groups in use.
-- A group's ⋯ menu renames it on every proxy, or removes it (its routes stay, in no group).
+- The route dialog has a **Group** field with every group as a chip to pick, or a new name to type.
+- A group's ⋯ menu: **Add route…**, **Add existing routes…**, **Rename…** (on every proxy) or
+  **Remove group** (its routes stay, in no group).
 
 Groups only sort the Routes page: no proxy's configuration changes, so nothing reloads on the proxy.
 Like routes, they stay on the server they were made on; a DNZ secondary doesn't copy proxies.
 
 ```bash
 dnz proxy routes group app.example.com "Web app"   # on every proxy serving it; --none takes it out
+dnz proxy routes groups add "REST API"             # a group with no routes yet
 dnz proxy routes groups rename "Web app" Apps
 ```
 
