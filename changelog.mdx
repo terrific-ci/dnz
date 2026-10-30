@@ -6,18 +6,29 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.22.0**, released October 30, 2026. To install or upgrade to it:
+The latest release is **v1.23.0**, released October 30, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.22.0
-docker pull terrificci/dnz-proxy:1.22.0   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.22.0
+docker pull terrificci/dnz:1.23.0
+docker pull terrificci/dnz-proxy:1.23.0   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.23.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.22.0" description="October 30, 2026" tags={["Latest"]}>
+<Update label="v1.23.0" description="October 30, 2026" tags={["Latest"]}>
+
+- **Uptime for a group of routes:** Add monitor → A group of routes watches a whole group from Proxy → Routes. Every route in it gets its own monitor, routes that join the group are watched within a minute and ones that leave aren't. Changing the watch changes all of its monitors (`dnz uptime watch`).
+- **Helpdesk role:** a new permission, Post incidents, and a built-in Helpdesk role holding only it: open incidents on the public status page, post their updates and resolve them, without managing monitors or anything else.
+- **Public status page on its own hostname, in one step:** pick a proxy and DNZ's address, and saving makes the route and the DNS record right away; turning the page off removes them again. The card shows the name's DNS records and routes, fills in DNZ's address from Settings → General → Device address, and warns about an address that would send visitors round in a loop (`dnz uptime page set --proxy … --dnz-address …`).
+- **Public status page look:** it now looks like DNZ's other visitor pages (maintenance, moved and the like), in light and dark.
+- **Route groups:** a New group button next to the filters (a name and the routes to put in it), and in By group, drag a route onto another group to move it, or onto No group or New group… while dragging.
+- **Menus:** items that open a submenu (Move to group, a route's proxies) now line up with the others.
+
+</Update>
+
+<Update label="v1.22.0" description="October 30, 2026">
 
 - **Web application firewall:** DNZ Proxy routes can turn on ready-made rules against common attacks (SQL injection, cross-site scripting, path traversal, Log4Shell, attack tools and more), at Low, Medium or High sensitivity, blocking or only logging, with exceptions for paths, rules and addresses. Matches show in Proxy → Analytics (rules, addresses, paths attacked) and as a count on the route in the Routes list.
 - **Route rules:** redirect, rewrite and change headers when conditions hold (path, query, header, method, country, address, hostname), right in the route dialog, with no Advanced editing. Traefik and Caddy routes get them too wherever those proxies can express them.
