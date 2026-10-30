@@ -4,7 +4,7 @@ description: "Serve DNS over TLS, HTTPS, QUIC and HTTP/3 to your devices, so the
 ---
 
 Plain DNS on port 53 is sent in clear text: anyone on the network can read it or change it. With a
-TLS certificate, DNZ also serves **encrypted DNS** to your devices, plus the dashboard over HTTPS.
+TLS certificate, which DNZ can issue and renew itself, DNZ also serves **encrypted DNS** to your devices, plus the dashboard over HTTPS.
 
 | Protocol | Address | Used by |
 | --- | --- | --- |
@@ -24,90 +24,121 @@ cache, conditional forwarding and the query log.
 
 ## Turn it on
 
+Encrypted DNS needs a certificate for the hostname devices use (for example `dns.example.com`): a
+public name, from a CA that devices trust, such as Let's Encrypt. DNZ can get it two ways:
+
+<CardGroup cols={2}>
+  <Card title="DNZ issues it" icon="certificate" href="#dnz-issues-the-certificate">
+    DNZ's own ACME engine gets the certificate over DNS-01 and renews it without a restart. No lego
+    or certbot.
+  </Card>
+  <Card title="Certificate files" icon="file-lines" href="#certificate-files">
+    Any tool writes PEM files; DNZ reads `DNZ_TLS_CERT` and `DNZ_TLS_KEY` and reloads them when they
+    change.
+  </Card>
+</CardGroup>
+
+The files win when both are set. Ports 853 and 443 are below 1024: the
+[systemd unit](/deploy/systemd) already has `CAP_NET_BIND_SERVICE`. For Docker, publish the ports
+(TCP and UDP):
+
+```yaml docker-compose.yml
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "853:853/tcp"
+      - "853:853/udp"   # DNS over QUIC
+      - "443:443/tcp"
+      - "443:443/udp"   # DoH over HTTP/3
+```
+
+The addresses can be moved (`#` lines are the defaults):
+
+```ini /etc/dnz/dnz.env
+#DNZ_DOT_ADDR=0.0.0.0:853
+#DNZ_HTTPS_ADDR=0.0.0.0:443
+#DNZ_DOQ_ADDR=off        # DNS over QUIC (UDP), default: DNZ_DOT_ADDR's
+#DNZ_H3_ADDR=off         # DoH over HTTP/3 (UDP), default: DNZ_HTTPS_ADDR's
+```
+
+With a certificate, the log shows `dns-over-tls listening on …`, `dns-over-quic listening on …`,
+`dns-over-http/3 listening on …` and `https listening on …` at start, and **Settings → General →
+Encrypted DNS** shows which protocols are on.
+
+## DNZ issues the certificate
+
 <Steps>
-  <Step title="Get a certificate">
-    The hostname (for example `dns.example.com`) must be a public name, and the certificate must
-    come from a CA that devices trust, such as Let's Encrypt. See
-    [Get a certificate](#get-a-certificate).
-  </Step>
-  <Step title="Point DNZ at the certificate">
+  <Step title="Have an ACME account">
+    If DNZ already gets certificates for [DNZ Proxy](/proxy/certificates), there is one. Otherwise
+    set it up once under **Proxy → Certificates**, or:
 
-    ```ini /etc/dnz/dnz.env
-    DNZ_TLS_CERT=/etc/dnz/tls/dns.example.com.crt    # PEM, full chain
-    DNZ_TLS_KEY=/etc/dnz/tls/dns.example.com.key     # PEM: PKCS#8, RSA or EC (named curve)
-    #DNZ_DOT_ADDR=0.0.0.0:853
-    #DNZ_HTTPS_ADDR=0.0.0.0:443
-    #DNZ_DOQ_ADDR=off        # DNS over QUIC (UDP), default: DNZ_DOT_ADDR's
-    #DNZ_H3_ADDR=off         # DoH over HTTP/3 (UDP), default: DNZ_HTTPS_ADDR's
+    ```bash
+    dnz proxy certs setup --agree --email you@example.com
     ```
 
-    The same settings live in the `[tls]` section of the config file (`cert`, `key`, `dot_addr`,
-    `https_addr`, `doq_addr`, `h3_addr`). See [Configuration](/deploy/configuration).
-
+    Encrypted DNS and DNZ Proxy share the accounts, DNS credentials and resolvers.
   </Step>
-  <Step title="Open the ports">
-    Ports 853 and 443 are below 1024. The [systemd unit](/deploy/systemd) already has
-    `CAP_NET_BIND_SERVICE`. For Docker, publish the ports (TCP and UDP):
+  <Step title="Name the hostname">
+    **Settings → General → Encrypted DNS → Certificate from DNZ**: enter the hostname (the main one
+    first; more names and `*.` wildcards are allowed), pick a resolver, then **Get certificate**. Or:
 
-    ```yaml docker-compose.yml
-        ports:
-          - "53:53/udp"
-          - "53:53/tcp"
-          - "853:853/tcp"
-          - "853:853/udp"   # DNS over QUIC
-          - "443:443/tcp"
-          - "443:443/udp"   # DoH over HTTP/3
-        volumes:
-          - dnz-data:/data
-          - ./tls:/tls:ro
-        environment:
-          DNZ_TLS_CERT: /tls/fullchain.pem
-          DNZ_TLS_KEY: /tls/privkey.pem
+    ```bash
+    dnz settings certificate dns.example.com                 # resolver "auto"
+    dnz settings certificate dns.example.com --resolver dns  # a DNS-01 resolver of your own
     ```
 
+    Each name must be one DNZ can prove over DNS, checked when you save: in a primary zone of DNZ
+    that the internet asks DNZ for, in a zone of a connected [Cloudflare](/integrations/cloudflare)
+    account, or under a DNS credential's rule (RFC 2136, a webhook, by hand). A resolver on HTTP-01
+    is refused.
   </Step>
-  <Step title="Restart DNZ">
-    The log shows `dns-over-tls listening on …`, `dns-over-quic listening on …`,
-    `dns-over-http/3 listening on …` and `https listening on …`. **Settings → General → Encrypted
-    DNS** shows which protocols are on.
+  <Step title="Restart once, the first time">
+    If DNZ ran without encrypted DNS before, restart it once the certificate is issued: the DoT,
+    DoQ and HTTPS ports open at start. The settings card and `dnz settings certificate` say when
+    that is needed. Renewals and changed names need no restart: DNZ swaps the certificate in place.
   </Step>
 </Steps>
 
-### Renewing the certificate
+DNZ renews it when a third of its lifetime is left. `dnz settings certificate` shows its state,
+expiry and last error; `--renew` renews it now and `--off` stops issuing it (the one in use is
+served until the next start). The card's **Log** lists every ACME step. Failures retry with a
+growing delay and send the same alerts as DNZ Proxy's certificates.
 
-DNZ checks the certificate files every minute and reads them again when they change, so renewing
-the certificate **doesn't need a restart**. If the new files are broken, the old certificate stays
-in use and the error appears under **Settings → General → Encrypted DNS**.
+<Note>
+  Only superadmins see or change it. The certificate is a server setting: it stays out of
+  **Proxy → Certificates**, is never sent to DNZ Proxy nodes, and the `proxy.manage` permission
+  can't renew or delete it.
+</Note>
 
-### Ports for DoQ and DoH3
+- **Cluster** (servers sharing one database): the setting and the certificate are shared; the
+  leader issues and renews it, and every server serves it.
+- **DNZ secondary** following a primary over [replication](/dns/replication): it has a database of
+  its own and refuses the setting. Give it certificate files.
+- **Moving from lego or certbot**: keep the old files in place, set it up with the same names, wait
+  until the card shows **Valid**, then remove `DNZ_TLS_CERT` / `DNZ_TLS_KEY` and the renewal timer or
+  cron job, and restart once.
 
-DoQ and DoH3 run over UDP on the same port numbers as DoT and HTTPS, so one certificate and one
-pair of port numbers cover everything. Set `DNZ_DOQ_ADDR` or `DNZ_H3_ADDR` to another address to
-move them, or to `off` to turn them off. If their UDP port is taken (by another HTTP/3 server, say),
-DNZ logs a warning and runs without them.
+## Certificate files
 
-Over HTTP/3, DNZ answers only `/dns-query`. The UI stays on HTTPS over TCP, and DNZ doesn't send
-`Alt-Svc`, so browsers keep using HTTP/2. Clients reach DoH3 when they are configured for it, or by
-finding it in an `HTTPS`/`SVCB` record, for example:
-
-```text
-_dns.example.com SVCB 1 dns.example.com alpn=h3,h2,doq
+```ini /etc/dnz/dnz.env
+DNZ_TLS_CERT=/etc/dnz/tls/dns.example.com.crt    # PEM, full chain
+DNZ_TLS_KEY=/etc/dnz/tls/dns.example.com.key     # PEM: PKCS#8, RSA or EC (named curve)
 ```
 
-### DoH behind your own reverse proxy
+The same settings live in the `[tls]` section of the config file (`cert`, `key`, `dot_addr`,
+`https_addr`, `doq_addr`, `h3_addr`). See [Configuration](/deploy/configuration). In Docker, mount
+the folder (`./tls:/tls:ro`) and point the variables at `/tls/fullchain.pem` and
+`/tls/privkey.pem`. Restart DNZ.
 
-`/dns-query` is also served on the plain HTTP port (`DNZ_HTTP_ADDR`), so DoH can sit behind your own
-HTTPS reverse proxy such as Caddy or nginx. Set `DNZ_TRUSTED_PROXIES` to the proxy's address so the
-real client IP is still used for views, blocklists and logs. See [HTTPS](/deploy/https).
-
-## Get a certificate
+DNZ checks the files every minute and reads them again when they change, so renewing the
+certificate **doesn't need a restart**. If the new files are broken, the old certificate stays in
+use and the error appears under **Settings → General → Encrypted DNS**.
 
 <Tabs>
   <Tab title="DNZ serves the zone">
 
-    When DNZ is the public nameserver for the hostname's zone, use DNZ's own ACME endpoint with
-    [lego](https://go-acme.github.io/lego/). Create an [API token](/api/overview) with
-    `records.write` for that zone, then:
+    When DNZ is the public nameserver for the hostname's zone, lego can use DNZ's own ACME endpoint.
+    Create an [API token](/api/overview) with `records.write` for that zone, then:
 
     ```bash
     HTTPREQ_ENDPOINT=http://127.0.0.1:8080/api/acme/httpreq \
@@ -142,6 +173,29 @@ real client IP is still used for views, blocklists and logs. See [HTTPS](/deploy
 
   This can go in lego's `--renew-hook`.
 </Note>
+
+## More about the ports
+
+### Ports for DoQ and DoH3
+
+DoQ and DoH3 run over UDP on the same port numbers as DoT and HTTPS, so one certificate and one
+pair of port numbers cover everything. Set `DNZ_DOQ_ADDR` or `DNZ_H3_ADDR` to another address to
+move them, or to `off` to turn them off. If their UDP port is taken (by another HTTP/3 server, say),
+DNZ logs a warning and runs without them.
+
+Over HTTP/3, DNZ answers only `/dns-query`. The UI stays on HTTPS over TCP, and DNZ doesn't send
+`Alt-Svc`, so browsers keep using HTTP/2. Clients reach DoH3 when they are configured for it, or by
+finding it in an `HTTPS`/`SVCB` record, for example:
+
+```text
+_dns.example.com SVCB 1 dns.example.com alpn=h3,h2,doq
+```
+
+### DoH behind your own reverse proxy
+
+`/dns-query` is also served on the plain HTTP port (`DNZ_HTTP_ADDR`), so DoH can sit behind your own
+HTTPS reverse proxy such as Caddy or nginx. Set `DNZ_TRUSTED_PROXIES` to the proxy's address so the
+real client IP is still used for views, blocklists and logs. See [HTTPS](/deploy/https).
 
 ## Connect devices
 

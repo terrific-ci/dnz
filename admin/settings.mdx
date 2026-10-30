@@ -189,7 +189,14 @@ into Prometheus. See [Prometheus and Grafana](/dashboard/prometheus).
 
 Shows whether DNS over TLS, HTTPS, QUIC and HTTP/3 are on, the hostname and the certificate's
 names and expiry, and any error from reloading the certificate. DoT, DoH, DoQ and DoH3 are turned
-on with a certificate in the configuration. See [Encrypted DNS](/dns/encrypted-dns).
+on with a certificate: one DNZ issues and renews itself (**Certificate from DNZ** on this card), or
+files named in the configuration. See [Encrypted DNS](/dns/encrypted-dns).
+
+```bash
+dnz settings certificate                    # DNZ's own certificate: names, state, expiry
+dnz settings certificate dns.example.com    # DNZ issues and renews it over ACME (DNS-01)
+dnz settings certificate --renew            # renew it now (--off: stop issuing it)
+```
 
 ## Factory reset
 

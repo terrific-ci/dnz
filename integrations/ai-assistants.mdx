@@ -148,6 +148,7 @@ with OAuth isn't possible.
 | `proxy_waf_rules` | The [web application firewall](/proxy/waf)'s rules (id, category, level, what each catches), optionally only those a sensitivity runs |
 | `proxy_waf_hits` | Requests the web application firewall matched since each node started, per proxy, middleware, rule and action (`block` or `log`) |
 | `proxy_nodes` | DNZ Proxy nodes and their servers: state, version, uptime, upstreams, and the node's CPU and memory, the machine's or container's memory, load average and free disk |
+| `encrypted_dns` | Encrypted DNS: whether DoT, DoH, DoQ and DoH3 are on, the addresses devices use, the certificate in use and, for superadmins, the certificate DNZ issues itself |
 | `audit_log` | Who changed what |
 | `pending_changes` | Change requests waiting for approval |
 | `topology` | How divisions, zones, views, upstreams, proxies and replication fit together |
