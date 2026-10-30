@@ -91,7 +91,7 @@ dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000=3 -u http://1
 dnz proxy routes add edge api.example.com -u http://10.0.2.11:8080 --rate-limit 100/300 --firewall office
 dnz proxy routes add edge intranet.example.com -u http://10.0.9.4 --http        # HTTP only
 dnz proxy routes add edge shop.example.com --service shop                       # to an upstream of Proxy → Upstreams
-dnz proxy routes add-tcp edge -e pg --host db.example.com --passthrough -s 10.0.0.7:5432   # TCP by hostname (SNI)
+dnz proxy routes add-tcp edge -e pg --host db.example.com --passthrough -t 10.0.0.7:5432   # TCP by hostname (SNI)
 dnz proxy routes add-udp edge -e dns --service resolvers                        # UDP to a shared upstream
 dnz proxy routes add edge old.example.com --redirect-to https://new.example.com --keep-path   # a redirect, no upstream
 dnz proxy routes edit edge app.example.com --no-cache --user ops:other-pass --remove-user admin
@@ -290,8 +290,8 @@ upstream, on every proxy. See [Upstreams](/proxy/upstreams).
 ```bash
 dnz proxy upstreams list                          # servers, balancing, health check, what uses each
 dnz proxy upstreams show swarm-service            # with every route (and proxy) using it
-dnz proxy upstreams add swarm-service -s http://10.0.133.31:80 -s http://10.0.133.32:80=2 --sticky --health-check /healthz
-dnz proxy upstreams add pg --tcp -s 10.0.0.7:5432
+dnz proxy upstreams add swarm-service -t http://10.0.133.31:80 -t http://10.0.133.32:80=2 --sticky --health-check /healthz
+dnz proxy upstreams add pg --tcp -t 10.0.0.7:5432
 dnz proxy upstreams add canary --split app=9 --split app-next=1
 dnz proxy upstreams edit swarm-service --strategy p2c
 dnz proxy upstreams edit app-example-com --shared # a route's own upstream becomes a shared one
@@ -299,7 +299,7 @@ dnz proxy upstreams merge swarm-service app-example-com
 dnz proxy upstreams rm yrdy                       # refused while anything uses it
 ```
 
-`-s` replaces the servers on `edit`; leave it out to keep them.
+`-t` replaces the servers on `edit`; leave it out to keep them.
 
 ### Route defaults (DNZ Proxy)
 

@@ -104,7 +104,7 @@ each. Upgrading moves them into upstreams once:
 
 ```bash
 dnz proxy upstreams list
-dnz proxy upstreams add swarm-service -s http://10.0.133.31:80 -s http://10.0.133.32:80 --sticky
+dnz proxy upstreams add swarm-service -t http://10.0.133.31:80 -t http://10.0.133.32:80 --sticky
 dnz proxy upstreams edit swarm-service --health-check /healthz
 dnz proxy upstreams merge swarm-service app-example-com
 ```
