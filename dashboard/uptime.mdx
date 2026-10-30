@@ -107,7 +107,9 @@ reach it**, pick one:
   hostname (visitors would go round in a loop), and not `localhost` unless the proxy runs on the
   same machine. **Save** with the page on and DNZ makes the route (HTTPS, with the redirect from
   http) and the DNS record right away. Turning the page off deletes them again; a record that was
-  there before only leaves the proxy. The card shows the name's DNS records and routes as they are.
+  there before only leaves the proxy. A wildcard route of the proxy (`*.example.com`) that sends
+  other names elsewhere doesn't get in the way: the page's own route goes before it. The card shows
+  the name's DNS records and routes as they are.
 - **I'll point it at DNZ myself:** a DNS record pointing the name straight at DNZ (when DNZ's HTTP
   port is 80), or a route on a proxy DNZ doesn't manage, which must pass the visitor's hostname on.
 

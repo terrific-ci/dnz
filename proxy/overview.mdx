@@ -217,7 +217,13 @@ As you type the hostname, the field offers:
 - names that already have A, AAAA or CNAME records, tagged with their types;
 - under each of DNZ's zones, the name you are typing, tagged **new**: a new DNS record is added for
   it;
-- a name outside every zone is tagged **no zone**, and one the proxy already routes **has router**.
+- a name outside every zone is tagged **no zone**, and one a route of the proxy already names
+  **has router**.
+
+A hostname has one route, but a name a wildcard route covers may get a route of its own: add
+`uptime.example.com` while `*.example.com` (or `example.com, *.example.com`) goes elsewhere, and
+`uptime.example.com` takes its own route on every proxy kind (Traefik, DNZ Proxy and Caddy); the
+wildcard keeps every other name. No priority to set.
 
 The routers go on the proxy's entry points on port 80 and 443. Under DNZ Proxy these are its own
 entry points. Under Traefik they are the ones its API lists (when the proxy has **Traefik API**
