@@ -75,6 +75,17 @@ with NXDOMAIN or NODATA. Turn it off for a zone that is the whole truth for its 
   forward.
 </Note>
 
+### Typo help
+
+```bash
+dnz zone set example.com --typo-help similar              # "Did you mean …?" for mistyped names
+dnz zone set example.com --typo-help all --typo-proxy edge
+dnz zone set example.com --typo-suggest portal,wiki       # sites the "not registered" page lists; "" = none
+dnz zone set example.com --typo-help off
+```
+
+See [Typo help](/dns/typo-help).
+
 ### DNSSEC and secondary zones
 
 ```bash

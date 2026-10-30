@@ -92,6 +92,7 @@
               "dns/import-export",
               "dns/history",
               "dns/forwarding",
+              "dns/typo-help",
               "dns/recursive",
               "dns/resolver-options",
               "dns/query-logs",

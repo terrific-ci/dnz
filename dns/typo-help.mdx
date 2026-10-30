@@ -1,0 +1,134 @@
+---
+title: "Typo help"
+sidebarTitle: "Typo help"
+description: "Send a visitor who mistypes a name, such as erm.example.com for emr.example.com, to a page with the right link instead of \"This site can't be reached\"."
+---
+
+A visitor types `erm.example.com` while the site is `emr.example.com`. Without typo help, DNS
+answers that the name doesn't exist and the browser shows *This site can't be reached*. With typo
+help on, DNZ answers that name with the address of the DNZ Proxy serving `emr.example.com`, and
+DNZ Proxy shows:
+
+> You typed **erm**.example.com. **Did you mean emr.example.com?** [Go to emr.example.com →]
+
+The link keeps what was typed after the name: `http://erm.example.com:8080/visits?id=7` leads to
+`http://emr.example.com:8080/visits?id=7`.
+
+It is a zone setting, off by default.
+
+## Modes
+
+| Mode | A name the zone doesn't have | The page |
+|---|---|---|
+| **Off** | NXDOMAIN, as without typo help | none |
+| **Similar names** (recommended) | Only a name one or two letters off a name behind a DNZ Proxy gets an answer; any other stays NXDOMAIN | *Did you mean …?* with every close name (at most five) |
+| **Every unknown name** | Every name one label under the zone gets an answer | *Did you mean …?* when a name is close, else *This name isn't registered* |
+
+<Warning>
+  *Every unknown name* makes every random name resolve. Scanners, bots and software that checks
+  whether a name exists see it as existing, and mail to a misspelt name isn't refused at once. Use
+  it for internal zones.
+</Warning>
+
+### What counts as close
+
+A letter missing, one too many, a wrong one, or two neighbours swapped. One mistake for names under
+8 letters, two from 8 letters on (`dahsbord` finds `dashboard`).
+
+Only names **one label under the zone** with A, AAAA or CNAME records **proxied through a DNZ
+Proxy** are suggested. Names served by Traefik or Caddy aren't: only DNZ Proxy shows the page.
+
+The page never lists the zone's names by itself: only the ones close to what was typed and, on
+the *not registered* page, the [suggested sites](#suggested-sites) you pick.
+
+## Turn it on
+
+<Steps>
+  <Step title="Open the zone">
+    Go to **DNS → Zones**, open the zone and find the **Typo help** card.
+  </Step>
+  <Step title="Pick a mode">
+    Choose **Similar names** or **Every unknown name**. For the latter, pick the DNZ Proxy that
+    shows *not registered* (by default, the one serving most of the zone's names).
+  </Step>
+  <Step title="Pick suggested sites (optional)">
+    With **Every unknown name**, click the sites the *not registered* page should list.
+  </Step>
+</Steps>
+
+The card warns when proxying is off, when no name of the zone goes through a DNZ Proxy, and when
+the zone has a wildcard record. Changes to the mode are kept in the zone's history and may wait for
+approval like the zone's other settings.
+
+## Suggested sites
+
+What the *not registered* page lists under **Sites you may be looking for**: names of the zone you
+pick, for example the portal and the e-mail web app.
+
+**None by default**, so the page lists nothing. Listing the zone's names by itself would show
+every visitor, and every scanner, the internal names and APIs behind it. Pick only what any visitor
+may know.
+
+- Only names of the zone that a proxy serves can be picked, the zone itself included; at most 10.
+- The links keep the scheme and port of the visit.
+- Only the *not registered* page lists them. *Did you mean …?* shows only the close names.
+- A picked name that stops going through a proxy stays listed until you take it off. Once taken
+  off, it can come back only with a proxy again.
+
+## What changes and what doesn't
+
+- Only names **one label under the zone** (`x.example.com`, not `x.y.example.com`).
+- Only **A and AAAA** questions are answered. MX, TXT and the rest stay NXDOMAIN, so mail and
+  verification records behave as before.
+- Not for **DNSSEC-signed** zones: the setting is refused there, and turning DNSSEC on turns it off.
+- A zone with a **wildcard record** (`*`) never has a missing name one label down, so typo help
+  never comes into play.
+- With **proxying off** (Settings → Proxy) nothing changes.
+- Answers have a TTL of at most **60 seconds**, since the right name may be added any minute.
+- Every real route of the proxy and its HTTPS redirect still win. The page answers 404 with
+  `noindex`, as HTML for browsers and JSON or plain text for API clients.
+- **Proxy → Analytics** shows which mistakes happen: the request log notes `typo → emr.example.com`
+  or `typo: not registered`.
+
+### With Forward missing names
+
+A zone that [forwards names it doesn't have](/dns/forwarding) still asks the upstreams first. Only
+when the upstream answers NXDOMAIN does typo help answer. A name that exists upstream always wins,
+and no extra upstream query is made.
+
+### HTTPS
+
+A mistake typed with `https://` needs a certificate for the mistyped name. DNZ Proxy uses the
+zone's wildcard certificate (`*.example.com`), which DNZ gets over DNS-01 when names of the zone
+share it. Without one, only `http://` mistakes reach the page: the browser stops at the
+certificate. With the proxy's *Redirect HTTP to HTTPS* on, `http://` mistakes are redirected first
+and need it too.
+
+### DNZ secondaries
+
+A DNZ secondary answers mistyped names exactly as its primary, and keeps the setting and the
+suggested sites when it is promoted.
+
+## Command line and API
+
+```bash
+dnz zone set example.com --typo-help similar
+dnz zone set example.com --typo-help all --typo-proxy edge   # "auto": the busiest DNZ Proxy
+dnz zone set example.com --typo-suggest portal,@             # "not registered" lists portal.example.com and example.com
+dnz zone set example.com --typo-suggest ""                   # lists none (the default)
+dnz zone set example.com --typo-help off
+dnz zone show example.com
+```
+
+- `PATCH /api/zones/{id}` with `typo_help` (`off`, `similar`, `all`) and `typo_proxy_id` (a DNZ
+  Proxy's id, or `null` for the default).
+- `PUT /api/zones/{id}/typo-suggestions` with `{"names": ["portal", "@"]}` sets the suggested
+  sites (`[]` clears them). It takes effect at once and is recorded in the audit log.
+- AI assistants: the `set_typo_help` tool sets the mode, the proxy and `suggested_sites`.
+- Prometheus: `dnz_dns_typo_answers_total{mode="similar|all",match="yes|no"}` counts the answers
+  given with a close name's addresses (`match="yes"`) or the fallback proxy's (`match="no"`).
+
+## Cost
+
+Typo help runs only for names the zone doesn't have, in zones with it on. Names that exist cost the
+same as before. A missing name in a typo help zone costs a few microseconds of CPU more.
