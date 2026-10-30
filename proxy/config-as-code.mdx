@@ -13,11 +13,11 @@ It works the same for Traefik, DNZ Proxy and Caddy.
 ## What the file holds
 
 - **Routes**, as the route dialog shows them: hostnames, path, where they go (upstreams of their own
-  or one of the proxy's services), HTTPS, every switch (cache, firewall, rate limit, password,
+  or an upstream of the list), HTTPS, every switch (cache, firewall, rate limit, password,
   sign-in, address list, custom headers, upload limits, under attack, waiting room,
   [web application firewall](/proxy/waf)), the redirect and the group. Routes set up under
-  **Advanced** come along with their conditions, priority and entry points.
-- **Services** and **middlewares** the routes use, by name.
+  YAML or the dialog's *Matching* come along with their conditions, priority and entry points.
+- **Upstreams** and **middlewares** the routes use, by name (upstreams are every proxy's: changing one in the file changes it on every proxy that uses it, and the plan says so). Files from before upstreams, with `services:` and `service:`, still apply.
 - **Route defaults** of a DNZ Proxy: redirect to https://, compression, security headers, the
   firewall on every route, upload limits.
 
@@ -48,12 +48,12 @@ routes:
   hosts:
   - api.example.com
   path: /v1
-  service: backend
+  upstream: backend
   https: true
   rate_limit:
     average: 50
     burst: 100
-services:
+upstreams:
 - name: backend
   servers:
   - http://10.0.2.11:8080
@@ -77,7 +77,7 @@ Unknown keys are refused, so a typo such as `cahce: 10m` is an error instead of 
   </Step>
   <Step title="Import">
     Open **YAML → Import…**, choose the file or paste it, and click **Show changes**. Each route,
-    service and middleware that would change is listed with its fields before and after.
+    upstream and middleware that would change is listed with its fields before and after.
   </Step>
   <Step title="Apply">
     Click **Apply**. Turn on **Remove what the file doesn't have** to delete routes, services and
@@ -117,7 +117,7 @@ edge: 1 to add, 1 to change, 0 to remove.
   `route shop-example-com (line 14): unknown key cahce`, and nothing changes.
 - **Nothing removed unless you ask.** Routes, services and middlewares the file leaves out stay;
   `--prune` (or **Remove what the file doesn't have**) deletes them, and their hostnames stop going
-  through the proxy. A service or middleware a route still uses is never removed.
+  through the proxy. An upstream or middleware a route still uses (on any proxy) is never removed.
 - **DNS follows.** A new route's hostnames go through the proxy, with a new record pointing at it
   when a name has none. `dns_record: false` on a route leaves DNS alone.
 - **Applying twice changes nothing.**

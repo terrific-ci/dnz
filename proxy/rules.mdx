@@ -5,7 +5,7 @@ description: "Redirect, rewrite or change the headers of requests that match, ri
 
 A route's **Rules** are a short list of "if these conditions hold, do this", like Cloudflare's Rules:
 move old links to new ones, send `/api/` to the servers as `/v2/`, hide the `Server` header, add a
-header for one country. You set them in the route dialog, with no middleware to write under Advanced.
+header for one country. You set them in the route dialog, with no middleware to write.
 
 Every proxy kind takes them. [DNZ Proxy](/proxy/dnz-proxy) runs all of them; Traefik and Caddy get
 what they can express, and DNZ tells you, rule by rule, what one of them can't run before you save.

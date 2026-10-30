@@ -48,7 +48,7 @@ version. The newest version of a route reads *as it is now*.
 
 <Note>
   A version is anything the route dialog, `dnz proxy routes add|edit|rm|group|redirect`, the MCP
-  route tools or the route endpoints of the API change. Changes made under **Advanced** (routers,
+  route tools or the route endpoints of the API change. Changes made through /routers and /objects (routers,
   services and middlewares one by one) aren't versions of a route.
 </Note>
 
@@ -72,7 +72,7 @@ version. The newest version of a route reads *as it is now*.
 - **DNS records stay proxied**: a restore makes records of hostnames it adds go through the proxy,
   but never takes a record off it.
 - **Middlewares, the firewall and a service the route used** are found by name. One deleted since
-  must be added again under Advanced first; the restore says which.
+  must be added again first (Settings → Middlewares, Proxy → Upstreams); the restore says which.
 - Another route that holds one of the hostnames now is refused, as in the route dialog.
 - Restoring needs the same rights as editing routes and is in the audit log
   (`proxy.route.restore`). AI assistants can read route history but not restore it: an older

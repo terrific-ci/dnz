@@ -70,7 +70,7 @@ The proxy also refuses, with `400`, uploads that a server could read differently
 malformed multipart, a boundary twice, a field named twice, header lines PHP would split or join,
 and the like. Browsers never send these, so real uploads aren't affected.
 
-Under **Advanced → Middlewares** the route's `dnzMultipart` middleware has every limit, including
+Under the proxy's **Settings → Middlewares** the route's `dnzMultipart` middleware has every limit, including
 part headers, file name length and boundary length.
 
 ## How the upload reaches your servers

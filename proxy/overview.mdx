@@ -139,7 +139,7 @@ to the hostname show how its certificate and DNS are doing; hover one for the de
 **By zone** gives each zone a list of its own, and **By group** each [route group](#route-groups);
 the list shows 25 routes a page (50 or 100 can be picked below it). A type filter next to the proxy
 filter keeps one kind of route: on or off, redirects, HTTPS, HTTP only, certificate failing, DNS not
-proxied, set up in Advanced, or one switch (cache, firewall, under attack, password, …); it stays in
+proxied, set up in YAML, or one switch (cache, firewall, under attack, password, …); it stays in
 the address (`?type=redirect`) and works with the views, the group filter and the pages. **Add route** is the one button: on Proxy → Routes it
 asks which proxies (one or several, with a search), and the same dialog edits a route later. Its
 **Serve on** saves the route on every proxy picked; each keeps its own firewall and other
@@ -153,14 +153,14 @@ clear cache, certificate log, and **Remove from …**, which takes it off that p
 The dialog has the **Hostname** (and **Another hostname**), where it goes, **HTTPS** with a
 redirect from `http://`, the switches in three groups (**Stop attacks**: web application firewall,
 upload limits, firewall, under attack check; **Who gets in**: address list, sign-in, password, rate
-limit, waiting room; **Speed and headers**: cache, custom headers), and **Advanced** for a path, other
+limit, waiting room; **Speed and headers**: cache, custom headers), and **More** for a path, matching, other
 middlewares and the DNS record.
 
 Where it goes has two tabs under the hostname:
 
 - **Upstreams**: servers of the route's own, with weights. DNZ keeps them in a service of the
   route's own.
-- **Service**: one of the proxy's services (**Advanced → Services**), picked from a list that shows
+- **Upstream**: one of [Proxy → Upstreams](/proxy/upstreams), shared by every proxy, picked from a list that shows
   where each goes. The route uses it as it is: the dialog never changes it, several routes can share
   it, and deleting the route leaves it. Switching back to **Upstreams** gives the route its own
   service again.
@@ -205,10 +205,9 @@ or HTTP through the nodes), tested before it is saved. See
 [Automatic certificates](/proxy/certificates#automatic-certificates). The row then shows the
 certificate's progress; a failure says why, with a fix, a retry and the full log.
 
-Everything behind the routes (routers, services, middlewares, TLS, TCP and UDP) is under
-**Advanced** on the page. A router made there shows in Routes too; one the dialog can't hold (extra
-conditions, a priority, TLS options) is marked **Set up in Advanced**; one on a weighted or shared
-service opens on the **Service** tab.
+Upstreams are under **Proxy → Upstreams**; middlewares, TLS, transports and TCP middlewares under the
+proxy's **Settings**. A router the dialog can't hold (TLS or observability options) is marked **Set
+up in YAML** and changed in the proxy's [YAML](/proxy/config-as-code).
 **Delete** removes the route's routers, its own service (a picked one stays) and its switches, and its DNS records stop going
 through the proxy.
 

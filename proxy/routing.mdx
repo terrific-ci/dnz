@@ -7,7 +7,7 @@ description: "Set up what a proxy serves: the hostnames it takes, where visits g
 Everything a proxy serves is set up in DNZ the way Traefik sees it:
 
 - **Routers** pick hostnames from DNZ's zones and send them to one service.
-- **Services** are where a visit goes: your upstream servers, or other services.
+- **Services** are where a visit goes: the [upstreams](/proxy/upstreams), one list for every proxy.
 - **Middlewares** change or check a visit on its way.
 
 This page applies to every kind of proxy. A Traefik gets these objects in its configuration
@@ -24,20 +24,27 @@ gets them translated into Caddy's own configuration, with what it can't do left 
 
 ## Where to find them
 
-On the **Proxy** page, open a proxy and pick **Advanced**. It groups everything the way Traefik does:
+A proxy's page has **Routes**, **History**, **Nodes** (DNZ Proxy) and **Settings**. What used to be
+under *Advanced* now has a place of its own:
 
-| Group | What it holds |
+| What | Where |
 | --- | --- |
-| **HTTP** | Routers, services, middlewares, transports |
-| **TCP** | Routers, services, middlewares, transports |
-| **UDP** | Routers, services |
-| **TLS** | Certificates, options |
-| **From Traefik** | [Records from Traefik's routers](/proxy/traefik-records) |
+| Routers (HTTP, TCP, UDP) | **Routes**: the route dialog, with conditions, an extra rule, a priority and entry points under *More → Matching* |
+| Services (HTTP, TCP, UDP) | **Proxy → Upstreams**, shared by every proxy ([Upstreams](/proxy/upstreams)) |
+| Middlewares and firewalls | **Settings → Middlewares**, and from the route dialog (*New firewall…*, *New middleware…*) |
+| Transports | **Settings → Connections to the servers** |
+| TCP middlewares | **Settings → TCP middlewares** |
+| Uploaded certificates, the default certificate, TLS options | **Settings → TLS** |
+| From Traefik | **Settings → From Traefik** ([Records from Traefik's routers](/proxy/traefik-records)) |
+
+A router the dialog can't hold (TLS or observability options) is marked *Set up in YAML* and changed
+in the proxy's [YAML](/proxy/config-as-code). `dnz proxy advanced-check` lists them.
 
 ## Services
 
-A service is where a visit goes. It holds one or more **upstreams**, each a URL such as
-`http://10.0.0.10:8080` with a **weight**.
+A service is where a visit goes: one of the [upstreams](/proxy/upstreams) under **Proxy → Upstreams**,
+shared by every proxy, so a router on two proxies sends to the same one. It holds one or more
+**servers**, each a URL such as `http://10.0.0.10:8080` with a **weight**.
 
 By default the visits are shared by weight (weighted round robin): weights 3 and 1 send 75% and 25%.
 With a health check, an upstream that fails it gets no visits.
@@ -58,7 +65,7 @@ The service form has tabs:
   status, scheme, port, `Host` header, timeout, a separate interval for upstreams that are down,
   headers and redirects. Plus **passive** checks that skip an upstream after failed visits.
 - **Sticky**: the cookie's name, SameSite, lifetime, domain, path, Secure and HttpOnly.
-- **Advanced**:
+- **Connection** (in the upstream dialog):
   - accept any certificate from HTTPS servers (the default, since servers are often reached by IP)
   - pass the visitor's `Host` header on
   - keep the upstream URLs' paths
@@ -127,7 +134,7 @@ A router decides what the proxy serves. Its form has tabs:
   says why. The tab shows the rule Traefik gets.
 - **TLS**: HTTPS, a certificate resolver, **TLS options** by name, and the **certificate domains**
   (a main name and alternative names) to ask the resolver for.
-- **Advanced**: a **priority**, on or off, and leaving the router out of access logs, metrics or
+- **In the YAML**: a **priority** (also under *More → Matching*), on or off, and leaving the router out of access logs, metrics or
   tracing (and how detailed its traces are).
 
 A router can be turned off without deleting it.
@@ -157,7 +164,7 @@ A **servers transport** sets how the proxy connects to a service's upstreams:
 - TLS versions and ciphers
 - idle connections, HTTP/2 and timeouts
 
-A load-balancer service picks a transport under **Advanced**. Without one, its *Accept any
+An upstream picks a transport under **Connection**. Without one, its *Accept any
 certificate* switch decides.
 
 ## TLS

@@ -119,6 +119,7 @@
               "proxy/traefik",
               "proxy/caddy",
               "proxy/routing",
+              "proxy/upstreams",
               "proxy/route-history",
               "proxy/config-as-code",
               "proxy/traefik-records",

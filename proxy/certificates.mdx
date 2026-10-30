@@ -113,7 +113,7 @@ For another CA, a resolver of your own, or certificates requested or uploaded by
     [Resolvers](#resolvers).
   </Step>
   <Step title="Point routers at it">
-    Under **Advanced**, in a router's **TLS** tab, pick the resolver as its certificate resolver. DNZ
+    In the proxy's YAML, give a route the resolver as its `cert_resolver`. DNZ
     then gets the certificate by itself. You can also request or upload certificates on the
     **Certificates** tab. See [Certificates](#certificates).
   </Step>

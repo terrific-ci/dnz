@@ -90,7 +90,9 @@ dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000=3 -u http://1
   --also www.example.com --cache 10m --user admin:s3cret --allow 10.0.0.0/8
 dnz proxy routes add edge api.example.com -u http://10.0.2.11:8080 --rate-limit 100/300 --firewall office
 dnz proxy routes add edge intranet.example.com -u http://10.0.9.4 --http        # HTTP only
-dnz proxy routes add edge shop.example.com --service shop                       # to one of edge's services
+dnz proxy routes add edge shop.example.com --service shop                       # to an upstream of Proxy → Upstreams
+dnz proxy routes add-tcp edge -e pg --host db.example.com --passthrough -s 10.0.0.7:5432   # TCP by hostname (SNI)
+dnz proxy routes add-udp edge -e dns --service resolvers                        # UDP to a shared upstream
 dnz proxy routes add edge old.example.com --redirect-to https://new.example.com --keep-path   # a redirect, no upstream
 dnz proxy routes edit edge app.example.com --no-cache --user ops:other-pass --remove-user admin
 dnz proxy routes edit edge app.example.com --https off
@@ -140,7 +142,7 @@ every zone, or one the proxy already routes, is refused, and the closest names a
 | Option (`add`) | What it does |
 | --- | --- |
 | `-u`, `--upstream` | Upstream URL with scheme and port; repeat for more. Append `=WEIGHT` to share visits unevenly, e.g. `http://10.0.0.10:8080=3`. Required unless `--service` or `--redirect-to` |
-| `--service` | Send the visits to one of the proxy's services instead, by name or id. The route uses it as it is, and deleting the route leaves it |
+| `--service` | Send the visits to an upstream of Proxy → Upstreams instead, by name or id. The route uses it as it is, and deleting the route leaves it |
 | `--redirect-to` | Redirect every visit to this address instead of upstreams (a [redirect route](/proxy/overview#redirect-routes)) |
 | `--keep-path` | With `--redirect-to`: keep the path and query (`/a?b` → `<URL>/a?b`) |
 | `--temporary` | With `--redirect-to`: a temporary 302 instead of a permanent 301 |
@@ -167,8 +169,8 @@ every zone, or one the proxy already routes, is refused, and the closest names a
 | `--https-entry` | Entry point for `https://` |
 
 `routes edit` changes only what you pass: `--add-host`, `--remove-host`, `-u` (replacing the
-upstreams, or giving a route on a service upstreams of its own), `--service NAME` (one of the
-proxy's services instead), `--https on|off`, `--redirect on|off`, `--path`, `--enabled on|off`, the switches above,
+servers, or giving a route on a shared upstream servers of its own), `--service NAME` (an
+upstream of the list instead), `--https on|off`, `--redirect on|off`, `--path`, `--enabled on|off`, the switches above,
 and `--no-cache`, `--no-firewall`, `--waf off`, `--no-challenge`, `--no-waiting-room`, `--no-rate-limit`, `--no-password`,
 `--remove-user NAME`, `--no-allow`, `--drop-request-header NAME`, `--drop-response-header NAME`,
 `--no-headers`. A route set up under **Advanced** is refused with the reason.
@@ -279,6 +281,25 @@ dnz proxy apply -f edge.yaml --prune              # and remove them
 ```
 
 See [Configuration as code](/proxy/config-as-code).
+
+### Upstreams
+
+Where routes send visits, one list for every proxy. A change reaches every route using the
+upstream, on every proxy. See [Upstreams](/proxy/upstreams).
+
+```bash
+dnz proxy upstreams list                          # servers, balancing, health check, what uses each
+dnz proxy upstreams show swarm-service            # with every route (and proxy) using it
+dnz proxy upstreams add swarm-service -s http://10.0.133.31:80 -s http://10.0.133.32:80=2 --sticky --health-check /healthz
+dnz proxy upstreams add pg --tcp -s 10.0.0.7:5432
+dnz proxy upstreams add canary --split app=9 --split app-next=1
+dnz proxy upstreams edit swarm-service --strategy p2c
+dnz proxy upstreams edit app-example-com --shared # a route's own upstream becomes a shared one
+dnz proxy upstreams merge swarm-service app-example-com
+dnz proxy upstreams rm yrdy                       # refused while anything uses it
+```
+
+`-s` replaces the servers on `edit`; leave it out to keep them.
 
 ### Route defaults (DNZ Proxy)
 

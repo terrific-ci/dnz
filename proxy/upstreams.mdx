@@ -1,0 +1,112 @@
+---
+title: "Upstreams"
+description: "Where proxies send visits: one list for every proxy, with servers, balancing, sticky sessions and health checks."
+---
+
+An **upstream** is where a route sends its visits: a set of servers, how visits are shared between
+them, and how their health is checked. **Proxy → Upstreams** holds one list for every proxy. A route on
+several proxies uses the same upstream on each, so a change to an upstream reaches every route that
+uses it, on every proxy.
+
+## The list
+
+Each upstream shows its servers, its balancing (and whether visits are sticky), its health check and
+what uses it: routes and the proxies they are on, other upstreams that send visits to it, and error
+pages that ask it for their pages.
+
+- Filter by kind of traffic: **HTTP**, **TCP** or **UDP**.
+- **Hide routes' own** leaves out the upstreams made from a route's servers (see below).
+- **Not used** keeps only the upstreams nothing uses.
+- Search by name, server or route.
+
+## Adding and editing
+
+**Add upstream** opens the upstream dialog:
+
+1. **Kind of traffic**: HTTP, TCP or UDP. An upstream keeps its kind.
+2. **What it is** (HTTP):
+   - **Load balancer**: servers you list, sharing the visits.
+   - **Split**: other upstreams by weight, for example 9 and 1 for a canary release.
+   - **Mirror**: one upstream answers; a share of the visits is copied to others, whose answers are
+     dropped.
+   - **Fallback**: another upstream while this one is down (or answers with the status codes you list).
+3. **Name** and **description**. The name is the service name every proxy knows the upstream by.
+4. **Servers**: URLs such as `http://10.0.0.10:8080` with a weight (HTTP), or `host:port` addresses
+   (TCP, optionally with TLS to the server; UDP).
+5. **Balancing**: weighted round robin, power of two choices, highest random weight or least time,
+   and **sticky sessions** (a cookie keeps each visitor on the server it first reached).
+6. **Health check**: a path and how often to ask it; a server that doesn't answer well gets no visits.
+7. **Connection** (folded): accept any certificate from HTTPS servers, pass the visitor's `Host`
+   header on, keep the server URLs' paths, and the rest of how proxies connect to the servers.
+
+Editing an upstream that routes use says how many routes on which proxies the change reaches.
+
+**Rename** follows the new name everywhere the upstream is named, on every proxy. **Delete** is refused
+while anything uses the upstream, and says what does.
+
+## A route's own upstream
+
+In the route dialog, **Upstream** is either **Servers of its own** or **An upstream from the list**.
+Servers typed there make the route's **own upstream**, listed as *For app.example.com*:
+
+| What happens | The route's own upstream |
+| --- | --- |
+| The route's servers change in the dialog | It changes, on every proxy the route is on |
+| The same route is added to another proxy | That proxy uses it too: no copy |
+| The route picks an upstream from the list instead | It is deleted when nothing uses it any more |
+| The route is deleted | It is deleted when nothing uses it any more |
+
+From the upstream dialog, a route's own upstream can be made **shared**: it then stays when its route
+goes, and other routes can pick it.
+
+## Merging
+
+**Merge…** points every route, upstream and error page that uses the upstreams picked at the one kept,
+and deletes the others. When two upstreams have the same servers but other settings (one with a
+health check, one without, for example), the list suggests merging them and keeps the name someone
+typed rather than one made from a hostname.
+
+## TCP and UDP routes
+
+A route can be **TCP** or **UDP** instead of HTTP: pick it with the option cards at the top of
+**Add route**. It listens on an **entry point** of the proxy (DNZ Proxy's TCP and UDP entry points,
+or a Traefik's) and sends connections to a TCP or UDP upstream, from the list or made of addresses
+typed in the dialog. TCP routes can end TLS at the proxy, pass it through to the servers, take only
+some hostnames (SNI, with TLS), accept only some client addresses, and have a priority. Caddy routes
+HTTP only.
+
+## Coming from per-proxy services
+
+Before upstreams, each proxy kept services of its own, and a route on two proxies had a copy on
+each. Upgrading moves them into upstreams once:
+
+- Services identical in content (servers and weights, balancing, sticky sessions, health check and
+  the rest) become **one upstream**, whatever their names. It takes the name someone typed rather than
+  one made from a hostname, else the one most routes use.
+- The **same name with other servers** stays apart: the later one is named after its proxy, for
+  example `swarm-service-edge2`.
+- A redirect route's empty service becomes no upstream. Services nothing used become upstreams shown
+  as **Not used**; none is deleted.
+- What visitors get doesn't change. Sticky sessions keep the cookie name of the service whose name
+  and settings the upstream took.
+
+**Proxy → Upstreams** says once what the move did, and the audit log keeps it.
+
+<Warning>
+  DNZ copies a SQLite database (and the Redis backend's local copy) to
+  `backups/before-upstreams-<time>.db` next to it before the move. With **Postgres or MySQL**, take a
+  dump before upgrading. DNZ keeps writing each proxy's services the old way as well, so going back to
+  the previous version finds every proxy as it is; a later release drops that, and from then on going
+  back needs the backup.
+</Warning>
+
+## From the command line
+
+```bash
+dnz proxy upstreams list
+dnz proxy upstreams add swarm-service -s http://10.0.133.31:80 -s http://10.0.133.32:80 --sticky
+dnz proxy upstreams edit swarm-service --health-check /healthz
+dnz proxy upstreams merge swarm-service app-example-com
+```
+
+See [Proxy commands](/cli/proxy) for every option.

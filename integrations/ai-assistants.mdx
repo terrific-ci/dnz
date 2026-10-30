@@ -141,7 +141,8 @@ with OAuth isn't possible.
 | `proxy_analytics` | DNZ Proxy traffic: totals, most requested URLs per hostname and path, top lists |
 | `proxy_visitors` | Distinct visitors of each hostname DNZ Proxy serves over the last hours, total and per hour |
 | `proxy_request_log` | DNZ Proxy request log lines, filtered by hostname, status, client or text |
-| `proxy_routes` | A proxy's routes: hostnames, servers, HTTPS and certificate progress, DNS, switches (custom headers and the web application firewall included) |
+| `proxy_routes` | A proxy's routes (HTTP, TCP and UDP): hostnames, servers or the upstream they use, HTTPS and certificate progress, DNS, switches (custom headers and the web application firewall included) |
+| `proxy_upstreams` | Where routes send visits, one list for every proxy: servers, balancing, health check and what uses each upstream |
 | `proxy_config_export` | A proxy's configuration as the YAML file kept in Git ([configuration as code](/proxy/config-as-code)); passwords by user name only |
 | `proxy_config_plan` | What applying a proxy YAML file would change, or why it can't be applied. Writes nothing: people apply |
 | `proxy_waiting_rooms` | DNZ Proxy waiting rooms now: visitors in, the limit and visitors waiting, per hostname |
@@ -166,6 +167,7 @@ with OAuth isn't possible.
 | `set_status_page` ✎ | Sets or replaces a host's status page: maintenance, moved, blocked…, with a schedule and allowed addresses; `moved` is a 301 unless `permanent: false` (a 302) |
 | `switch_status_page` ✎ | Turns a host's status page on or off |
 | `delete_status_page` ✎ | Removes a host's status page |
+| `set_proxy_upstream` ✎ | Makes or changes an upstream (servers, balancing, sticky sessions, health check); the change reaches every route using it, on every proxy. Deleting and merging are left to people |
 | `set_route_redirect` ✎ | Redirects every visit to a route's hostnames to another address (`to`, `keep_path`, `permanent`), or removes the redirect (`off`); the rest of the route stays |
 | `set_route_rules` ✎ | Sets a route's [rules](/proxy/rules) (redirects, rewrites and header changes when conditions hold, in order), or removes them (`off`); the rest of the route stays. Answers with each rule in plain words; a rule a Traefik or Caddy can't run is refused with its number |
 | `set_waf` ✎ | Sets or turns off a DNZ Proxy route's web application firewall (`mode`, `sensitivity`, `skip_paths`, `skip_rules`, `allow_ips`); the rest of the route stays. Refused on Traefik and Caddy |
