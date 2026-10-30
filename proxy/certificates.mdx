@@ -80,6 +80,20 @@ and the `auto` resolver gets the name a certificate again.
   </Tab>
 </Tabs>
 
+### One wildcard certificate per domain
+
+With **Wildcards** on (each resolver's switch under **Certificates → Resolvers**, on by default;
+`dnz proxy certs wildcards on|off`), names one label under the same parent share one certificate:
+`app.example.com` and `api.example.com` are served with `*.example.com`. That is one order and one
+renewal instead of one per name, so a domain stays far from Let's Encrypt's rate limits (50 new
+certificates per registered domain a week), and a new route under it is served at once.
+
+- It needs two or more names under the parent (or the wildcard already issued) and **DNS-01**: DNZ's
+  own public zone, a Cloudflare connection or a DNS credential.
+- The parent itself and deeper names (`a.b.example.com`) keep certificates of their own.
+- Names keep their own certificates until the wildcard is issued, so nothing changes for visitors.
+  A wildcard that fails three times without being issued gives the names their own again.
+
 ## Setting it up by hand
 
 For another CA, a resolver of your own, or certificates requested or uploaded by hand:

@@ -18,8 +18,11 @@ A monitor checks one of two things:
 
 | Kind | What it checks | Good for |
 | --- | --- | --- |
-| **A URL** | DNZ requests it: the status code (200–399 passes unless you list codes such as `200,301-302`), optionally a keyword the answer must contain, and how long the answer took. Redirects are followed. `GET` or `HEAD`, and "accept any certificate" for self-signed servers. | Any address: a route of Traefik, Caddy or DNZ Proxy, or a service DNZ has nothing to do with |
+| **A URL** | DNZ requests it: the status code (200–399 passes unless you list codes such as `200,301-302`), optionally a keyword the answer must contain, and how long the answer took. Redirects are followed. `GET` or `HEAD`, and "accept any certificate" for self-signed servers. | A route of Traefik, Caddy or DNZ Proxy, by its hostname |
 | **A DNZ Proxy service** | The servers behind a hostname a DNZ Proxy route serves, from the upstream health the nodes already report every 5 seconds. Up while every server is healthy, degraded while some are, down when none is or no node reported in the last 30 seconds. Nothing extra is sent. | Proxied services, server by server. Turn on the route's health check for the clearest answer |
+
+Monitors watch your routes only: the URL's hostname must be one a route of your proxies serves. The
+dialog lists the proxied names; other sites and addresses are refused.
 
 Each monitor has an interval (20 seconds to an hour, 60 seconds by default), a timeout and how many
 **failed checks in a row** make it **down** (2 by default). A single failure shows it **degraded**

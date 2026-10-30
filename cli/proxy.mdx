@@ -299,6 +299,7 @@ DNZ's automatic certificates for DNZ Proxy routes:
 dnz proxy certs show                              # on or not, the account, the credentials in use
 dnz proxy certs setup --agree --email admin@example.com   # once: a Let's Encrypt account (accepting its agreement)
 dnz proxy certs setup --account "Let's Encrypt"   # or one DNZ already has
+dnz proxy certs wildcards on                      # one wildcard per domain (default); off: one certificate per name
 dnz proxy certs check edge app.example.com shop.example.org
 dnz proxy certs credential shop.example.org --cloudflare-token …
 dnz proxy certs credential shop.example.org --rfc2136 192.0.2.53:53 --key-name acme. --secret …
