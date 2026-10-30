@@ -100,6 +100,51 @@ each. Upgrading moves them into upstreams once:
   back needs the backup.
 </Warning>
 
+## Checking a proxy setup
+
+The proxy page has no *Advanced* tab any more: everything it held has a form (routes with their
+*Matching*, upstreams, and middlewares, TLS, transports and TCP middlewares under the proxy's
+**Settings**). A few things are changed elsewhere: a route with TLS or observability options of its
+router (in the proxy's [YAML](/proxy/config-as-code)), and a TCP route with a rule of Traefik's own
+(through the API). `dnz proxy advanced-check` lists them, per proxy; each proxy's **Settings** shows
+its own.
+
+The check only reads, and it works on a **copy of the database** too: run it with the new version
+against a copy of the current one **before upgrading**, without touching the running server.
+
+<Tabs>
+  <Tab title="Docker">
+    Copy the database out of the running container (with its `-wal` file, which holds the newest
+    changes), then check it with the new image:
+
+    ```bash
+    mkdir -p ~/dnz-check
+    docker cp dnz:/data/dnz.db ~/dnz-check/
+    docker cp dnz:/data/dnz.db-wal ~/dnz-check/ 2>/dev/null || true
+    docker run --rm --user "$(id -u):$(id -g)" -v ~/dnz-check:/check terrificci/dnz:1.27.0 \
+      proxy advanced-check --database /check/dnz.db
+    ```
+
+    After the upgrade, the same check runs inside the container:
+
+    ```bash
+    docker exec dnz dnz proxy advanced-check
+    ```
+  </Tab>
+  <Tab title="Binary">
+    ```bash
+    dnz proxy advanced-check --database ./dnz-backup.db
+    ```
+
+    `--database` takes a SQLite file (a copy of `dnz.db` with its `-wal` file next to it, or a
+    backup from **Settings → Backups**) or a `postgres://` / `mysql://` URL of a restored copy.
+  </Tab>
+</Tabs>
+
+The copy is opened read-only and never migrated. On a read-only folder, SQLite can't read the `-wal`
+file and the check reads the main file alone (it says so); copy into a folder you can write to, or use
+a backup from Settings → Backups.
+
 ## From the command line
 
 ```bash
