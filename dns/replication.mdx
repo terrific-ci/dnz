@@ -239,6 +239,12 @@ primary (the first one, when it follows several):
   reverse proxies, the health check, the cluster, clearing the cache or the query log, the
   replication itself (sync, promote, leave) and a factory reset. The setup wizard skips the
   upstreams and first-zone steps.
+- **Done by the primary only:** certificates (issuing and renewing them), the daily summary, the
+  NXDOMAIN spike alert, domain expiry alerts, uptime monitors and proxy alerts. A server that was a
+  primary before it joined keeps its old certificates and notification providers, but none of these
+  run there: the primary already does them for the whole install. Alerts about the server itself
+  (its forward DNS upstreams, rate limiting, a full cache, threats, its own backups and cluster
+  nodes) still go out through the providers it has.
 
 <Note>
 The primary builds the settings once for all its secondaries (at most every 5 seconds) and
