@@ -200,14 +200,21 @@ dnz record rm example.com --tag legacy --all
 
 ### Proxied records
 
-`--proxy` puts an A, AAAA or CNAME record behind one or more proxies. DNS then answers the name with every proxy's address. Each proxy needs a router for the name
-(see [Proxy routing](/proxy/routing), or let [`dnz proxy route`](/cli/proxy#proxy-routes) set it up).
+`--proxy` puts an A, AAAA or CNAME record behind one or more proxies. DNS then answers the name with every proxy's address. Each proxy needs a route for the name
+(see [Proxy routing](/proxy/routing)); add `--upstream` and the record makes it.
 
 ```bash
 dnz record add example.com shop A 10.0.0.5 --proxy edge-jkt,edge-sgp   # DNS answers with both proxies
 dnz record edit example.com shop --proxy edge-jkt,edge-ams --all       # every A/AAAA/CNAME of the name at once
 dnz record edit example.com shop --proxy none --all                    # back to DNS only
+dnz record add example.com app A 10.0.1.20 --proxy edge --upstream http://10.0.1.20:3000   # makes edge's route too
+dnz record edit example.com db A --proxy edge --upstream http://10.0.133.10 --group "Web app"
 ```
+
+`--upstream URL` (repeat for more; `URL=WEIGHT` shares visits unevenly) makes the name's route on
+each of those proxies that has none. HTTPS with a redirect from `http://` is on unless `--http` or
+`--no-redirect`; `--group`, `--strategy` and `--sticky` are as for routes. It needs **Manage
+proxies**, takes one name at a time, and is refused in a zone whose changes wait for approval.
 
 A name's A, AAAA and CNAME records must go through the same proxies, so change them together: leave
 out the type and pass `--all`.

@@ -188,10 +188,28 @@ dnz record add example.com intranet A 10.1.1.1 --view lan
 
 ### Proxied records
 
-An A, AAAA or CNAME record can go through one or more proxies, like Cloudflare's orange cloud: DNS
-answers the name with the proxies' addresses and the origin stays hidden. Once proxying is set up,
-the record form lists the proxies; one without a router for the record's name shows **no router for
-this name** and can't be picked until you add a route.
+An A, AAAA or CNAME record can go through one or more proxies, like a proxied record on Cloudflare:
+DNS answers the name with the proxies' addresses and the origin stays hidden. Once proxying is set
+up, the record form lists the proxies: with one proxy it is a switch, with several you tick one or
+more.
+
+#### A record makes its route
+
+Ticking a proxy that has **no route for the name** turns that part of **Add record** or **Edit
+record** into the route's form, so you don't have to go to **Proxy → Routes** first:
+
+- **Upstreams**: where visits go, prefilled from the record's value (`10.0.133.10` becomes
+  `http://10.0.133.10`). With two or more, the load-balancing strategy and **Sticky sessions**.
+- **HTTPS** and **Redirect http → https**, on by default.
+- **Group** on the Routes page.
+
+Saving makes the route on each ticked proxy, then the record. Firewall, WAF, cache and the rest are
+in the route's own dialog afterwards (**Show the route** in the message after saving). Unticking a
+proxy never deletes its route.
+
+- It needs **Manage proxies** as well as **Manage records**.
+- One name at a time.
+- In a zone whose changes wait for approval, add the route under **Proxy → Routes** instead.
 
 ```bash
 dnz record add example.com shop A 10.0.0.5 --proxy edge-jkt,edge-sgp   # DNS answers with both proxies
