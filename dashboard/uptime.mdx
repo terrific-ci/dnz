@@ -42,6 +42,12 @@ display time zone and are kept 400 days.
   from there.
 </Info>
 
+## Routes under attack protection
+
+Under attack and the waiting room would stop DNZ's own checks (a check runs no script). DNZ signs
+its checks for each DNZ Proxy serving the hostname, and the nodes let them through those two;
+sign-in, the WAF and the firewall still apply.
+
 ## A group of routes
 
 Rather than one monitor per route, watch a whole group from **Proxy → Routes**: **Add monitor → A
@@ -109,7 +115,13 @@ reach it**, pick one:
 dnz uptime page set --on --hostname status.example.com --proxy edge --dnz-address http://10.0.0.53:8080
 ```
 
-Making or deleting the route needs **Manage proxies** too.
+Making or deleting the route needs **Manage proxies** too. If the route or DNS record can't be made,
+the page is still saved and the card says why.
+
+<Info>
+  Visitors don't load DNZ: on its own hostname the page may be cached (30 s on DNZ Proxy, whose route
+  DNZ makes with its cache on, 15 s in browsers), and DNZ builds it at most once every 10 seconds.
+</Info>
 
 ## Alerts
 
