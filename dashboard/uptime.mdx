@@ -84,17 +84,23 @@ reloads itself every minute and shows times in the visitor's time zone.
 ### On its own hostname
 
 Give the page a hostname, such as `status.example.com`, and DNZ answers requests for that name with
-the page alone: neither the DNZ dashboard nor its API is reachable under it. Point a route on any
-proxy at DNZ's HTTP address, as the proxy reaches it (not `localhost`, unless the proxy runs on the
-same machine):
+the page alone: neither the DNZ dashboard nor its API is reachable under it. Under **How visitors
+reach it**, pick one:
+
+- **Through a proxy, set up by DNZ:** choose a proxy and DNZ's own address as the proxy reaches it:
+  its IP and HTTP port, prefilled from **Settings → General → Device address**. Never the page's
+  hostname (visitors would go round in a loop), and not `localhost` unless the proxy runs on the
+  same machine. **Save** with the page on and DNZ makes the route (HTTPS, with the redirect from
+  http) and the DNS record right away. Turning the page off deletes them again; a record that was
+  there before only leaves the proxy. The card shows the name's DNS records and routes as they are.
+- **I'll point it at DNZ myself:** a DNS record pointing the name straight at DNZ (when DNZ's HTTP
+  port is 80), or a route on a proxy DNZ doesn't manage, which must pass the visitor's hostname on.
 
 ```bash
-dnz proxy routes add edge status.example.com -u http://10.0.0.53:8080
-dnz uptime page set --on --hostname status.example.com
+dnz uptime page set --on --hostname status.example.com --proxy edge --dnz-address http://10.0.0.53:8080
 ```
 
-The card builds this command for you with the proxy and address you pick. A DNS record pointing
-the name straight at DNZ works too when DNZ's HTTP port is 80.
+Making or deleting the route needs **Manage proxies** too.
 
 ## Alerts
 
@@ -122,5 +128,8 @@ The bundled alert rules include `DnzUptimeMonitorDown` (2 minutes down). See
 [API](/api/uptime) has the same. AI assistants connected over [MCP](/integrations/ai-assistants) can
 read monitors and incidents with `list_uptime_monitors` and `list_uptime_incidents`.
 
-Reading needs **Manage monitoring** or **Manage proxies**; changing needs **Manage monitoring**.
+Reading needs **Manage monitoring**, **Manage proxies** or **Post incidents**; changing needs
+**Manage monitoring**. **Post incidents** (the built-in **Helpdesk** role) also opens, edits and
+updates incidents, without touching monitors, the public page or anything else; deleting an
+incident stays with **Manage monitoring**.
 Every change is in the [audit log](/admin/audit-log).

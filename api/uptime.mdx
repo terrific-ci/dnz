@@ -8,7 +8,9 @@ For what monitors, incidents and the public status page do, see
 token (see [API overview](/api/overview)).
 
 <Note>
-  Reading needs `monitoring.manage` or `proxy.manage`; changing needs `monitoring.manage`. On a DNZ
+  Reading needs `monitoring.manage`, `proxy.manage` or `incidents.manage`; changing needs
+  `monitoring.manage`. Creating, editing and updating incidents also accepts `incidents.manage`
+  (the built-in Helpdesk role); deleting one doesn't. On a DNZ
   secondary following a primary, changes are refused: manage monitors on the primary.
 </Note>
 
@@ -30,7 +32,8 @@ token (see [API overview](/api/overview)).
 | `PUT` | `/api/uptime/incidents/{id}` | Change its title, impact, monitors or `on_page` |
 | `POST` | `/api/uptime/incidents/{id}/updates` | Add to its timeline: `{"status": "identified", "message": "…"}` |
 | `DELETE` | `/api/uptime/incidents/{id}` | Delete it and its updates (204) |
-| `GET`, `PUT` | `/api/uptime/page` | The public page's settings |
+| `GET`, `PUT` | `/api/uptime/page` | The public page's settings; `route: { proxy_id, upstream }` makes its hostname's route and DNS record while the page is on, and deletes them when it's off |
+| `GET` | `/api/uptime/page/hostname` | The hostname's DNS records and routes now (`?host=`), DNZ's suggested address, the proxies |
 | `GET` | `/status`, `/status.json` | The public page and its JSON; no sign-in |
 
 ## A monitor

@@ -42,12 +42,18 @@ manage views and the resolver for the whole server.
 | `threats.manage` | Manage threat detection | Findings, mutes, allow list, feeds and blocks | ✓ |
 | `replication.manage` | Manage replication | Zone transfers, secondaries and primaries | |
 | `proxy.manage` | Manage proxies | Proxies, DNZ Proxy nodes, routes, certificates and status pages | |
-| `monitoring.manage` | Manage monitoring | Health check, notification providers, alerts and incidents | |
+| `monitoring.manage` | Manage monitoring | Health check, notification providers, alerts, uptime monitors and incidents | |
+| `incidents.manage` | Post incidents | Open incidents on the public status page, post their updates and resolve them; see the uptime monitors | |
 
 Network Admin also holds `zones.read`, `zones.write`, `records.write`, `logs.read`, `audit.read`
 and `filtering.manage` in its division. Add or remove any of them under **Settings → Roles**; the
 editor shows the two groups as **In the division** and **Whole server**. API tokens never get
 server-wide permissions.
+
+The built-in **Helpdesk** role holds only `incidents.manage`: someone at the helpdesk can tell
+your users about an outage on the public status page (**High availability → Uptime → New
+incident**, then **Post update** until it's resolved) without managing monitors, the page itself
+or anything else.
 
 Users, roles, divisions, backups, the cluster and **Settings → General** stay with superadmins.
 

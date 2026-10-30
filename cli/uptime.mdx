@@ -7,7 +7,10 @@ These commands match **High availability → Uptime** in the dashboard. For what
 and the public status page do, see [Uptime and public status page](/dashboard/uptime). Not
 `dnz status-page`, which switches a host to a maintenance or moved page.
 
-Reading needs **Manage monitoring** or **Manage proxies**; changing needs **Manage monitoring**.
+Reading needs **Manage monitoring**, **Manage proxies** or **Post incidents**; changing needs
+**Manage monitoring**. **Post incidents** (the built-in **Helpdesk** role) also opens, edits and
+updates incidents, without touching monitors, the public page or anything else; deleting an
+incident stays with **Manage monitoring**.
 Monitors are named by their name or id.
 
 ## Monitors
@@ -65,5 +68,12 @@ dnz uptime page set --on --title "Company status" --hostname status.example.com 
 dnz uptime page set --off
 ```
 
-For its own hostname, send the name to DNZ with a route first:
-`dnz proxy routes add edge status.example.com -u http://10.0.0.53:8080`.
+For its own hostname, let DNZ make the route and DNS record on a proxy: `--proxy` names it and
+`--dnz-address` is DNZ's own address as that proxy reaches it (its IP and HTTP port, never the
+page's hostname). They are made while the page is on and deleted when it's turned off;
+`--no-route` deletes them and keeps the hostname.
+
+```bash
+dnz uptime page set --on --hostname status.example.com --proxy edge --dnz-address http://10.0.0.53:8080
+dnz uptime page set --no-route
+```
