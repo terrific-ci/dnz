@@ -45,6 +45,19 @@ dnz uptime rm Website                        # with its history
 
 `edit` changes only the options you pass.
 
+## Groups of routes
+
+```bash
+dnz uptime watch ls                          # watched groups, and every group with its hostnames
+dnz uptime watch add "Web app" --path /health --interval 120 --public
+dnz uptime watch edit "Web app" --interval 300
+dnz uptime watch rm "Web app"                # its monitors go too; --keep-monitors keeps them
+```
+
+A watched group gets a monitor per hostname of its routes, made and deleted as routes join and
+leave it. `add` and `edit` take `--path`, `--expect`, `--keyword`, `--slow-ms`, `--interval`,
+`--timeout`, `--confirm`, `--insecure`, `--public` / `--private` and `--public-group`.
+
 ## Incidents
 
 ```bash

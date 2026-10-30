@@ -42,6 +42,15 @@ display time zone and are kept 400 days.
   from there.
 </Info>
 
+## A group of routes
+
+Rather than one monitor per route, watch a whole group from **Proxy → Routes**: **Add monitor → A
+group of routes**, pick the group and the path requested on each hostname (`/` or `/health`). DNZ
+keeps a monitor per hostname of the group's routes, named after it. A route that joins the group
+gets its monitor within 30 seconds, and one that leaves loses it. Changing the watch (the group's
+card above the monitors) changes all of its monitors; **Stop watching** removes them or keeps them
+as monitors of their own.
+
 ## Incidents
 
 When a monitor goes down, DNZ opens an incident ("*name* unavailable", status **investigating**)

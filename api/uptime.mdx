@@ -32,6 +32,8 @@ token (see [API overview](/api/overview)).
 | `PUT` | `/api/uptime/incidents/{id}` | Change its title, impact, monitors or `on_page` |
 | `POST` | `/api/uptime/incidents/{id}/updates` | Add to its timeline: `{"status": "identified", "message": "…"}` |
 | `DELETE` | `/api/uptime/incidents/{id}` | Delete it and its updates (204) |
+| `GET`, `POST` | `/api/uptime/watches` | Watched groups of routes and every group with its hostnames; watch one (`route_group`, `path` and a monitor's settings) |
+| `PUT`, `DELETE` | `/api/uptime/watches/{id}` | Change its monitors' settings; stop watching (`?keep_monitors=true` keeps them) |
 | `GET`, `PUT` | `/api/uptime/page` | The public page's settings; `route: { proxy_id, upstream }` makes its hostname's route and DNS record while the page is on, and deletes them when it's off |
 | `GET` | `/api/uptime/page/hostname` | The hostname's DNS records and routes now (`?host=`), DNZ's suggested address, the proxies |
 | `GET` | `/status`, `/status.json` | The public page and its JSON; no sign-in |
