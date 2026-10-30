@@ -6,18 +6,28 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.23.0**, released October 30, 2026. To install or upgrade to it:
+The latest release is **v1.24.0**, released October 30, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.23.0
-docker pull terrificci/dnz-proxy:1.23.0   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.23.0
+docker pull terrificci/dnz:1.24.0
+docker pull terrificci/dnz-proxy:1.24.0   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.24.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.23.0" description="October 30, 2026" tags={["Latest"]}>
+<Update label="v1.24.0" description="October 30, 2026" tags={["Latest"]}>
+
+- **Route groups:** a group can now be made empty (New group, with or without routes) and stays until you remove it, also when its last route leaves. A group's menu adds a new route or existing routes to it, empty groups show in By group as places to drag routes, and the route dialog lists every group as a chip to pick (`dnz proxy routes groups add`).
+- **Uptime checks through Under attack:** DNZ's own checks now pass a DNZ Proxy route's Under attack browser check and waiting room, so a protected site no longer shows as down with "answered 403". Sign-in, the WAF and the firewall still apply. Update your DNZ Proxy nodes too.
+- **Public status page load:** visitors of the page on its own hostname are served from DNZ Proxy's cache, and DNZ builds the page at most once every 10 seconds, so many visitors no longer add load to the DNS server.
+- **A hostname's own route beside a wildcard:** a route for one name (app.example.com) can now be added on a proxy that already has a wildcard route covering it (*.example.com), and the name's own route always wins, on DNZ Proxy, Traefik and Caddy. Only a route for the very same hostname is refused.
+- **Public status page hostname:** turning the page on now sets up the hostname even when a wildcard route of the proxy already covers it: the page gets its own route and DNS record. If the route or record can't be made, the page is still turned on and the card says why. The card ends with the address visitors open, as a link that follows the hostname, and offers Turn on and set up while the page is off.
+
+</Update>
+
+<Update label="v1.23.0" description="October 30, 2026">
 
 - **Uptime for a group of routes:** Add monitor → A group of routes watches a whole group from Proxy → Routes. Every route in it gets its own monitor, routes that join the group are watched within a minute and ones that leave aren't. Changing the watch changes all of its monitors (`dnz uptime watch`).
 - **Helpdesk role:** a new permission, Post incidents, and a built-in Helpdesk role holding only it: open incidents on the public status page, post their updates and resolve them, without managing monitors or anything else.
