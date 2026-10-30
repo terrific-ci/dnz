@@ -23,42 +23,43 @@ CPUs over UDP, 32 clients, 500 queries outstanding, median of 3 runs of 20 s.
 
 | Server | Queries/s | Avg latency | Memory |
 | --- | ---: | ---: | ---: |
-| Knot DNS 3.4.6 | 134,060 | 0.56 ms | 8.6 MiB |
-| NSD 4.12.0 | 129,591 | 0.88 ms | 74.7 MiB |
-| **DNZ 1.22.0** | **124,504** | **1.12 ms** | **43.9 MiB** |
-| Unbound 1.26.2 (`auth-zone`) | 121,675 | 0.69 ms | 14.8 MiB |
-| PowerDNS Authoritative 4.9.18 | 121,100 | 0.94 ms | 59.2 MiB |
-| BIND 9.20.30 | 119,060 | 1.39 ms | 11.6 MiB |
-| gdnsd 3.8.3 | 117,989 | 0.72 ms | 2.4 MiB |
-| YADIFA 3.0.2 ¹ | 78,001 | 1.77 ms | 59.5 MiB |
-| CoreDNS 1.12.1 (`file`) | 49,716 | 4.26 ms | 82.4 MiB |
-| Technitium 15.6.2 | 36,790 | 11.87 ms | 153.4 MiB |
-| Hickory DNS 0.26.3 | 10,756 | 16.25 ms | 20.8 MiB |
+| **DNZ 1.22** | **146,152** | **1.75 ms** | **45.4 MiB** |
+| NSD 4.12.0 | 140,030 | 0.80 ms | 74.5 MiB |
+| Knot DNS 3.4.6 | 139,706 | 0.57 ms | 8.4 MiB |
+| PowerDNS Authoritative 4.9.18 | 129,503 | 0.89 ms | 59.4 MiB |
+| gdnsd 3.8.3 | 127,507 | 0.59 ms | 2.2 MiB |
+| Unbound 1.26.2 (`auth-zone`) | 124,491 | 0.81 ms | 14.7 MiB |
+| BIND 9.20.30 | 123,850 | 1.29 ms | 11.7 MiB |
+| YADIFA 3.0.2 ¹ | 78,136 | 1.67 ms | 58.7 MiB |
+| CoreDNS 1.12.1 (`file`) | 53,392 | 3.83 ms | 79.8 MiB |
+| Technitium 15.6.2 | 39,776 | 10.75 ms | 85.0 MiB |
+| Hickory DNS 0.26.3 | 11,953 | 15.07 ms | 16.3 MiB |
 
 ### Cached forwarding
 
 | Server | Queries/s | Avg latency | Memory |
 | --- | ---: | ---: | ---: |
-| dnsdist 1.9.16 (packet cache) | 135,731 | 2.12 ms | 36.9 MiB |
-| BIND 9.20.30 | 127,351 | 1.17 ms | 18.0 MiB |
-| **DNZ 1.22.0** | **126,367** | **1.15 ms** | **51.5 MiB** |
-| Knot Resolver 5.7.5 | 126,083 | 0.88 ms | 9.6 MiB |
-| Unbound 1.26.2 | 122,383 | 0.69 ms | 21.9 MiB |
-| PowerDNS Recursor 5.2.13 | 121,971 | 2.35 ms | 19.5 MiB |
-| CoreDNS 1.12.1 | 64,405 | 3.15 ms | 93.5 MiB |
-| dnsmasq 2.91 | 63,038 | 2.59 ms | 3.3 MiB |
-| Technitium 15.6.2 | 35,113 | 12.62 ms | 179.2 MiB |
-| AdGuard Home 0.107.79 | 28,945 | 7.49 ms | 83.2 MiB |
-| Pi-hole 2026.10.0 | 21,571 | 7.67 ms | about 44 MiB ² |
-| Hickory DNS 0.26.3 | 19,015 | 8.96 ms | 39.2 MiB |
-| Blocky 0.35.0 | 16,506 | 13.20 ms | 72.8 MiB |
+| **DNZ 1.22** | **147,302** | **1.67 ms** | **51.2 MiB** |
+| dnsdist 1.9.16 (packet cache) | 136,023 | 2.45 ms | 36.7 MiB |
+| Knot Resolver 5.7.5 | 131,431 | 0.89 ms | 10.3 MiB |
+| PowerDNS Recursor 5.2.13 | 129,786 | 2.16 ms | 19.8 MiB |
+| Unbound 1.26.2 | 125,865 | 0.67 ms | 21.8 MiB |
+| BIND 9.20.30 | 124,822 | 1.29 ms | 17.6 MiB |
+| CoreDNS 1.12.1 | 67,982 | 3.04 ms | 91.6 MiB |
+| dnsmasq 2.91 | 66,229 | 2.46 ms | 3.0 MiB |
+| Technitium 15.6.2 | 39,617 | 10.98 ms | 107.4 MiB |
+| AdGuard Home 0.107.79 | 30,867 | 7.17 ms | 57.9 MiB |
+| Pi-hole 2026.10.0 | 21,673 | 7.63 ms | about 44 MiB ² |
+| Hickory DNS 0.26.3 | 20,063 | 8.71 ms | 34.7 MiB |
+| Blocky 0.35.0 | 17,770 | 12.05 ms | 48.0 MiB |
 
-DNZ is the code released as 1.22.0, the `dnz` binary built from its commit. Every server answered
-6 to 11% fewer queries than in the run before (2026-10-25: Knot DNS 142,655, NSD 140,755, BIND
-134,038 authoritative), so compare places within one run: DNZ is third in both scenarios, as it was
-with 1.8.0 then (134,360 authoritative and 130,739 cached, 41 and 52 MiB). Its cached latency went
-from 1.33 to 1.15 ms with mimalloc (below). v1.5.0 answered 66,772 authoritative and 65,581 cached
-queries a second at 2.3 ms; what changed is below.
+DNZ is 1.22 with the UDP hand-over after 512 queries (see *1.22: against Knot DNS* below), the
+`dnz` binary built from its commit. It answers the most queries a second in both scenarios, but not
+the fastest: at dnsperf's limit its average latency is 1.7 ms against Knot DNS's 0.6 ms, and higher
+than the 1.1 ms of the build before the hand-over change. The same day's run of that build: Knot DNS
+134,060, NSD 129,591, DNZ 124,504 authoritative; dnsdist 135,731, BIND 127,351, DNZ 126,367 cached.
+Other servers vary 3 to 8% between runs, so compare places within one run. v1.5.0 answered 66,772
+authoritative and 65,581 cached queries a second at 2.3 ms; what changed is below.
 
 1. YADIFA 3.0.2 (the Debian 13 package) sends malformed NXDOMAIN answers (the SOA in the wrong
    section), one query in ten here, so its number is not quite comparable.
@@ -66,21 +67,21 @@ queries a second at 2.3 ms; what changed is below.
 
 What the numbers say:
 
-- **The top group is the load generator's limit.** Knot DNS, NSD, DNZ, Unbound, PowerDNS, BIND 9,
-  gdnsd, dnsdist, Knot Resolver and PowerDNS Recursor all land between 118k and 136k queries a
-  second, within 15% of each other. That is what dnsperf sends from its 2 CPUs; their real capacity
+- **The top group is the load generator's limit.** DNZ, NSD, Knot DNS, PowerDNS, gdnsd, Unbound,
+  BIND 9, dnsdist, Knot Resolver and PowerDNS Recursor all land between 123k and 148k queries a
+  second, within 20% of each other. That is what dnsperf sends from its 2 CPUs; their real capacity
   is higher, and this run doesn't rank them among themselves.
-- **DNZ is in that group** in both scenarios, while writing every query to its query log, with
-  1.1 ms of latency, third in both. v1.5.0 answered half as many at twice the latency (below). DNZ
-  answers 2.5 times what CoreDNS does authoritative and twice what CoreDNS and dnsmasq do cached.
+- **DNZ is at the top of that group** in both scenarios, while writing every query to its query
+  log, with 1.7 ms of latency at the limit. v1.5.0 answered half as many at twice the latency (below). DNZ
+  answers 2.7 times what CoreDNS does authoritative and twice what CoreDNS and dnsmasq do cached.
 - **Against the servers with a web UI, a query log and filtering**, the ones people often pick
-  instead of DNZ: Technitium answers 28 to 30% of what DNZ does, AdGuard Home 23%, Pi-hole 17% and
-  Blocky 13%, with 6 to 11 times DNZ's latency.
-- **Hickory DNS**, the other DNS server written in Rust, answers 9% of DNZ's authoritative and 15%
+  instead of DNZ: Technitium answers 27% of what DNZ does, AdGuard Home 21%, Pi-hole 15% and
+  Blocky 12%, with 4 to 7 times DNZ's latency.
+- **Hickory DNS**, the other DNS server written in Rust, answers 8% of DNZ's authoritative and 14%
   of its cached queries (with its default `info` logging of every request).
 - **Memory**: the C servers that only answer DNS mostly hold 2 to 22 MiB; NSD, PowerDNS
-  Authoritative and YADIFA set aside 59 to 75 MiB. DNZ holds 44 to 52 MiB with its web API, query
-  log and cache: less than AdGuard Home, Blocky and CoreDNS here, under a third of Technitium.
+  Authoritative and YADIFA set aside 59 to 75 MiB. DNZ holds 45 to 51 MiB with its web API, query
+  log and cache: less than AdGuard Home and CoreDNS here, about half of Technitium.
 
 ### Cache hits, before and after
 
@@ -160,6 +161,34 @@ later. Both builds side by side on the server above, taking turns, then in each 
 
 mimalloc with its default (memory given back a second later) was as fast but held 79 to 87 MiB
 after load, so DNZ sets that delay to 0.
+
+### 1.22: against Knot DNS, and the UDP hand-over
+
+At dnsperf's limit the top servers look alike, so Knot DNS and DNZ also answered the authoritative
+queries at a steady 80,000 a second, taking turns, with the CPU each used: **Knot DNS 12.0 µs per
+query, DNZ 20.9 µs**, for the same 64-byte answers. Most of DNZ's is the kernel sending the
+answers; DNZ's own work per answer is about 2 µs, and the rest is what it does that Knot doesn't
+(the query log, statistics, filtering and policy).
+
+Each UDP socket's receive loop used to hand its worker over after 128 queries, so that one busy
+socket can't keep it while the others fill up. From 1.22 it does so after 512. Against the build
+before, side by side, then in each other's place:
+
+| | Before | After | Change |
+| --- | ---: | ---: | ---: |
+| Authoritative, queries/s | 137,443-137,918 | 144,561-145,521 | +5.2 to +5.5% |
+| Cached forwarding, queries/s | 137,536-138,000 | 146,490-148,073 | +6.2 to +7.7% |
+| CPU per query at 80,000/s | 20.6-21.0 µs | 20.5-20.7 µs | the same or lower |
+| Datagrams dropped (receive buffer full) | 10,724-10,902 | 2,655-3,199 | −71 to −75% |
+| Avg latency at the limit | 1.10-1.37 ms | 1.35-1.71 ms | higher |
+| Avg latency at 80,000/s | 1.18-1.19 ms | 1.22-1.27 ms | +3 to +8% |
+| Memory after the runs | 48-52 MiB | 49-53 MiB | the same range |
+
+Fewer hand-overs let the workers drain the sockets faster, so a quarter as many datagrams were
+dropped. Using 1 or 2 sockets per CPU instead of 4 was tried too and cost 4 to 13% of the queries
+a second. In this harness DNZ now answers more queries a second than Knot DNS, at 1.7 times its
+CPU per query. The cost is latency at the limit: a query waits behind a longer batch, and queries
+the old build dropped at a full buffer are answered late instead.
 
 ## Features compared
 
