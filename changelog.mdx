@@ -39,517 +39,283 @@ The `latest` image tag and the install script without `--version` always get thi
 
 <Update label="v1.21.1" description="October 29, 2026">
 
-- Route dialog: your own certificate; UI shows outside logo images
-- Routes: a submenu per proxy in a route's menu when several serve it
+- **Your own certificate:** the route dialog's certificate step can take a certificate and key you upload, and names it covers need no Let's Encrypt setup (`dnz proxy certs upload --cert FILE --key FILE`).
+- **Routes:** a route served by several proxies has a submenu per proxy in its menu.
+- **Fix:** Settings → Profile now shows a logo given as an image address.
 
 </Update>
 
 <Update label="v1.21.0" description="October 28, 2026">
 
-- Back links lead to the list a page was opened from; Analytics first
-- Routes: hostname opens the app, copy icon, Solar icons, proxies per row
-- Toasts show in front of dialogs
-- Routes: a redirect route shows where it goes; the Proxy picker opens a proxy
-- Status pages move to the Proxy menu
-- Proxies: cards as a mini overview; the setup guide stays reachable
-- Copy buttons work over plain http and inside dialogs
-- DNZ Proxy nodes report their server: CPU, memory, load, disk
-- Sign in with Google: link a DNZ account to Google and sign in with it
-- UI: Sign in with Google on the sign-in page, Account and Integrations
-- CLI: dnz settings google-sign-in and dnz user unlink-google
-- Settings → Profile: a logo and label on every status page; pages fit the screen
-- Profile preview: draw the page at 1000 px so it reads at card size
-- Profile: a generic "Company" as the label's placeholder and example
+- **Sign in with Google:** users link their DNZ account to Google and sign in with it (their second factor is still asked for), optionally limited to Google Workspace domains. Set up under Settings → Integrations with a copy-paste guide (`dnz settings google-sign-in`, `dnz user unlink-google`).
+- **Your logo on visitor pages:** Settings → Profile puts a logo and label at the top of every status page and sign-in page, on DNZ Proxy, Caddy and Traefik (`dnz settings profile`). The pages now fit the screen without scrolling, on phones and desktops.
+- **DNZ Proxy node health:** each node reports its CPU, memory, load, disk and connections, shown under Proxy → Analytics and Nodes, in `dnz proxy nodes`, in Prometheus metrics and alerts. Fixed: upload refusal counts were always empty in metrics, the CLI and MCP.
+- **Routes:** the hostname opens the app and a copy icon copies it; a row's Proxy cell adds or removes the route on each proxy; a redirect route shows where it goes.
+- **Proxy pages:** proxy cards give a short overview with the setup guide one click away, status pages moved to the Proxy menu, Analytics comes first, and back links return to the list you came from, filters included.
+- **Fixes:** copy buttons work when DNZ is opened over plain http and inside dialogs, and toasts show in front of dialogs.
 
 </Update>
 
 <Update label="v1.20.0" description="October 28, 2026">
 
-- Say DNZ Proxy, not dnz-proxy, wherever the proxy is named
-- Routes across proxies, Serve on, and redirect routes
-- Web: a right-click menu on every table and row list
+- **Routes across proxies:** Proxy → Routes lists every proxy's routes in one table, with one row per hostname and a Proxy column. Add route can pick several proxies, and the route dialog's Serve on keeps a route on each of them.
+- **Redirect routes:** add a route that only redirects, permanent (301) or temporary (302), on DNZ Proxy, Caddy and Traefik; or Redirect to… from a route's menu (`dnz proxy routes add --redirect-to`, `dnz proxy routes redirect`).
+- **Right-click menus:** every table and row list offers what you want next for a row: copy its values, open it, jump to the matching filter, and its actions. Compare with Cloudflare can add, copy and delete on either side.
+- **DNZ Proxy:** the proxy is now called DNZ Proxy everywhere in the UI, CLI and docs; the `dnz-proxy` binary, image and commands keep their names.
 
 </Update>
 
 <Update label="v1.19.0" description="October 28, 2026">
 
-- Live capture: keyword lists to pick instead of typing keywords
-- Live capture keyword lists: dnz capture --list, dnz capture-list, MCP
-- Live capture keyword lists: picker and editor on the page, docs
-- Keyword list dialog: the keyword count beside its label
-- Phone layout: the setup banner's buttons wrap under its text, the capture's client field is full width
-- Login page: split layout with a globe showcase beside the form, show-password toggle
-- Loading feedback: spinners on server-side searches and busy buttons
-- Searchable selects for lists that can grow long
-- Proxy menu: Proxies, Routes, Nodes, Analytics, Certificates; routes by zone
-- Sidebar: menu items keep their height when the menu scrolls
-- CLI: dnz proxy routes list --by-zone
-- Cloudflare: compare a local zone with its Cloudflare zone, one row per name
+- **Cloudflare compare:** a local zone's Cloudflare tab shows each name beside what Cloudflare answers the internet (split, same, only local, only Cloudflare, or a private address published on Cloudflare), and fills either side from the other (`dnz cf compare`).
+- **Live capture keyword lists:** save named keyword lists and pick them instead of typing keywords (`dnz capture --list`, `dnz capture-list`); a capture holds up to 50 keywords, and Live Capture now works on a secondary too.
+- **Proxy menu:** Proxies, Routes, Nodes, Analytics and Certificates; Routes lists every proxy's routes, all together or by zone (`dnz proxy routes list --by-zone`).
+- **Sign-in page:** a new layout, and a show-password toggle.
+- **Searchable selects:** long lists (services, zones, proxies, certificates, users and more) can be searched as you type.
+- **Loading feedback:** searches and busy buttons show a spinner.
+- **Fixes:** the setup banner and the capture's client field fit on phones, and sidebar items keep their height when the menu scrolls.
 
 </Update>
 
 <Update label="v1.18.0" description="October 28, 2026">
 
-- Dependencies: security updates for rustls-webpki, webpki-root-certs, crypto-bigint, ctutils
-- HTTP/3 for dnz-proxy: research and plan
-- Sign-in for routes: visitors sign in with an OpenID Connect provider
-- Cloudflare: zone settings, DNSSEC, purges, traffic, tunnels; keep a zone in sync
-- Log push: stream the query log and audit log to HTTP, Loki, S3 or syslog
-- dnz-proxy: upload limits middleware (dnzMultipart)
-- Upload limits: route switch, route defaults, Traefik and Caddy, CLI, MCP, docs
-- Upload limits: a chip in the routes list, the dialog's fields on one line each
-- Visitor pages: a card with the status's icon, what to do next, the line as a ring
-- Redesign: sidebar, slim top bar, black glass dark theme, readable light theme
-- Readability: no text under 11.5px anywhere, upload limits included; black loading screen
-- Contrast: warnings use the warn colour, the avatar is solid
-- Upload limits: file data goes on without a copy
-- Upload limits: cost measured on 103
+- **Sign-in for routes:** a route's "Require sign-in" switch sends visitors to Google, Microsoft Entra ID, Keycloak, Authentik, Okta, GitLab or any OpenID Connect provider; only the listed emails, domains or groups get in, and your servers get the user's email, name and groups. Works on DNZ Proxy, Traefik and Caddy; set up under Settings → Proxy → Sign-in (`dnz proxy sign-in`).
+- **Upload limits:** DNZ Proxy routes can refuse uploads that break limits (size, parts, fields, file names, paths, methods) before they reach your app, with a shield against PHP upload-progress attacks; also as a default for every route, and the size limit on Traefik and Caddy.
+- **Cloudflare:** a Cloudflare zone's page shows traffic, SSL/TLS and security settings, DNSSEC, cache purges and Cloudflare Tunnel hostnames; "Keep in sync with Cloudflare" pushes a local zone to Cloudflare within a minute of every change, touching only the records DNZ added (`dnz cf sync`, `settings`, `purge`, `traffic`, `tunnel`).
+- **Log push:** stream the query log or the audit log to an HTTP endpoint, Grafana Loki, S3-compatible storage or syslog, without gaps or duplicates (Settings → Integrations → Log push, `dnz logpush`).
+- **New look:** a sidebar with every section, a slim top bar, a pitch-black dark theme and a light theme that passes WCAG AA, with no text smaller than 11.5px.
+- **Visitor pages:** status pages, the block page, the waiting room and the browser check show the status's icon, when the site is expected back, and what to do next.
+- **Security updates:** TLS and cryptography libraries updated for published advisories (distrusted certificate authorities, timing issues).
 
 </Update>
 
 <Update label="v1.17.2" description="October 28, 2026">
 
-- Take over: use the old primary's current name, no second node on the map
-- Menu: High availability group, Topology in Overview, Access in Settings
-- Routes: Upstreams or Service tab, to use one of the proxy's services
-- Status pages: links reach the nodes, labels line up
-- dnz-proxy reports DNZ's version; nodes list shows version and config apart
+- **Menu:** the main menu is now Overview, DNS, Proxy, High availability (Replication and Cluster) and Settings; the topology map is a tab of the Overview, and members, users, roles, divisions and the audit log moved into Settings. Old addresses redirect.
+- **Routes:** a route can use one of the proxy's services instead of its own upstreams, and several routes can share it (`--service` on `dnz proxy routes add|edit`).
+- **DNZ Proxy nodes:** each node's version is shown (marked "Older than DNZ" when behind), separately from whether it serves the current configuration.
+- **Take over fix:** a primary renamed after its secondary joined no longer shows twice on the replication map after a take over.
+- **Status pages:** the path's lines meet their circles, labels line up, and long host names wrap at dots.
 
 </Update>
 
 <Update label="v1.17.0" description="October 27, 2026">
 
-- Replication: take over from the header, hide the card for the side this server isn't on
-- Replication: never copy from this server itself, check the new primary's DNS before a take over
-- Filtering: export a blocklist as .txt
-- Zones: import many at once from a zip of BIND files, a folder or several files
-- Replication: refuse joins to a secondary; leaving removes the secondary from its primary
-- Replication map: right-click a server for its actions, this server for a take over
-- Replication: a primary joining another hands over its zones and secondaries first
-- Replication: Set as primary asks a secondary to take over at its next check-in
-- Replication UI: Set as primary, its request on the page, the join dialog says what a primary hands over
-- Replication docs and CLI: set-primary, a primary joining another, leaving tells the primary
-- Replication map: nodes take right-clicks; header menu at the end, take over only from DNZ primaries
+- **A primary joining another primary:** a primary with its own zones and secondaries can now join another primary; it hands over its zones (with tags, comments, views and DNSSEC keys) and secondaries first, after a check that changes nothing if it refuses.
+- **Set as primary:** on the primary, ask a DNZ secondary to take over; it starts at its next check-in (`dnz replication secondary set-primary`).
+- **Replication:** a secondary can't be joined, and **Leave** now removes the secondary from its primary's list. Right-click a server on the replication map for its actions; take over from the page header.
+- **Replication fix:** a secondary never copies zones from its own address, and a take over checks first that the old primary reaches the new primary's DNS (a primary in Docker could end up copying from itself).
+- **Zones:** import many zones at once from a zip of BIND files (as Export all gives), a folder or several files, each created, skipped, merged or replaced (`dnz zone import-bundle`).
+- **Filtering:** export any blocklist as a .txt file (`dnz filter list export`).
 
 </Update>
 
 <Update label="v1.16.1" description="October 27, 2026">
 
-- Upgrade: set the old query log aside instead of deleting it during the start
-- Replication diagram: edges on the right side, a promoted server shown as primary
-- Passkeys after a promote: offered only for this host, a secondary's own ones kept
-- Promote without the primary: the failed take over no longer shows, the UI unlocks
-- Easier password rules: 8 characters, no letter/number mix required
+- **Upgrading from v1.15 or older:** with a large query log, the first start no longer keeps DNS and the web UI down for minutes; the old log is cleared in the background.
+- **Passkeys after a promotion:** sign-in offers a passkey only when it belongs to this server's host name, and an account copied to a secondary can add passkeys of its own there.
+- **Promote without the primary:** after a failed take over, promoting no longer looks failed, and pages are editable again without a reload.
+- **Replication diagram:** links connect on the right side, and a promoted server shows as primary.
+- **Passwords:** 8 characters are enough, with no letter and number mix required; common passwords and the username are still refused.
 
 </Update>
 
 <Update label="v1.16.0" description="October 27, 2026">
 
-- dnz-proxy: DNS filtering's block page for hosts no router serves
-- DNS filtering: a block page mode that points blocked names at a proxy
-- Block page on Traefik and Caddy proxies, over plain HTTP
-- Block page: settings in the UI, dnz filter block-page, topology
-- Traefik config: drop the connection info before awaiting
-- RRL: exempt networks as tags
-- Records: filter by view, searchable type picker
-- Live capture: stream the queries matching keywords, by domain
-- Live Capture page: keywords, by domain or live, block from the results
-- Find: settings cards with search words, clear the DNS cache from Find
-- Memory: a Live query log no longer holds the database's file cache; container memory on hybrid cgroup hosts
-- Settings: release database file cache, a switch and the minutes after the last search
-- Query log: a time window, the last 24 hours by default
-- Replication: a joining secondary's seeded Default division becomes the primary's first
-- Routes: a custom headers switch on every proxy kind
-- Query log store: daily SQLite files per server, bounded searches
-- Proxy: styled pages when a password, rate limit, allow list or firewall turns a visitor away
-- Query log: two more readers per day file than searches
+- **Block page:** DNS filtering can point blocked names at a proxy that shows visitors a "Blocked" page instead of a failed connection. On DNZ Proxy (also over HTTPS, with a certificate authority your devices trust), and on Traefik and Caddy over plain HTTP. Set up on the Filtering page or with `dnz filter block-page`.
+- **Live Capture:** DNS → Live Capture streams the queries matching a few keywords as they are answered, grouped by domain or as a live list, and blocks a domain or name from the results (`dnz capture`).
+- **Query log:** kept in one file per day on each server, so a long search can no longer slow down sign-in, the dashboard or DNS. At most two searches run at once per server; in a cluster, Query Logs gathers every server's rows. Searches cover the last 24 hours by default, with a range picker (`dnz logs --range|--since|--until`). Queries logged before the upgrade are not carried over; the charts and top lists keep their history.
+- **Routes:** a custom headers switch on every proxy kind, to set or remove headers on requests and answers.
+- **Visitor pages:** DNZ Proxy shows styled pages when a password, rate limit, allow list or firewall turns a visitor away (Caddy for the password and allow list), and the "under attack" check gets the same style.
+- **Records:** filter by view, and a searchable type picker that also matches what a type holds ("ipv6" finds AAAA).
+- **Find:** Cmd+K finds settings inside pages by the words people search for, and can clear the DNS cache.
+- **Memory:** a new setting under Settings → General decides when DNZ releases the cache of its log files (`dnz settings file-cache`). Fixed: a Query Logs page left open on Live kept gigabytes of the log in the container's memory, and the Server tab missed the container's memory on hosts with mixed cgroup versions.
+- **Rate limiting:** RRL's exempt networks are entered as tags.
+- **Replication fix:** a joining secondary no longer keeps its own empty *Default* division beside the primary's.
 
 </Update>
 
 <Update label="v1.15.0" description="October 26, 2026">
 
-- Add proxy: Docker Compose guide for dnz-proxy nodes
-- Drop the "orange cloud" wording; describe proxied records by what they do
-- Blocked answers carry an Extended DNS Error (RFC 8914)
-- Set status pages from a router's hostnames on a proxy's page
-- MCP: status page tools
-- dnz-proxy: waiting room middleware (dnzWaitingRoom)
-- Waiting room: form with live counts, CLI, MCP tool and docs
-- Routes API and automatic certificates for dnz-proxy
-- Route defaults for dnz-proxy proxies
-- Proxy page: Routes first, a simple route dialog, certificates step by step
-- MCP: proxy_routes and clear_proxy_cache
-- Routes: a waiting room switch, status pages from a route's menu
+- **Routes:** a proxy's page opens on Routes, one row per hostname with its certificate, DNS and switches, and one simple dialog to add or edit a route: hostnames, servers, HTTPS, and switches for cache, firewall, rate limit, password, address list and the "under attack" check, with the rest under Advanced. Clear a hostname's cache from its route. `dnz proxy routes`.
+- **Automatic certificates on DNZ Proxy:** HTTPS gets a Let's Encrypt certificate by itself. DNZ proves each name the way it can (its own zone, a Cloudflare connection, a DNS credential, or HTTP through the nodes), asks step by step for anything missing, and says why a certificate failed, with a fix and a retry (`dnz proxy certs`).
+- **Route defaults:** a DNZ Proxy proxy's Settings set what every route gets: http:// sent to https://, compression, security headers and a firewall (`dnz proxy defaults`).
+- **Waiting room:** DNZ Proxy can hold visitors in a line once a hostname has enough of them, with their place and an estimate, letting them in as places free up; optional pre-launch mode where everyone waits. A switch in the route dialog, live counts, `dnz proxy waiting-room`.
+- **Status pages:** set them from a route's menu or a router's hostnames on the proxy's page.
+- **Blocked answers:** carry an Extended DNS Error (RFC 8914) saying they were blocked, so a block can be told apart from a missing or broken name.
+- **Add proxy:** a Docker Compose guide for DNZ Proxy nodes.
+- **MCP:** tools for routes, clearing a proxy's cache and status pages.
 
 </Update>
 
 <Update label="v1.14.3" description="October 26, 2026">
 
-- Forward missing names: a local name's missing type is NODATA, not the upstream's NXDOMAIN
-- Secondaries answer views and forward missing names as their primary does
-- Secondaries run filter schedules in the primary's time zone
-- Automatic PTR on a secondary leaves out proxied names, as the primary does
-- Secondaries steer traffic as their primary does
-- Catalog lists the zones a server copies from other primaries too
-- Promoting a secondary keeps copying what its primary copied from elsewhere
+- **Secondaries answer like their primary:** records in views, *Forward missing names*, traffic steering (GeoDNS, weights and health checks), automatic PTR of proxied names and filter schedules (in the primary's time zone) now give the same answers on a DNZ secondary as on its primary.
+- **Zones from other primaries:** a DNZ secondary also gets the zones its primary copies from other servers, and a promoted secondary keeps copying them from their real primary.
+- **Forward missing names:** a local name asked for a type it doesn't have now gets the zone's empty answer (NODATA) instead of the upstream's "doesn't exist".
 
 </Update>
 
 <Update label="v1.14.2" description="October 26, 2026">
 
-- Take over: tie the hold to its caller, refuse switched-off zones, crash-safe moves
+- **Your own blocklists:** paste domains or load a .txt file under Blocklists instead of giving a URL; the list works like any other and can be edited later. `*.tld` blocks a whole top-level domain, and web addresses and Markdown links count as their host (`dnz filter list add NAME --file`, `list show`, `list edit`).
+- **Promotion and take over keep more:** record tags, comments, records in views, switched-off records and proxied records are kept when a secondary is promoted or takes over, and when switching back.
+- **Take over fixes:** DNS updates and DNSSEC rollovers wait while a take over runs, a take over no longer ends with both servers primary, a failed account copy stops it before accounts are lost, and a take over cut short by a restart no longer blocks the next one.
+- **Take over:** only the secondary that started a take over can finish or cancel it; it is refused while the old primary has switched-off zones or while this server follows another DNZ primary; zones the old primary no longer has are dropped instead of stopping it; and a secondary moving to a new primary picks up where it left off after a restart.
 
 </Update>
 
 <Update label="v1.14.0" description="October 26, 2026">
 
-- Secondary: own rows give way when copying the primary's settings
-- Replication: "Take over as primary" on a followed primary's menu
-- Replication: connections diagram on the Replication page
-- Replication: take over as primary while the old primary is still there
-- Replication: take over from the dashboard, with each step shown
-- Replication: secondaries copy divisions, roles and every account
-- dnz-proxy: analytics stay on each node, every path counted
-- dnz-proxy analytics: say an old node may need updating when it doesn't answer
+- **Take over as primary:** a secondary can take over from a DNZ primary that is still running: the two switch roles, the old primary becomes a secondary with its zones kept answering, and its other secondaries follow the new primary by themselves. From the dashboard with each step shown, or `dnz replication take-over`; when the primary can't be reached it offers to promote without it.
+- **Secondaries copy divisions, roles and every account:** zones land in the same division as on the primary, and everyone keeps signing in after a take over.
+- **Connections diagram:** the Replication page shows this server, the primaries it copies from and its secondaries, each link coloured by its sync state.
+- **DNZ Proxy analytics:** every request is now counted per hostname and path (not just the sampled log), with a "most requested URLs" table. Analytics stay on each node; the page says when an old node needs updating. Proxy analytics from before this version are not carried over.
+- **Fix:** a secondary that had its own upstreams or forward rules before following a primary kept them instead of the primary's.
 
 </Update>
 
 <Update label="v1.13.0" description="October 26, 2026">
 
-- About: link to dnzwithazee.com instead of listing the tech stack
-- UI: right-click menus, starting with views
-- UI: right-click menus on every list with row actions
-- Records: group records of one name and type into one row
-- UI: close button on every toast
-- MCP server: `dnz mcp` over stdio and /mcp with OAuth sign-in
-- UI: consent page for MCP clients, connected apps, setup guide
-- Top bar: Update badge when a newer DNZ release is out
-- MCP: off by default, turned on by a superadmin
+- **AI assistants (MCP):** Claude, Cursor, VS Code and other MCP clients can work with DNZ's zones, records, query explain, logs, stats, threats, audit log and topology, with your permissions. `dnz mcp` runs over stdio; `/mcp` signs apps in with OAuth on a consent page (read only, or read and change). Off by default: a superadmin turns it on under Settings → Integrations → AI assistants (or `dnz settings mcp on`), which also has setup steps per app; Account lists connected apps.
+- **Update badge:** the top bar shows when a newer DNZ release is out, with the release notes and copy-paste upgrade commands; `dnz version` prints the same.
+- **Records:** "Group by name" shows the records of one name and type as a single row that opens to list each one (`dnz record list --group`).
+- **Right-click menus:** on every list with row actions, with the same items as the row's ⋯ menu.
+- **Toasts:** every toast has a close button.
+- **About:** links to the DNZ website instead of listing the tech stack.
 
 </Update>
 
 <Update label="v1.12.0" description="October 26, 2026">
 
-- Secondaries copy the primary's resolver settings and refuse what it manages
-- Replication overview names the followed primary; docs for secondaries following their primary
-- Threats: a secondary leaves automatic blocking to its primary
-- Mirror: build the primary's settings snapshot at most every 5 s
-- UI: a secondary shows what its primary manages read-only
-- Mirror: matches! for the local zone paths
+- **Secondaries answer like their primary:** a DNZ secondary now copies its primary's upstreams, forward rules, DNSSEC validation, resolver options, filtering, RPZ and threat lists every minute, besides zones and superadmins.
+- **Managed on the primary:** on a secondary, what the primary manages is read-only and marked "Managed on the primary"; its own account, address, health check, cluster, caches, logs and replication stay editable. The Replication overview names the primary it follows.
+- **Threat detection:** a secondary leaves automatic blocking to its primary and takes the primary's blocks.
 
 </Update>
 
 <Update label="v1.11.0" description="October 25, 2026">
 
-- Replication: the primary learns a secondary's address from where it asks
-- DNS cache and query log: Clear cache and Clear log buttons
-- Domain expiry monitoring over RDAP, per zone and off by default
-- Two-factor sign-in: authenticator app, passkeys and recovery codes (API)
-- CLI: two-factor sign-in
-- UI: two-factor sign-in
-- Domain info: the registry's answer on demand, with a WHOIS fallback
-- UI: dialogs never grow past the screen
-- Trusted reverse proxies: known proxies trusted automatically, a setting, and a warning
-- Roles: server-wide permissions and a built-in Network Admin role
-- UI and CLI: server-wide permissions
-- Query explain: the decision path of one query and its answer
+- **Two-factor sign-in:** authenticator apps, passkeys and recovery codes, set up under Account → Two-factor sign-in. Roles can require it, and so can a setting for superadmins; superadmins can reset a user's second factors. Also in the CLI (`dnz login`, `dnz two-factor`).
+- **Server-wide permissions:** views, the resolver, server-wide filtering, all query logs, threats, replication, proxies and monitoring are now permissions a role can grant instead of superadmin only, with a built-in Network Admin role (`dnz role grant|revoke`).
+- **Query explain:** see why a query got its answer: the view and division, the blocklist entry or rule that matched, the zone records or forwarding rule, the cache, steering, DNSSEC and the reply. Under DNS → Query Explain, from a Query Logs row, or `dnz query explain`.
+- **Domain expiry monitoring:** per zone, off by default: a daily check with the registry (RDAP) and alerts before expiry, on holds and on renewal (`dnz zone expiry`).
+- **Domain info:** a zone's Registration tab shows what the registry says about the domain: registrar, dates, statuses explained, and its nameservers and DS compared with the zone's; WHOIS where there is no RDAP (`dnz zone info`).
+- **Clear cache and Clear log:** Clear cache on DNS → Forwarding works in every resolution mode, and Clear log on DNS → Query Logs empties the query log (`dnz forwarding clear-cache`, `dnz logs --clear`).
+- **Trusted reverse proxies:** proxies DNZ already knows are trusted automatically, so the audit log, sessions and sign-in limits show the visitor's real address. Add more under Settings → General (`dnz settings trusted-proxies`); the health check warns about untrusted ones.
+- **Replication fix:** a secondary that joined through a reverse proxy now gets NOTIFY at an address that works, instead of showing Unreachable.
+- **Dialogs:** never taller than the screen, so their buttons stay reachable.
 
 </Update>
 
 <Update label="v1.10.0" description="October 25, 2026">
 
-- Replication: copy zones from the primary's DNS when its API is behind a reverse proxy
-- Replication: removing a DNZ secondary can factory reset it
-- Proxy: DNZ with Caddy or dnz-proxy in one compose file
-- Proxy settings: Add proxy → Caddy asks whether DNZ configures it or only keeps DNS records
-- Sites in DNS: Traefik too, chosen under Add proxy → Traefik → Keep my Traefik config
+- **Replication behind a reverse proxy:** when the primary's web UI is reached through a reverse proxy, a secondary now copies zones from the primary's DNS address instead of the proxy's (it never transferred and showed Unreachable).
+- **Removing a secondary:** removing a DNZ secondary on its primary can also factory reset it (on by default); `dnz replication secondary rm` resets unless `--no-reset`.
+- **One compose file:** DNZ with a Caddy or with DNZ Proxy nodes can now start from one compose file already connected (`DNZ_PROXY_CONNECT_KEY`, `DNZ_PROXY_SEED_KIND=dnz-proxy`).
+- **Sites in DNS:** Add proxy → Caddy or Traefik asks whether DNZ configures it or only keeps DNS records for the sites it serves; a Traefik's own routers can now get DNS records too (`dnz caddy add --traefik`).
 
 </Update>
 
 <Update label="v1.9.0" description="October 25, 2026">
 
-- Overview: Replication tab with each replica's sync status
-- Replication: promote a secondary to primary
-- Zone page: secondary zones show DNSSEC read-only; update keys and the DHCP guide skip them
-- Proxy: declare a Traefik and zones in the environment, for one compose file
+- **Replication status:** the Overview gets a Replication tab with each replica's sync state (in sync, behind, unreachable), the share of zones that are current and the zones that aren't; `dnz replication status`.
+- **Promote a secondary:** when the primary is gone, turn the zones copied from it into primary zones here, keeping records, DNSSEC keys (the DS at the registrar stays valid) and key rollover. In the replication menu, on secondary zones and the zone page, or `dnz replication promote` / `dnz zone promote`.
+- **Secondary zones:** the DNSSEC card is read-only and says the zone follows its primary; the DNS update key picker and the DHCP setup guide leave secondary zones out.
+- **One compose file:** declare zones (`DNZ_ZONES`) and a Traefik or Caddy proxy (`DNZ_PROXY_SEED_*`) in the environment, so DNZ and the proxy start already connected. Fields set this way are read-only in the UI, API and CLI.
+- **CLI:** `dnz proxy auto-records` manages the records made from a Traefik's own routers.
 
 </Update>
 
 <Update label="v1.8.0" description="October 25, 2026">
 
-- Join a primary from the welcome page
-- Memory: drop the database file's page cache when the log sits unread; Server tab shows the container's memory
-- Redis / Valkey backend: shared data through a change stream
-- Redis backend: Sentinel failover, Cluster mode, Redis-down behaviour, CI
-- Redis backend: start over from a copy after Redis lost its data; docs
-- Redis backend: tidy Replica::open
-- Redis backend: release the page cache of this server's copy too
-- Bench images: copy .cargo for SQLite's session extension
+- **Join a primary:** a fresh server can become a secondary right from the welcome page (radar pairing or a join code), without an admin of its own: it copies the primary's superadmins, so the same accounts sign in on both. Also `DNZ_JOIN_CODE` for Docker and `dnz setup --join-code`.
+- **Redis / Valkey backend:** a cluster of DNZ servers can share its data through Redis or Valkey, including Sentinel and Cluster mode. Each server keeps its own copy and its own query log, keeps answering DNS while Redis is down, and starts over from a copy if Redis loses its data.
+- **Memory:** on Linux, DNZ releases the kernel's cache of its database file once the query log sits unread for 10 minutes, so `docker stats` no longer counts a large log file against the container. The Server tab shows the container's memory as `docker stats` counts it.
 
 </Update>
 
 <Update label="v1.7.3" description="October 24, 2026">
 
-- dnz-proxy: mimalloc, without transparent huge pages
+- **DNZ Proxy:** faster again: up to 16% more requests a second, less CPU per request and lower latency.
 
 </Update>
 
 <Update label="v1.7.2" description="October 24, 2026">
 
-- Proxy settings: a dnz-proxy proxy's state comes from its nodes
-- Backups: a target tile opens the dialog on its kind
-- dnz-proxy: test the X-Forwarded-* headers from visitors and trusted forwarders
+- **Proxy settings:** a DNZ Proxy proxy's state now comes from its nodes (no node yet, waiting for approval, running, how many are healthy, or down) instead of showing Ready before any node runs; the topology map follows it too.
+- **Backups:** the S3-compatible and SFTP tiles open their own form instead of the Folder one.
 
 </Update>
 
 <Update label="v1.7.1" description="October 24, 2026">
 
-- dnz-proxy: one write for an answer's head and small body; log lines only when kept
+- **DNZ Proxy:** faster: about 12% more HTTP and 18% more HTTPS requests a second on one CPU, with less CPU per request.
 
 </Update>
 
 <Update label="v1.7.0" description="October 24, 2026">
 
-- Proxy: on/off switch, a kind per proxy, and Caddy as a proxy
-- Status pages: a host served by a proxy shows a status page instead of its backend
-- Status pages on Caddy and Traefik, and in the topology map
-- Status pages: a Vue Flow-style path, Manrope, and a countdown
-- Status pages without panels
-- Memory: big inserts not kept prepared, cached answers without spare room
-- Blocklists and threat feeds as packed domain sets
-- Proxy benchmark: dnz-proxy against nginx, HAProxy, Envoy, Caddy and Traefik
-- Threats: few-name pairs kept small, the baseline's memory fixed
-- Caddy: upstream URLs split without an else-if chain
+- **Proxy:** proxying is now an on/off switch, and each proxy has its own kind, picked when adding it: Traefik, DNZ Proxy or Caddy. Kinds work side by side, and a record can go through several; DNS answers with all their addresses (`dnz proxy on|off`, `dnz proxy add --kind`).
+- **Caddy as a proxy:** DNZ can now configure a Caddy with your routes, like a Traefik. "Caddy sites in DNS" moved to Settings → Proxy.
+- **Status pages:** a hostname served by a proxy can show a status page instead of its backend: maintenance, coming soon, unreachable, blocked, unauthorized, suspended, rate limited, geo-blocked, moved or gone, with the right HTTP code, an optional schedule and countdown, addresses that bypass it, and your own title, message and link. On DNZ Proxy, Caddy and Traefik; set under DNS → Status pages, on proxied records or with `dnz status-page`, and shown in the topology map.
+- **DNZ Proxy:** its own failures (502, 503, 504) get styled pages.
+- **Memory:** blocklists and threat feeds take about half the memory and are looked up faster; with two large blocklists and a threat feed, memory went from about 350 to 230 MB.
+- **Threat detection:** memory stays level instead of growing with clients and domains, and detection no longer stops checking new client and domain pairs once 200,000 are seen.
 
 </Update>
 
 <Update label="v1.6.1" description="October 23, 2026">
 
-- DNS over UDP: batch buffers split with as_chunks
-- Overview: a skeleton while the traffic panel loads
-- Toasts: top right, just under the top bar
-- Outgoing lookups: fall back past a broken /etc/resolv.conf
-- DNS over UDP: answer from the address that was asked
-- Overview: top names and clients from hourly rollups
+- **Overview:** the traffic panel shows a placeholder while it loads, and its top names and clients now open in a fraction of a second on large query logs (they took up to 38 seconds for 7 days).
+- **Fix:** DNZ's own outgoing lookups (Cloudflare, ACME, S3, webhooks, blocklists, the update check, joining a primary) failed when `/etc/resolv.conf` pointed at a resolver that wasn't running; they now fall back to DNZ itself and public resolvers.
+- **Fix:** on a wildcard address, DNS over UDP answered from a different address than the one asked (for example 127.0.0.53 or a second IP), and some resolvers dropped the answer. Answers now come from the address that was asked.
+- **Toasts:** they appear at the top right, just under the top bar.
 
 </Update>
 
 <Update label="v1.6.0" description="October 23, 2026">
 
-- Public files for the docs: monitoring, benchmark harness, Swarm stack
-- Upstream toasts: one per poll instead of one per incident
-- Record form: searchable view picker
-- Launch config: Mintlify docs preview
-- Query logs: fixed statement sizes, so memory stops climbing
-- DNS over UDP: a socket per CPU, answered where received
-- Cache: a full cache no longer sweeps itself on every insert
-- DNS over UDP: four sockets per CPU
-- Overview: All queries scope for superadmins
-- DNS: a 2 KB future per query instead of 22 KB
-- DNS: a query's name is normalized once
-- DNS over UDP: batches with recvmmsg and sendmmsg
+- **Faster DNS over UDP:** on Linux, DNZ answers about twice as many queries a second as v1.5.0, with lower latency and less CPU per query.
+- **DNS cache:** forwarded queries no longer slow to a crawl once the cache is full.
+- **Memory:** memory no longer climbs for twenty minutes under steady query logging (it went from about 50 to 240 MB before levelling off).
+- **Overview:** superadmins can see the whole server's traffic (All queries), including forwarded names from clients no division claims; `dnz stats --all` does the same.
+- **Notifications:** when several forward DNS servers go down at once, one toast sums them up instead of one toast each.
+- **Records:** the record form's view picker is searchable.
+- **Monitoring files:** the Grafana dashboard, alert rules, monitoring compose file and DNZ Proxy Swarm stack the docs point to are now published for download.
 
 </Update>
 
 <Update label="v1.5.0" description="October 23, 2026">
 
-- DNS phase 1: TCP, EDNS, SOA, CNAME chasing and zone cache
-- DNS phase 2: upstream cache, failover and forward DNS monitoring
-- Forwarding strategies and first-run setup page
-- Encrypted upstreams: DNS-over-TLS and DNS-over-HTTPS
-- Vercel-style sidebar layout and incident notification providers
-- Vercel-style account menu and centered collapsed sidebar
-- Cloudflare integration per division
-- Zone import and export
-- Find on Cmd+K and pre-filled Cloudflare token link
-- Server time zone setting and SPA loading screen
-- Conditional forwarding and audit log
-- Auto PTR, domain autocomplete for forwarding rules, compact layout
-- Sign in with Cloudflare and bulk import into local DNS
-- Deploy-ready build, all-queries log view, readable toasts
-- Blocklists per division, API tokens with ACME DNS-01, deploy guide
-- Dynamic DNS over DynDNS2
-- Split-horizon DNS with views
-- Serve DNS over TLS and DNS over HTTPS
-- DNSSEC signing for local zones
-- Publish the release image to Docker Hub instead of ghcr.io
-- About DNZ instead of the status line in the account menu
-- Readable, consistent form text
-- Harden sign-in, sessions and HTTP headers
-- Redesign the Filtering page
-- Filtering: plain placeholder on the list URL field
-- Replication: zone transfers, NOTIFY, catalog zones and DNZ secondaries
-- Fix confirm dialogs always answering no
-- Redesign the Integrations page
-- Replication: one entry per discovered server, list manual secondary zones
-- Switch UI icons from Lucide to Iconify Phosphor
-- Replication page with network discovery
-- Overview: hourly query chart, top names and stat tiles
-- Record on/off, default TTL per zone, bulk record edits, comments and tags
-- Redesign the dashboard: glass top bar, section tabs, Iris theme
-- TOML config file and CLI-only mode
-- Redesign polish: record type lens filter, zone state header, solid auth forms
-- Records toolbar: keep search and Add record on one row on phones
-- CLI: record on/off, tags, comments, bulk edits and zone default TTL
-- Top bar health pill opens an upstream popover instead of Forwarding
-- Dashboard tabs: DNS, Forward DNS and a Server tab with host usage
-- Dashboard: Request flow tab drawn with vue-flow
-- Account settings in a dialog instead of a page
-- Spacing fixes for Find and the top bar; DD-MM-YYYY HH:mm:ss times
-- Forwarding by client network, with rule labels
-- Forward rule form: DNS servers and client networks as tag chips
-- Tag chips for every list field
-- Record controls UI and bulk add of records
-- CLI: dnz record add-many
-- Add record in a dialog, with several names as chips
-- Edit record in a dialog
-- Upstream diagnosis streamed over SSE, and dnz forwarding diagnose
-- Diagnose dialog for upstreams with live step progress
-- Forward rules in a drag-and-drop order, first match wins
-- Diagnose action on forwarding rules; document the upstream diagnosis
-- Dynamic DNS UPDATE (RFC 2136) with per-division TSIG update keys
-- DNS update keys in the UI and dnz update-key in the CLI
-- Dashboard: top clients beside top names, and dnz stats
-- Hourly query rollups and 24h/7d/30d/90d traffic ranges
-- Traffic alerts and a daily summary
-- HTTPS/SVCB records, CAA iodef, BADVERS and end-to-end DNS tests
-- Cloudflare: cache zone and record lists, explain API errors
-- DNS over QUIC and DoH over HTTP/3, as upstreams and served
-- Proxied records through Traefik
-- Proxy: one Traefik config, recognized by address, detected and approved
-- Proxy: correct the address a Traefik calls DNZ from
-- Proxy in the menu next to DNS, settings for turning it on and connecting
-- Proxy: leave empty routers and services out of Traefik's config
-- Proxy menu: show up without a page refresh
-- Proxy: pick the Traefik entry points from a list
-- Proxy: read Traefik's API, and a copy-paste guide to set Traefik up
-- Select: inner padding and item radius like the other menus
-- Proxy: open the edit and approve dialogs against an older server
-- Proxy dialog: at most 80% of the screen tall
-- Menus never wrap their items; short Traefik API errors
-- Record form: show a proxied visit step by step
-- Record form: the visitor's URL follows the proxy's entry points
-- Proxy: "uses HTTPS" decides both sides of a proxied name
-- Proxy: routers, services and middlewares per proxy
-- Proxy: records from a Traefik's own routers
-- Proxy: From Traefik tab and docs for records from Traefik's routers
-- Proxy: several upstreams per service, shared by weight
-- Proxy: records from routers of every Traefik provider
-- Record form: proxied path as a vertical step list
-- Proxy: the whole card opens the proxy, with a clear call to action
-- Proxy: add a route in one step
-- Proxy: Traefik API hint names the Proxy menu and links to it
-- Proxy: pull zones for Traefik's hostnames that no zone holds
-- Proxy: load-balancing strategy and sticky sessions per service
-- Proxy: records from Traefik's routers are proxied through the proxy
-- Factory reset from the web UI and the CLI
-- Proxy: a form for every Traefik HTTP middleware
-- Request flow: a Proxy tab while proxying is on
-- Proxy: weighted, mirroring and failover services, full load-balancer settings
-- Proxy: full router rules, TLS options and domains, router observability
-- Proxy: TLS certificates and options, servers transports, TCP and UDP
-- Proxy: reachability marks, certificate progress, DNS records from the proxy
-- dnz-proxy: workspace, node binary skeleton, nodes joining a proxy and the configuration stream
-- dnz-proxy: the HTTP data plane on Pingora and Traefik's HTTP middlewares
-- dnz-proxy: traffic analytics from the nodes' reports
-- Proxy: dnz-proxy's own middleware types, kept from Traefik
-- Settings → Proxy: pick dnz-proxy, with a copy-paste node setup guide
-- dnz-proxy: caching, firewall rules and the "under attack" challenge
-- dnz-proxy: TCP and UDP (L4) routers and services
-- dnz-proxy: DNZ runs a node on its own server; packaging
-- Proxy: dnz-proxy nodes, entry points, cache and settings
-- Middlewares: dnz-proxy's cache, firewall and challenge forms
-- Proxy analytics: traffic, latency, cache and the request log
-- dnz proxy CLI: nodes, approve, ignore, drain, remove, purge; nodes that stop reporting count as disconnected
-- dnz-proxy: certificates over ACME, issued and renewed by DNZ
-- dnz-proxy UI: fixes from trying it against a running node
-- dnz-proxy: DNS follows what it would answer, so a node's new address reaches DNS too
-- dnz-proxy setup: Docker from the DNZ image, and a node on DNZ's own server
-- Certificates: ACME accounts, DNS credentials, resolvers and certificates
-- dnz-proxy: name the DNS answers type
-- CLI: notifications, Cloudflare, settings, audit log, sessions and a private CA
-- Proxied records: one record through several proxies
-- Proxy routers: line every cell up on one row height
-- Proxy routers: open the app behind each hostname
-- Topology map: the whole setup on one canvas
-- Add route: suggest hostnames from zones and records
-- Add route: hold back "no zone" while suggestions are open
-- CLI: dnz proxy hosts and dnz proxy route
-- CLI: dnz proxy route finds the proxy's entry points
-- Add route: one place picks the entry points, for the UI and the CLI
-- Router dialog: the same entry points as Add route and the CLI
-- dnz-proxy: encodedCharacters middleware
-- dnz-proxy: client certificates and passTLSClientCert
-- dnz-proxy: grpcWeb middleware
-- dnz-proxy: rate limits shared through Redis
-- dnz-proxy: 421 for client certificates on reused connections, docs
-- Cloudflare import: all records, or only the ones ticked
-- Import a zone: Raw zone file and From Cloudflare tabs
-- Zones: forward names they don't have to the upstreams
-- ALIAS records: CNAME flattening at the apex
-- Caddy: DNS records for the sites a Caddy serves
-- Caddy: Settings → Integrations, zone badges, topology and docs
-- Build release binaries against glibc 2.35; proxy setup uses the install script
-- More record types: TLSA, SSHFP, NAPTR, DS, URI, DNAME and LOC
-- DNSSEC: NSEC3, Ed25519 and RSA, KSK/ZSK split, automatic key rollover with CDS/CDNSKEY
-- Recursive resolution: DNZ resolves from the root servers itself
-- DNSSEC validation of forwarded and recursive answers
-- Recursor: concurrent identical questions share one resolution
-- Response rate limiting (RRL) per response, besides the per-client limit
-- Filtering: safe search, parental control, schedules and per-client rules
-- RPZ: subscribe to response policy zones and serve the blocklists as one
-- GeoDNS, weighted answers and health checks for plain A/AAAA records
-- Serve-stale (RFC 8767) and prefetch in the forwarder cache
-- EDNS Client Subnet (RFC 7871) towards the upstreams
-- DNS64 (RFC 6147) for IPv6-only networks
-- DNS cookies (RFC 7873, RFC 9018) and NSID (RFC 5001)
-- ECS: ecs_of() for the client subnet a query carries
-- Forwarder: prefetch refreshes ask without CD
-- Database: Postgres and MySQL besides SQLite
-- dnz db migrate-from-sqlite, data_dir, the backend in config check
-- Faster cache hits: wire-format answers in a sharded cache
-- Docker: dnz-proxy image of its own, published with each release
-- dnz-proxy on Docker Swarm: stack file and docs
-- Setup guide: a Docker Swarm tab for dnz-proxy
-- Cluster: several DNZ servers on one Postgres or MySQL database
-- Nodes starting together on an empty database seed it once
-- Cluster page: new nodes run the DNZ image, not dnz-proxy's
-- ExternalDNS webhook provider, Kubernetes guide
-- Change approval: read DNZ's 202 answer, check the request's status
-- Zone history and change approval: versions, diff, rollback, change requests
-- CLI: dnz zone history|diff|rollback, dnz change, dnz settings history
-- UI: zone history tab, pending changes inbox, approval policies
-- History: a changed value reads 'www A 192.0.2.1 → 192.0.2.2'
-- History after the cluster: prune on the leader only; change events in new providers' defaults
-- ExternalDNS webhook in Rust (dnz externaldns-webhook); drop the Go code
-- Kubernetes guide: where change requests are approved
-- Prometheus /metrics: own listen address or HTTP API with a token
-- Settings: Prometheus metrics card with token and scrape config
-- Grafana dashboard, Prometheus alert rules and a monitoring compose file
-- Metrics: cluster node id, leader and change-feed lag in the docs, alerts and dashboard
-- Metrics: query counters in 16 stripes picked by the client's port, so DNS workers rarely share a cache line
-- Zones in memory: no spare room per name, no copy on reload
-- Server: one malloc arena per CPU, trimmed every minute
-- Health check: install and machine checks with copy-paste fixes, a schedule on the leader that alerts, API and metrics
-- Onboarding: the setup wizard's state and guides (API), dnz setup asks the same questions, dnz doctor
-- Onboarding UI: the setup wizard page, the health check page and its header badge
-- Alerts: health check rules named apart from the GeoDNS health check's
-- DHCP and IPAM: leases from Kea, dhcpd and Windows DHCP become records; DHCID rules for DNS UPDATEs; IPAM view
-- CLI: dnz dhcp servers|show|add|edit|sync|leases|import|rm and dnz ipam subnets|show|conflicts|add|rm
-- UI: DNS → DHCP & IPAM (servers with copy-paste Kea/dhcpd/Windows setup, leases, IPAM subnets and conflicts); DHCP badge on records
-- API tokens may push DHCP lease files (import, sync, leases) and read IPAM
-- DHCP: a paused server keeps its records
-- Backups: archives of the whole install, targets (folder, S3, SFTP), schedules, retention, restore
-- Backups: fixes from a live run
-- Backups: Settings &gt; Backups page, restore dialogs, restore on the setup page, topology
-- CLI: health_check in dnz notify's list of events
-- Threats: detectors over the query stream, findings, feeds, alerts, auto-blocking, API, CLI and metrics
-- Threats: feeds take an Auth-Key; abuse.ch and HaGeZi as presets instead of seeded feeds
-- Threats page: findings per client and per domain with evidence, status, mute, allow, block; feeds, lists, settings and a self-test
-- Threats: tunnel counts stop at the name cap instead of counting every query; benchmark with detection on and off
-- Setup guides: the host's address when DNZ runs in Docker
-- Device address in the UI: Settings → General, the wizard and dnz settings advertise
-- Overview: queries per client network and an "Answered by" breakdown
+- **DNS server:** authoritative zones over UDP and TCP with EDNS, CNAME chasing, ALIAS records (CNAME flattening at the apex), automatic PTR, DNS cookies and NSID, record types including HTTPS/SVCB, CAA, TLSA, SSHFP, NAPTR, DS, URI, DNAME and LOC, a per-client rate limit and response rate limiting (RRL).
+- **Records and zones:** switch records on and off, a default TTL per zone, comments and tags, bulk edits, several records added at once (`dnz record add-many`), and zone import and export (a zone file, or from Cloudflare).
+- **Split-horizon DNS:** views answer different client networks with different records.
+- **Forwarding:** forwarding strategies with failover and monitoring of the forward DNS servers, encrypted upstreams (DNS over TLS, HTTPS, QUIC and HTTP/3), conditional forwarding, forward rules by client network in a drag-and-drop order (first match wins), serve-stale and prefetch, EDNS Client Subnet and DNS64. Zones can forward the names they don't have to the upstreams. Diagnose an upstream step by step in the UI or with `dnz forwarding diagnose`.
+- **Recursive resolution:** DNZ can resolve from the root servers itself, and validates DNSSEC on forwarded and recursive answers.
+- **Encrypted DNS:** DNZ serves DNS over TLS, HTTPS, QUIC and HTTP/3 to its clients.
+- **DNSSEC signing:** local zones are signed (NSEC3, Ed25519 or RSA, separate KSK and ZSK), with automatic key rollover and CDS/CDNSKEY.
+- **Dynamic DNS:** DNS UPDATE (RFC 2136) with TSIG update keys per division (in the UI and `dnz update-key`), and DynDNS2 for routers and DDNS clients.
+- **Filtering:** blocklists per division, safe search, parental control, schedules and per-client rules; subscribe to response policy zones (RPZ) and serve your blocklists as one.
+- **GeoDNS and traffic steering:** answers by location, weighted answers and health checks for A/AAAA records.
+- **Replication:** zone transfers, NOTIFY, catalog zones and DNZ secondaries, with a Replication page that finds DNZ servers on the network.
+- **Clustering and databases:** SQLite, Postgres or MySQL (`dnz db migrate-from-sqlite` moves an install over), and several DNZ servers sharing one Postgres or MySQL database.
+- **Zone history and change approval:** every version of a zone with diffs and rollback, change requests and approval policies (`dnz zone history|diff|rollback`, `dnz change`).
+- **Overview:** an hourly query chart, top names and clients, queries per client network, an "Answered by" breakdown, 24h/7d/30d/90d ranges, the server's own usage and a request flow diagram; `dnz stats`.
+- **Alerts:** notification providers for incidents, traffic alerts and a daily summary.
+- **Threat detection:** detectors over the query stream with findings per client and per domain, evidence, threat feeds (abuse.ch and HaGeZi presets), alerts and automatic blocking.
+- **DHCP and IPAM:** leases from Kea, dhcpd and Windows DHCP become records, DHCID rules for DNS UPDATEs, and an IPAM view of subnets and conflicts (DNS → DHCP & IPAM, `dnz dhcp`, `dnz ipam`).
+- **Cloudflare:** a connection per division with an API token or Sign in with Cloudflare, and import of a Cloudflare zone's records (all of them, or only the ones ticked) into local DNS.
+- **Proxied records:** send a name through a reverse proxy. Traefik is detected and approved, set up with a copy-paste guide, and its routers, services and middlewares are managed from DNZ; records can be made from Traefik's own routers, Caddy's sites can get DNS records too, and one record can go through several proxies.
+- **DNZ Proxy:** DNZ's own reverse proxy. Nodes join a proxy and get their configuration from DNZ, with caching, firewall rules, an "under attack" check, rate limits shared through Redis, client certificates, TCP and UDP routing, certificates issued and renewed by DNZ over ACME, and traffic analytics with a request log. Run nodes from the `terrificci/dnz-proxy` image, on Docker Swarm or on DNZ's own server; manage them with `dnz proxy`.
+- **Topology map:** the whole setup on one canvas.
+- **Kubernetes:** an ExternalDNS webhook provider (`dnz externaldns-webhook`), with a guide.
+- **Monitoring:** Prometheus metrics on an address of their own or through the API with a token, a Grafana dashboard, alert rules and a monitoring compose file.
+- **Setup and health:** a first-run setup wizard (also `dnz setup`), a health check with copy-paste fixes and scheduled alerts (`dnz doctor`), a Device address so setup guides show the right address when DNZ runs in Docker, and factory reset from the UI or the CLI.
+- **Backups:** archives of the whole install to a folder, S3-compatible storage or SFTP, with schedules, retention and restore (also from the setup page).
+- **Accounts and security:** divisions, users, roles, API tokens (which can also answer ACME DNS-01 challenges) and an audit log; hardened sign-in, sessions and HTTP headers.
+- **CLI and configuration:** a TOML config file, a CLI-only mode, and `dnz` commands for everything in the web UI.
+- **Install:** Docker images on Docker Hub (`terrificci/dnz` and `terrificci/dnz-proxy`) and Linux release binaries that need glibc 2.34 or newer.
 
 </Update>
 
