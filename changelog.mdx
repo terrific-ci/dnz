@@ -6,18 +6,25 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v1.24.0**, released October 30, 2026. To install or upgrade to it:
+The latest release is **v1.25.0**, released October 30, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:1.24.0
-docker pull terrificci/dnz-proxy:1.24.0   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.24.0
+docker pull terrificci/dnz:1.25.0
+docker pull terrificci/dnz-proxy:1.25.0   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 1.25.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v1.24.0" description="October 30, 2026" tags={["Latest"]}>
+<Update label="v1.25.0" description="October 30, 2026" tags={["Latest"]}>
+
+- **One wildcard certificate per domain:** HTTPS routes of DNZ Proxy under the same domain (app.example.com, api.example.com) now share one `*.example.com` certificate instead of one each, when DNZ can prove it over DNS-01 (its own public zone, a Cloudflare connection or a DNS credential). Far fewer orders and renewals at Let's Encrypt, so a domain with many names stays clear of its rate limits, and a new route is served at once. The domain itself and deeper names (a.b.example.com) keep their own certificates; names keep theirs until the wildcard is issued, so nothing changes for visitors. On by default; switch it per resolver under Certificates → Resolvers, or with `dnz proxy certs wildcards on|off`.
+- **Uptime monitors watch your routes:** a monitor's URL must now be a hostname one of your proxies' routes serves; other sites and IP addresses are refused, and the Add monitor dialog lists the proxied names to pick. Monitors you already have keep working until you change their URL.
+
+</Update>
+
+<Update label="v1.24.0" description="October 30, 2026">
 
 - **Route groups:** a group can now be made empty (New group, with or without routes) and stays until you remove it, also when its last route leaves. A group's menu adds a new route or existing routes to it, empty groups show in By group as places to drag routes, and the route dialog lists every group as a chip to pick (`dnz proxy routes groups add`).
 - **Uptime checks through Under attack:** DNZ's own checks now pass a DNZ Proxy route's Under attack browser check and waiting room, so a protected site no longer shows as down with "answered 403". Sign-in, the WAF and the firewall still apply. Update your DNZ Proxy nodes too.
