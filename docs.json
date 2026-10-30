@@ -30,6 +30,10 @@
       {
         "label": "GitHub",
         "href": "https://github.com/terrific-ci/dnz"
+      },
+      {
+        "label": "Support DNZ",
+        "href": "https://www.paypal.com/paypalme/alfianlensun"
       }
     ],
     "primary": {
@@ -261,7 +265,18 @@
   "footer": {
     "socials": {
       "github": "https://github.com/terrific-ci/dnz"
-    }
+    },
+    "links": [
+      {
+        "header": "Community",
+        "items": [
+          {
+            "label": "Support DNZ",
+            "href": "https://www.paypal.com/paypalme/alfianlensun"
+          }
+        ]
+      }
+    ]
   },
   "redirects": [
     {
