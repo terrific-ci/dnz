@@ -332,6 +332,7 @@ Split-horizon views answer a name differently for some client networks. See [Vie
 
 ```bash
 dnz view list
+dnz view show lan                             # its networks and the records answered only to it
 dnz view add lan 10.0.0.0/8 192.168.0.0/16 [--description "Office LAN"]
 dnz view rm lan                               # deletes the view and its records
 ```

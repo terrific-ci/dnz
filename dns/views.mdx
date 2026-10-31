@@ -32,6 +32,7 @@ From the command line:
 
 ```bash
 dnz view list
+dnz view show lan    # its networks and the records answered only to it
 dnz view add lan 10.0.0.0/8 192.168.0.0/16
 dnz record add example.com intranet A 10.1.1.1 --view lan
 dnz view rm lan
@@ -42,6 +43,16 @@ dnz view rm lan
 
 A network can belong to only one view. When networks overlap, a client belongs to the view with
 the most specific network.
+
+## See a view's records
+
+Click a view's row, or its **Records** count, on **DNS → Views**. A side panel lists every record
+answered only to that view, across zones: its name and zone, type, value, TTL, and whether it's
+switched off. **Open** takes you to the record in its zone, with the zone's record table filtered
+to the view. `dnz view show lan` lists the same.
+
+The list and the count include only zones you may read (the *zones.read* permission in their
+division). Superadmins see every zone.
 
 ## How answers work
 
