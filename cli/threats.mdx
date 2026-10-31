@@ -15,6 +15,7 @@ dnz threats list --status all --detector tunnel
 dnz threats list --client 10.0.0.9
 dnz threats list --domain example.net           # the domain and its subdomains
 dnz threats list --by client                    # or --by domain
+dnz threats list --limit 100 --page 2           # 50 to a page by default, at most 200
 dnz threats show 12                             # evidence: scores, sample queries, first/last seen
 dnz threats ack 12 13
 dnz threats resolve 12                          # opens again if it happens again

@@ -44,12 +44,21 @@ Threat detection endpoints need a signed-in **superadmin** session, not an
 <ParamField query="domain" type="string">
   The domain or a parent of it.
 </ParamField>
+<ParamField query="exact_domain" type="string">
+  Only this domain, not its subdomains. Empty: findings about a client as a whole.
+</ParamField>
 <ParamField query="q" type="string">
   Client or domain containing this.
 </ParamField>
-<ParamField query="limit" type="integer" default="200">
-  At most 1000 (5000 for groups).
+<ParamField query="page" type="integer" default="1">
+  Which page, from 1. The filters apply before the page is cut.
 </ParamField>
+<ParamField query="per_page" type="integer" default="50">
+  Findings (or groups) per page, at most 200. `limit` is read the same way.
+</ParamField>
+
+Both list newest activity first, one page at a time, and answer with `total` (how many findings or
+groups match the filters), `page` and `per_page` next to the list.
 
 ```json
 {
@@ -64,9 +73,14 @@ Threat detection endpoints need a signed-in **superadmin** session, not an
       "alerted_at": "2026-10-22T11:51:20Z", "status_by": null, "status_at": null,
       "block": { "id": 3, "expires_at": "2026-10-23T11:51:20Z", "created_by": "auto" }
     }
-  ]
+  ],
+  "total": 1, "page": 1, "per_page": 50
 }
 ```
+
+A group (`/api/threats/groups?by=client`) counts over all its findings (`findings`, `new`, `hits`,
+`max_score`, `others_count`: its domains, or a domain's clients) and lists the `detectors`,
+`others` and `ids` of its newest findings, up to 5,000 for the page.
 
 ## Changing findings
 

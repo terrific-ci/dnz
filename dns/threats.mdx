@@ -133,7 +133,10 @@ A finding is one detector, one client and one domain (none for unusual clients).
 counting while it happens: hits, the highest and the last score, first and last seen, the latest
 sample queries (name, type, response code, time) and the detector's numbers. Every node of a
 [cluster](/deploy/cluster) adds to the same findings. The page groups them **per client** (which
-machines to look at) or **per domain** (which domains several machines ask for).
+machines to look at) or **per domain** (which domains several machines ask for), newest activity
+first and a page at a time (25, 50 or 100 rows; the page number stays in the address). The search,
+status and detector filters apply before the page is cut. An opened group shows its newest 100
+findings, with **Show more** for the rest.
 
 | Status | Meaning |
 | --- | --- |

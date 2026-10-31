@@ -137,7 +137,7 @@ with OAuth isn't possible.
 | `capture_queries` | Watch live queries matching keywords (typed, or saved keyword lists) for a few seconds, grouped by domain ([Live capture](/dns/live-capture)) |
 | `capture_keyword_lists` | The saved keyword lists live capture can pick, server-wide and a division's |
 | `traffic_stats` | Query counts, NXDOMAIN ratio, top names and clients |
-| `threat_findings` | What threat detection found |
+| `threat_findings` | What threat detection found, newest first: `limit` per page (50, at most 200), `page`, and the `total` that match |
 | `proxy_analytics` | DNZ Proxy traffic: totals, most requested URLs per hostname and path, top lists |
 | `proxy_visitors` | Distinct visitors of each hostname DNZ Proxy serves over the last hours, total and per hour |
 | `proxy_request_log` | DNZ Proxy request log lines, filtered by hostname, status, client or text |
