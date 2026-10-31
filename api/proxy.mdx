@@ -59,7 +59,7 @@ as on (`traefik`, `dnz`) or off.
 | `GET` | `/api/proxies/{id}/routes/hosts` | What Add route offers: `{"zones": [...], "records": [{"host", "types", "routed"}]}`. DNZ's primary zones and the names with A/AAAA/CNAME records (`routed` when this proxy has a router for one) |
 | `GET` | `/api/proxies/{id}/routes/entry-points` | The proxy's HTTP entry points for the router and Add route dialogs: `{"list": [{"name", "address"}], "http", "https", "from", "http_found", "https_found", "error"}` |
 | `GET` | `/api/proxies/{id}/routes` | `{"routes": [...], "auto_certificates"}`: each route's `id` (its router), `hosts`, `path_prefix`, `tls`, `cert_resolver`, `redirect_router`, `service_id`, `service_name`, `own_service` (false: a service of the proxy's it uses), `servers`, `options` (the switches), other `middlewares`, `simple` / `advanced` and, on DNZ Proxy, `certificate` |
-| `POST` | `/api/proxies/{id}/routes` | One step: `{"host" or "hosts", "servers" or "service_id" (one of the proxy's services, used as it is), "tls", "redirect_http", "options", "middlewares", "path_prefix", "dns_record"}` adds the service, router(s), switches and proxied DNS records. With `dns_record` (the default) it is refused (409) in a zone whose changes wait for approval for you: it would write the records at once |
+| `POST` | `/api/proxies/{id}/routes` | One step: `{"host" or "hosts", "servers" or "service_id" (one of the proxy's services, used as it is), "tls", "redirect_http", "options", "middlewares", "path_prefix", "dns_record", "skip_tls_verify"}` adds the service, router(s), switches and proxied DNS records. `skip_tls_verify` is for the route's own HTTPS servers (see [Skip TLS verify](#skip-tls-verify)). With `dns_record` (the default) it is refused (409) in a zone whose changes wait for approval for you: it would write the records at once |
 | `POST` | `/api/proxy/routes/bulk` | [Several routes at once](#several-routes-at-once), on any proxies, all or nothing |
 | `PUT` | `/api/proxies/{id}/routes/{router}` | The same body: changes the route (409 for one set up under Advanced); also `"clear_redirect": true` |
 | `DELETE` | `/api/proxies/{id}/routes/{router}[?unproxy=true]` | Deletes its routers, its own service (a picked one stays) and switches; `unproxy` takes the proxy off its DNS records instead of refusing |
@@ -114,6 +114,19 @@ or Caddy route with it gets `400`. A route's `certificate` has `state`, `not_aft
 
 **Auth users.** `POST /api/proxy/auth-user` with `{"user", "password"}` returns `{"line"}` for basic
 auth. Add `"digest": true` and an optional `"realm"` for digest auth.
+
+### Skip TLS verify
+
+`"skip_tls_verify": true` on `POST` and `PUT` makes the proxies accept any certificate from the
+route's own `https://` servers (the dialogs' **Skip TLS verify**); `false` checks that each server's
+certificate is valid for its address. Left out, a new route accepts any certificate (as routes always
+did) and an edited one keeps what its upstream has. `POST /api/zones/{id}/records/route` (the record
+dialog's route) takes it too. A route that uses an upstream from the list follows that upstream's
+[connection settings](/proxy/upstreams#connection-settings) instead.
+
+```json
+{ "host": "app.example.com", "servers": [{ "url": "https://10.0.0.10:8443", "weight": 1 }], "tls": true, "skip_tls_verify": false }
+```
 
 ### Several routes at once
 

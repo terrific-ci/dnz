@@ -216,7 +216,11 @@ Ticking a proxy that has **no route for the name** turns that part of **Add reco
 record** into the route's form, so you don't have to go to **Proxy → Routes** first:
 
 - **Upstreams**: where visits go, prefilled from the record's value (`10.0.133.10` becomes
-  `http://10.0.133.10`). With two or more, the load-balancing strategy and **Sticky sessions**.
+  `http://10.0.133.10`). Pick **Insecure** (`http://`, the default) or **Secure** (`https://`) once
+  and type each server as `address:port`, with the scheme as a badge in front; **Enter** adds the
+  next. With **Secure**, **Skip TLS verify** (on by default) accepts any certificate from the
+  servers. See [Typing the servers](/proxy/overview#typing-the-servers). With two or more, the
+  load-balancing strategy and **Sticky sessions**.
 - **HTTPS** and **Redirect http → https**, on by default.
 - **Group** on the Routes page.
 

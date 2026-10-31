@@ -57,8 +57,13 @@ dnz proxy upstreams show swarm-service   # each server: up on 3 of 3 nodes, or d
    - **Fallback**: another upstream while this one is down (or answers with the status codes you list).
 3. **Name** and **description**. The name is the service name every proxy knows the upstream by.
 4. **Servers from** (a load balancer):
-   - **Listed here**: URLs such as `http://10.0.0.10:8080` with a weight (HTTP), or `host:port`
-     addresses (TCP, optionally with TLS to the server; UDP).
+   - **Listed here**: servers with a weight (HTTP), or `host:port` addresses (TCP, optionally with
+     TLS to the server; UDP). For HTTP, pick **Insecure** (`http://`, the default) or **Secure**
+     (`https://`) once and type each server as `address:port` (`10.0.0.10:8080`): the scheme shows as
+     a badge in front, a full URL typed or pasted sets the choice, and **Enter** adds the next server.
+     Servers of mixed schemes (`h2c://`, or `http://` and `https://` together) are edited as full
+     URLs. Whether HTTPS servers' certificates are checked is **Accept any certificate** under
+     **Connection** (step 7). See [Typing the servers](/proxy/overview#typing-the-servers).
    - **Every address of a DNS name**: DNZ looks the name up with its own DNS (its zones first) and keeps
      one server per address, such as every Docker Swarm node behind its routing mesh.
    - **Docker Swarm tasks** (HTTP): `tasks.<service>`, which each DNZ Proxy node and Caddy look up
