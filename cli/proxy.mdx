@@ -290,7 +290,7 @@ upstream, on every proxy. See [Upstreams](/proxy/upstreams).
 
 ```bash
 dnz proxy upstreams list                          # servers, balancing, health check, what uses each
-dnz proxy upstreams show swarm-service            # with every route (and proxy) using it
+dnz proxy upstreams show swarm-service            # with every route (and proxy) using it, and each server's health on the DNZ Proxy nodes
 dnz proxy upstreams add swarm-service -t http://10.0.133.31:80 -t http://10.0.133.32:80=2 --sticky --health-check /healthz
 dnz proxy upstreams add pg --tcp -t 10.0.0.7:5432
 dnz proxy upstreams add canary --split app=9 --split app-next=1
@@ -301,6 +301,10 @@ dnz proxy upstreams rm yrdy                       # refused while anything uses 
 ```
 
 `-t` replaces the servers on `edit`; leave it out to keep them.
+
+`show` prints each server with its health from the DNZ Proxy nodes' last reports, for example
+`(up on 2 of 3 nodes; down on jkt-2: connection refused)`. A server no node checks has none. See
+[Server health](/proxy/upstreams#server-health).
 
 An upstream's [connection](/proxy/upstreams#connection-settings) to its servers, the same on every
 proxy using it:

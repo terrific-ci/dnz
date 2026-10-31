@@ -19,6 +19,26 @@ pages that ask it for their pages.
 - **Not used** keeps only the upstreams nothing uses.
 - Search by name, server or route.
 
+### Server health
+
+Each server has a dot showing its health as the DNZ Proxy nodes see it, from their reports of the
+last 30 seconds:
+
+| Dot | Meaning |
+| --- | --- |
+| Green | Every node finds the server up |
+| Amber | Some nodes find it down |
+| Red | No node finds it up |
+
+Hover a server to see which nodes find it down and why (*connection refused*, for example). An
+upstream with servers down on some nodes says how many, such as *1 of 3 servers down on some nodes*.
+A server no DNZ Proxy node checks (an upstream used only by Traefik or Caddy, or not used at all) has
+no dot. A node's own page shows the node only; the health of the servers is here.
+
+```bash
+dnz proxy upstreams show swarm-service   # each server: up on 3 of 3 nodes, or down on which node and why
+```
+
 ## Adding and editing
 
 **Add upstream** opens the upstream dialog:

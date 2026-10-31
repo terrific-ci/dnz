@@ -322,6 +322,11 @@ The node list keeps two things apart:
 Nodes report every 5 seconds: the configuration they serve, their listeners, the health of each
 upstream, cache use, warnings (a rule or middleware they couldn't use), and the server they run on.
 
+The health of each upstream's servers, merged from every node's last report (30 seconds at most),
+shows on **Proxy → Upstreams**: a dot per server, and on hover the nodes that find it down and why
+(see [Server health](/proxy/upstreams#server-health), or `dnz proxy upstreams show NAME`). A node's
+own page shows the node only.
+
 ### Servers
 
 With each report a node says how its process and the machine it runs on are doing:
