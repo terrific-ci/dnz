@@ -68,6 +68,14 @@ approval** after one joined with the connect key, then **Running** (or how many 
 The **Proxy** page shows up in the menu, next to DNS, while proxying is on and a proxy is listed
 (detected ones included).
 
+**Overview → Proxy**, beside the DNS tab once proxying is on (for those who may manage proxies), is
+the proxies at a glance: the last 24 hours through the DNZ Proxy nodes (visitors active now,
+requests, bandwidth, cache hit ratio, 5xx rate, blocked, p95 latency, requests by status class, the
+top hostnames and status codes; the full view is **Proxy → Analytics**), and their health: each proxy
+with its nodes up, upstream servers a node finds down, certificates failing or expiring within 14
+days, and the latest proxy alerts. Traefik and Caddy report no traffic, so only their health shows.
+See the [dashboard tour](/dashboard/tour#overview).
+
 Below the proxies, **Sites in DNS** keeps DNS records for the sites in a Caddy's or Traefik's own
 configuration, without proxying through it. It shows once one is connected. It isn't a proxy: DNZ
 only reads that Caddy or Traefik and never changes it. See [Sites in DNS](/integrations/caddy).
