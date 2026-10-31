@@ -64,17 +64,17 @@ as on (`traefik`, `dnz`) or off.
 | `DELETE` | `/api/proxies/{id}/routes/{router}[?unproxy=true]` | Deletes its routers, its own service (a picked one stays) and switches; `unproxy` takes the proxy off its DNS records instead of refusing |
 | `GET` | `/api/proxies/{id}/route-history[?host=]` | The proxy's route versions, newest first; `/{version}` one with the route before and after; `POST …/{version}/restore` puts it back ([Route history](/proxy/route-history#api)) |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/routers[/{router}]` | Add, change, delete a router |
-| `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/services[/{service}]` | Add, change, delete a service |
 | `GET` / `POST` | `/api/proxy/middlewares` | Every proxy's [middlewares and firewalls](/proxy/middlewares), a page at a time (`?q=`, `protocol=http\|tcp`, `own=true` for routes' own switches, `firewalls=true`, `unused=true`), or add one (`{"name", "kind", "config", "protocol", "description"}`) |
 | `GET` / `PUT` / `DELETE` | `/api/proxy/middlewares/{id}` | One middleware: show, change (`"shared": true` makes a route's own switch shared), delete (refused while anything uses it) |
 | `GET` | `/api/proxy/middlewares/{id}/usage` | What uses it: routes per proxy, chains, route defaults |
 | `POST` | `/api/proxy/middlewares/merge` | `{"keep", "merge": [ids]}`: everything using the others uses `keep`, and they are deleted |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/objects[/{object}]` | Add, change, delete a certificate, TLS options, the default store, or a TCP/UDP router or service |
+| `POST` | `/api/proxy/auth-user` | A basic or digest auth user line from `{"user", "password"}` |
 
-Since DNZ v2, `/api/proxies/{id}/middlewares` answers `410 Gone` (use `/api/proxy/middlewares`), and
+Since DNZ v2, `/api/proxies/{id}/services` and `/api/proxies/{id}/middlewares` answer `410 Gone` (use
+`/api/proxy/upstreams` and `/api/proxy/middlewares`), and
 the objects endpoint refuses transports (an upstream's connection settings, under
 `/api/proxy/upstreams`) and TCP middlewares (`/api/proxy/middlewares` with `"protocol": "tcp"`).
-| `POST` | `/api/proxy/auth-user` | A basic or digest auth user line from `{"user", "password"}` |
 
 **Entry points.** Under DNZ Proxy, `routes/entry-points` lists the proxy's own entry points. Under
 Traefik it lists the ones its API lists. `from` says which (`dnz-proxy` / `traefik`). Without either,
