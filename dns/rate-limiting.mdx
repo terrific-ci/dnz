@@ -11,7 +11,7 @@ since their source addresses can't be forged.
 | | Per-client limit | Response rate limiting (RRL) |
 | --- | --- | --- |
 | Counts | Every query from one address | Identical answers to one client network |
-| Set in | Config file or environment (`dns.rate_limit`, `DNZ_RATE_LIMIT`) | **Settings → General → Response rate limiting**, `dnz settings rrl`, the API |
+| Set in | Config file or environment (`dns.rate_limit`, `DNZ_RATE_LIMIT`) | **Settings → General → DNS answers → Response rate limiting**, `dnz settings rrl`, the API |
 | Default | 200 queries per second | Off |
 | Best for | Resolvers on a LAN (one noisy device) | Authoritative servers reachable from the internet |
 
@@ -43,7 +43,7 @@ names is not.
 
     <Steps>
       <Step title="Start in log-only mode">
-        As a superadmin, open **Settings → General → Response rate limiting**, turn it on with
+        As a superadmin, open **Settings → General → DNS answers → Response rate limiting**, turn it on with
         **Log only** on, and save.
       </Step>
       <Step title="Watch the counters">

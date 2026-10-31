@@ -40,7 +40,7 @@ services:
       # DNZ_TRUSTED_PROXIES: 172.16.0.0/12
       # The host's LAN address, which the setup guides tell devices to use
       # (inside the container DNZ only sees the container's own address;
-      # also settable under Settings → General → Device address):
+      # also settable under Settings → General → Server → Device address):
       # DNZ_ADVERTISE: 192.168.1.10
 
 volumes:
@@ -77,7 +77,7 @@ those in the environment, not in a mounted `dnz.toml`.
 On a Docker bridge network DNZ only sees the container's own address (`172.x.x.x`), which other
 devices can't reach. The setup guides (the setup wizard's last step) then use the address you opened
 the UI at, so open it at the host's LAN IP (`http://192.168.1.10:8080`, not `localhost`). Or set
-the host's LAN IP under [Settings → General → Device address](/admin/settings#device-address) (the
+the host's LAN IP under [Settings → General → Server → Device address](/admin/settings#device-address) (the
 wizard's last step offers it too), or with `DNZ_ADVERTISE`.
 
 To keep the data in Postgres instead, see [Docker with Postgres](/deploy/database#docker-with-postgres).
@@ -104,7 +104,7 @@ the Live list and the Overview's recent queries read only the newest rows, so th
 cache. The first search through the whole log after such a pause reads it from disk; later ones are
 as fast as before.
 
-**Settings → General → Release query log file cache** (`dnz settings file-cache`) changes the
+**Settings → General → Data and monitoring → Query log file cache** (`dnz settings file-cache`) changes the
 minutes, or turns it off and leaves the cache to the kernel so searches stay fast (see
 [Query log file cache](/admin/settings#query-log-file-cache)).
 

@@ -1,13 +1,27 @@
 ---
 title: "Server settings"
 sidebarTitle: "Settings"
-description: "Time zone, automatic PTR, the device address, response rate limiting, the GeoIP database, zone history retention, the query log file cache, Prometheus metrics, encrypted DNS status and factory reset under Settings → General."
+description: "Time zone, the device address, trusted proxies, two-factor for superadmins, automatic PTR, DNS64, response rate limiting, encrypted DNS, the GeoIP database, zone history, Prometheus metrics, the query log file cache and factory reset under Settings → General."
 ---
 
 **Settings → General** holds the settings that apply to the whole server. Only superadmins can
-open it.
+open it. Its cards are in categories, listed down the side of the page:
 
-## Time zone
+| Category | Cards |
+| --- | --- |
+| **Server** | [Time zone](#time-zone), [Device address](#device-address), [Trusted reverse proxies](#trusted-reverse-proxies) |
+| **Security** | [Two-factor sign-in for superadmins](#two-factor-sign-in-for-superadmins) |
+| **DNS answers** | [Automatic PTR](#automatic-ptr), [DNS64, DNS cookies and NSID](#dns64-dns-cookies-and-nsid), [Response rate limiting](#response-rate-limiting-rrl) |
+| **Encrypted DNS** | [Encrypted DNS](#encrypted-dns) |
+| **Data and monitoring** | [GeoIP database](#geoip-database), [Zone history](#zone-history), [Prometheus metrics](#prometheus-metrics), [Query log file cache](#query-log-file-cache) |
+| **Reset** | [Factory reset](#factory-reset) |
+
+The open category is part of the page's address (`?tab=data`, for example), so a link opens it, and
+an older link to a card opens the category that holds it.
+
+## Server
+
+### Time zone
 
 Every time shown in DNZ and in notifications uses the server's time zone, detected automatically
 (from `TZ` or the system). Pick another one here. Data is stored in UTC, so you can change it at any
@@ -18,24 +32,7 @@ dnz settings timezone Asia/Jakarta
 dnz settings timezone server       # follow the server again
 ```
 
-## Automatic PTR
-
-With **Automatic PTR (reverse DNS)** on, reverse lookups (`in-addr.arpa`, `ip6.arpa`) are answered
-from your A and AAAA records, with no reverse zone needed. If `www.lab.internal` points at
-`10.0.0.5`, a PTR query for `5.0.0.10.in-addr.arpa` returns `www.lab.internal`. Nothing is written
-to your zones.
-
-- PTR records you add in a reverse zone always win.
-- When several names share an address, all are returned, shortest first.
-- Wildcard records (`*`) are skipped, since they don't name one host.
-- [Views](/dns/views) are followed: a client in a view gets names from its view's records.
-- [Proxied](/proxy/overview) names are skipped.
-
-```bash
-dnz settings auto-ptr on
-```
-
-## Device address
+### Device address
 
 The **Device address** card sets the address devices and DHCP servers use to reach this server's
 DNS. The [setup guides](/get-started/first-run) name it, and so does the
@@ -55,7 +52,7 @@ dnz settings advertise 192.168.1.10     # set
 dnz settings advertise --auto           # work it out from the network again
 ```
 
-## Trusted reverse proxies
+### Trusted reverse proxies
 
 The **Trusted reverse proxies** card lists the proxies whose `X-Forwarded-For`, `X-Real-IP` or
 `Forwarded` header DNZ believes, so the audit log, sessions and sign-in limits see the client
@@ -76,7 +73,50 @@ dnz settings trusted-proxies --remove 10.0.133.10
 dnz settings trusted-proxies 10.0.133.10,172.18.0.5  # replace the saved list (--clear empties it)
 ```
 
-## Response rate limiting (RRL)
+## Security
+
+### Two-factor sign-in for superadmins
+
+With **Two-factor sign-in for superadmins** on, every superadmin must use
+[two-factor sign-in](/admin/two-factor). Set it up for your own account first; DNZ refuses otherwise.
+
+```bash
+dnz settings two-factor on
+```
+
+## DNS answers
+
+### Automatic PTR
+
+With **Automatic PTR (reverse DNS)** on, reverse lookups (`in-addr.arpa`, `ip6.arpa`) are answered
+from your A and AAAA records, with no reverse zone needed. If `www.lab.internal` points at
+`10.0.0.5`, a PTR query for `5.0.0.10.in-addr.arpa` returns `www.lab.internal`. Nothing is written
+to your zones.
+
+- PTR records you add in a reverse zone always win.
+- When several names share an address, all are returned, shortest first.
+- Wildcard records (`*`) are skipped, since they don't name one host.
+- [Views](/dns/views) are followed: a client in a view gets names from its view's records.
+- [Proxied](/proxy/overview) names are skipped.
+
+```bash
+dnz settings auto-ptr on
+```
+
+### DNS64, DNS cookies and NSID
+
+**DNS64** answers AAAA queries for IPv6-only clients behind a NAT64 gateway with addresses made
+from A records. **DNS cookies** (on by default) let clients prove their address so the UDP rate
+limit leaves them alone. **NSID** tells clients that ask which server answered. Each has its card
+here; see [Resolver options](/dns/resolver-options).
+
+```bash
+dnz settings dns64 on --network 2001:db8:aa::/48
+dnz settings cookies on
+dnz settings nsid on --value dns-1.jkt
+```
+
+### Response rate limiting (RRL)
 
 The **Response rate limiting (RRL)** card limits identical answers to one client network over UDP,
 like BIND's RRL, against DNS amplification attacks. It is off by default.
@@ -102,7 +142,22 @@ dnz settings rrl --enabled on --log-only on
 The per-client query limit (`DNZ_RATE_LIMIT`) is a config setting instead. See
 [Rate limiting](/dns/rate-limiting) for how both work and how to choose rates.
 
-## GeoIP database
+## Encrypted DNS
+
+Shows whether DNS over TLS, HTTPS, QUIC and HTTP/3 are on, the hostname and the certificate's
+names and expiry, and any error from reloading the certificate. DoT, DoH, DoQ and DoH3 are turned
+on with a certificate: one DNZ issues and renews itself (**Certificate from DNZ** on this card), or
+files named in the configuration. See [Encrypted DNS](/dns/encrypted-dns).
+
+```bash
+dnz settings certificate                    # DNZ's own certificate: names, state, expiry
+dnz settings certificate dns.example.com    # DNZ issues and renews it over ACME (DNS-01)
+dnz settings certificate --renew            # renew it now (--off: stop issuing it)
+```
+
+## Data and monitoring
+
+### GeoIP database
 
 [GeoDNS](/dns/geodns) answers by the client's country or continent, with a country database in
 MaxMind's `.mmdb` format. DNZ doesn't ship one: the **GeoIP database** card downloads it.
@@ -124,20 +179,7 @@ dnz geoip lookup 203.0.113.9
 The file is kept next to the database (`geoip-country.mmdb`). Without it, GeoDNS records answer every
 client with their defaults; weights and health checks work either way.
 
-## DNS64, DNS cookies and NSID
-
-**DNS64** answers AAAA queries for IPv6-only clients behind a NAT64 gateway with addresses made
-from A records. **DNS cookies** (on by default) let clients prove their address so the UDP rate
-limit leaves them alone. **NSID** tells clients that ask which server answered. Each has its card
-here; see [Resolver options](/dns/resolver-options).
-
-```bash
-dnz settings dns64 on --network 2001:db8:aa::/48
-dnz settings cookies on
-dnz settings nsid on --value dns-1.jkt
-```
-
-## Zone history
+### Zone history
 
 How long [zone history](/dns/history) is kept: versions older than **Days** (default 365), and
 beyond the newest **Versions per zone** (default 1000), are dropped every hour. `0` means no limit.
@@ -147,23 +189,19 @@ Decided change requests follow the days limit.
 dnz settings history --keep-days 90 --keep-versions 500
 ```
 
-## Route history
+### Prometheus metrics
 
-How long [route history](/proxy/route-history) is kept is under **Settings → Proxy → Route
-history**: versions older than **Days** (default 365), and beyond the newest **Versions per proxy**
-(default 1000), are dropped every hour. `0` means no limit.
+The **Prometheus metrics** card turns on `/metrics` for Prometheus: on a listen address of its
+own, on the HTTP API with a token, or both. It makes the token and shows a scrape config to paste
+into Prometheus. See [Prometheus and Grafana](/dashboard/prometheus).
 
-```bash
-dnz settings route-history --keep-days 90 --keep-versions 500
-```
-
-## Query log file cache
+### Query log file cache
 
 Searching the [query log](/dns/query-logs) reads its day files, and the Linux kernel keeps what it
 read in memory. That cache is charged to DNZ's container, so `docker stats` (and the **Server** tab's
 *Container* row) can show far more than DNZ itself uses.
 
-With **Release query log file cache** on (the default), DNZ drops that cache once nobody has searched
+With the **Query log file cache** card on (the default), DNZ drops that cache once nobody has searched
 or filtered the log for **Minutes after the last search** (default 10, at most 1440). The next search
 reads the disk once; later ones are fast again. The Live list and the Overview's recent queries read
 only the newest rows and don't keep the cache.
@@ -181,26 +219,9 @@ dnz settings file-cache off                     # leave it to the kernel
 Changes are in the [audit log](/admin/audit-log) as `settings.file_cache`. See
 [Docker: memory](/deploy/docker#memory).
 
-## Prometheus metrics
+## Reset
 
-The **Prometheus metrics** card turns on `/metrics` for Prometheus: on a listen address of its
-own, on the HTTP API with a token, or both. It makes the token and shows a scrape config to paste
-into Prometheus. See [Prometheus and Grafana](/dashboard/prometheus).
-
-## Encrypted DNS
-
-Shows whether DNS over TLS, HTTPS, QUIC and HTTP/3 are on, the hostname and the certificate's
-names and expiry, and any error from reloading the certificate. DoT, DoH, DoQ and DoH3 are turned
-on with a certificate: one DNZ issues and renews itself (**Certificate from DNZ** on this card), or
-files named in the configuration. See [Encrypted DNS](/dns/encrypted-dns).
-
-```bash
-dnz settings certificate                    # DNZ's own certificate: names, state, expiry
-dnz settings certificate dns.example.com    # DNZ issues and renews it over ACME (DNS-01)
-dnz settings certificate --renew            # renew it now (--off: stop issuing it)
-```
-
-## Factory reset
+### Factory reset
 
 Erases everything on the server: zones and records, users and divisions, API tokens and update
 keys, proxies, replication, filtering, notifications, settings and logs. The server goes back to
@@ -218,6 +239,16 @@ dnz --reset --all          # or: dnz -ra; --yes skips the question
 ```
 
 Your saved CLI session for that server is forgotten.
+
+## Route history
+
+How long [route history](/proxy/route-history) is kept is under **Settings → Proxy → Route
+history**, not here: versions older than **Days** (default 365), and beyond the newest **Versions per
+proxy** (default 1000), are dropped every hour. `0` means no limit.
+
+```bash
+dnz settings route-history --keep-days 90 --keep-versions 500
+```
 
 ## Other settings pages
 

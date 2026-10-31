@@ -9,7 +9,20 @@ name and gets an answer that goes nowhere, so the ad or tracker never loads. You
 blocked. Lists and rules can apply to **some clients only** and to **some hours only**, and
 **safe search** and **parental control** keep a child's devices clean.
 
-Filtering lives under **DNS → Filtering**, and in the CLI under `dnz filter`.
+Filtering lives under **DNS → Filtering**, and in the CLI under `dnz filter`. **Test a domain** sits
+at the top of the page; the rest is in tabs:
+
+| Tab | Cards |
+| --- | --- |
+| **Blocking** | [Blocklists](#blocklists), [Parental control](#parental-control), [Your rules](#your-own-rules) |
+| **Safe search** | [Safe search](#safe-search) |
+| **Clients and schedules** | [Clients](#clients-rules-for-some-devices-only), [Schedules](#schedules), [Client networks](#scopes) |
+| **Blocked answers** | [Blocked answers](#answers-for-blocked-queries), [Block page](#block-page) (server-wide only) |
+| **RPZ** | [Response policy zones](/dns/rpz) (server-wide only) |
+
+The switch at the top picks the scope: **Server-wide** or your division. Both the open tab and the
+scope are part of the page's address (`?tab=clients`, `?scope=division`), so a link opens the same
+view.
 
 ## Scopes
 
@@ -19,7 +32,7 @@ Filtering lives under **DNS → Filtering**, and in the CLI under `dnz filter`.
 | **Per division** | Devices in that division's *client networks*, on top of the server-wide lists | The *Manage blocklists* permission (`filtering.manage`, Owner by default) |
 
 The division is picked from the **client's IP address**. A superadmin maps networks to divisions in
-the **Client networks** card, for example `10.10.0.0/16 → SIMRS` and `10.20.0.0/16 → Marketing`.
+the **Client networks** card (**Clients and schedules** tab), for example `10.10.0.0/16 → SIMRS` and `10.20.0.0/16 → Marketing`.
 When networks overlap, the most specific one (longest prefix) wins.
 
 Only superadmins can map networks, so one division can't claim another division's devices. Until a
@@ -35,13 +48,14 @@ division's networks show in that division's [query log](/dns/query-logs) and Ove
 
     <Steps>
       <Step title="Add a blocklist">
-        Open **DNS → Filtering**. In **Blocklists**, click one of the suggested lists, or paste the
+        Open **DNS → Filtering**. On the **Blocking** tab, in **Blocklists**, click one of the suggested lists, or paste the
         URL of any list you trust (with an optional name). The list is downloaded right away. To
         block your own domains, click **Paste domains or upload a .txt file** (see
         [Your own lists](#your-own-lists)).
       </Step>
       <Step title="Map client networks (per-division filtering)">
-        As a superadmin, add each division's networks in **Client networks**, for example
+        As a superadmin, add each division's networks in **Client networks** (**Clients and
+        schedules** tab), for example
         `10.20.0.0/16` for Radiology.
       </Step>
       <Step title="Test a domain">
@@ -136,7 +150,7 @@ https://www.example.net/some/page
 
 <Tabs>
   <Tab title="Dashboard">
-    **DNS → Filtering → Blocklists → Paste domains or upload a .txt file**.
+    **DNS → Filtering → Blocking → Blocklists → Paste domains or upload a .txt file**.
   </Tab>
   <Tab title="CLI">
 
@@ -162,7 +176,7 @@ gone. Exporting changes nothing, so it also works on a secondary.
 
 <Tabs>
   <Tab title="Dashboard">
-    **DNS → Filtering → Blocklists → ⋯ → Export as .txt**.
+    **DNS → Filtering → Blocking → Blocklists → ⋯ → Export as .txt**.
   </Tab>
   <Tab title="CLI">
 
@@ -206,7 +220,7 @@ clients. Open a list's **⋯ → Clients & schedule…** (or the sliders button 
 
     <Steps>
       <Step title="Name the devices">
-        In the **Clients** card, add a client with a name, such as *Kids tablets*, and its
+        In the **Clients** card (**Clients and schedules** tab), add a client with a name, such as *Kids tablets*, and its
         addresses or networks.
       </Step>
       <Step title="Limit a list or rule">
@@ -240,7 +254,7 @@ for any device, with no divisions involved.
 ## Schedules
 
 A **schedule** is a set of days and a time range, in the server's
-[time zone](/admin/settings#time-zone) (**Settings → General**). For example:
+[time zone](/admin/settings#time-zone) (**Settings → General → Server**). For example:
 
 | Name | Days | Time |
 | --- | --- | --- |
@@ -335,7 +349,7 @@ server-wide lists as an RPZ zone for BIND, Unbound or PowerDNS. See
 
 ## Answers for blocked queries
 
-A superadmin sets this in the server-wide scope under **Blocked answers**:
+A superadmin sets this in the server-wide scope, on the **Blocked answers** tab:
 
 | Mode | Answer |
 | --- | --- |
@@ -376,8 +390,8 @@ in their format.
 
     <Steps>
       <Step title="Open the block page settings">
-        As a superadmin, open **DNS → Filtering**, the server-wide scope, then **Blocked answers** →
-        **Block page**.
+        As a superadmin, open **DNS → Filtering**, the server-wide scope, then the **Blocked
+        answers** tab → **Block page**.
       </Step>
       <Step title="Pick the proxy showing the page">
         Any approved proxy. [Proxying](/proxy/overview#turning-proxying-on) must be on.
@@ -485,7 +499,7 @@ apps and sites calling home aren't the proxy's traffic.
 
     Run **Test a domain** with the device's **Client IP**. Check that its address is in the client
     group, and, for a list with a schedule, that the schedule covers the current time in the
-    server's time zone (**Settings → General**).
+    server's time zone (**Settings → General → Server**).
 
   </Accordion>
   <Accordion title="Safe search doesn't work in a browser">

@@ -59,7 +59,7 @@ DNZ trusts three kinds of address:
   DNZ Proxy [proxies](/proxy/overview), active DNZ Proxy nodes or the Caddy and Traefik servers of
   Sites in DNS. DNZ trusts the address each one calls from, the addresses DNS answers with, and the
   Traefik API's host. It reads them again every 30 seconds and right after one changes.
-- **Addresses you add** under **Settings → General → Trusted reverse proxies**, or from the terminal:
+- **Addresses you add** under **Settings → General → Server → Trusted reverse proxies**, or from the terminal:
 
   ```bash
   dnz settings trusted-proxies --add 10.0.133.10

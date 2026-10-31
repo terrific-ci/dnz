@@ -20,7 +20,7 @@ Each record has its own steering. Records of a name without steering are answere
 
     <Steps>
       <Step title="Download the GeoIP database (for GeoDNS)">
-        As a superadmin, open **Settings → General → GeoIP database** and click **Download**. Leave
+        As a superadmin, open **Settings → General → Data and monitoring → GeoIP database** and click **Download**. Leave
         **Update monthly** on. Weights and health checks work without it.
       </Step>
       <Step title="Steer a record">
@@ -94,7 +94,7 @@ dnz record steer example.com api A 192.0.2.2 --weight 1
 ## Where clients are
 
 GeoDNS needs a country database in MaxMind's `.mmdb` format. DNZ doesn't ship one: download it under
-**Settings → General → GeoIP database**, or with `dnz geoip download`.
+**Settings → General → Data and monitoring → GeoIP database**, or with `dnz geoip download`.
 
 By default that is [DB-IP's IP to Country Lite](https://db-ip.com/db/download/ip-to-country-lite),
 free under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (*IP Geolocation by DB-IP*),

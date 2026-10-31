@@ -7,7 +7,7 @@ A **response policy zone** (RPZ) is a blocklist in the form of a DNS zone, the f
 Unbound, Knot Resolver and PowerDNS Recursor share. Threat-intelligence providers (and other
 resolvers) publish them. DNZ can subscribe to them, and serve its own blocklists as one.
 
-Superadmins manage them under **DNS → Filtering → Server-wide → Response policy zones**, with
+Superadmins manage them under **DNS → Filtering → RPZ** (server-wide scope), with
 `dnz filter rpz`, or the [API](/api/filtering#response-policy-zones). RPZ applies to names outside
 local zones, for every client.
 
@@ -34,7 +34,7 @@ A zone's *passthru* answer goes straight to forwarding, without the blocklists.
         Ask the provider to allow DNZ's address, and to give you a TSIG key if they use one.
       </Step>
       <Step title="Add the zone">
-        Open **DNS → Filtering**, pick the **Server-wide** scope, and add a zone under **Response
+        Open **DNS → Filtering**, pick the **Server-wide** scope, open the **RPZ** tab and add a zone under **Response
         policy zones**: its name, the **Source** (zone transfer or URL), the primaries or the zone
         file URL, and the TSIG key if there is one.
       </Step>

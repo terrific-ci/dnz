@@ -260,7 +260,7 @@ When the secondary leaves the primary (**Leave** under **High availability → R
 The join code may name a reverse proxy (`https://dns.example.com` in front of port 8080). The proxy
 only carries the web API; zone transfers, NOTIFY and the sync status need the DNS servers
 themselves. So at join time both sides swap where their DNS answers: the **Device address**
-(Settings → General, or `DNZ_ADVERTISE`), else the machine's interfaces. The secondary asks every
+(Settings → General → Server, or `DNZ_ADVERTISE`), else the machine's interfaces. The secondary asks every
 address for the catalog's SOA over TCP and keeps the ones that answer, the join code's host
 first; the primary keeps the address the request came from unless only the secondary's own one
 answers DNS.
@@ -500,7 +500,7 @@ It is refused, with nothing changed, when:
 - the primary **can't reach the secondary's DNS**: typically the web address is a reverse proxy
   (`https://localdns.example.com`) and the secondary runs in a container without a Device address,
   so all it reports is its container address, which on the primary's host may even be the
-  primary's own container. Set the secondary's Device address (Settings → General, or
+  primary's own container. Set the secondary's Device address (Settings → General → Server, or
   `DNZ_ADVERTISE`) to the IP the primary reaches its DNS at, with TCP port 53 published.
 
 Everyone keeps signing in: the new primary already has every **account** with its divisions and

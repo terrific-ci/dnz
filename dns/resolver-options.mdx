@@ -4,7 +4,7 @@ description: "Serve stale answers while upstreams are down, refresh busy names e
 ---
 
 How DNZ answers beyond picking an upstream. Superadmins set these in the dashboard (**DNS →
-Forwarding** for serve-stale, prefetch and client subnet; **Settings → General** for DNS64,
+Forwarding** for serve-stale, prefetch and client subnet; **Settings → General → DNS answers** for DNS64,
 cookies and NSID), with `dnz forwarding …` and `dnz settings …`, or through
 `PUT /api/settings/resolver`. Changes apply right away, without a restart.
 
@@ -145,7 +145,7 @@ prefix, and the gateway turns connections to them into IPv4.
 
 <Tabs>
   <Tab title="Dashboard">
-    In **Settings → General**, turn **DNS64** on, enter the prefix and the client networks, and
+    In **Settings → General → DNS answers**, turn **DNS64** on, enter the prefix and the client networks, and
     **Save**.
   </Tab>
   <Tab title="CLI">

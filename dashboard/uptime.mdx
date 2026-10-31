@@ -6,6 +6,10 @@ description: "Watch whether your services are up, keep their uptime per day, wri
 **High availability → Uptime** watches whether your services are up, keeps their uptime per day,
 records incidents and publishes a **public status page** anyone can open without signing in.
 
+The page has three tabs: **Monitors** (with the incidents still open above them), **Incident
+history** and **Public status page**. **New incident** is at the top, whichever tab is open. The open
+tab is part of the page's address (`?tab=history`, for example).
+
 <Note>
   Not the same as [Status pages](/proxy/status-pages): those replace a site with a maintenance,
   moved or blocked page. Uptime only watches and reports; it never changes what visitors of a site
@@ -79,11 +83,12 @@ another status opens it again.
 | Maintenance | Under maintenance |
 
 An incident that affects no monitor is about everything, and the page's overall status shows it.
-An incident can be kept off the public page.
+An incident can be kept off the public page. Open incidents show above the monitors on the
+**Monitors** tab; those resolved in the last 90 days are on the **Incident history** tab.
 
 ## The public status page
 
-Turn it on in the **Public status page** card. It is at `http(s)://<your DNZ>/status`, its content
+Turn it on in the **Public status page** card, on the tab of the same name. It is at `http(s)://<your DNZ>/status`, its content
 as JSON at `/status.json`, and on its own hostname if you give one. It shows:
 
 - your logo and label from **Settings → Profile**, a title and description
@@ -106,7 +111,7 @@ the page alone: neither the DNZ dashboard nor its API is reachable under it. Und
 reach it**, pick one:
 
 - **Through a proxy, set up by DNZ:** choose a proxy and DNZ's own address as the proxy reaches it:
-  its IP and HTTP port, prefilled from **Settings → General → Device address**. Never the page's
+  its IP and HTTP port, prefilled from **Settings → General → Server → Device address**. Never the page's
   hostname (visitors would go round in a loop), and not `localhost` unless the proxy runs on the
   same machine. **Save** with the page on and DNZ makes the route (HTTPS, with the redirect from
   http) and the DNS record right away. Turning the page off deletes them again; a record that was

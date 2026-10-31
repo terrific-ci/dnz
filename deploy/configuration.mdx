@@ -45,7 +45,7 @@ url = "sqlite:///var/lib/dnz/dnz.db"
 | File key | Environment | Default | Description |
 | --- | --- | --- | --- |
 | `instance_name` | `DNZ_INSTANCE_NAME` | machine hostname | Server name in notifications, replication and discovery |
-| `advertise` | `DNZ_ADVERTISE` | – | Addresses devices use to reach DNZ, shown in the setup guides (comma-separated). Set it in a container or behind NAT; empty = the one saved under Settings → General → Device address, else the network interfaces' addresses |
+| `advertise` | `DNZ_ADVERTISE` | – | Addresses devices use to reach DNZ, shown in the setup guides (comma-separated). Set it in a container or behind NAT; empty = the one saved under Settings → General → Server → Device address, else the network interfaces' addresses |
 | – | `DNZ_CONFIG` | – | Config file to read |
 | – | `TZ` | system time zone | The server's default time zone, e.g. `Europe/Berlin` |
 
@@ -92,7 +92,7 @@ saved there, the saved value wins over the file.
 | `http.ui_dir` | `DNZ_UI_DIR` | – | Serve the dashboard from this folder instead of the binary |
 | `http.mcp` | `DNZ_MCP` | `false` | `true` turns on the [MCP endpoint](/integrations/ai-assistants) (`/mcp`) and its OAuth sign-in; a switch in the dashboard or `dnz settings mcp` wins over it |
 | `http.cors_origin` | `DNZ_CORS_ORIGIN` | `http://localhost:3111` | Origin allowed to call the API from another site |
-| `http.trusted_proxies` | `DNZ_TRUSTED_PROXIES` | – | Reverse proxy IPs or CIDRs whose `X-Forwarded-For` / `X-Real-IP` / `Forwarded` is trusted, added to Settings → General and the proxies DNZ knows ([details](/deploy/https#trust-the-proxys-forwarded-address)) |
+| `http.trusted_proxies` | `DNZ_TRUSTED_PROXIES` | – | Reverse proxy IPs or CIDRs whose `X-Forwarded-For` / `X-Real-IP` / `Forwarded` is trusted, added to Settings → General → Server → Trusted reverse proxies and the proxies DNZ knows ([details](/deploy/https#trust-the-proxys-forwarded-address)) |
 
 ### TLS and encrypted DNS
 
