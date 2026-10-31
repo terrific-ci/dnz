@@ -150,8 +150,24 @@ the way.
   in v1.27.0 (below), then the old tables are dropped. DNZ makes one copy before both,
   `backups/before-upstreams-<time>.db`. Check the proxies on a copy of the database before upgrading,
   as v1.27.0 describes, with the new version's image.
+- **Middlewares and firewalls are every proxy's.** Each proxy's middlewares, firewalls and TCP
+  middlewares are merged once into one list, **Proxy → Middlewares**. The same name with other
+  settings on another proxy is renamed after that proxy (`office-edge2`): a Traefik's own routers
+  (Docker labels, files) naming `dnz-office@http` there must name `dnz-office-edge2@http`. DNZ copies
+  a SQLite database (and the Redis backend's local copy) to `backups/before-v2-<time>.db` first. See
+  [From per-proxy middlewares](/proxy/middlewares#from-per-proxy-middlewares).
+- **Transports become an upstream's connection settings.** An upstream that proxies connected to
+  differently is split (`<upstream>-<proxy>`), and Caddy proxies start applying an upstream's
+  connection settings. See [From per-proxy transports](/proxy/upstreams#from-per-proxy-transports).
+- **Check first.** `dnz proxy advanced-check --database <copy>`, run with the new version's image on a
+  copy of the database, lists every merge, rename and split before you upgrade (see
+  [Checking a proxy setup](/proxy/upstreams#checking-a-proxy-setup)).
+- **Proxy YAML.** Exports are `version: 2` and hold TCP and UDP routes and each upstream's connection
+  settings. Version-1 files still apply; one naming a middleware or upstream the upgrade renamed is
+  refused with the new name. See [Configuration as code](/proxy/config-as-code).
 - **API.** `/api/proxies/{id}/services` is gone (v1.27 answered `410 Gone`). Use
-  [`/api/proxy/upstreams`](/proxy/upstreams) instead.
+  [`/api/proxy/upstreams`](/proxy/upstreams) instead. `/api/proxies/{id}/middlewares` answers
+  `410 Gone` too: use [`/api/proxy/middlewares`](/api/proxy#routes-routers-services-and-middlewares).
 - **From v1.15 or older.** The server loses the query log those versions kept in the main
   database: it is dropped during the upgrade, in one step, with nothing to wait for (v1.16 and later
   keep the query log in day files). See

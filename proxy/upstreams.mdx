@@ -1,6 +1,6 @@
 ---
 title: "Upstreams"
-description: "Where proxies send visits: one list for every proxy, with servers, balancing, sticky sessions and health checks."
+description: "Where proxies send visits: one list for every proxy, with servers, balancing, sticky sessions, health checks and how proxies connect to the servers."
 ---
 
 An **upstream** is where a route sends its visits: a set of servers, how visits are shared between
@@ -37,7 +37,9 @@ pages that ask it for their pages.
    and **sticky sessions** (a cookie keeps each visitor on the server it first reached).
 6. **Health check**: a path and how often to ask it; a server that doesn't answer well gets no visits.
 7. **Connection** (folded): accept any certificate from HTTPS servers, pass the visitor's `Host`
-   header on, keep the server URLs' paths, and the rest of how proxies connect to the servers.
+   header on, keep the server URLs' paths, and how every proxy connects to the servers: server name,
+   trusted CAs, a client certificate, timeouts and, for TCP, the PROXY protocol. See
+   [Connection settings](#connection-settings).
 
 Editing an upstream that routes use says how many routes on which proxies the change reaches.
 
@@ -66,14 +68,71 @@ and deletes the others. When two upstreams have the same servers but other setti
 health check, one without, for example), the list suggests merging them and keeps the name someone
 typed rather than one made from a hostname.
 
+## Connection settings
+
+Since DNZ v2 an upstream holds how the proxies connect to its servers, the same on every proxy that
+uses it: the upstream dialog's **Connection** (folded). Settings only Traefik runs are marked
+*Traefik only*.
+
+**HTTP upstreams:**
+
+- **Accept any certificate** from HTTPS servers (the default, since servers are often reached by IP).
+- The **server name** (SNI) to send and check the certificate for.
+- **Trusted CAs**: PEM text, or paths that must exist on every proxy's machine. Once set, they replace
+  the public CAs.
+- **Client certificates** for mTLS: the certificate and its key as PEM. DNZ keeps the key and never
+  shows it again; saving without a key keeps the one DNZ has.
+- The expected certificate URI and SPIFFE, TLS versions and ciphers.
+- Idle connections, HTTP/2 and timeouts.
+
+**TCP upstreams:** connect timeout, keep-alive, termination delay, the **PROXY protocol** (so the
+servers see the client's address), and TLS to the servers (server name, CAs, client certificates).
+
+What each proxy kind does with them:
+
+| Proxy kind | Gets |
+| --- | --- |
+| Traefik | A servers transport named `dnz-<upstream>`, which the upstream's load balancer names. An upstream whose only setting is *accept any certificate* keeps the shared insecure transport |
+| DNZ Proxy | The same. It uses the server name, certificate checks, trusted CAs, the client certificate, timeouts and HTTP/2 (HTTP and TCP), for visits and health checks |
+| Caddy | Its `reverse_proxy` transport: server name, CAs (inline or files), timeouts, idle connections, HTTP/1.1 only. Client certificates aren't sent: Caddy reads them from files only, and the proxy page says so |
+
+### From per-proxy transports
+
+Before v2 an upstream *named* a servers transport, and each proxy had its own transport by that name
+under its **Settings**. Upgrading to v2 moves each transport into the upstream that names it, client
+certificates copied in as PEM:
+
+- Where proxies connected to an upstream differently (another client certificate on another proxy, or
+  no transport there), the upstream is **split** so each proxy keeps connecting as it did. The way most
+  routes use keeps the upstream; each other way gets a copy named `<upstream>-<proxy>`, which those
+  proxies' routes use.
+- Transports nothing named did nothing and are dropped (the audit log and the backup keep them).
+- **Caddy proxies start applying** an upstream's connection settings, which they ignored before.
+
+`dnz proxy advanced-check` lists the splits and the Caddy proxies affected; run it on a copy of the
+database before upgrading (see [Checking a proxy setup](#checking-a-proxy-setup) and
+[From per-proxy middlewares](/proxy/middlewares#from-per-proxy-middlewares)).
+
 ## TCP and UDP routes
 
 A route can be **TCP** or **UDP** instead of HTTP: pick it with the option cards at the top of
-**Add route**. It listens on an **entry point** of the proxy (DNZ Proxy's TCP and UDP entry points,
-or a Traefik's) and sends connections to a TCP or UDP upstream, from the list or made of addresses
-typed in the dialog. TCP routes can end TLS at the proxy, pass it through to the servers, take only
-some hostnames (SNI, with TLS), accept only some client addresses, and have a priority. Caddy routes
-HTTP only.
+**Add route** (not on Caddy, which routes HTTP only). It listens on an **entry point** of the proxy
+(DNZ Proxy's TCP and UDP entry points, or a Traefik's: UDP ones have `/udp` addresses) and sends
+connections to a TCP or UDP upstream, from the list or made of server addresses typed in the dialog.
+
+- **TLS** (TCP): none (every connection on the port), **ended by the proxy** (it holds the
+  certificate, the servers get plain TCP) or **passed through** (the servers end TLS; the proxy reads
+  only the hostname). With TLS, a route can take **only some hostnames** (SNI); their records can go
+  through the proxy like an HTTP route's.
+- **Only from these addresses** (TCP): client addresses or ranges.
+- **Priority** (TCP): a higher one wins when routes overlap.
+- **Middlewares** (TCP): address lists and connection limits (at most this many open connections per
+  client address) from [Proxy → Middlewares](/proxy/middlewares#tcp-middlewares), shared by every
+  proxy's TCP routes. **New TCP middleware** in the dialog makes one and picks it.
+
+They are listed with the HTTP routes, marked *TCP pg* or *UDP dns* (protocol and entry point), with a
+TCP route's middlewares. TCP and UDP routes are in the proxy's [YAML](/proxy/config-as-code#tcp-and-udp-routes)
+and in [route history](/proxy/route-history) too.
 
 ## Coming from per-proxy services
 
@@ -103,11 +162,13 @@ each. Upgrading moves them into upstreams once:
 ## Checking a proxy setup
 
 The proxy page has no *Advanced* tab any more: everything it held has a form (routes with their
-*Matching*, upstreams, and middlewares, TLS, transports and TCP middlewares under the proxy's
-**Settings**). A few things are changed elsewhere: a route with TLS or observability options of its
-router (in the proxy's [YAML](/proxy/config-as-code)), and a TCP route with a rule of Traefik's own
-(through the API). `dnz proxy advanced-check` lists them, per proxy; each proxy's **Settings** shows
-its own.
+*Matching*, upstreams with their connection settings, [middlewares](/proxy/middlewares) and TCP
+middlewares under **Proxy → Middlewares**, and TLS under the proxy's **Settings**). A few things
+are changed elsewhere: a route with TLS or observability options of its router (in the proxy's
+[YAML](/proxy/config-as-code)), and a TCP route with a rule of Traefik's own (through the API).
+`dnz proxy advanced-check` lists them, per proxy; each proxy's **Settings** shows its own. Its **v2**
+part says what upgrading to DNZ v2 does to the database: see
+[From per-proxy middlewares](/proxy/middlewares#from-per-proxy-middlewares).
 
 The check only reads, and it works on a **copy of the database** too: run it with the new version
 against a copy of the current one **before upgrading**, without touching the running server.
@@ -121,7 +182,7 @@ against a copy of the current one **before upgrading**, without touching the run
     mkdir -p ~/dnz-check
     docker cp dnz:/data/dnz.db ~/dnz-check/
     docker cp dnz:/data/dnz.db-wal ~/dnz-check/ 2>/dev/null || true
-    docker run --rm --user "$(id -u):$(id -g)" -v ~/dnz-check:/check terrificci/dnz:1.27.0 \
+    docker run --rm --user "$(id -u):$(id -g)" -v ~/dnz-check:/check terrificci/dnz:2.0.0 \
       proxy advanced-check --database /check/dnz.db
     ```
 
@@ -152,6 +213,9 @@ dnz proxy upstreams list
 dnz proxy upstreams add swarm-service -t http://10.0.133.31:80 -t http://10.0.133.32:80 --sticky
 dnz proxy upstreams edit swarm-service --health-check /healthz
 dnz proxy upstreams merge swarm-service app-example-com
+dnz proxy upstreams edit secure-api --server-name api.internal --root-ca ./internal-ca.pem
+dnz proxy upstreams edit secure-api --client-cert ./dnz-client.pem --client-key ./dnz-client.key   # mTLS
+dnz proxy upstreams edit pg --proxy-protocol 2       # TCP: send the PROXY protocol
 ```
 
 See [Proxy commands](/cli/proxy) for every option.

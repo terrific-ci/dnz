@@ -65,8 +65,15 @@ as on (`traefik`, `dnz`) or off.
 | `GET` | `/api/proxies/{id}/route-history[?host=]` | The proxy's route versions, newest first; `/{version}` one with the route before and after; `POST …/{version}/restore` puts it back ([Route history](/proxy/route-history#api)) |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/routers[/{router}]` | Add, change, delete a router |
 | `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/services[/{service}]` | Add, change, delete a service |
-| `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/middlewares[/{middleware}]` | Add, change, delete a middleware |
-| `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/objects[/{object}]` | Add, change, delete a certificate, TLS options, the default store, a transport, or a TCP/UDP router, service or middleware |
+| `GET` / `POST` | `/api/proxy/middlewares` | Every proxy's [middlewares and firewalls](/proxy/middlewares), a page at a time (`?q=`, `protocol=http\|tcp`, `own=true` for routes' own switches, `firewalls=true`, `unused=true`), or add one (`{"name", "kind", "config", "protocol", "description"}`) |
+| `GET` / `PUT` / `DELETE` | `/api/proxy/middlewares/{id}` | One middleware: show, change (`"shared": true` makes a route's own switch shared), delete (refused while anything uses it) |
+| `GET` | `/api/proxy/middlewares/{id}/usage` | What uses it: routes per proxy, chains, route defaults |
+| `POST` | `/api/proxy/middlewares/merge` | `{"keep", "merge": [ids]}`: everything using the others uses `keep`, and they are deleted |
+| `POST` / `PUT` / `DELETE` | `/api/proxies/{id}/objects[/{object}]` | Add, change, delete a certificate, TLS options, the default store, or a TCP/UDP router or service |
+
+Since DNZ v2, `/api/proxies/{id}/middlewares` answers `410 Gone` (use `/api/proxy/middlewares`), and
+the objects endpoint refuses transports (an upstream's connection settings, under
+`/api/proxy/upstreams`) and TCP middlewares (`/api/proxy/middlewares` with `"protocol": "tcp"`).
 | `POST` | `/api/proxy/auth-user` | A basic or digest auth user line from `{"user", "password"}` |
 
 **Entry points.** Under DNZ Proxy, `routes/entry-points` lists the proxy's own entry points. Under
@@ -98,7 +105,7 @@ DNZ Proxy (once set up). `options` holds the switches:
 ```
 
 Each is the route's own middleware (`cache`, `firewall`, `challenge` and `waf` on DNZ Proxy only; `firewall`
-names one of the proxy's firewall middlewares). `waf` is the [web application firewall](/proxy/waf):
+names one of the firewalls, which every proxy shares). `waf` is the [web application firewall](/proxy/waf):
 `mode` `block` (default) or `log`, `sensitivity` `low`, `medium` (default) or `high`, and up to 100
 each of `skip_paths`, `skip_rules` (ids from `GET /api/proxy/waf/rules`) and `allow_ips`; a Traefik
 or Caddy route with it gets `400`. A route's `certificate` has `state`, `not_after`,
@@ -250,11 +257,14 @@ Responses also carry:
   them), or `raw` for any other. `config` holds exactly that one type.
 - The first kinds (`redirect_https`, `basic_auth`, `strip_prefix`, `ip_allow_list`, `rate_limit`) are
   still accepted.
-- A chain's `middlewares` and an error-pages `service` are names in the same proxy.
+- A chain's `middlewares` and an error-pages `service` are names of other middlewares and upstreams,
+  which every proxy shares.
+- `protocol` is `http` (the default) or `tcp`: a TCP middleware's `kind` is `ipAllowList` or
+  `inFlightConn`.
 
-### Objects: TLS, transports, TCP and UDP
+### Objects: TLS, TCP and UDP
 
-TLS, transports, TCP and UDP are **objects** under `/api/proxies/{id}/objects`:
+TLS, TCP and UDP routers are **objects** under `/api/proxies/{id}/objects`:
 `{"kind", "name", "config"}`, with `config` in Traefik's shape.
 
 | `kind` | Notes |
@@ -262,13 +272,14 @@ TLS, transports, TCP and UDP are **objects** under `/api/proxies/{id}/objects`:
 | `certificate` | `certFile`, `keyFile` as PEM |
 | `tlsStore` | Only `default`: `defaultCertificate` names a certificate, or `defaultGeneratedCert` |
 | `tlsOptions` | |
-| `serversTransport` | `certificates` names certificates |
 | `tcpRouter` | `hostSNI` and `clientIP` lists and an extra `rule`, instead of Traefik's rule |
 | `tcpService` | |
-| `tcpMiddleware` | |
-| `tcpServersTransport` | |
 | `udpRouter` | |
 | `udpService` | |
+
+`serversTransport`, `tcpServersTransport` and `tcpMiddleware` are refused since DNZ v2: transports are
+an upstream's [connection settings](/proxy/upstreams#connection-settings), and TCP middlewares are in
+`/api/proxy/middlewares`.
 
 Names of other objects go as they are (`name@provider` for another provider's). Unknown fields are
 refused.

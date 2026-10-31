@@ -92,6 +92,7 @@ dnz proxy routes add edge api.example.com -u http://10.0.2.11:8080 --rate-limit 
 dnz proxy routes add edge intranet.example.com -u http://10.0.9.4 --http        # HTTP only
 dnz proxy routes add edge shop.example.com --service shop                       # to an upstream of Proxy → Upstreams
 dnz proxy routes add-tcp edge -e pg --host db.example.com --passthrough -t 10.0.0.7:5432   # TCP by hostname (SNI)
+dnz proxy routes add-tcp edge -e pg -t 10.0.0.7:5432 --middleware office-only  # with a TCP middleware (repeat -m for more)
 dnz proxy routes add-udp edge -e dns --service resolvers                        # UDP to a shared upstream
 dnz proxy routes add edge old.example.com --redirect-to https://new.example.com --keep-path   # a redirect, no upstream
 dnz proxy routes edit edge app.example.com --no-cache --user ops:other-pass --remove-user admin
@@ -152,7 +153,7 @@ every zone, or one the proxy already routes, is refused, and the closest names a
 | `--cert-resolver` | Certificate resolver for HTTPS; default: DNZ's automatic certificates on DNZ Proxy |
 | `--path` | Only paths under this, e.g. `/api` |
 | `--cache [TTL]` | Cache answers on the nodes (DNZ Proxy), default `10m` |
-| `--firewall` | Run one of the proxy's firewall middlewares first (DNZ Proxy) |
+| `--firewall` | Run one of the firewalls (Proxy → Middlewares, shared by every proxy) first (DNZ Proxy) |
 | `--waf` | The [web application firewall](/proxy/waf) (DNZ Proxy): `block` or `log` (only log). See [below](#web-application-firewall) for its other flags |
 | `--challenge` | The "under attack" browser check (DNZ Proxy) |
 | `--waiting-room` | A waiting room letting this many visitors in at once (DNZ Proxy); `--queue-all` makes everyone wait |
@@ -300,6 +301,45 @@ dnz proxy upstreams rm yrdy                       # refused while anything uses 
 ```
 
 `-t` replaces the servers on `edit`; leave it out to keep them.
+
+An upstream's [connection](/proxy/upstreams#connection-settings) to its servers, the same on every
+proxy using it:
+
+```bash
+dnz proxy upstreams edit secure-api --server-name api.internal --root-ca ./internal-ca.pem
+dnz proxy upstreams edit secure-api --client-cert ./dnz-client.pem --client-key ./dnz-client.key   # mTLS; the key is never shown again
+dnz proxy upstreams edit secure-api --connect-timeout 5s --no-http2
+dnz proxy upstreams edit pg --proxy-protocol 2       # TCP: send the PROXY protocol
+dnz proxy upstreams edit secure-api --transport '{"serverName": "api.internal", "forwardingTimeouts": {"dialTimeout": "5s"}}'
+dnz proxy upstreams edit secure-api --no-transport   # back to the defaults
+```
+
+`--root-ca`, `--client-cert` and `--client-key` read PEM files on the machine running the CLI and
+send their text; `show` lists the settings (client certificates by name and expiry, never their keys).
+
+### Middlewares and firewalls
+
+What happens to a visit on its way, one list for every proxy. A change reaches every route running
+it, on every proxy. See [Middlewares and firewalls](/proxy/middlewares).
+
+```bash
+dnz proxy middlewares list                         # shared ones: type, the proxy kinds that run it, what uses it
+dnz proxy middlewares list --own --unused          # routes' own switches too; only the ones nothing uses
+dnz proxy middlewares show strip-api               # its settings and every route (and proxy), chain and route defaults using it
+dnz proxy middlewares usage office
+dnz proxy middlewares add strip-api --config '{"stripPrefix": {"prefixes": ["/api"]}}'
+dnz proxy middlewares add office-only --tcp --config '{"ipAllowList": {"sourceRange": ["10.0.0.0/8"]}}'
+dnz proxy middlewares add office --file ./office-firewall.json   # {"dnzFirewall": {"rules": [...]}}
+dnz proxy middlewares edit strip-api --rename strip-v1 --description "Old API clients"
+dnz proxy middlewares edit app-example-com-headers --shared   # a route's own switch becomes a shared middleware
+dnz proxy middlewares merge office office-edge2    # everything using office-edge2 uses office
+dnz proxy middlewares rm strip-v1                  # refused while anything uses it
+dnz proxy firewalls list                           # every firewall, its rule count and what uses it
+dnz proxy firewalls show office                    # its rules, in order
+```
+
+`--kind` defaults to the type `--config` holds. A TCP route picks TCP middlewares with
+`dnz proxy routes add-tcp … --middleware office-only`.
 
 ### Route defaults (DNZ Proxy)
 

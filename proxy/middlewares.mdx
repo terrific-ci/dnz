@@ -1,0 +1,167 @@
+---
+title: "Middlewares and firewalls"
+description: "What happens to a visit on its way: one list of middlewares and firewalls for every proxy, with route switches, renaming, merging and what each proxy kind gets."
+---
+
+A **middleware** is what happens to a visit on its way to the upstream: a firewall, sign-in, a
+password, headers, a redirect, a rate limit. Since DNZ v2, **Proxy → Middlewares** holds one list for
+**every proxy**: a route on several proxies runs the same middlewares on each, and a change to a
+middleware reaches every route that runs it, on every proxy.
+
+## The list
+
+**Proxy → Middlewares** has two parts:
+
+- **Firewalls** first: each firewall, its rules and what uses it. **Add firewall** makes one.
+- **Middlewares**, a page at a time: each one's name, type and what it does, the **proxy kinds that
+  run it**, and what uses it (routes and the proxies they are on, chains, route defaults).
+  *DNZ Proxy only* marks the cache, firewall, web application firewall, waiting room and under attack
+  check.
+
+Above the list:
+
+- Filter by kind of traffic: **All**, **HTTP** or **TCP**.
+- **Routes' own** adds the middlewares made for a route's switches (see below), which are left out
+  by default.
+- **Not used** keeps only the middlewares nothing uses.
+- Search by name or type.
+
+**Add middleware** opens the middleware dialog with every HTTP middleware of Traefik 3, grouped and
+searchable, and DNZ Proxy's own (see [Middlewares](/proxy/routing#middlewares) for the forms).
+**TCP middleware** makes one for [TCP routes](#tcp-middlewares). Editing a middleware that routes run
+says which routes on which proxies the change reaches.
+
+Middlewares can also be made and edited from the route dialog: *New firewall…*, *Edit rules…* and
+*More → New middleware…*.
+
+## Route switches
+
+The route dialog's switches (cache, web application firewall, sign-in, custom headers, password,
+address list, rate limit, upload limits, under attack check, waiting room and rules) are middlewares
+made for that route. A route has **one of each for every proxy it is on**, so a visitor signs in once,
+whichever proxy DNS sends them to.
+
+| What happens | The switch's middleware |
+| --- | --- |
+| The switch changes in the route dialog | It changes, on every proxy the route is on |
+| The same route is added to another proxy | That proxy runs it too: no copy |
+| The switch is turned off | It is taken off and deleted |
+| The route is deleted from its last proxy | It is deleted |
+| Another route picks it under *More → Other middlewares* | It becomes a shared middleware |
+
+They are listed only with **Routes' own** on. `dnz proxy middlewares edit <name> --shared` makes one
+shared by hand.
+
+## Firewalls
+
+A firewall holds your own rules: block or challenge visits by address, country, path or user agent.
+Firewalls are every proxy's too:
+
+- A route on any DNZ Proxy picks one in its dialog (**Firewall**).
+- A DNZ Proxy's [route defaults](/proxy/dnz-proxy#route-defaults) may run one on every route.
+- Traefik and Caddy routes never run them.
+
+See [Firewall](/proxy/dnz-proxy#firewall-dnzfirewall) for the rules themselves.
+
+## Rename, delete and merge
+
+- **Rename** follows the new name into chains on every proxy and into TCP routes.
+- **Delete** is refused while anything uses the middleware, and says what does.
+- **Merge…** points every route, chain and route defaults that use the middlewares picked at the one
+  kept, and deletes the others. Middlewares with the same settings under other names are offered for
+  merging at the top of the list.
+
+## What each proxy kind gets
+
+| Proxy kind | Gets |
+| --- | --- |
+| Traefik | **Every shared middleware**, used or not, as `dnz-<name>`. Traefik's own routers (Docker labels, files, Kubernetes) may name one as `dnz-<name>@http`, so they keep working |
+| DNZ Proxy | Only the middlewares its routes, chains and route defaults run |
+| Caddy | Only the middlewares its routes run, translated into Caddy's handlers ([What Caddy gets](/proxy/caddy#what-caddy-gets)) |
+
+A middleware a proxy's kind can't run (the web application firewall on Traefik, rules it can't
+express) is refused on that proxy's routes rather than left out silently.
+
+## TCP middlewares
+
+TCP routes have middlewares of their own, in the same list (filter **TCP**):
+
+- **Address list**: only these client addresses or ranges.
+- **Connection limit**: at most this many open connections per client address.
+
+They are shared by every proxy's TCP routes. A TCP route picks them in its dialog under
+**Middlewares**; **New TCP middleware** there makes one and picks it. See
+[TCP and UDP routes](/proxy/upstreams#tcp-and-udp-routes).
+
+## From per-proxy middlewares
+
+Before v2 each proxy had middlewares of its own: a route on two proxies kept its own copy of every
+switch and firewall on each, and a sign-in there was two sign-ins. Upgrading to v2 merges them once:
+
+- A route's switches become **one per route**, merged across its copies on several proxies when their
+  settings are the same.
+- Other middlewares with the **same name and the same settings** become one.
+- The **same name with other settings** stays apart: the later ones are named after their proxy, for
+  example `office-edge2`.
+- TCP middlewares move into the list too.
+- The merged middleware keeps the oldest copy's sign-in: visitors signed in through it stay signed in,
+  visitors of the other copies sign in once more.
+- Routes, chains, route defaults, sign-ins in progress, TCP routes and [route history](/proxy/route-history)
+  follow. Nothing used is deleted.
+
+**Proxy → Middlewares** says once what the move did, and the audit log keeps it
+(`proxy.v2_migrated`).
+
+<Warning>
+  DNZ copies a SQLite database (and the Redis backend's local copy) to `backups/before-v2-<time>.db`
+  next to it before the move. With **Postgres or MySQL**, take a dump before upgrading. Going back to
+  v1 needs that backup. See [Upgrading](/deploy/upgrading#breaking-changes).
+</Warning>
+
+### Check before upgrading
+
+Run the check with the new version against a **copy** of the database before upgrading, as
+described under [Checking a proxy setup](/proxy/upstreams#checking-a-proxy-setup):
+
+```bash
+dnz proxy advanced-check --database ./dnz-copy.db
+```
+
+With Docker, run it with the new image (`terrificci/dnz:2.0.0`). Its v2 part lists:
+
+- every middleware merged or renamed;
+- the **renamed ones a Traefik's own routers may name**: on `edge2`, Docker labels naming
+  `dnz-office@http` get `edge`'s `office` after the upgrade. Change them to `dnz-office-edge2@http`;
+- upstreams split by their connection settings, and Caddy proxies whose connection settings start to
+  apply (see [From per-proxy transports](/proxy/upstreams#from-per-proxy-transports));
+- transports nothing used, which are dropped.
+
+A proxy's [YAML](/proxy/config-as-code) exported before v2 still applies; a middleware the upgrade
+renamed on that proxy is refused with its new name, so export the proxy again.
+
+## From the command line
+
+```bash
+dnz proxy middlewares list                         # shared ones: type, the proxy kinds that run it, what uses it
+dnz proxy middlewares list --own --unused          # routes' own switches too; only the ones nothing uses
+dnz proxy middlewares show strip-api               # its settings and every route (and proxy), chain and route defaults using it
+dnz proxy middlewares add strip-api --config '{"stripPrefix": {"prefixes": ["/api"]}}'
+dnz proxy middlewares add office-only --tcp --config '{"ipAllowList": {"sourceRange": ["10.0.0.0/8"]}}'
+dnz proxy middlewares add office --file ./office-firewall.json   # {"dnzFirewall": {"rules": [...]}}
+dnz proxy middlewares edit strip-api --rename strip-v1 --description "Old API clients"
+dnz proxy middlewares merge office office-edge2    # everything using office-edge2 uses office
+dnz proxy middlewares rm strip-v1                  # refused while anything uses it
+dnz proxy firewalls list                           # every firewall, its rule count and what uses it
+dnz proxy firewalls show office                    # its rules, in order
+dnz proxy routes add-tcp edge -e pg -t 10.0.0.7:5432 --middleware office-only
+```
+
+See [Proxy commands](/cli/proxy#middlewares-and-firewalls) for every option.
+
+## AI assistants and metrics
+
+- An [AI assistant](/integrations/ai-assistants) reads the list with `proxy_middlewares` and makes or
+  changes a middleware or firewall with `set_proxy_middleware`. Passwords and sign-in are left to
+  people, and so are deleting and merging.
+- Prometheus: `dnz_proxy_middlewares{protocol, shared}` counts them, by kind of traffic and whether
+  they are shared or a route's own switches. See [Prometheus](/dashboard/prometheus).

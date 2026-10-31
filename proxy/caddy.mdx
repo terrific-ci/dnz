@@ -165,6 +165,7 @@ DNZ translates the proxy's routers, services and middlewares into Caddy's own JS
 | Strategy `wrr`, `p2c`, `leasttime`, `hrw` | Round robin or weighted round robin, random choose 2, least conn, client IP hash |
 | Sticky cookie, active health checks, accept any certificate, preserve path | The `reverse_proxy` equivalents |
 | Pass Host header off | The upstream's host |
+| An upstream's [connection settings](/proxy/upstreams#connection-settings): server name, CAs (inline or files), timeouts, idle connections | The `reverse_proxy` transport, HTTP/1.1 only. Client certificates aren't sent (Caddy reads them from files only; the proxy page says so) |
 | Weighted services | One upstream list, the weights multiplied |
 | Failover | Caddy's `first` selection policy |
 | Mirroring | The main service only |

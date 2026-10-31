@@ -176,8 +176,9 @@ behind basic auth.
 
 ## What Traefik gets
 
-Each Traefik gets its own enabled routers and all of its services and middlewares (a chain or error
-pages may use ones no router does). Every name is prefixed with `dnz-` (router `app` becomes
+Each Traefik gets its own enabled routers, the upstreams they use (a chain or error pages may use
+ones no router does) and **every shared [middleware](/proxy/middlewares)**, used or not, so Traefik's
+own routers (Docker labels, files, Kubernetes) can name one as `dnz-<name>@http`. Every name is prefixed with `dnz-` (router `app` becomes
 `dnz-app`), so it never clashes with Traefik's other providers.
 
 | In DNZ | In Traefik |
@@ -186,7 +187,7 @@ pages may use ones no router does). Every name is prefixed with `dnz-` (router `
 | TLS options, certificate domains, observability | `tls.options`, `tls.domains` (instead of the wildcard ones), `observability` |
 | Certificates, default certificate | `tls.certificates` (the PEM pair inline), `tls.stores.default` |
 | TLS options | `tls.options` (`default` keeps its name, the rest get `dnz-`) |
-| Transports | `http.serversTransports`, `tcp.serversTransports` (client certificates as PEM pairs) |
+| An upstream's [connection settings](/proxy/upstreams#connection-settings) | `http.serversTransports`, `tcp.serversTransports` named `dnz-<upstream>`, which its load balancer names (client certificates as PEM pairs) |
 | TCP and UDP | `tcp.routers` (the rule built from SNI hostnames, client addresses and the extra rule), `tcp.services`, `tcp.middlewares`, `udp.routers`, `udp.services` |
 | Entry points, priority | `entryPoints`, `priority` (wildcard-only routers get priority 1) |
 | TLS, certificate resolver | `tls`, `tls.certResolver`; wildcards also get `tls.domains` |

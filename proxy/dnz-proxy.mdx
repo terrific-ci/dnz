@@ -393,8 +393,9 @@ one `DNZ_PROXY_BIN` names. It restarts the node if it exits and shows its last l
 ## The proxy's page
 
 A DNZ Proxy's page has **Routes** ([Adding a route](/proxy/overview#adding-a-route)),
-**Nodes** and **Settings** (middlewares, TLS, transports,
-TCP and UDP objects behind the routes). **Settings** holds:
+**History**, **Nodes** and **Settings** (TLS and the other objects behind the routes; middlewares and
+firewalls are under [Proxy → Middlewares](/proxy/middlewares), shared by every proxy). **Settings**
+holds:
 
 | Card | What it holds |
 | --- | --- |
@@ -415,7 +416,7 @@ What every route of the proxy gets, without touching a router, live on every nod
 - **Compress answers**: gzip, Brotli or zstd, whichever the browser takes.
 - **Security headers**: `X-Content-Type-Options: nosniff`, `Referrer-Policy:
   strict-origin-when-cross-origin`, `X-Frame-Options: SAMEORIGIN`, and HSTS (180 days) over HTTPS.
-- **Firewall on every route**: one of the proxy's firewall middlewares, run before anything else.
+- **Firewall on every route**: one of the [firewalls](/proxy/middlewares#firewalls) (shared by every proxy), run before anything else.
 
 <Tabs>
   <Tab title="Dashboard">
@@ -533,8 +534,8 @@ circuitBreaker, buffering.
 
 ## DNZ Proxy's middlewares
 
-These appear under **DNZ Proxy** in **Add middleware** on a DNZ Proxy. Traefik and Caddy never
-get them.
+These appear under **DNZ Proxy** in **Add middleware** on [Proxy → Middlewares](/proxy/middlewares),
+marked *DNZ Proxy only*. Only DNZ Proxy runs them: Traefik and Caddy routes can't use them.
 
 ### Cache (`dnzCache`)
 
@@ -651,7 +652,7 @@ show` lists them, and Prometheus gets `dnz_proxy_waiting_room_active`, `…_queu
 <Tabs>
   <Tab title="Dashboard">
 
-    **Proxy** → open the proxy → **Add middleware** → **DNZ Proxy** → **Waiting room**, then add the
+    **Proxy → Middlewares** → **Add middleware** → **DNZ Proxy** → **Waiting room**, then add the
     middleware to the hostname's route.
 
   </Tab>

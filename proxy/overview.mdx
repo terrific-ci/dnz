@@ -142,8 +142,9 @@ filter keeps one kind of route: on or off, redirects, HTTPS, HTTP only, certific
 proxied, set up in YAML, or one switch (cache, firewall, under attack, password, …); it stays in
 the address (`?type=redirect`) and works with the views, the group filter and the pages. **Add route** is the one button: on Proxy → Routes it
 asks which proxies (one or several, with a search), and the same dialog edits a route later. Its
-**Serve on** saves the route on every proxy picked; each keeps its own firewall and other
-middlewares. A route that goes to a service from the list goes to the service of the same name on
+**Serve on** saves the route on every proxy picked. Its switches are one set of
+[middlewares](/proxy/middlewares) for all of them (a visitor signs in once, whichever proxy DNS sends
+them to), and the DNZ Proxy switches go only to DNZ Proxies. A route that goes to a service from the list goes to the service of the same name on
 each proxy (made there from the same servers when a proxy has none), so the same servers never become
 a second service. A route saved before that, with upstreams of its own on one proxy while another uses
 a service from its list, gets **Use … on …** in its row menu: that copy moves onto the service of
@@ -165,12 +166,13 @@ Where it goes has two tabs under the hostname:
   it, and deleting the route leaves it. Switching back to **Upstreams** gives the route its own
   service again.
 
-The switches are each the route's own middleware, made and removed with it:
+The switches are each the route's own middleware, made and removed with it, one for every proxy the
+route is on (see [Route switches](/proxy/middlewares#route-switches)):
 
 | Switch | What it does |
 | --- | --- |
 | **Cache** (DNZ Proxy) | Keeps answers on the nodes; **Clear cache** right next to it when editing |
-| **Firewall** (DNZ Proxy) | Runs one of the proxy's firewall middlewares |
+| **Firewall** (DNZ Proxy) | Runs one of the [firewalls](/proxy/middlewares#firewalls), shared by every proxy |
 | **Web application firewall** (DNZ Proxy) | Ready-made rules against SQL injection, XSS, path traversal, Log4Shell and attack tools: **Block attacks** or **Log only**, a sensitivity, and exceptions. See [Web application firewall](/proxy/waf) |
 | **Rate limit** | Requests a second per visitor, with a burst |
 | **Password** | Any number of users, each added by name and password; only a bcrypt hash is kept. A user typed but not added yet is added on save |
@@ -205,7 +207,8 @@ or HTTP through the nodes), tested before it is saved. See
 [Automatic certificates](/proxy/certificates#automatic-certificates). The row then shows the
 certificate's progress; a failure says why, with a fix, a retry and the full log.
 
-Upstreams are under **Proxy → Upstreams**; middlewares, TLS, transports and TCP middlewares under the
+Upstreams (with how the proxies connect to their servers) are under **Proxy → Upstreams**; middlewares,
+firewalls and TCP middlewares under **Proxy → Middlewares**, both shared by every proxy; TLS under the
 proxy's **Settings**. A router the dialog can't hold (TLS or observability options) is marked **Set
 up in YAML** and changed in the proxy's [YAML](/proxy/config-as-code).
 **Delete** removes the route's routers, its own service (a picked one stays) and its switches, and its DNS records stop going
