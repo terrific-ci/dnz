@@ -125,7 +125,12 @@ setup_dnz() {
     proxy=$(api POST /proxies '{"name":"bench","kind":"dnz","ipv4":"172.28.54.30"}' | jq -r .id)
     api POST /proxy/dnz/nodes "{\"proxy_id\":$proxy,\"name\":\"node1\",\"public_ipv4\":\"172.28.54.30\"}" >/dev/null
     local service
-    service=$(api POST "/proxies/$proxy/services" '{"name":"app","servers":[{"url":"http://172.28.54.10:80","weight":1}],"pass_host_header":true,"skip_tls_verify":false,"health_check_path":"","health_check_interval_secs":10,"strategy":"wrr","sticky":false,"sticky_cookie":"","kind":"loadBalancer","options":{}}' | jq -r .id)
+    # v1.27+/v2: services are the shared upstreams (POST /proxy/upstreams); a router's service_id is the upstream's id.
+    service=$(api POST /proxy/upstreams '{"name":"app","servers":[{"url":"http://172.28.54.10:80","weight":1}],"pass_host_header":true,"skip_tls_verify":false,"health_check_path":"","health_check_interval_secs":10,"strategy":"wrr","sticky":false,"sticky_cookie":"","kind":"loadBalancer","options":{}}' | jq -r .id)
+    # BENCH_PEAK_TRACKING=1: the proxy's peak concurrency setting on (v2).
+    if [ -n "${BENCH_PEAK_TRACKING:-}" ]; then
+        api PUT "/proxies/$proxy/dnz/settings" "$(api GET "/proxies/$proxy/dnz" | jq -c '.settings + {peak_tracking: true}')" | jq -c '{peak_tracking}' >&2
+    fi
     api POST "/proxies/$proxy/routers" "{\"name\":\"app\",\"hosts\":[\"app.bench.test\"],\"entry_points\":[\"web\"],\"service_id\":$service}" >/dev/null
     api POST "/proxies/$proxy/routers" "{\"name\":\"app-tls\",\"hosts\":[\"app.bench.test\"],\"entry_points\":[\"websecure\"],\"tls\":true,\"service_id\":$service}" >/dev/null
     local cert
@@ -174,6 +179,17 @@ for p in $PROXIES; do
     # wrk resumes TLS sessions; say whether this proxy lets it.
     resumed=$(perf sh -c 'sleep 1 | openssl s_client -connect app.bench.test:443 -servername app.bench.test -sess_out /tmp/sess >/dev/null 2>&1; sleep 1 | openssl s_client -connect app.bench.test:443 -servername app.bench.test -sess_in /tmp/sess 2>/dev/null | grep -c "^Reused"' || true)
     log "  TLS session resumed: $([ "$resumed" -gt 0 ] && echo yes || echo no)"
+    if [ "$p" = dnzproxy ]; then
+        # Whether the node's report carries peak concurrency (only with peak_tracking on).
+        for i in $(seq 60); do
+            conc=$(api GET /proxy/dnz | jq -c '[.. | objects | select(has("concurrency")) | .concurrency | select(. != null)] | first // empty')
+            { [ -n "${BENCH_PEAK_TRACKING:-}" ] && [ -n "$conc" ]; } && break
+            { [ -z "${BENCH_PEAK_TRACKING:-}" ] && [ "$i" -ge 3 ]; } && break
+            sleep 1
+        done
+        log "  node report concurrency: ${conc:-none}"
+        [ -z "${BENCH_PEAK_TRACKING:-}" ] || [ -n "$conc" ] || { log "peak tracking on but the report has no concurrency"; exit 1; }
+    fi
     sleep 3
     idle=$(anon_mib "$p")
 

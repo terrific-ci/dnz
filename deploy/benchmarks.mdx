@@ -190,6 +190,30 @@ a second. In this harness DNZ now answers more queries a second than Knot DNS, a
 CPU per query. The cost is latency at the limit: a query waits behind a longer batch, and queries
 the old build dropped at a full buffer are answered late instead.
 
+### 2.0: against 1.27
+
+2.0 doesn't change how DNZ answers DNS, so the check before its release (2026-11-01) asked only
+whether anything got slower. Release builds of 1.27 and 2.0, checked to be different builds, ran
+side by side on the server above in both scenarios, taking turns, 6 rounds per run. There were four
+runs: twice with 1.27 in the first place and twice with the two swapped, since the places alone
+differ by a few percent. CPU per query was measured at a steady 80,000 queries a second, 5 rounds,
+in both orders.
+
+| | 1.27 | 2.0 | Change |
+| --- | ---: | ---: | ---: |
+| Authoritative, queries/s | 143,441-143,995 | 141,153-146,733 | −0.4% (medians of the runs) |
+| Cached forwarding, queries/s | 139,931-142,851 | 140,837-143,572 | +0.8% |
+| CPU per query at 80,000/s, authoritative | 20.65-20.81 µs | 20.58-20.71 µs | the same |
+| CPU per query at 80,000/s, cached | 20.54-20.59 µs | 20.44-20.57 µs | the same |
+| Average latency at 80,000/s | 1.25-1.33 ms | 1.24-1.33 ms | the same |
+| Queries lost | 0.00-0.04% | 0.00-0.04% | the same |
+| Memory after the runs | 48-78 MiB | 48-76 MiB | the same range |
+
+Both builds sit at what dnsperf sends from its 2 CPUs (139,000 to 147,000 a second), and their CPU
+per query is within 0.2 µs either way: 2.0 answers DNS as fast as 1.27, with the same memory. An
+earlier set of the same runs, taken while other work ran on the same server, had cached forwarding
+2% lower for 2.0 at the same CPU per query; with the server quiet, the gap was gone.
+
 ## Features compared
 
 Speed is half the picture: the servers ahead of DNZ answer DNS and little else, and the ones
