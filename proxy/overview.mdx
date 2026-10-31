@@ -241,6 +241,13 @@ set), else `web` and `websecure`. Under Caddy they are `web` (:80) and `websecur
 
 A record without a router links straight to this dialog, with its name filled in.
 
+<Note>
+  In a zone whose changes [wait for approval](/dns/history#change-approval), **Add route** with its
+  DNS record is refused: the route would change the name's records at once, past the approval. Add
+  the route without the DNS record (**More → DNS record**, or `--no-dns` in the CLI), or ask an
+  approver.
+</Note>
+
 <Tabs>
   <Tab title="Dashboard">
 
@@ -270,6 +277,75 @@ A record without a router links straight to this dialog, with its name filled in
 you type, also a path, an upstream address or a group's name, together with the other filters. The
 page's address keeps it (`?q=`), so a link opens with the same search. CLI:
 `dnz proxy routes list edge --search shop`.
+
+### Several routes at once
+
+Every row of **Proxy → Routes** has a checkbox. The one in a list's header picks every row shown on
+the page (Shift-click picks a range), and once the whole page is picked a line offers **Pick all N
+matching**: every route the search and filters leave, on every page. A row is a hostname, so picking
+it picks its route on **every proxy that serves it**, and the bar says so: "12 routes on 2 proxies".
+
+The bar's actions, in this order:
+
+| Action | What it does |
+| --- | --- |
+| **Set status page** | One [status page](/proxy/status-pages#several-routes-at-once) for every hostname of the routes (Maintenance, Coming soon, …), or **Back to normal**, with a title, message and allowed addresses. **When** is *Now, until turned off*, *From … until …* (once) or *Repeating* ([scheduled maintenance](/proxy/status-pages#scheduled-maintenance)). Redirect routes keep redirecting unless *Also the redirects* is ticked |
+| **Turn on** / **Turn off** | Also in each row's menu. Monitors of a [watched route group](/dashboard/uptime#a-group-of-routes) follow its routes that are on, so turning routes off removes their monitors; the confirmation says so |
+| **Group** | One of the [route groups](#route-groups), *No group*, or a new name |
+| **HTTPS** | HTTPS with `http://` redirecting to it, HTTPS only, or HTTP only. The certificate resolver stays |
+| **Switches** | Turn the web application firewall, *Under attack*, cache, waiting room, upload limits and rate limit on (with the route dialog's defaults; a switch that is already on keeps its settings) or off; turn the address list, custom headers, rules, firewall, password and sign-in off |
+| **Middleware** | Add or remove a shared [middleware](/proxy/middlewares) on every proxy of the routes |
+| **Upstream** | Send them all to one [upstream](/proxy/upstreams) (HTTP routes to an HTTP one, TCP to TCP). A route's own servers go once nothing else uses them |
+| **Serve on** | Copy the routes to another proxy, as the route dialog's **Serve on** does, or take them off one |
+| **Delete** | The routes go, and their names' DNS records stop going through those proxies |
+
+<Tip>
+  To take sites down for maintenance and keep their uptime monitors, use **Set status page** rather
+  than **Turn off**: the visitors see a maintenance page, and the monitors
+  [stay quiet](/dashboard/uptime#scheduled-maintenance) instead of disappearing.
+</Tip>
+
+It is **all or nothing**. Every proxy the change touches is checked first, with the route dialog's
+own checks; if one route can't take it, nothing is changed and the message lists each route's
+reason. Otherwise every proxy's routes and the status pages change together, [route
+history](/proxy/route-history) gets a version for each route changed, and the
+[audit log](/admin/audit-log) one entry (`proxy.routes.bulk`).
+
+- TCP and UDP routes take only **Upstream**, **Serve on** and **Delete**.
+- A route [set up in YAML](/proxy/config-as-code) refuses edits (change it in the proxy's YAML);
+  **Delete** and status pages work on it.
+- On a Traefik or Caddy, DNZ Proxy's own switches stay off, and the answer names them. The web
+  application firewall is refused there, as in the route dialog.
+- In a zone whose changes [wait for approval](/dns/history#change-approval), **Serve on** and
+  **Delete** are refused: they change the names' DNS records at once, past the approval. Ask an
+  approver. Status pages, groups, switches and the rest change no DNS answer and need no approval.
+
+<Tabs>
+  <Tab title="CLI">
+
+    ```bash
+    dnz proxy routes edit all app.example.com api.example.com --enabled off
+    dnz proxy routes edit all app.example.com api.example.com --group "Web app" --https on
+    dnz proxy routes edit edge app.example.com api.example.com --switch waf=on --switch cache=off
+    dnz proxy routes edit all app.example.com api.example.com --middleware +strip-api
+    dnz proxy routes edit edge app.example.com api.example.com --serve-on +edge2
+    dnz proxy routes rm all app.example.com api.example.com
+    dnz status-page set app.example.com maintenance --also api.example.com --for 2h
+    ```
+
+    `all` instead of a proxy's name takes each route on every proxy serving it. See
+    [Several routes at once](/cli/proxy#several-routes-at-once).
+
+  </Tab>
+  <Tab title="AI assistant">
+
+    Over [MCP](/integrations/ai-assistants), `bulk_edit_routes` does the same (never passwords or
+    sign-in), and `dry_run` only checks and plans. Ask, for example:
+
+    > Turn on the web application firewall for app.example.com, api.example.com and shop.example.com.
+
+  </Tab>
+</Tabs>
 
 ### Route groups
 

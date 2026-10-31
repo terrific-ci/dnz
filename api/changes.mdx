@@ -100,6 +100,11 @@ When an approval policy covers the caller, these writes are **not applied**:
 - `POST /api/zones/{id}/import` with `apply`
 - `POST /api/zones/{id}/rollback`
 
+Proxy routes can't wait, since they change the names' records at once, so in such a zone these are
+refused with `409` and the reason instead: `POST /api/proxies/{id}/routes` with `dns_record` (the
+default), `POST /api/zones/{id}/records/route`, and the `serve_on` and `delete` operations of
+`POST /api/proxy/routes/bulk` (see [Proxy routes in a zone that waits](/dns/history#proxy-routes-in-a-zone-that-waits)).
+
 They answer `202 Accepted` with a `Location` header:
 
 ```http

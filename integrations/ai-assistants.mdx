@@ -173,7 +173,10 @@ and ask for the next page.
 | `clear_proxy_cache` ✎ | Drops what a DNZ Proxy's nodes cached for a hostname (superadmin) |
 | `proxy_route_history` | A proxy's route versions (or one hostname's), `page` and `limit` (20 a page): who changed which route when, and what changed part by part; with `version`, the route before and after and what restoring would change. Restoring is left to people ([Route history](/proxy/route-history)) |
 | `proxy_route_group` ✎ | Puts a hostname's route in a group (Web app, REST API, …) on every proxy serving it (or one), or in none (`group: ""`); only sorts the Routes page |
-| `set_status_page` ✎ | Sets or replaces a host's status page: maintenance, moved, blocked…, with a schedule and allowed addresses; `moved` is a 301 unless `permanent: false` (a 302) |
+| `bulk_edit_routes` ✎ | [Several routes at once](/proxy/overview#several-routes-at-once), all or nothing: status pages, on/off, group, HTTPS, switches, shared middlewares, one upstream, Serve on and delete, on the routes holding the given `hosts`, on every proxy serving them (or one `proxy`). `operations` in order, e.g. `[{"op": "disable"}, {"op": "set_group", "group": "Web app"}]`; `dry_run` only checks and plans. Never passwords or sign-in |
+| `set_status_page` ✎ | Sets or replaces a host's status page: maintenance, moved, blocked…, with a schedule and allowed addresses; `moved` is a 301 unless `permanent: false` (a 302). With `hosts`, every hostname of those routes on every proxy, in one batch ([several routes at once](/proxy/status-pages#several-routes-at-once)) |
+| `maintenance_windows` | [Scheduled maintenance](/proxy/status-pages#scheduled-maintenance) that repeats: days, start time (in the server's time zone), length, hostnames, whether it is on now and when next; `upcoming_days` for the occurrences of the coming days |
+| `set_maintenance_window` ✎ | Adds or changes (by `name`) scheduled maintenance: `hosts`, `days` (`sun`, `mon-fri`), `at` (`22:00`), `duration` (`2h`), first and last day (`from`, `until`), the page's title and message, whether uptime stays quiet (`quiet_alerts`). Deleting is left to people; one-off maintenance is `set_status_page` with a start and end |
 | `switch_status_page` ✎ | Turns a host's status page on or off |
 | `delete_status_page` ✎ | Removes a host's status page |
 | `set_proxy_upstream` ✎ | Makes or changes an upstream (servers, or `from_dns` as `NAME:PORT` with `resolve_on`, `scheme` and `family` for servers from a DNS name; balancing, sticky sessions, health check); the change reaches every route using it, on every proxy. Deleting and merging are left to people |
@@ -197,7 +200,10 @@ The token an assistant gets acts as the user who allowed it, with their division
   tokens, DNS update keys, backups, settings, notification providers, Cloudflare connections, ACME
   credentials and the cluster.
 - **Read and change** also creates, changes and deletes records, creates zones, clears the cache,
-  sets, switches and removes status pages, and changes a route's upload limits and redirect.
+  sets, switches and removes status pages, changes a route's upload limits, redirect, web
+  application firewall, rules and group, changes several routes at once (never their passwords or
+  sign-in), schedules maintenance (without deleting it), and makes and changes upstreams and
+  middlewares (without deleting or merging them).
   Nothing else: no zone deletion, no rollbacks, no approvals, no settings.
 
 Access tokens last an hour; the assistant renews them with a refresh token that lasts 30 days from

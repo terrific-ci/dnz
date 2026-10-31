@@ -183,6 +183,52 @@ dnz proxy routes edit edge app.example.com --request-header X-Env=production --r
 HTTPS with a redirect from `http://` is the default. On a DNZ Proxy its certificate comes by
 itself once [automatic certificates](#certificates) are set up; until then it gets a temporary one.
 
+<Note>
+  In a zone whose changes [wait for approval](/dns/history#change-approval), `routes add` is refused
+  unless it leaves DNS alone (`--no-dns`): a route with its DNS record would change the name's
+  records at once, past the approval.
+</Note>
+
+### Several routes at once
+
+What the Routes page's bar does ([Several routes at once](/proxy/overview#several-routes-at-once)):
+give `routes edit` or `routes rm` more hostnames, or `all` instead of the proxy to take each route
+on **every proxy serving it**. It is one request, all or nothing: if one route can't take the
+change, nothing changes, and the command prints each route's reason.
+
+```bash
+dnz proxy routes edit all app.example.com api.example.com --enabled off
+dnz proxy routes edit all app.example.com api.example.com --group "Web app" --https on
+dnz proxy routes edit edge app.example.com api.example.com --switch waf=on --switch cache=off
+dnz proxy routes edit all app.example.com api.example.com --middleware +strip-api --middleware -old-headers
+dnz proxy routes edit all app.example.com api.example.com --service web       # one shared upstream
+dnz proxy routes edit edge app.example.com api.example.com --serve-on +edge2   # copy them to edge2; -edge2 takes them off
+dnz proxy routes rm all app.example.com api.example.com                         # asks first; -y
+```
+
+A batch takes:
+
+| Flag | What it does |
+| --- | --- |
+| `--enabled on\|off` | Turn the routes on or off |
+| `--group NAME`, `--no-group` | Put them in a [route group](#route-groups), or in none |
+| `--https on\|off`, `--redirect on\|off` | HTTPS, and whether `http://` redirects to it |
+| `--switch NAME=on\|off` | On, with the route dialog's defaults: `waf`, `challenge`, `cache`, `waiting_room`, `uploads`, `rate_limit`. Off also: `allow_ips`, `headers`, `rules`, `firewall`, `basic_auth`, `sign_in`. Repeat for more; a switch already on keeps its settings |
+| `--challenge`, `--cache`, `--waf block\|off`, the `--no-…` switches | The same as `--switch` (`--cache` at its default of 10 minutes) |
+| `--middleware +NAME\|-NAME` | Add or remove a shared middleware; repeat for more |
+| `--service NAME` | Send them all to one upstream of Proxy → Upstreams |
+| `--serve-on +PROXY\|-PROXY` | Copy the routes to another proxy, or take them off one |
+
+Flags that carry a route's own values (servers, hostnames, users, headers, a cache time other than
+10 minutes, rate limit and waiting room numbers, `--waf log`) change one route on one proxy: run
+them without more hostnames or `all`. TCP and UDP routes take only `--service`, `--serve-on` and
+`rm`. In a zone whose changes wait for approval, `--serve-on` and `rm` are refused, since they
+change the names' DNS records at once.
+
+To set a status page on several routes, see
+[`dnz status-page set … --also`](/cli/status-pages#several-routes-at-once); for maintenance that
+repeats, [`dnz proxy maintenance`](/cli/status-pages#scheduled-maintenance).
+
 ### Web application firewall
 
 Ready-made rules against SQL injection, XSS, path traversal, Log4Shell, attack tools and the like, on

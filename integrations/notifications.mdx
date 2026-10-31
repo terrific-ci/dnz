@@ -65,7 +65,10 @@ No alert storms:
 - one message when an incident starts and one when it ends, nothing in between;
 - the same node, origin or hostname waits the **repeat** interval (30 minutes) after its last message,
   so a flapping origin sends at most one down and one up per interval;
-- what changes in the same round shares one message ("3 origins are down").
+- what changes in the same round shares one message ("3 origins are down");
+- **Origin down** waits for an upstream whose routes are all in
+  [scheduled maintenance](/proxy/status-pages#scheduled-maintenance) (unless the window lets uptime
+  alert); one still down afterwards alerts then. Node, certificate and attack alerts don't wait.
 
 The counts behind attack spikes stay on the DNZ Proxy nodes: DNZ asks them for their minute counters
 once a minute, and for the top rules and addresses only when a spike starts. Only the cluster leader

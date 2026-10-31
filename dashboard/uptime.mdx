@@ -86,6 +86,31 @@ An incident that affects no monitor is about everything, and the page's overall 
 An incident can be kept off the public page. Open incidents show above the monitors on the
 **Monitors** tab; those resolved in the last 90 days are on the **Incident history** tab.
 
+### Scheduled maintenance
+
+Maintenance planned under **Proxy → Status pages** keeps uptime quiet for the hostnames it covers:
+a [repeating window](/proxy/status-pages#scheduled-maintenance), or a **maintenance**
+[status page](/proxy/status-pages) that is on (also one set on
+[several routes at once](/proxy/overview#several-routes-at-once)).
+
+- A monitor of such a hostname (an HTTP monitor's URL host, a service monitor's hostname) keeps
+  checking and keeping its results, but while the maintenance is on a failed check counts nothing:
+  no failures in a row, no automatic incident, no alert. Its row says *In maintenance until 23:00*.
+  A monitor that was already down stays down, with its incident open.
+- At each occurrence of a repeating window that covers a monitor, DNZ opens an incident
+  "Scheduled maintenance: *name*" (impact **Maintenance**, so those days show as maintenance) and
+  resolves it with "Maintenance finished." at the end. It is on the public page when the window is
+  set to be and one of its monitors is on the page.
+- The public page lists the next 7 days' occurrences under **Scheduled maintenance**.
+- A window with **Uptime stays quiet** off still shows its maintenance page, but monitors alert as
+  usual.
+
+<Tip>
+  To take sites down for maintenance, set a status page on their routes rather than turning the
+  routes off: a [watched group](#a-group-of-routes)'s monitors follow its routes that are on, so
+  turning routes off removes their monitors.
+</Tip>
+
 ## The public status page
 
 Turn it on in the **Public status page** card, on the tab of the same name. It is at `http(s)://<your DNZ>/status`, its content
@@ -94,6 +119,7 @@ as JSON at `/status.json`, and on its own hostname if you give one. It shows:
 - your logo and label from **Settings → Profile**, a title and description
 - the overall status: all systems operational, degraded performance, partial or major outage, under maintenance
 - open incidents with their timeline
+- **Scheduled maintenance**: the coming 7 days' occurrences of [repeating maintenance](#scheduled-maintenance) that covers a monitor on the page
 - the monitors you put on it, under the **public name** and **group** you give them, with their state, uptime bars and uptime
 - past incidents of the last 14 days (1 to 90), day by day
 
@@ -157,7 +183,8 @@ The bundled alert rules include `DnzUptimeMonitorDown` (2 minutes down). See
 
 `dnz uptime` does all of this from the terminal (see [Uptime CLI](/cli/uptime)); the
 [API](/api/uptime) has the same. AI assistants connected over [MCP](/integrations/ai-assistants) can
-read monitors and incidents with `list_uptime_monitors` and `list_uptime_incidents`.
+read monitors and incidents with `list_uptime_monitors` and `list_uptime_incidents`, and scheduled
+maintenance with `maintenance_windows` (`dnz proxy maintenance` in the terminal).
 
 Reading needs **Manage monitoring**, **Manage proxies** or **Post incidents**; changing needs
 **Manage monitoring**. **Post incidents** (the built-in **Helpdesk** role) also opens, edits and

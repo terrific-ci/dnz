@@ -16,6 +16,8 @@ visitors a status page instead of the backend. For what the statuses do, see
 - Others manage the hosts in zones where they have `records.write`, and see those of zones they can
   read.
 - A host in none of DNZ's zones is superadmin-only.
+- [Several routes at once](#several-routes-at-once) and [scheduled maintenance](#scheduled-maintenance)
+  also need **Manage proxies** (`proxy.manage`).
 
 ## Finding a host
 
@@ -64,6 +66,29 @@ zone. `--for` counts from `--from`, or from now.
   allowed through), and the status is on unless `--off` is given.
 </Note>
 
+## Several routes at once
+
+```bash
+dnz status-page set app.example.com maintenance --also api.example.com --also shop.example.com --for 2h
+dnz status-page set app.example.com maintenance --routes     # every hostname of app.example.com's route
+dnz status-page set app.example.com maintenance --also old.example.com --include-redirects
+```
+
+With `--also` or `--routes`, the status goes on **every hostname of the routes** holding the hosts,
+on every proxy serving them, in one batch, as **Set status page** in the Routes bar does
+([Several routes at once](/proxy/status-pages#several-routes-at-once)).
+
+| Flag | Meaning |
+| --- | --- |
+| `--also HOST` | Another route, by one of its hostnames; repeat for more |
+| `--routes` | The host is a route's hostname: the status goes on every hostname of that route |
+| `--include-redirects` | Also on redirect routes' hostnames, which ends their redirect. Without it they keep redirecting |
+
+The other flags of `set` work as above, except `--off`: a batch sets the statuses on. It is all or
+nothing: if one hostname can't take the status, none changes, and the command prints each route's
+reason. To take them all back to normal, `dnz status-page clear` each host, or pick them on
+**Proxy → Routes** and use **Back to normal**.
+
 ## Watching, turning off and removing
 
 ```bash
@@ -77,3 +102,36 @@ dnz status-page clear app.example.com                   # remove it (`rm`)
 **State** is `active` (visitors see the page), `scheduled` (starts later), `ended` (its window is
 over) or `off`. `list` and `show` print times in this machine's time zone. `clear` asks first;
 `--yes` skips the question (needed without a terminal), and `--json` prints the API's answers.
+
+## Scheduled maintenance
+
+Maintenance that repeats, such as every Sunday at 22:00 for two hours (**Proxy → Status pages →
+Scheduled maintenance**). See [Scheduled maintenance](/proxy/status-pages#scheduled-maintenance) for
+what it does.
+
+```bash
+dnz proxy maintenance add "Weekly backups" --hosts app.example.com,api.example.com --days sun --at 22:00 --for 2h
+dnz proxy maintenance add "Patch night" --hosts '*.shop.example.com' --days mon-fri --at 23:30 --for 90m \
+  --from 2026-11-01 --until 2026-12-31
+dnz proxy maintenance list                     # when, hostnames, on now or next (`ls`)
+dnz proxy maintenance upcoming --days 14       # the occurrences of the next 1 to 31 days (default 7)
+dnz proxy maintenance show "Weekly backups"
+dnz proxy maintenance edit "Weekly backups" --at 23:00 --no-quiet   # only what you pass changes
+dnz proxy maintenance edit "Weekly backups" --off                   # kept, not running; --on again
+dnz proxy maintenance rm "Weekly backups"
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--hosts` | Hostnames it covers, comma-separated; `*.example.com` covers one label below |
+| `--days` | `mon` … `sun`, `weekdays`, `weekend`, `every`, or a range like `mon-fri`; comma-separated |
+| `--at` | When it starts, `HH:MM` **in the server's time zone** (not this machine's) |
+| `--for` | How long it lasts: `90m`, `2h`, `1h30m`; it may run past midnight |
+| `--from`, `--until` | Its first and last day (`YYYY-MM-DD`); default from now, with no end |
+| `--title`, `--message` | Instead of the maintenance page's usual title and message |
+| `--allow` | IPs and CIDRs that get the sites as usual, comma-separated |
+| `--no-quiet` | Uptime monitors of the hostnames alert as usual during it |
+| `--not-public` | Keep it off the public status page's *Scheduled maintenance* |
+| `--off` | Save it turned off (`edit --on` turns it on again) |
+
+Windows are named by their name; `edit --rename` gives one a new name.

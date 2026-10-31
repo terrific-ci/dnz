@@ -209,7 +209,9 @@ proxy never deletes its route.
 
 - It needs **Manage proxies** as well as **Manage records**.
 - One name at a time.
-- In a zone whose changes wait for approval, add the route under **Proxy → Routes** instead.
+- In a zone whose changes [wait for approval](/dns/history#proxy-routes-in-a-zone-that-waits), the
+  route is refused: it would change the name's records at once, past the approval. Ask an approver,
+  or add the route under **Proxy → Routes** without its DNS record.
 
 ```bash
 dnz record add example.com shop A 10.0.0.5 --proxy edge-jkt,edge-sgp   # DNS answers with both proxies

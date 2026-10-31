@@ -119,6 +119,22 @@ role.
 | Zone settings: serving the zone, default TTL, forwarding of missing names | Caddy, Traefik and proxy records and zone transfers, which follow a source DNZ copies from |
 | Rollbacks | DNSSEC, creating and deleting zones, and zones created by an import |
 
+### Proxy routes in a zone that waits
+
+A [proxy route](/proxy/overview#adding-a-route) changes its names' DNS records the moment it is
+saved, so it can't wait as a change request. Where your edits in a zone wait for approval, these are
+**refused** instead, with the reason:
+
+- **Add route** with its DNS record (the default). Add it without the DNS record (**More → DNS
+  record** in the dialog, `--no-dns` in the CLI), or ask an approver.
+- A record's route made from **Add record** or **Edit record** ([A record makes its
+  route](/dns/zones#a-record-makes-its-route)).
+- **Serve on** and **Delete** for [several routes at once](/proxy/overview#several-routes-at-once)
+  (they take names on or off proxies).
+
+What changes no DNS answer goes through as usual: status pages, groups, switches, HTTPS, middlewares
+and upstreams of existing routes.
+
 ### Review a change request
 
 A held edit says **Waiting for approval** in the dashboard, and the CLI prints

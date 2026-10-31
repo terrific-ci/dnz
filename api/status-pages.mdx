@@ -77,6 +77,60 @@ curl -X POST https://dns.example.com/api/status-pages \
        "allow_ips":["203.0.113.7"],"link":"https://status.example.com"}'
 ```
 
+## Several routes at once
+
+To set or clear the status of every hostname of several routes, on every proxy serving them, in one
+request, use `POST /api/proxy/routes/bulk` with a `set_status` or `clear_status` operation (see
+[Several routes at once](/api/proxy#several-routes-at-once)). It takes the fields above, plus
+`include_redirects`; nothing changes unless every hostname takes it. It also needs `proxy.manage`.
+
+## Scheduled maintenance
+
+[Scheduled maintenance](/proxy/status-pages#scheduled-maintenance) that repeats has endpoints of its
+own. They need `proxy.manage` and the right to set status pages on the hostnames' zones.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/proxy/maintenance` | `{"windows": [...], "timezone"}`: every window, each with `active` (on now), `next_start` and `next_end` (its current or next occurrence, `null` when none is left) and `not_served` (hostnames no proxy serves); `timezone` is the server's |
+| `GET` | `/api/proxy/maintenance/upcoming?days=7` | `{"days", "occurrences": [{"id", "name", "hosts", "starts_at", "ends_at", "on_public_page"}]}`: the occurrences of the next 1 to 31 days, earliest first |
+| `GET` | `/api/proxy/maintenance/{id}` | One window |
+| `POST` | `/api/proxy/maintenance` | Add one (201; 409 when the name is taken) |
+| `PUT` | `/api/proxy/maintenance/{id}` | Change one (send every field) |
+| `DELETE` | `/api/proxy/maintenance/{id}` | Delete one (204) |
+
+```json
+{
+  "name": "Weekly backups",
+  "hosts": ["app.example.com", "api.example.com"],
+  "days": 64,
+  "start_minute": 1320,
+  "duration_mins": 120,
+  "starts_on": null,
+  "ends_on": null,
+  "title": "",
+  "message": "Weekly backups. Back by midnight.",
+  "allow_ips": [],
+  "quiet_alerts": true,
+  "on_public_page": true,
+  "enabled": true
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `name` | Unique |
+| `hosts` | The hostnames it covers; `*.example.com` covers one label below |
+| `days` | Bits: 1 = Monday, 2 = Tuesday … 64 = Sunday; 31 is Monday to Friday, 127 every day |
+| `start_minute` | Minutes after midnight **in the server's time zone** (1320 = 22:00) |
+| `duration_mins` | From 1 minute to a week (10080); it may run past midnight |
+| `starts_on`, `ends_on` | `YYYY-MM-DD` in the server's time zone, or `null` |
+| `title`, `message`, `allow_ips` | As for a status above; empty for the maintenance page's usual ones |
+| `quiet_alerts` | Uptime monitors of the hostnames stay quiet during it (default `true`) |
+| `on_public_page` | Its occurrences show on the public status page (default `true`) |
+| `enabled` | Default `true` |
+
+The audit log has `proxy.maintenance.create`, `.update` and `.delete`.
+
 ## Preview
 
 `GET /api/status-pages/preview` renders the page with `kind` and, optionally, `host`, `title`,

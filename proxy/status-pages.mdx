@@ -120,11 +120,89 @@ example your status page or an announcement.
   <Tab title="AI assistant">
     Over [MCP](/integrations/ai-assistants), an assistant reads statuses with `list_status_pages` and
     `status_page_hosts` and, with write access, changes them with `set_status_page`,
-    `switch_status_page` and `delete_status_page`. Ask, for example:
+    `switch_status_page` and `delete_status_page`. With `hosts`, `set_status_page` sets the page on
+    [several routes at once](#several-routes-at-once). Ask, for example:
 
     > Put app.example.com in maintenance for two hours, but let 10.0.0.0/8 through.
   </Tab>
 </Tabs>
+
+## Several routes at once
+
+On **Proxy → Routes**, pick routes and use **Set status page** in the bar (see
+[Several routes at once](/proxy/overview#several-routes-at-once)). It sets one page on every
+hostname of the picked routes, on every proxy serving them, or **Back to normal** removes their
+pages. **When** is:
+
+- **Now, until turned off**: visitors see it until you set the routes back to normal.
+- **From … until …**: once, in a window you pick (see [Schedule and Retry-After](#schedule-and-retry-after));
+  afterwards the sites come back on their own.
+- **Repeating**: [scheduled maintenance](#scheduled-maintenance) on chosen days, with the routes'
+  hostnames filled in. A redirect doesn't repeat.
+
+A hostname that already shows another page gets the new one instead; the dialog counts them before
+you save. A redirect route's hostnames keep redirecting unless **Also the redirects** is ticked,
+which ends the redirect. Nothing changes unless every hostname takes the page (a window that is
+already over refuses them all). Status pages change no DNS answer, so a zone whose changes wait for
+approval doesn't hold them back.
+
+```bash
+dnz status-page set app.example.com maintenance --also api.example.com --also shop.example.com --for 2h
+dnz status-page set app.example.com maintenance --routes     # every hostname of app.example.com's route
+```
+
+## Scheduled maintenance
+
+For maintenance that comes back, such as every Sunday at 22:00 for two hours: **Proxy → Status
+pages → Scheduled maintenance → Schedule**, or **Set status page → Repeating** on Proxy → Routes. A
+window has:
+
+| Field | |
+| --- | --- |
+| **Name** | e.g. *Weekly backups* |
+| **Hostnames** | The names it covers; `*.shop.example.com` covers one label below |
+| **Days** | The days of the week it runs on |
+| **Starts at** | A time **in the server's time zone** (**Settings → General**; the dialog names it) |
+| **Lasts** | From a minute to a week. Past midnight it runs into the next day |
+| **First day**, **Last day** | Optional: when it begins and stops repeating |
+| **Title**, **Message**, **Allowed addresses** | Optional, as for any [maintenance page](#statuses) |
+| **Uptime stays quiet** | On by default: see below |
+| **On the public status page** | List its coming occurrences on the [public status page](/dashboard/uptime#the-public-status-page) |
+| **Turned on** | Off keeps it without running it |
+
+While a window is on:
+
+- Every proxy serving one of its hostnames shows the **maintenance** page, with the window's end as
+  **Expected back** and in `Retry-After`. Traefik and Caddy follow it on their next poll; DNZ Proxy
+  nodes get each occurrence beforehand and switch on the minute by themselves.
+- A hostname's **own status page** wins while it is on (or scheduled); the window applies again once
+  that page is off. Windows of one hostname that meet count as one, from the earliest start to the
+  latest end.
+- **Uptime stays quiet**: [monitors](/dashboard/uptime#scheduled-maintenance) of its hostnames keep
+  checking, but a failed check counts nothing, opens no incident and sends no alert, and the
+  [Origin down](/integrations/notifications#proxy-alerts) alert waits for upstreams whose routes are
+  all in maintenance until it is over. The incident list notes each occurrence (impact
+  *Maintenance*). Turn **Uptime stays quiet** off to have monitors alert as usual.
+
+Daylight saving: an occurrence always lasts its length. A start time that doesn't exist that day
+moves to the next minute that does, and one that happens twice is the first. Changing the server's
+time zone moves every window with it.
+
+The list shows each window's days and time, its hostnames, and whether it is on now or when it
+comes next. Hostnames no proxy serves are marked *not served*. Editing a window that is on changes
+its current occurrence at once.
+
+```bash
+dnz proxy maintenance add "Weekly backups" --hosts app.example.com,api.example.com --days sun --at 22:00 --for 2h
+dnz proxy maintenance list
+dnz proxy maintenance upcoming --days 14
+dnz proxy maintenance edit "Weekly backups" --at 23:00 --no-quiet
+dnz proxy maintenance rm "Weekly backups"
+```
+
+See [Scheduled maintenance in the CLI](/cli/status-pages#scheduled-maintenance) and the
+[API](/api/status-pages#scheduled-maintenance). For one-off maintenance, a status page with **Starts
+at** and **Ends at** is enough.
 
 ## Schedule and Retry-After
 
@@ -324,6 +402,11 @@ never keeps the page after the status is lifted. **Proxy → Analytics** counts 
 API tokens follow the same rule with their own permissions and zones. Every change is in the
 [audit log](/admin/audit-log) as `status_page.create`, `.update`, `.enable`, `.disable` or
 `.delete`.
+
+[Several routes at once](#several-routes-at-once) and [scheduled maintenance](#scheduled-maintenance)
+also need **Manage proxies** (`proxy.manage`), besides the right to set status pages on the
+hostnames' zones. Scheduled maintenance is in the audit log as `proxy.maintenance.create`, `.update`
+and `.delete`; a change to several routes as one `proxy.routes.bulk` entry.
 
 ## Next steps
 

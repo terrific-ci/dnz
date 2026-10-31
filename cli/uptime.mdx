@@ -5,7 +5,9 @@ description: "Monitors, incidents and the public status page from the terminal."
 
 These commands match **High availability → Uptime** in the dashboard. For what monitors, incidents
 and the public status page do, see [Uptime and public status page](/dashboard/uptime). Not
-`dnz status-page`, which switches a host to a maintenance or moved page.
+`dnz status-page`, which switches a host to a maintenance or moved page, nor
+[`dnz proxy maintenance`](/cli/status-pages#scheduled-maintenance), which schedules repeating
+maintenance and keeps the hostnames' monitors quiet during it.
 
 Reading needs **Manage monitoring**, **Manage proxies** or **Post incidents**; changing needs
 **Manage monitoring**. **Post incidents** (the built-in **Helpdesk** role) also opens, edits and
