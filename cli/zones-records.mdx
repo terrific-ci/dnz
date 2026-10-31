@@ -13,7 +13,8 @@ Zones are named by name or id. When you belong to several divisions, commands th
 need `--division` (`-d`), given as id, slug or name.
 
 ```bash
-dnz zone list [--division it]
+dnz zone list [--division it]                 # a page of each division's zones, by name (--page, --limit)
+dnz zone list -q lab --page 2                 # zones whose name holds "lab", the second page
 dnz zone list --visitors                      # plus each zone's distinct visitors on DNZ Proxy over 24 h
 dnz zone add example.com --division it
 dnz zone show example.com                     # details and DNSSEC state
@@ -148,8 +149,14 @@ dnz record list example.com --tag prod
 dnz record list example.com --enabled off
 dnz record list example.com -q "main site"    # text in the name, value or comment
 dnz record list example.com --group           # one row per name and type, with all its values
+dnz record list example.com --page 2 --limit 100   # the next 100 names, each with all its records
 dnz record tags example.com                   # tags in use and how many records carry each
 ```
+
+The list comes [a page at a time](/cli/overview#long-lists-come-a-page-at-a-time), counted in
+**names**: a page holds `--limit` names (50 by default, at most 200) with every matching record of
+each, so a name's records never split across pages. The filters run on the server before the page is
+cut, and the footer counts the names that match.
 
 ### Adding
 
@@ -332,7 +339,7 @@ Split-horizon views answer a name differently for some client networks. See [Vie
 
 ```bash
 dnz view list
-dnz view show lan                             # its networks and the records answered only to it
+dnz view show lan                             # its networks and the records answered only to it (--page, --limit)
 dnz view add lan 10.0.0.0/8 192.168.0.0/16 [--description "Office LAN"]
 dnz view rm lan                               # deletes the view and its records
 ```

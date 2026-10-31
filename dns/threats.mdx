@@ -166,6 +166,9 @@ Off by default. Turned on, a new finding of the feed, tunnel or DGA detector blo
 allowed domains are never blocked automatically, and your own allow rules still win. You can also
 block a finding's domain by hand with **Block domain**.
 
+The blocks in force are listed a page at a time on the threat lists' **Blocked** tab, with
+`dnz threats blocks --page 2` and in `GET /api/threats/blocks` (`page`, `per_page`).
+
 ## Tuning
 
 | Problem | What to do |

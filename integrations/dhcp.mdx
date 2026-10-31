@@ -248,6 +248,10 @@ key's scope.
   machine, a static record inside a DHCP pool, a PTR to a local name without that address, and
   leases whose name is taken.
 
+Long lists come a page at a time, 50 rows by default: the leases (searched by address, hostname or
+MAC, with **live only** if you like, on the server before the page is cut) and a subnet's addresses
+in its panel. `dnz dhcp leases` and `dnz ipam show` page the same way (`--page`, `--limit`).
+
 Subnets and DHCP servers also show in the [topology map](/dashboard/topology). The counts are on
 [/metrics](/dashboard/prometheus): `dnz_dhcp_leases`, `dnz_dhcp_records_synced_total`,
 `dnz_dhcp_read_success`, `dnz_ipam_conflicts` and more.

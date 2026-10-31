@@ -18,11 +18,13 @@ dnz logs --division it
 dnz logs --query example.com --range 7d
 dnz logs --since 2026-10-20T00:00:00+07:00 --until 2026-10-21T00:00:00+07:00
 dnz logs --node ns2                           # one server of a cluster
+dnz logs --page 2 --until 2026-10-31T08:00:01Z   # the second page; page 1's footer gives the --until
 ```
 
 | Option | What it does |
 | --- | --- |
-| `-n`, `--limit` | How many, newest first (default 50) |
+| `-n`, `--limit` | How many, newest first (default 50); with `--page`, the page size (at most 100) |
+| `--page` | A page of `--limit` queries, from 1 to 50 (see [below](#pages-of-the-query-log)) |
 | `-q`, `--query` | Name or client contains this |
 | `--client` | Only this client address |
 | `--source` | `local`, `forwarded`, `cached`, `blocked`, `error`, or one source such as `conditional` or `stale` |
@@ -43,6 +45,21 @@ on stderr.
 searches at once. A third stops with "A log search is still running; try again in a moment." The
 newest queries without those options always list. See
 [Query logs](/dns/query-logs#two-searches-at-a-time).
+
+### Pages of the query log
+
+With `--page`, the list is one page of the time window. There is no total, so the footer only says
+whether an older page follows, and gives the `--until` to pass with it: that pins the window's end, so
+queries logged in the meantime don't shift the pages.
+
+```bash
+dnz logs --page 1 -n 100
+# …
+# page 1 (--page 2 --until 2026-10-31T08:00:01Z for the next)
+```
+
+Pages stop at 50. On the last one the footer says so: narrow the window with `--since` / `--until`
+for older queries. See [Query logs → Pages](/dns/query-logs#pages).
 
 ```bash
 dnz logs --clear --yes

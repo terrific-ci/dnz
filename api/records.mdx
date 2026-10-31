@@ -10,7 +10,7 @@ needs `zones.read`; every change needs `records.write`.
 
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
-| `GET` | `/api/zones/{id}/records` | `zones.read` | List records, optionally filtered |
+| `GET` | `/api/zones/{id}/records` | `zones.read` | List records, optionally filtered and [a page of names at a time](#pages-of-names) |
 | `GET` | `/api/zones/{id}/tags` | `zones.read` | Tags used in the zone |
 | `POST` | `/api/zones/{id}/records` | `records.write` | Create a record |
 | `POST` | `/api/zones/{id}/records/bulk` | `records.write` | Add, change and delete many records at once, all or nothing |
@@ -196,10 +196,68 @@ conflict.
   Case-insensitive text in the name, value or comment.
 </ParamField>
 
+<ParamField query="name" type="string">
+  Only this name, relative to the zone (`www`, or `@` for the apex), case aside.
+</ParamField>
+
+<ParamField query="type" type="string">
+  Only this record type, e.g. `A`.
+</ParamField>
+
+<ParamField query="view" type="string">
+  `default` for the records every client gets, or a [view](/dns/views)'s id for only that view's records.
+</ParamField>
+
+<ParamField query="proxied" type="boolean">
+  `true` for records served through a proxy, `false` for DNS-only ones.
+</ParamField>
+
 ```bash
 curl -fsS -H "Authorization: Bearer $DNZ_TOKEN" \
   "https://dns.example.com/api/zones/3/records?tag=prod&enabled=true"
 ```
+
+### Pages of names
+
+With `page` (from 1) or `per_page` (50 by default, at most 200) the list comes **a page of names** at
+a time, each with every record of that name that matches the filters, so a name's records never
+split across pages:
+
+```bash
+curl -fsS -H "Authorization: Bearer $DNZ_TOKEN" \
+  "https://dns.example.com/api/zones/3/records?type=A&page=2&per_page=100"
+```
+
+```json
+{
+  "records": [ /* the page's names, apex first, then by name and type */ ],
+  "total": 412,
+  "matching": 1240,
+  "page": 2,
+  "per_page": 100,
+  "facets": {
+    "records": 1300, "off": 12, "proxied": 40,
+    "types": { "A": 900, "AAAA": 300, "TXT": 100 },
+    "tags": [{ "tag": "prod", "count": 4 }],
+    "views": [{ "view_id": null, "count": 1290 }, { "view_id": 3, "count": 10 }]
+  }
+}
+```
+
+<ResponseField name="total" type="integer">
+  Names that match: what the pages count.
+</ResponseField>
+
+<ResponseField name="matching" type="integer">
+  Records that match, on every page.
+</ResponseField>
+
+<ResponseField name="facets" type="object">
+  Counts for the whole zone, whatever the filters: records, records turned off, proxied records,
+  records per type, per tag and per view (`view_id` `null` is every client's).
+</ResponseField>
+
+Without `page` and `per_page` every matching record comes as a bare array, as before.
 
 `GET /api/zones/{id}/tags` lists the tags in use and how many records carry each:
 
@@ -263,6 +321,25 @@ entry holding the records before and after.
 <Note>
   A request holds at most **100 operations** and **5000 records** (ids plus new records).
 </Note>
+
+### Every record the filters match
+
+Instead of listing ids, a request can name the record list's filters in `matching`. Operations given
+no `ids` then act on every record of the zone those filters match, as the list counts them (the
+records editor's *Select all 1,240 matching records*):
+
+```json
+{
+  "matching": { "type": "A", "tag": "legacy", "enabled": true },
+  "operations": [
+    { "op": "set_ttl", "ttl": 3600 },
+    { "op": "add_tag", "tag": "reviewed" }
+  ]
+}
+```
+
+`matching` takes the [list's filters](#filtering-the-list): `q`, `type`, `tag`, `enabled`, `name`,
+`view` and `proxied`. More than 5000 matching records, or none, answer 400: narrow the filters first.
 
 ### The answer
 

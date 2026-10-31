@@ -197,7 +197,8 @@ backup: no keys, settings or history. See [Import and export](/dns/import-export
 ## Status and alerts
 
 Each target's card shows whether the last backup worked, the last good one and its size, the next
-run, and failures in a row with the error; the recent runs are listed below. A failed backup, and
+run, and failures in a row with the error; the recent runs are listed below. The runs, and the
+archives on a target (**Archives**), come a page at a time, newest first. A failed backup, and
 the first good one after, goes to the [notification providers](/integrations/notifications) with
 **Backup failed** (`backup_failed`). For Prometheus there are `dnz_backup_*` metrics and the
 `DnzBackupFailing` and `DnzBackupOverdue` alerts ([Prometheus](/dashboard/prometheus)). Targets also

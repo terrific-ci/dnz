@@ -93,6 +93,7 @@ reason. To take them all back to normal, `dnz status-page clear` each host, or p
 
 ```bash
 dnz status-page list                                    # host, status, state, schedule, proxies, allowed
+dnz status-page list -q app --state active --page 2     # a search, a state (active, scheduled, ended, off), a page
 dnz status-page show app.example.com
 dnz status-page off app.example.com                     # kept; `on` brings it back
 dnz status-page on app.example.com

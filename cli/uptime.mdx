@@ -19,6 +19,7 @@ Monitors are named by their name or id.
 
 ```bash
 dnz uptime                                   # list: state, 24h/30d/90d uptime, response time, what it checks
+dnz uptime list --status down -q web --page 2   # a page of monitors, by state or a search
 dnz uptime add Website --url https://www.example.com/ --keyword Welcome --public Website --group Web
 dnz uptime add "App servers" --service app.example.com --interval 30
 dnz uptime add Billing --url https://billing.internal/health --expect 200 --slow-ms 800 --insecure true --paused
@@ -63,7 +64,7 @@ leave it. `add` and `edit` take `--path`, `--expect`, `--keyword`, `--slow-ms`, 
 ## Incidents
 
 ```bash
-dnz uptime incidents --days 90               # open ones and the last days; --monitor Website
+dnz uptime incidents --days 90               # open ones and the last days; --monitor Website; --page, --limit
 dnz uptime incident open "Database maintenance" --impact maintenance --monitor Website -m "Planned, 22:00–23:00."
 dnz uptime incident update 12 identified -m "A disk filled up; clearing it."
 dnz uptime incident resolve 12 -m "All good again."

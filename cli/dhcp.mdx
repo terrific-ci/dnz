@@ -48,6 +48,7 @@ dnz dhcp rm kea1                            # and the records its leases made (-
 dnz dhcp leases                             # every server's leases, with their records
 dnz dhcp leases kea1 --search laptop        # one server's; --search matches address, hostname or MAC
 dnz dhcp leases --live                      # only the live ones
+dnz dhcp leases --page 2 --limit 100        # a page at a time, 50 by default
 dnz dhcp import dhcpd1 /var/lib/dhcp/dhcpd.leases
 dnz dhcp import dc01 leases.csv             # Windows' Export-Csv of its leases (or of its scopes)
 cat dhcpd.leases | dnz dhcp import dhcpd1 -
@@ -60,7 +61,7 @@ leases, a scopes CSV its subnets.
 
 ```bash
 dnz ipam subnets                            # ls: subnets, where from, used, free, conflicts
-dnz ipam show 10.0.0.0/24 --free            # its addresses (hostname, MAC, source, last seen), free ranges
+dnz ipam show 10.0.0.0/24 --free            # its addresses (hostname, MAC, source, last seen), free ranges; --page, --limit
 dnz ipam conflicts
 dnz ipam add 10.0.9.0/24 --name Servers
 dnz ipam rm 10.0.9.0/24

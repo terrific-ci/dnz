@@ -336,6 +336,8 @@ upstream, on every proxy. See [Upstreams](/proxy/upstreams).
 
 ```bash
 dnz proxy upstreams list                          # servers, balancing, health check, what uses each
+dnz proxy upstreams list --protocol tcp --unused  # only TCP ones nothing uses
+dnz proxy upstreams list -q shop --page 2         # a search (name, server, route), a page at a time
 dnz proxy upstreams show swarm-service            # with every route (and proxy) using it, and each server's health on the DNZ Proxy nodes
 dnz proxy upstreams add swarm-service -t http://10.0.133.31:80 -t http://10.0.133.32:80=2 --sticky --health-check /healthz
 dnz proxy upstreams add pg --tcp -t 10.0.0.7:5432
@@ -449,6 +451,7 @@ DNZ's automatic certificates for DNZ Proxy routes:
 
 ```bash
 dnz proxy certs show                              # on or not, the account, the credentials in use
+dnz proxy certs list [-q shop] [--state failed]   # the certificates, in use first, a page at a time
 dnz proxy certs setup --agree --email admin@example.com   # once: a Let's Encrypt account (accepting its agreement)
 dnz proxy certs setup --account "Let's Encrypt"   # or one DNZ already has
 dnz proxy certs wildcards on                      # one wildcard per domain (default); off: one certificate per name
@@ -471,6 +474,7 @@ first, and its key); nodes serve it as it is, and it isn't renewed. `DNZ_CLOUDFL
 
 ```bash
 dnz proxy nodes                                   # every node: proxy, state, addresses, version, config, CPU, memory
+dnz proxy nodes list -q jkt --page 2              # a page of the nodes in a proxy (waiting ones always listed)
 dnz proxy nodes show jkt-1                        # one node: its report and its server's CPU, load, memory, disk
 dnz proxy approve jkt-1 --proxy "Edge JKT" --ipv4 203.0.113.10
 dnz proxy ignore node-10-0-0-9                    # turn a waiting node away

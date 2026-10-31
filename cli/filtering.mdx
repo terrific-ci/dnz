@@ -46,6 +46,7 @@ means the name is never blocked, even if a list has it.
 
 ```bash
 dnz filter rule list [--division it]
+dnz filter rule list --action block -q ads --page 2   # only block rules holding "ads"; a page at a time (--limit)
 dnz filter rule block ads.example.net
 dnz filter rule allow cdn.example.net --division it --comment "Needed by the LMS"
 dnz filter rule block roblox.com --clients "Kids tablets" --schedule "School hours"

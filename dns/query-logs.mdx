@@ -31,6 +31,8 @@ Open **DNS → Query Logs**. Viewing it needs the `logs.read` permission.
 - Pick the [time window](#time-window) next to the source filter: the last 24 hours by default.
 - Turn on **Live** to fetch the newest queries every 5 seconds, or click **Refresh**. See
   [Live](#live).
+- The list shows **100 queries a page**. **Older** and **Newer** under the list move through the
+  window, and **Back to newest** returns to page 1. See [Pages](#pages).
 - Click **Live capture** to watch the queries holding a few keywords as they arrive, grouped by
   domain, and block from the results. It carries the search over. See
   [Live capture](/dns/live-capture).
@@ -101,7 +103,27 @@ request while the last one is still on its way.
 
 - Live pauses while a search or filter is set (the switch shows *Paused while filtering*) and
   resumes when they are cleared.
+- Live follows page 1 only. On an older page it pauses (*Paused on page 3*), and **Back to newest**
+  starts it again.
 - Picking **All days** or **Custom…** turns Live off.
+
+### Pages
+
+The list comes **100 queries a page**, newest first. **Older** opens the next page of the window,
+**Newer** the one before it, and **Back to newest** goes back to page 1.
+
+- **The pages stay put.** Leaving page 1 pins the window's end just after page 1's newest query: the
+  footer says *queries before* that time, and queries logged meanwhile don't push the rows of page 2
+  and on along. Page 1 always shows the newest queries.
+- **The address keeps the place.** The page, the pinned end and the time window are in the browser's
+  address, so a link or a reload opens the same page.
+- **A new search or filter starts at page 1** again.
+- **Pages stop at 50** (5,000 queries). There is no total: counting every query of a window
+  would mean reading all of it. On page 50 the list says *Narrow the time window for older queries*:
+  pick a shorter window, or a **Custom…** range that ends earlier.
+
+`dnz logs --page`, the API's `page` and the MCP tool's `page` work the same way (see
+[From the command line](#from-the-command-line) and [API](#api)).
 
 ## In a cluster
 
@@ -168,11 +190,13 @@ period (see [How long data is kept](#how-long-data-is-kept)).
     dnz logs --query example.com --range 7d
     dnz logs --since 2026-10-20T00:00:00+07:00 --until 2026-10-21T00:00:00+07:00
     dnz logs --node ns2                         # one server of a cluster
+    dnz logs --page 2 --until 2026-10-31T08:00:01Z   # the second page; page 1's footer gives the --until
     ```
 
     | Option | Meaning |
     | --- | --- |
-    | `-n`, `--limit` | How many queries, newest first (default 50) |
+    | `-n`, `--limit` | How many queries, newest first (default 50); with `--page`, the page size (at most 100) |
+    | `--page` | One [page](#pages) of the window, from 1 to 50. The footer gives the next `--page` and the `--until` that keeps it in place |
     | `-q`, `--query` | The name or client contains this text |
     | `--client` | Only this client address |
     | `--source` | `local`, `forwarded`, `cached`, `blocked`, `error`, or one source such as `conditional` |
@@ -213,7 +237,7 @@ period (see [How long data is kept](#how-long-data-is-kept)).
 </Tabs>
 
 See [CLI: monitoring](/cli/monitoring) for every option. An AI assistant reads the log with the MCP
-tool `query_log`, which takes the same window, filters and `node` (see
+tool `query_log`, which takes the same window, filters, `node` and `page` (see
 [AI assistants](/integrations/ai-assistants)).
 
 ## API
@@ -235,6 +259,7 @@ Both lists take:
 | `range` | `1h`, `24h` (the default), `7d` or `all` |
 | `since`, `until` | RFC 3339 times instead of `range`; without `since`, the range reaches back from `until` |
 | `node` | One server of a cluster, by node id; default: every server |
+| `page`, `per_page` | [Pages](#pages-in-the-api), if you ask for them: 100 rows a page (at most 100), pages 1 to 50 |
 
 An [API token](/api/overview) with `logs.read` can read its division's log:
 
@@ -264,8 +289,9 @@ x-dnz-missing-nodes: ns3
 ]
 ```
 
-- The body is a plain array. `x-dnz-missing-nodes` (server names, comma-separated) is only there
-  when a server of the cluster didn't answer.
+- The body is a plain array (unless you ask for [a page](#pages-in-the-api)).
+  `x-dnz-missing-nodes` (server names, comma-separated) is only there when a server of the cluster
+  didn't answer.
 - Ids are unique per server, not across a cluster.
 - `q`, `client` and `source` make a list a search. While two others run on the server, it gets:
 
@@ -275,6 +301,36 @@ Retry-After: 2
 
 {"error": "A log search is still running; try again in a moment."}
 ```
+
+### Pages in the API
+
+With `page` (from 1, at most 50) or `per_page` (100 by default, at most 100), the answer is an object
+instead of a plain array:
+
+```json
+{
+  "logs": [ /* the page's rows, as above */ ],
+  "page": 1,
+  "per_page": 100,
+  "more": true,
+  "until": "2026-10-31T08:00:01Z",
+  "last_page": false
+}
+```
+
+- There is **no total**: counting a window would read all of it. `more` says an older page follows.
+- Page 1 answers `until`, just after its newest row. Pass it back with pages 2 and on
+  (`&until=2026-10-31T08:00:01Z`), so queries logged meanwhile don't shift them.
+- Page N reads N pages of rows on every server, so pages stop at 50 (`last_page`). For older queries,
+  narrow the window with `since` / `until`.
+- Searches on pages count towards the [two at a time](#two-searches-at-a-time) like any other.
+
+```bash
+curl -fsS -H "Authorization: Bearer $DNZ_TOKEN" \
+  "https://dns.example.com/api/divisions/1/logs?range=7d&page=2&until=2026-10-31T08:00:01Z"
+```
+
+Without `page` and `per_page`, the list answers a plain array of `limit` rows, as before.
 
 A division's traffic summary is at `GET /api/divisions/{id}/stats?range=24h`.
 

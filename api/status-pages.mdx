@@ -16,7 +16,7 @@ session or an API token (see [API overview](/api/overview)).
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/status-pages` | `{"items": [...], "kinds": [...]}`: the statuses you can see, and the statuses to choose from |
+| `GET` | `/api/status-pages` | `{"items": [...], "kinds": [...]}`: the statuses you can see, and the statuses to choose from. With `page` / `per_page` (50, at most 200; `q=` hostname, `state=` `active`, `scheduled`, `ended` or `off`) a page of them, with `total` and `counts` (`active`, `scheduled`, `all` of what you can see) |
 | `GET` | `/api/status-pages/hosts` | Hosts a status can be set on, with the proxies serving each |
 | `GET` | `/api/status-pages/{id}` | One status |
 | `POST` | `/api/status-pages` | Set a host's status (409 when it already has one) |

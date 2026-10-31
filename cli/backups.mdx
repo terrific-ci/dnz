@@ -13,8 +13,8 @@ id.
 dnz backup                      # each target: schedule, retention, last good backup, next run, failures
 dnz backup run                  # every enabled target now; waits and prints each result
 dnz backup run offsite --no-wait
-dnz backup list                 # recent backups
-dnz backup list offsite         # the archives on a target
+dnz backup list                 # recent backups, a page at a time (--page, --limit)
+dnz backup list offsite         # the archives on a target, newest first, paged the same way
 dnz backup download offsite dnz-backup-20261022-030000Z.zip.enc
 ```
 

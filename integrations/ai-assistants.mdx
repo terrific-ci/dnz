@@ -131,13 +131,13 @@ and ask for the next page.
 | Tool | Does |
 |---|---|
 | `whoami` | Who the connection acts as, its divisions, superadmin or not |
-| `list_zones` | Zones you can see, optionally of one division |
+| `list_zones` | Zones you can see, optionally of one division or matching `search`; a page of each division at a time (`page`, `limit`, 50), with each division's total |
 | `get_zone` | One zone's settings |
-| `list_records` | A zone's records, by name, type or a search in name, value and comment |
+| `list_records` | A zone's records, by name, type or a search in name, value and comment; a page of names at a time (`page`, `limit` names, 50), each with all its records: `total` counts names, `matching` records |
 | `export_zone` | A zone as a zone file |
 | `zone_history` | A zone's versions: who changed what, when, from where; `page` and `limit` (20 a page) |
 | `explain_query` | The decision path and answer for a name, type and client ([Query explain](/dns/query-explain)) |
-| `query_log` | Recent queries, filtered by name, client or source; the last 24 hours unless `range` (`1h`, `24h`, `7d`, `all`) or `since`/`until`. In a cluster every server's, each row naming its server; `node` (a node id) for one server ([Query logs](/dns/query-logs#in-a-cluster)) |
+| `query_log` | Recent queries, filtered by name, client or source; the last 24 hours unless `range` (`1h`, `24h`, `7d`, `all`) or `since`/`until`. In a cluster every server's, each row naming its server; `node` (a node id) for one server ([Query logs](/dns/query-logs#in-a-cluster)); `page` (from 1, at most 50; `limit` is then the page size, 100) answers `more` and the `until` to pass for the next pages ([pages](/dns/query-logs#pages)) |
 | `capture_queries` | Watch live queries matching keywords (typed, or saved keyword lists) for a few seconds, grouped by domain ([Live capture](/dns/live-capture)) |
 | `capture_keyword_lists` | The saved keyword lists live capture can pick, server-wide and a division's |
 | `traffic_stats` | Query counts, NXDOMAIN ratio, top names and clients |
@@ -146,7 +146,7 @@ and ask for the next page.
 | `proxy_visitors` | Distinct visitors of each hostname DNZ Proxy serves over the last hours, total and per hour |
 | `proxy_request_log` | DNZ Proxy request log lines, filtered by hostname, status, client or text |
 | `proxy_routes` | A proxy's routes (HTTP, TCP and UDP): hostnames, servers or the upstream they use, HTTPS and certificate progress, DNS, switches (custom headers and the web application firewall included) |
-| `proxy_upstreams` | Where routes send visits, one list for every proxy: servers, balancing, health check, each server's [health](/proxy/upstreams#server-health) as the DNZ Proxy nodes see it (how many find it up, and why the others don't), the [connection settings](/proxy/upstreams#connection-settings) (server name, CAs, client certificates without their keys, timeouts) and what uses each upstream; for servers from a [DNS name](/proxy/upstream-discovery), the name (`discovery`), what DNZ found (`discovered`) and the servers the proxies get now (`servers_now`) |
+| `proxy_upstreams` | Where routes send visits, one list for every proxy: servers, balancing, health check, each server's [health](/proxy/upstreams#server-health) as the DNZ Proxy nodes see it (how many find it up, and why the others don't), the [connection settings](/proxy/upstreams#connection-settings) (server name, CAs, client certificates without their keys, timeouts) and what uses each upstream; for servers from a [DNS name](/proxy/upstream-discovery), the name (`discovery`), what DNZ found (`discovered`) and the servers the proxies get now (`servers_now`). A page at a time (`page`, `limit`, 50) with `search`, `protocol` and `unused`, the `counts` and the `twins` (upstreams with the same servers) |
 | `discover_proxy_upstream` | Looks an upstream's DNS name up now and answers the servers it gives, saving nothing; for `tasks.<service>` looked up by each proxy, what each DNZ Proxy node reported ([Servers from a DNS name](/proxy/upstream-discovery)) |
 | `proxy_middlewares` | What happens to a visit on its way, one list for every proxy: each [middleware](/proxy/middlewares)'s type and settings (password hashes left out), HTTP or TCP, the proxy kinds that run it and what uses it (routes per proxy, chains, route defaults, not used). It can list only the firewalls with their rules, add routes' own switches, or show one by name |
 | `proxy_config_export` | A proxy's configuration as the YAML file kept in Git ([configuration as code](/proxy/config-as-code)); passwords by user name only |
@@ -161,9 +161,12 @@ and ask for the next page.
 | `audit_log` | Who changed what, newest first; `page` and `limit` (50 a page) |
 | `pending_changes` | Change requests waiting for approval (or, with `status`, decided ones); `page` and `limit` (50 a page) |
 | `topology` | How divisions, zones, views, upstreams, proxies and replication fit together |
-| `view_records` | [Views](/dns/views) with their networks and record counts, or one view's records (zone, name, type, value, TTL, on/off) in the zones you may read |
-| `list_status_pages` | Hosts with a status page ([Status pages](/proxy/status-pages)): kind, state, schedule, allowed addresses, proxies |
+| `view_records` | [Views](/dns/views) with their networks and record counts, or one view's records (zone, name, type, value, TTL, on/off) in the zones you may read; one view's records a page at a time (`page`, `limit`, 50) |
+| `list_status_pages` | Hosts with a status page ([Status pages](/proxy/status-pages)): kind, state, schedule, allowed addresses, proxies; a page at a time (`page`, `limit`, 50) unless `host` names one |
 | `status_page_hosts` | Hosts a status page can be set on, with the proxies serving each |
+| `list_uptime_monitors` | [Uptime](/dashboard/uptime) monitors: state and since when, what each checks, uptime over 24 hours, 7, 30 and 90 days, response time, last error, public name; open incidents and watched route groups; a page of monitors at a time (`page`, `limit`, 50) unless `monitor` names one |
+| `list_uptime_incidents` | Uptime incidents (automatic and written by people): status, impact, affected monitors, duration and timeline; `page` and `limit` (50 a page) |
+| `proxy_incidents` | [Proxy incidents](/integrations/notifications#proxy-alerts) going on now (nodes, origins, attack spikes, with when each started) and the latest incidents and recoveries, certificates included; the latest a page at a time (`page`, `limit`, 20, with `total`) |
 | `create_record` ✎ | Adds a record |
 | `update_record` ✎ | Changes a record by id; fields left out stay |
 | `delete_records` ✎ | Deletes records of one zone by id, all or none |

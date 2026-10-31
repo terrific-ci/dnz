@@ -49,7 +49,9 @@ the most specific network.
 Click a view's row, or its **Records** count, on **DNS → Views**. A side panel lists every record
 answered only to that view, across zones: its name and zone, type, value, TTL, and whether it's
 switched off. **Open** takes you to the record in its zone, with the zone's record table filtered
-to the view. `dnz view show lan` lists the same.
+to the view. A view with many records shows them a page at a time. `dnz view show lan` lists the
+same (`--page`, `--limit`), and so do `GET /api/views/{id}/records` (with `page` / `per_page`: a page of
+them with `total`, 50 by default) and the assistants' MCP tool `view_records` (`page`, `limit`).
 
 The list and the count include only zones you may read (the *zones.read* permission in their
 division). Superadmins see every zone.

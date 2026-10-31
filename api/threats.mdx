@@ -17,7 +17,7 @@ Threat detection endpoints need a signed-in **superadmin** session, not an
 | `GET` | `/api/threats/findings/{id}` | One finding, with the mute rules that match it |
 | `POST` | `/api/threats/findings/status` | Set the status of findings |
 | `POST` | `/api/threats/findings/{id}/block` | Block the finding's domain through filtering |
-| `GET` | `/api/threats/blocks` | Domains blocked because of findings |
+| `GET` | `/api/threats/blocks` | Domains blocked because of findings; with `page` / `per_page` a page of them with `total` |
 | `DELETE` | `/api/threats/blocks/{id}` | Lift a block |
 | `GET` / `PUT` | `/api/threats/settings` | The settings |
 | `GET` / `POST` | `/api/threats/mutes` | Mute rules |

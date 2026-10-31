@@ -240,6 +240,10 @@ name, or a wildcard covering one label.
 Issuance runs at most two at a time. Each certificate gets a fresh ECDSA P-256 key. Its log shows
 every step (order, records, propagation, validation, errors) and keeps the latest 200 lines.
 
+The **Certificates** list shows the ones in use first, then by name, a page at a time: search by a
+name, or show one state (valid, pending, issuing, renewing, failed, expired). From the terminal:
+`dnz proxy certs list -q shop --state failed --page 2`.
+
 ### Renewal
 
 Renewal starts when less than a third of the lifetime is left: day 60 of 90. The old certificate keeps

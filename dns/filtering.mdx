@@ -199,9 +199,13 @@ gone. Exporting changes nothing, so it also works on a secondary.
 **Your rules** block or always allow single domains on top of the lists. Each rule can carry a
 note. Allow wins over any block.
 
+Rules come a page at a time, allow rules first, then by domain. Search them by domain or note, or
+show only block or only allow rules; the counts of each are the whole scope's.
+
 ```bash
 dnz filter rule block ads.example.net
 dnz filter rule allow cdn.example.net --division it
+dnz filter rule list --action block -q ads --page 2      # a page of rules (--limit, 50 by default)
 ```
 
 ## Clients: rules for some devices only

@@ -17,11 +17,11 @@ set up a new server.
 | `PUT` | `/api/backups/targets/{id}` | superadmin | Change a target; only the fields sent change |
 | `DELETE` | `/api/backups/targets/{id}` | superadmin | Remove a target (its archives stay) |
 | `POST` | `/api/backups/targets/test` | superadmin | Write, list and delete a test file: `{"id"?, "kind", "config"}` |
-| `GET` | `/api/backups/targets/{id}/files` | superadmin | The archives on a target, newest first |
+| `GET` | `/api/backups/targets/{id}/files?page=&per_page=` | superadmin | The archives on a target, newest first; with `page` / `per_page` `{files, total, page, per_page}` (50 a page) |
 | `GET` | `/api/backups/targets/{id}/files/{name}` | superadmin | Download an archive |
 | `DELETE` | `/api/backups/targets/{id}/files/{name}` | superadmin | Delete an archive |
 | `POST` | `/api/backups/run` | superadmin | Back up now (202): `{"target": 3}` (id or name), or `{}` for every enabled target |
-| `GET` | `/api/backups/runs?target=&limit=` | superadmin | Backups made, newest first |
+| `GET` | `/api/backups/runs?target=&page=&per_page=` | superadmin | Backups made, newest first; with `page` / `per_page` `{runs, total, page, per_page}` (50 a page), with `limit` alone a list, as before |
 | `GET` | `/api/backups/runs/{id}` | superadmin | One run; `status` is `running`, `ok` or `failed` |
 | `POST` | `/api/backups/uploads` | superadmin, or setup | The archive as the request body |
 | `POST` | `/api/backups/inspect` | superadmin, or setup | The dry run of a full restore |

@@ -16,7 +16,8 @@ For how the pieces work together, see [Filtering](/dns/filtering) and
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/filtering?division_id=` | A scope's lists, rules, client groups, schedules and safe search |
+| `GET` | `/api/filtering?division_id=` | A scope's lists, rules, client groups, schedules and safe search. `light=true` leaves the rules out (`rule_counts` instead) |
+| `GET` | `/api/filtering/rules?division_id=&action=&q=&page=&per_page=` | A scope's allow and block rules, allow rules first, then by domain, a page at a time (50, at most 200): `{rules, total, page, per_page, counts}`. `action` is `block` or `allow`, `q` text in the domain or comment; `counts` are the block and allow rules of the whole scope |
 | `PUT` | `/api/filtering/mode` | What blocked names answer: `{"mode": "null_ip"}`, `"nxdomain"` or `"block_page"` (superadmin; the block page must be set up first) |
 | `GET` / `PUT` | `/api/filtering/block-page` | The [block page](#block-page) (superadmin) |
 | `POST` | `/api/filtering/block-page/ca/rotate` | A new certificate authority for the block page (superadmin) |

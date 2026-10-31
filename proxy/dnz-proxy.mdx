@@ -356,7 +356,8 @@ as a share of the CPUs the node may use, the node process's memory against what 
 container's memory against its limit (or the machine's memory), the fullest disk, the load average,
 TCP sockets, version and uptime. Bars turn amber from 75% and red from 90% (disk from 85% and 95%,
 load from 1 and 2 per CPU). Hover a number for the details. The proxy's **Nodes** tab shows the
-same in short.
+same in short. It lists the nodes a page at a time, with a search by name or address; nodes
+waiting for approval always show, whatever the page.
 
 Prometheus gets them as `dnz_proxy_node_*` gauges (see [Prometheus](/dashboard/prometheus)), with
 alerts for a full disk and a node short of memory.

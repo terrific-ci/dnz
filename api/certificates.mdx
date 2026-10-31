@@ -17,7 +17,8 @@ Traefik and certbot use to solve challenges in DNZ's zones; that one is under
 
 | Method | Path | Body / answer |
 | --- | --- | --- |
-| `GET` | `/api/acme` | Accounts, credentials, resolvers, certificates, Cloudflare connections, CAs |
+| `GET` | `/api/acme` | Accounts, credentials, resolvers, certificates, Cloudflare connections, CAs. `?light=true` leaves the certificates out (`certificate_count` and `issuing` instead) |
+| `GET` | `/api/acme/certificates?q=&state=&page=&per_page=` | The certificates a page at a time (50, at most 200), in use first, then by name: `{certificates, total, page, per_page, issuing}`. `q` is text in one of the names; `state` is `valid`, `pending`, `issuing`, `renewing`, `failed` or `expired` |
 
 ## Automatic certificates
 

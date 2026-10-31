@@ -18,7 +18,8 @@ token (see [API overview](/api/overview)).
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/uptime` | Monitors (state, 90 days, last checks, uptime), incidents of the last 90 days and open ones, the page's settings, who runs the checks |
+| `GET` | `/api/uptime` | Monitors (state, 90 days, last checks, uptime), incidents of the last 90 days and open ones, the page's settings, who runs the checks. `?light=true` (what the Uptime page polls): monitors without their days and last checks, open incidents only |
+| `GET` | `/api/uptime/monitors?q=&status=&page=&per_page=` | The monitors in their order; with `page` / `per_page` a page (50, at most 200) as `{monitors, total, page, per_page, counts}`. `q` is text in the name, public name or what it checks; `status` is `up`, `degraded`, `down`, `unknown` or `paused`; `counts` per status are of every monitor |
 | `POST` | `/api/uptime/monitors` | Add a monitor (201; 409 when the name is taken) |
 | `GET` | `/api/uptime/monitors/{id}` | One monitor and its incidents |
 | `PUT` | `/api/uptime/monitors/{id}` | Replace a monitor (send every field) |
@@ -26,7 +27,7 @@ token (see [API overview](/api/overview)).
 | `POST` | `/api/uptime/monitors/{id}/check` | One check now, not kept |
 | `POST` | `/api/uptime/test` | One check of an unsaved monitor (a monitor body), not kept |
 | `GET` | `/api/uptime/hosts` | Hostnames proxies serve, `dnz_proxy` when a DNZ Proxy serves one |
-| `GET` | `/api/uptime/incidents?days=30&monitor=3` | Incidents: open ones and those of the last days |
+| `GET` | `/api/uptime/incidents?days=30&monitor=3` | Incidents: open ones and those of the last days; `resolved=true` or `false` for only one kind. With `page` / `per_page` (50, at most 200): `{items, total, page, per_page}` |
 | `POST` | `/api/uptime/incidents` | Write an incident (201) |
 | `GET` | `/api/uptime/incidents/{id}` | One incident and its updates |
 | `PUT` | `/api/uptime/incidents/{id}` | Change its title, impact, monitors or `on_page` |

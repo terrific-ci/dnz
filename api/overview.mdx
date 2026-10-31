@@ -116,6 +116,25 @@ next to the list. Filters and searches apply before the page is cut, so `total` 
 | Division members | `/api/divisions/{id}/members` (`members`) | `q`: user name, name, email or role |
 | API tokens | `/api/divisions/{id}/tokens` (`tokens`) | `q`: name or prefix |
 | Update keys | `/api/divisions/{id}/update-keys` (`keys`) | `q`: name |
+| Zones | `/api/divisions/{id}/zones` (`zones`) | `q`: the name ([Zones](/api/zones#list-zones)) |
+| A zone's records | `/api/zones/{id}/records` (`records`) | a page of **names**: `q`, `type`, `name`, `tag`, `enabled`, `view`, `proxied`; also `matching` and `facets` ([Records](/api/records#pages-of-names)) |
+| A view's records | `/api/views/{id}/records` (`records`) | – |
+| Filtering rules | `/api/filtering/rules` (`rules`) | `division_id`, `action` (`block` or `allow`), `q` ([Filtering](/api/filtering)) |
+| DHCP leases | `/api/dhcp-servers/{id}/leases`, `/api/divisions/{id}/dhcp-leases` (`leases`) | `q`, `live` ([DHCP](/api/dhcp)) |
+| A subnet's addresses | `/api/divisions/{id}/ipam/subnet?cidr=` (`addresses`) | – |
+| Threat blocks | `/api/threats/blocks` (`blocks`) | – |
+| Upstreams | `/api/proxy/upstreams` (`upstreams`) | `q`, `protocol`, `unused`, `own=hide`; also `counts` and `twins` ([Proxy](/api/proxy#upstreams)) |
+| Certificates | `/api/acme/certificates` (`certificates`) | `q`, `state` ([Certificates](/api/certificates)) |
+| DNZ Proxy nodes | `/api/proxy/dnz` (`nodes`) | `proxy_id`, `q`: name or address; nodes waiting for approval come whole in `pending` ([DNZ Proxy](/api/dnz-proxy)) |
+| Status pages | `/api/status-pages` (`items`) | `q`: hostname, `state`; also `counts` ([Status pages](/api/status-pages)) |
+| Uptime monitors | `/api/uptime/monitors` (`monitors`) | `q`, `status`; also `counts` ([Uptime](/api/uptime)) |
+| Uptime incidents | `/api/uptime/incidents` (`items`) | `days`, `monitor`, `resolved` |
+| Notification incidents | `/api/incidents` (`incidents`) | `source` (`dns` or `proxy`) |
+| Backups made | `/api/backups/runs` (`runs`) | `target` ([Backups](/api/backups)) |
+| Archives on a target | `/api/backups/targets/{id}/files` (`files`) | – |
+
+The query log pages differently, without a total: see [Query logs → Pages in the
+API](/dns/query-logs#pages-in-the-api).
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" "https://dns.example.com/api/zones/3/versions?page=2&per_page=100"

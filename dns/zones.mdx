@@ -114,6 +114,7 @@ fields:
     - **Search**: the search box matches the name or the content. **Filter** narrows the list by
       type, on/off and tags, and, when [views](/dns/views) exist, by view: **Any view**, **All
       clients** (records every client gets) or **Only** one view, each with its count.
+    - **Pages**: a big zone comes a page of names at a time (see [Long zones](#long-zones)).
     - **Turn off / Turn on**: the switch on each row.
     - **Delete**: open the record and click **Delete**. It stops resolving immediately.
 
@@ -139,6 +140,22 @@ fields:
 
   </Tab>
 </Tabs>
+
+### Long zones
+
+A zone with thousands of records, and a division with many zones, never load whole into the
+browser:
+
+- **DNS → Zones** lists the zones a page at a time, by name. Its search asks the server, so it finds
+  a zone on any page.
+- **A zone's records** come a page of **names** at a time, each name with all of its records that
+  match, so a name's records never split across two pages. The pager counts names; the toolbar
+  shows how many records match out of the zone's total (`1,240 of 1,300`).
+- The search box and **Filter** ask the server too, so they look through the whole zone, and the
+  counts in **Filter** (per type, tag, on/off and view) are the whole zone's.
+
+The command line and the API page the same way: `dnz zone list --page`, `dnz record list --page`
+([CLI](/cli/zones-records#listing)) and `page` / `per_page` ([API](/api/records#pages-of-names)).
 
 ### Comments, tags and turning records off
 
@@ -266,6 +283,12 @@ The records are added together, or none if one fails (a duplicate, a CNAME clash
 
 In the dashboard, tick records (Shift-click selects a range) and use the bar that appears: **Turn
 on**, **Turn off**, **TTL**, **Tags**, **Comment** or **Delete**.
+
+The header checkbox selects the records on the page. When more records match the search and
+filters than the page shows, a line above the list offers **Select all 1,240 matching records**:
+the bar then acts on every matching record, on every page (*All 1,240 matching records are
+selected, on every page*), and **Clear selection** goes back. At most 5,000 records change at once;
+above that the line says so, and you narrow the filters first.
 
 From the CLI, use `--all` or several `--id`s:
 

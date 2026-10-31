@@ -58,7 +58,7 @@ Shorter aliases exist too: `fwd` for `forwarding`, `repl` for `replication`, `cf
 Commands print tables. Add `--json` to get the API's JSON instead, for example to feed `jq`:
 
 ```bash
-dnz --json zone list | jq -r '.[].name'
+dnz --json zone list --division it | jq -r '.zones[].name'
 ```
 
 Commands that delete or replace something ask first. `--yes` (`-y`) skips the question.
@@ -76,6 +76,7 @@ Lists that can grow long take the same two flags: `--limit` (rows per page, 50 b
 | List | Command |
 | --- | --- |
 | Threat findings | `dnz threats list` |
+| Threat blocks | `dnz threats blocks` |
 | Change requests | `dnz change list` |
 | The audit log | `dnz audit` |
 | Zone history | `dnz zone history` |
@@ -84,6 +85,22 @@ Lists that can grow long take the same two flags: `--limit` (rows per page, 50 b
 | Division members | `dnz division members` |
 | API tokens | `dnz token list` |
 | Update keys | `dnz update-key list` |
+| Zones (a page of each division) | `dnz zone list` |
+| A zone's records (a page of names, each with all its records) | `dnz record list` |
+| A view's records | `dnz view show` |
+| Filtering rules | `dnz filter rule list` |
+| DHCP leases | `dnz dhcp leases` |
+| A subnet's addresses | `dnz ipam show` |
+| Upstreams | `dnz proxy upstreams list` |
+| Certificates | `dnz proxy certs list` |
+| DNZ Proxy nodes | `dnz proxy nodes list` |
+| Status pages | `dnz status-page list` |
+| Uptime monitors | `dnz uptime list` |
+| Uptime incidents | `dnz uptime incidents` |
+| Notification incidents | `dnz notify incidents` |
+| Backups, and the archives on a target | `dnz backup list` |
+
+The query log pages its own way: see [The query log](#the-query-log-a-page-at-a-time) below.
 
 Under a page that doesn't hold the whole list, a footer says where it is and how to get the next one:
 
@@ -93,18 +110,50 @@ dnz threats list --limit 100 --page 2
 # 101-200 of 1234 findings, page 2 of 13 (--page 3 for the next)
 ```
 
-Users, members, API tokens and update keys also take `-q` (`--query`): the server searches before it
-pages, so the footer counts what matches.
+Searches and filters run on the server before it pages, so the footer counts what matches. Users,
+members, API tokens, update keys, zones, upstreams, certificates, nodes, status pages, uptime monitors
+and filtering rules take `-q` (`--query`); other lists keep their own filters:
 
 ```bash
 dnz user list -q budi                         # user name, name or email
 dnz division members radiology -q editor      # also the role
 dnz token list -q certbot                     # name or prefix
 dnz update-key list -q kea                    # name
+dnz zone list -q lab --page 2                 # the zone's name
+dnz record list example.com --type A --page 2 # --name, --type, --tag, --enabled and -q filter on the server
+dnz filter rule list --action block -q ads    # domain or comment
+dnz dhcp leases --live --search laptop        # address, hostname or MAC
+dnz proxy upstreams list -q shop --protocol tcp --unused
+dnz proxy certs list -q shop --state failed   # valid, pending, issuing, renewing, failed, expired
+dnz proxy nodes list -q jkt                   # name or address
+dnz status-page list -q app --state active    # active, scheduled, ended, off
+dnz uptime list -q web --status down          # up, degraded, down, unknown, paused
 ```
+
+`dnz zone list` shows a page of each division, with a footer for each. `dnz record list` counts
+**names**: a page holds `--limit` names with every matching record of each, so a name's records never
+split across pages (`-n` is `--name` there, so the page size is only `--limit`). `dnz proxy nodes list`
+always shows the nodes waiting for approval, whatever the page.
 
 With `--json` the answer carries `total`, `page` and `per_page` next to the list, so a script can walk
 every page.
+
+#### The query log, a page at a time
+
+`dnz logs --page N` asks for pages of `--limit` queries (`-n`, 50 as without `--page`, at most 100), from
+page 1 to 50. There is no total (counting a whole time window would read all of it); instead the
+footer says whether there is an older page and gives the `--until` that keeps the next pages where
+they are while new queries come in:
+
+```bash
+dnz logs --page 1
+# …
+# page 1 (--page 2 --until 2026-10-31T08:00:01Z for the next)
+dnz logs --page 2 --until 2026-10-31T08:00:01Z
+```
+
+Page 50 is the last: for older queries, narrow the window with `--since` / `--until`. Without
+`--page`, `dnz logs` lists the newest queries as before. See [Query logs](/dns/query-logs#pages).
 
 ## Which server a command talks to
 

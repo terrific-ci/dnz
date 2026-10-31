@@ -18,11 +18,11 @@ and one with `zones.read` can read leases and IPAM.
 | `DELETE` | `/api/dhcp-servers/{id}?keep_records=false` | `integrations.manage` | Remove it, and its records unless `keep_records=true` |
 | `POST` | `/api/dhcp-servers/{id}/sync` | `records.write` | Read it now and sync its records |
 | `POST` | `/api/dhcp-servers/{id}/import?format=auto` | `records.write` | A lease file (dhcpd.leases, CSV) as the body, or `{"content": "…", "format": "auto"}`; up to 64 MB |
-| `GET` | `/api/dhcp-servers/{id}/leases?q=&live=true` | `zones.read` | Its leases, with the records DHCP keeps for each |
-| `GET` | `/api/divisions/{id}/dhcp-leases?q=&live=true` | `zones.read` | Every server's leases |
+| `GET` | `/api/dhcp-servers/{id}/leases?q=&live=true&page=` | `zones.read` | Its leases, with the records DHCP keeps for each; with `page` / `per_page` `{leases, total, page, per_page}` (50 a page, at most 200) |
+| `GET` | `/api/divisions/{id}/dhcp-leases?q=&live=true&page=` | `zones.read` | Every server's leases, paged the same way |
 | `GET` | `/api/zones/{id}/dhcp-records` | `zones.read` | The zone's DHCP-managed records, by record id |
 | `GET` | `/api/divisions/{id}/ipam` | `zones.read` | Subnets with their use and conflicts, and the counts |
-| `GET` | `/api/divisions/{id}/ipam/subnet?cidr=10.0.0.0/24` | `zones.read` | A network's addresses, free ranges and conflicts |
+| `GET` | `/api/divisions/{id}/ipam/subnet?cidr=10.0.0.0/24&page=` | `zones.read` | A network's addresses, free ranges and conflicts; with `page` / `per_page` `addresses` is a page (50, at most 200) with `total` |
 | `GET` | `/api/divisions/{id}/ipam/conflicts` | `zones.read` | Every conflict |
 | `GET` | `/api/divisions/{id}/ipam/outside` | `zones.read` | Addresses in no known subnet |
 | `POST` | `/api/divisions/{id}/ipam/subnets` | `zones.write` | Add a subnet: `{"cidr": "10.0.9.0/24", "name": "Servers", "comment": ""}` |

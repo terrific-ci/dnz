@@ -113,7 +113,7 @@ See [Proxy alerts](/integrations/notifications#proxy-alerts) for what each one w
 ## Incidents
 
 ```bash
-dnz notify incidents                              # outages and recoveries: forward DNS and proxies
+dnz notify incidents                              # outages and recoveries: forward DNS and proxies, a page at a time
 dnz notify incidents --source proxy               # only the proxies' (nodes, origins, attacks, certificates)
-dnz notify incidents --limit 200                  # default 50
+dnz notify incidents --limit 200 --page 2         # 50 a page by default, at most 200
 ```

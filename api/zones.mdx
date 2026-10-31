@@ -10,7 +10,7 @@ numeric ids: a division id for listing and creating, a zone id for the rest.
 
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
-| `GET` | `/api/divisions/{id}/zones` | `zones.read` | List zones |
+| `GET` | `/api/divisions/{id}/zones` | `zones.read` | List zones, by name; a page at a time with `page` / `per_page` (see [List zones](#list-zones)) |
 | `POST` | `/api/divisions/{id}/zones` | `zones.write` | Create a zone |
 | `GET` | `/api/zones/{id}` | `zones.read` | Zone details |
 | `PATCH` | `/api/zones/{id}` | `zones.write` | Turn a zone on or off, set its default TTL, choose whether missing names are forwarded |
@@ -29,6 +29,31 @@ numeric ids: a division id for listing and creating, a zone id for the rest.
 | `GET` | `/api/token` | – | Token info |
 
 Records have their own endpoints; see [Records](/api/records).
+
+## List zones
+
+`GET /api/divisions/{id}/zones` lists the division's zones by name.
+
+<ParamField query="q" type="string">
+  Only zones whose name contains this text.
+</ParamField>
+
+<ParamField query="page" type="integer">
+  Which page, from 1. With `page` or `per_page` the answer is
+  `{"zones": [...], "total", "page", "per_page"}`.
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="50">
+  Zones per page, at most 200.
+</ParamField>
+
+```bash
+curl -fsS -H "Authorization: Bearer $DNZ_TOKEN" \
+  "https://dns.example.com/api/divisions/1/zones?q=lab&page=2"
+```
+
+A token limited to some zones sees only those, and `total` counts only those. Without `page` and
+`per_page` the answer is the bare list of every zone, as before.
 
 ## Create a zone
 
@@ -221,6 +246,12 @@ what clients in its client networks asked, from the last 24 hours unless asked o
 
 <ParamField query="node" type="string">
   One server of a cluster, by node id. Default: every server.
+</ParamField>
+
+<ParamField query="page" type="integer">
+  A page of 100 rows (`per_page`, at most 100), from 1 to 50. The answer is then
+  `{"logs", "page", "per_page", "more", "until", "last_page"}`: pass page 1's `until` with the
+  next pages. See [Query logs → Pages in the API](/dns/query-logs#pages-in-the-api).
 </ParamField>
 
 ```bash

@@ -164,7 +164,7 @@ the status pages.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` / `POST` | `/api/proxy/upstreams` | Every upstream, with what uses it (`usage`) and `servers_now` (the servers the proxies get), or add one |
+| `GET` / `POST` | `/api/proxy/upstreams` | Every upstream, with what uses it (`usage`) and `servers_now` (the servers the proxies get), or add one. A page at a time with `page` / `per_page` ([below](#a-page-of-upstreams)) |
 | `GET` / `PUT` / `DELETE` | `/api/proxy/upstreams/{id}` | One upstream: show, change, delete (refused while anything uses it) |
 | `POST` | `/api/proxy/upstreams/discover` | `{"protocol", "discovery"}`: looks a DNS name up now, saving nothing (the dialog's **Test**). Answers `{"resolved_by", "addresses", "servers", "ttl", "error", "left_out"}` |
 | `POST` | `/api/proxy/upstreams/{id}/discover` | The same for a saved upstream; for a name each proxy looks up itself, what each DNZ Proxy node reported (`nodes`) |
@@ -193,6 +193,22 @@ An upstream whose servers come from a [DNS name](/proxy/upstream-discovery) has 
 `discovered` is what DNZ found: `servers`, `checked_at`, `changed_at`, `ttl`, `error`, `error_since`
 (the last servers stay while lookups fail), `missing_since` (NXDOMAIN) and `left_out` (addresses of
 the proxies themselves).
+
+### A page of upstreams
+
+`GET /api/proxy/upstreams?page=&per_page=` (50 a page, at most 200) answers
+`{"upstreams": [...], "total", "page", "per_page", "counts", "twins"}`, after these filters:
+
+| Parameter | |
+| --- | --- |
+| `q` | Text in the name, description, discovered DNS name, a server or a route |
+| `protocol` | `http`, `tcp` or `udp` |
+| `unused` | `true`: only upstreams nothing uses |
+| `own` | `hide`: leave out routes' own upstreams |
+
+`counts` (per protocol, not used, routes' own) are of every upstream, whatever the filters; `twins`
+pairs upstreams with the same servers, which can be merged. Without `page` and `per_page` the answer
+is every upstream, as before (the route dialogs read it that way).
 
 ## Checks and DNS
 
