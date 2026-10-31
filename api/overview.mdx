@@ -112,6 +112,7 @@ next to the list. Filters and searches apply before the page is cut, so `total` 
 | Route history | `/api/proxies/{id}/route-history` (`versions`) | `host` |
 | Threat findings | `/api/threats/findings`, `/api/threats/groups` | `q`: client or domain, and more ([Threats](/api/threats#listing-findings)) |
 | Middlewares | `/api/proxy/middlewares` | `q`, `protocol`, `own`, `firewalls`, `unused` |
+| Routes (Proxy → Routes, one row per hostname across proxies) | `/api/proxy/routes` (`rows`) | `q`, `proxy`, `type`, `group`, `zone`, `view`; also `unfiltered` and, by zone or group, each one's count in `groups` ([Proxy](/api/proxy#the-routes-page)) |
 | Users | `/api/users` (`users`) | `q`: user name, name or email |
 | Division members | `/api/divisions/{id}/members` (`members`) | `q`: user name, name, email or role |
 | API tokens | `/api/divisions/{id}/tokens` (`tokens`) | `q`: name or prefix |

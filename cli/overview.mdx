@@ -81,6 +81,7 @@ Lists that can grow long take the same two flags: `--limit` (rows per page, 50 b
 | The audit log | `dnz audit` |
 | Zone history | `dnz zone history` |
 | Route history | `dnz proxy routes history` |
+| Routes (every proxy's, one row per hostname) | `dnz proxy routes list` |
 | Users | `dnz user list` |
 | Division members | `dnz division members` |
 | API tokens | `dnz token list` |
@@ -124,6 +125,7 @@ dnz zone list -q lab --page 2                 # the zone's name
 dnz record list example.com --type A --page 2 # --name, --type, --tag, --enabled and -q filter on the server
 dnz filter rule list --action block -q ads    # domain or comment
 dnz dhcp leases --live --search laptop        # address, hostname or MAC
+dnz proxy routes list --search shop --type https --by-zone   # every proxy's routes; a proxy's name before the flags for one
 dnz proxy upstreams list -q shop --protocol tcp --unused
 dnz proxy certs list -q shop --state failed   # valid, pending, issuing, renewing, failed, expired
 dnz proxy nodes list -q jkt                   # name or address

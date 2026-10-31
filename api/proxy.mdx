@@ -59,7 +59,9 @@ as on (`traefik`, `dnz`) or off.
 | `GET` | `/api/proxies/{id}/setup` | The proxy's routers, services and middlewares, and its proxied names |
 | `GET` | `/api/proxies/{id}/routes/hosts` | What Add route offers: `{"zones": [...], "records": [{"host", "types", "routed"}]}`. DNZ's primary zones and the names with A/AAAA/CNAME records (`routed` when this proxy has a router for one) |
 | `GET` | `/api/proxies/{id}/routes/entry-points` | The proxy's HTTP entry points for the router and Add route dialogs: `{"list": [{"name", "address"}], "http", "https", "from", "http_found", "https_found", "error"}` |
-| `GET` | `/api/proxies/{id}/routes` | `{"routes": [...], "auto_certificates"}`: each route's `id` (its router), `hosts`, `path_prefix`, `tls`, `cert_resolver`, `redirect_router`, `service_id`, `service_name`, `own_service` (false: a service of the proxy's it uses), `servers`, `options` (the switches), other `middlewares`, `simple` / `advanced` and, on DNZ Proxy, `certificate` |
+| `GET` | `/api/proxies/{id}/routes` | `{"routes": [...], "auto_certificates"}`: each route's `id` (its router), `hosts`, `path_prefix`, `tls`, `cert_resolver`, `redirect_router`, `service_id`, `service_name`, `own_service` (false: a service of the proxy's it uses), `servers`, `options` (the switches), other `middlewares`, `simple` / `advanced` and, on DNZ Proxy, `certificate`. One proxy's routes, whole |
+| `GET` | `/api/proxy/routes` | [The Routes page](#the-routes-page): every approved proxy's routes, one row per hostname, filtered and paged on the server |
+| `GET` | `/api/proxy/routes/targets` | Every route the same filters match, as the batch edit takes them (*Pick all matching*) |
 | `POST` | `/api/proxies/{id}/routes` | One step: `{"host" or "hosts", "servers" or "service_id" (one of the proxy's services, used as it is), "tls", "redirect_http", "options", "middlewares", "path_prefix", "dns_record", "skip_tls_verify"}` adds the service, router(s), switches and proxied DNS records. `skip_tls_verify` is for the route's own HTTPS servers (see [Skip TLS verify](#skip-tls-verify)). With `dns_record` (the default) it is refused (409) in a zone whose changes wait for approval for you: it would write the records at once |
 | `POST` | `/api/proxy/routes/bulk` | [Several routes at once](#several-routes-at-once), on any proxies, all or nothing |
 | `PUT` | `/api/proxies/{id}/routes/{router}` | The same body: changes the route (409 for one set up under Advanced); also `"clear_redirect": true` |
@@ -129,6 +131,63 @@ dialog's route) takes it too. A route that uses an upstream from the list follow
 { "host": "app.example.com", "servers": [{ "url": "https://10.0.0.10:8443", "weight": 1 }], "tls": true, "skip_tls_verify": false }
 ```
 
+### The Routes page
+
+`GET /api/proxy/routes` is **Proxy → Routes** ([Using it](/proxy/overview#adding-a-route)): every
+approved proxy's routes (HTTP, TCP and UDP), one row per hostname (and path), searched, filtered and
+paged on the server, so `total` and every count are over every route.
+
+| Parameter | |
+| --- | --- |
+| `q` | Text in a hostname, the path, an upstream address, the group's or a proxy's name |
+| `proxy` | A proxy's id or name: only its copies (a route's copies on the other proxies come in `others`) |
+| `type` | `on`, `off`, `redirect`, `https`, `http`, `cert-failing`, `dns-missing`, `advanced`, or a switch: `cache`, `firewall`, `waf`, `under-attack`, `waiting-room`, `rate-limit`, `password`, `sign-in`, `allow`, `headers`, `uploads`, `rules` |
+| `group`, `zone` | A route group's or a zone's name, or `-` for routes in none |
+| `view` | `zones` or `groups`: rows ordered by zone or group, and each one's count in `groups` |
+| `page`, `per_page` | 50 a page by default, at most 200 |
+
+```json
+{
+  "rows": [
+    {
+      "key": "app.example.com",
+      "hosts": ["app.example.com"],
+      "path": "",
+      "zone": "example.com",
+      "group": "Web app",
+      "entries": [{ "proxy_id": 1, "route": { "id": 12, "hosts": ["app.example.com"], "tls": true } }],
+      "others": []
+    }
+  ],
+  "total": 1240,
+  "page": 1,
+  "per_page": 50,
+  "unfiltered": 1240,
+  "proxies": [{ "id": 1, "name": "edge", "kind": "dnz", "auto_certificates": true, "proxied": [], "checks": {} }],
+  "middlewares": []
+}
+```
+
+- `entries` holds each proxy's copy of the route as `GET /api/proxies/{id}/routes` shows it, with
+  its certificate and latest steps on a DNZ Proxy (shortened above).
+- `unfiltered` counts the rows before the search and filters (the proxy filter applied).
+- `proxies` lists each proxy's `name`, `kind` and `auto_certificates`, and for the page's routes the
+  names DNS answers with it (`proxied`) and the last reachability `checks` (by route id).
+- `middlewares` holds the shared middlewares and those the page's routes name.
+- `groups`, only with `view=zones` or `groups`, is `[{"name", "count"}]` (`name` is `null` for routes
+  in none): a zone or group can run on over several pages, and its count is its whole one.
+
+Both need **Manage proxies** (`proxy.manage`).
+
+`GET /api/proxy/routes/targets` takes the same filters and answers every route they match, as
+`POST /api/proxy/routes/bulk` takes them: `{"routes": [{"proxy_id", "id"}], "rows": [{"key", "hosts",
+"path", "group", "entries": [{"proxy_id", "id", "protocol", "enabled"}]}], "total", "count", "limit",
+"over"}`. Past 5,000 routes `over` is `true` and nothing is listed.
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" "https://dns.example.com/api/proxy/routes?q=shop&type=https&view=zones&page=2"
+```
+
 ### Several routes at once
 
 `POST /api/proxy/routes/bulk` is the Routes page's bar
@@ -143,7 +202,8 @@ of any proxies.
 }
 ```
 
-`id` is the route's id (its router) in `GET /api/proxies/{id}/routes`. The operations:
+`id` is the route's id (its router) in `GET /api/proxies/{id}/routes`; `GET /api/proxy/routes/targets`
+answers the `routes` list for every route a search and filters match. The operations:
 
 | `op` | Fields |
 | --- | --- |
