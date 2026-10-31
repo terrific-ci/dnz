@@ -43,6 +43,11 @@ dnz proxy routes restore edge app.example.com 7   # back to version 7 (shows the
 | Web application firewall | Mode and sensitivity, skipped paths, skipped rules, allowed addresses |
 | Other middlewares | Middlewares besides the switches, by name |
 
+**TCP and UDP routes** have versions too, with lines of their own: the kind, entry points, hostnames
+(SNI; none means every connection), TLS (ended by the proxy or passed through), where the connections
+go, the client addresses, the priority and the TCP middlewares. A route without hostnames is named by
+its entry point (*TCP route pg*). Restoring a deleted one makes it again with its own servers.
+
 A new route lists what it has, a deleted one what it had. Saving a route unchanged keeps no
 version. The newest version of a route reads *as it is now*.
 
@@ -72,7 +77,9 @@ version. The newest version of a route reads *as it is now*.
 - **DNS records stay proxied**: a restore makes records of hostnames it adds go through the proxy,
   but never takes a record off it.
 - **Middlewares, the firewall and a service the route used** are found by name. One deleted since
-  must be added again first (Settings → Middlewares, Proxy → Upstreams); the restore says which.
+  must be added again first ([Proxy → Middlewares](/proxy/middlewares), Proxy → Upstreams); the
+  restore says which. Middlewares renamed by the [v2 upgrade](/proxy/middlewares#from-per-proxy-middlewares)
+  are renamed in the history too, so an older version finds the right one.
 - Another route that holds one of the hostnames now is refused, as in the route dialog.
 - Restoring needs the same rights as editing routes and is in the audit log
   (`proxy.route.restore`). AI assistants can read route history but not restore it: an older

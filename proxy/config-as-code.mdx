@@ -17,14 +17,18 @@ It works the same for Traefik, DNZ Proxy and Caddy.
   sign-in, address list, custom headers, upload limits, under attack, waiting room,
   [web application firewall](/proxy/waf)), the redirect and the group. Routes set up under
   YAML or the dialog's *Matching* come along with their conditions, priority and entry points.
-- **Upstreams** and **middlewares** the routes use, by name (upstreams are every proxy's: changing one in the file changes it on every proxy that uses it, and the plan says so). Files from before upstreams, with `services:` and `service:`, still apply.
+  [TCP and UDP routes](#tcp-and-udp-routes) are routes too.
+- **Upstreams** and **middlewares** the routes use, by name, with each upstream's connection settings
+  (`transport`). Both are every proxy's: changing one in the file changes it on every proxy that uses
+  it, and the plan says which. Files from before upstreams, with `services:` and `service:`, still
+  apply.
 - **Route defaults** of a DNZ Proxy: redirect to https://, compression, security headers, the
   firewall on every route, upload limits.
 
 Everything is named, never numbered: services, middlewares, the firewall and sign-in providers.
 
 ```yaml edge.yaml
-version: 1
+version: 2
 proxy: edge
 kind: dnz-proxy
 defaults:
@@ -60,11 +64,73 @@ upstreams:
   health_check:
     path: /health
     interval: 10
+  transport:
+    serverName: backend.internal
+    forwardingTimeouts:
+      dialTimeout: 5s
 ```
+
+| Key | Meaning |
+| --- | --- |
+| `version` | `2` since DNZ v2. Files with `version: 1` still load; a middleware or upstream the v2 upgrade renamed on this proxy is refused with its new name (*office of edge2 is office-edge2 since DNZ v2: export the proxy again*) |
+| `proxy`, `kind` | The proxy it is for, by name, and its kind (`traefik`, `dnz-proxy`, `caddy`), for the reader. A file applies to another proxy, of another kind too, as long as it uses nothing that kind lacks |
+| `defaults` | A DNZ Proxy's route defaults; left out, they stay as they are |
+| `routes` | The routes |
+| `upstreams` | Upstreams by name: servers, balancing, sticky sessions, health check, and `transport`: its [connection settings](/proxy/upstreams#connection-settings) in the shape of Traefik's servers transport (server name, `rootCAs`, client `certificates`, timeouts) |
+| `middlewares` | Middlewares by name: `kind` (the form, such as `stripPrefix` or `dnzFirewall`) and `config` in Traefik's shape. Every proxy's: one another proxy uses stays when this file prunes it, and a change reaches every proxy using it (the plan says which) |
 
 A route without a `name` is named after its first hostname (`app.example.com` becomes
 `app-example-com`); the name is how a route is found again, so the same name updates the same route.
 Unknown keys are refused, so a typo such as `cahce: 10m` is an error instead of being ignored.
+
+## TCP and UDP routes
+
+A route with `protocol: tcp` or `protocol: udp` is a [TCP or UDP route](/proxy/upstreams#tcp-and-udp-routes)
+(Traefik and DNZ Proxy; Caddy has none). It goes to `servers` of its own (`host:port`) or to an
+`upstream` of the list with the same `protocol`. The TCP middlewares it runs are listed under
+`middlewares` with `protocol: tcp`, shared by every proxy's TCP routes like the HTTP ones.
+
+```yaml
+routes:
+- name: db
+  protocol: tcp
+  entry_points: [pg]
+  hosts: [db.example.com]   # by TLS hostname (SNI); left out: every connection on the port
+  tls: passthrough          # or terminate (the proxy holds the certificate); left out: no TLS
+  servers: [10.0.0.7:5432]
+  client_ips: [10.0.0.0/8]
+  middlewares: [office-only]
+- name: resolvers
+  protocol: udp
+  entry_points: [dns]
+  upstream: resolvers
+upstreams:
+- name: resolvers
+  protocol: udp
+  servers: [10.0.0.53:53]
+middlewares:
+- name: office-only
+  protocol: tcp
+  kind: ipAllowList
+  config:
+    ipAllowList:
+      sourceRange: [10.0.0.0/8]
+```
+
+| Key | Meaning |
+| --- | --- |
+| `protocol` | `tcp` or `udp`; left out: an HTTP route |
+| `entry_points` | The TCP or UDP entry point (a port of the proxy) it listens on |
+| `hosts` | TCP with TLS: the hostnames it takes (SNI), in DNZ's zones; left out: every connection |
+| `tls` | TCP: `terminate` (the proxy ends TLS, with `cert_resolver` as for HTTP) or `passthrough` (the servers end it, the proxy reads only the hostname) |
+| `client_ips` | TCP: only these addresses or ranges |
+| `priority` | TCP: the higher one wins between routes on one entry point |
+| `middlewares` | TCP: TCP middlewares (`ipAllowList`, `inFlightConn`) by name |
+
+UDP routes take no hostnames, TLS, client addresses or middlewares. The route dialog's checks apply:
+routing by hostname needs TLS, and a name another route of the proxy takes is refused. A
+`version: 1` file has no TCP or UDP routes: applying it, even with `--prune`, leaves the proxy's as
+they are.
 
 ## Export and import in the dashboard
 
@@ -112,7 +178,7 @@ edge: 1 to add, 1 to change, 0 to remove.
 ## How applying works
 
 - **Nothing half applied.** Every check the route dialog makes runs first: hostnames in your zones,
-  one route per hostname, services and middlewares that exist, sign-in providers, switches the
+  one route per hostname, upstreams and middlewares that exist, sign-in providers, switches the
   proxy's kind runs. An error names the route and its line, for example
   `route shop-example-com (line 14): unknown key cahce`, and nothing changes.
 - **Nothing removed unless you ask.** Routes, services and middlewares the file leaves out stay;
@@ -134,10 +200,13 @@ edge: 1 to add, 1 to change, 0 to remove.
   such a file out of public repositories.
 </Note>
 
+The **keys of an upstream's client certificates** (`transport.certificates`) are left out the same
+way: applying a certificate without its key keeps the key DNZ has, and `--secrets` puts them in.
+
 Sign-in routes name their provider; the provider and its client secret stay under
-**Settings → Proxy → Sign-in** and are never exported. The proxy itself (its addresses and token),
-DNZ Proxy's node settings, TLS certificates and TCP/UDP routers aren't in the file and are never
-touched by it.
+**Settings → Proxy → Sign-in** and are never exported. The proxy itself (its addresses, token and
+Traefik API password), DNZ Proxy's node settings, TLS certificates and entry points (the proxy's
+**Settings**) aren't in the file and are never touched by it, with or without prune.
 
 ## GitOps with GitHub Actions
 
