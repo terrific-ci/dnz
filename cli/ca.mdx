@@ -24,6 +24,7 @@ dnz ca init --cn "Example Root CA" --org "Example Ltd" --unit IT --country ID --
   --intermediate-cn "Example Issuing CA" --intermediate-years 3 \
   --constraint lab.internal --constraint office.lan --ip-constraint 10.0.0.0/8 \
   --address http://192.168.1.10:8080 --days 397
+dnz ca init --cn "Lab Root CA"                    # its intermediate is "Lab Issuing CA" unless --intermediate-cn
 dnz ca init --no-intermediate --any-name --yes    # the root signs certificates, any name (asked first)
 dnz ca edit --days 90 --crl off                   # applies at once
 dnz ca edit --org "Example Two"                   # a new version: asks first (--yes for scripts)
@@ -42,7 +43,7 @@ dnz ca retire 1                                   # an older version, once nothi
 | `--key-type` | `ecdsa-p256` (default), `ecdsa-p384`, `rsa-2048`, `rsa-3072` or `rsa-4096` |
 | `--root-years` | How long the root is valid, 1 to 25 years |
 | `--intermediate` / `--no-intermediate` | The root signs only an intermediate, which signs certificates (the default), or signs them itself |
-| `--intermediate-cn`, `--intermediate-years` | The intermediate's common name and validity (not longer than the root) |
+| `--intermediate-cn`, `--intermediate-years` | The intermediate's common name and validity (not longer than the root). Without `--intermediate-cn`, a root given its own `--cn` or `--org` names it: `Example Root CA` gives `Example Issuing CA`, another root name `<Organization> Issuing CA`, else `DNZ Issuing CA` |
 | `--constraint` | A domain name the CA may sign (it and every name under it); repeat for more. Replaces the list |
 | `--ip-constraint` | An address range the CA may sign (`10.0.0.0/8`); repeat for more. Replaces the list |
 | `--any-name` | No name constraints: a leaked key could then sign any name for devices that trust the root |

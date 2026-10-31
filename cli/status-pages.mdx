@@ -72,22 +72,25 @@ zone. `--for` counts from `--from`, or from now.
 dnz status-page set app.example.com maintenance --also api.example.com --also shop.example.com --for 2h
 dnz status-page set app.example.com maintenance --routes     # every hostname of app.example.com's route
 dnz status-page set app.example.com maintenance --also old.example.com --include-redirects
+dnz status-page clear app.example.com --also api.example.com --also shop.example.com   # back to normal
+dnz status-page clear app.example.com --routes               # every hostname of app.example.com's route
 ```
 
-With `--also` or `--routes`, the status goes on **every hostname of the routes** holding the hosts,
-on every proxy serving them, in one batch, as **Set status page** in the Routes bar does
+With `--also` or `--routes`, the status goes on (`set`) or comes off (`clear`) **every hostname of
+the routes** holding the hosts, on every proxy serving them, in one batch, as **Set status page**
+and **Back to normal** in the Routes bar do
 ([Several routes at once](/proxy/status-pages#several-routes-at-once)).
 
 | Flag | Meaning |
 | --- | --- |
 | `--also HOST` | Another route, by one of its hostnames; repeat for more |
-| `--routes` | The host is a route's hostname: the status goes on every hostname of that route |
-| `--include-redirects` | Also on redirect routes' hostnames, which ends their redirect. Without it they keep redirecting |
+| `--routes` | The host is a route's hostname: every hostname of that route |
+| `--include-redirects` | Also redirect routes' hostnames, which ends their redirect. Without it they keep redirecting |
 
 The other flags of `set` work as above, except `--off`: a batch sets the statuses on. It is all or
 nothing: if one hostname can't take the status, none changes, and the command prints each route's
-reason. To take them all back to normal, `dnz status-page clear` each host, or pick them on
-**Proxy → Routes** and use **Back to normal**.
+reason. `clear` on several routes asks first (`--yes` skips the question); `--include-redirects`
+goes only with `--also` or `--routes`.
 
 ## Watching, turning off and removing
 

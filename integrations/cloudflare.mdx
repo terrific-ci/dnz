@@ -35,6 +35,7 @@ Connecting needs the `integrations.manage` permission in the division (Owner by 
     ```bash
     dnz cloudflare connect --division it    # asks for the token (or DNZ_CLOUDFLARE_TOKEN)
     dnz cf verify                           # re-check the token and each permission, e.g. after changing them
+    dnz cf verify --zone example.com        # the same, against one zone (for tokens limited to some zones)
     dnz cf permissions                      # every permission DNZ uses, what each is for, the token link
     ```
   </Tab>
@@ -98,8 +99,9 @@ changing anything on your zones:
 | **Missing** | Cloudflare refused it; the list says what it turns off |
 | **Not checked yet** | Connected before DNZ checked permissions, or no zone to check against: press **Re-check** |
 
-`dnz cf verify` re-checks and prints the same list; `dnz cf permissions` prints every permission with
-what it's for and the token link.
+`dnz cf verify` re-checks and prints the same list (`--zone NAME` checks against that zone instead of
+the token's first one, as **Re-check** on a zone's page does); `dnz cf permissions` prints every
+permission with what it's for and the token link.
 
 ### On a zone's page
 

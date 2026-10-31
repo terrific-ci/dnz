@@ -40,7 +40,7 @@ and every one shows in the certificates the CA signs:
 | Country, state or province, locality, e-mail | Empty | Country: two letters, ISO 3166 (`US`, `DE`, `ID`) |
 | Key type | ECDSA P-256 | P-384, RSA 2048, 3072 or 4096 (RSA for old devices and appliances) |
 | Root valid for | 10 years | 1 to 25 |
-| Intermediate | On, `… Issuing CA`, 3 years | The root signs only the intermediate; the intermediate signs certificates |
+| Intermediate | On, 3 years, named after the root: `Example Root CA` gives `Example Issuing CA`, a root named otherwise `<Organization> Issuing CA`, else `DNZ Issuing CA` (an empty name follows the root) | The root signs only the intermediate; the intermediate signs certificates |
 | Names it may sign | DNZ's internal zones and the private address ranges | See [Name constraints](#name-constraints) |
 | Revocation list | On | Served at `/ca/<id>.crl` and named in every certificate |
 | The address devices reach DNZ on | **Settings → General → Server → Device address** and DNZ's HTTP port | Where devices download the root and the revocation list |

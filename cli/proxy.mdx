@@ -231,14 +231,17 @@ A batch takes:
 | `--group NAME`, `--no-group` | Put them in a [route group](#route-groups), or in none |
 | `--https on\|off`, `--redirect on\|off` | HTTPS, and whether `http://` redirects to it |
 | `--switch NAME=on\|off` | On, with the route dialog's defaults: `waf`, `challenge`, `cache`, `waiting_room`, `uploads`, `rate_limit`. Off also: `allow_ips`, `headers`, `rules`, `firewall`, `basic_auth`, `sign_in`. Repeat for more; a switch already on keeps its settings |
-| `--challenge`, `--cache`, `--waf block\|off`, the `--no-…` switches | The same as `--switch` (`--cache` at its default of 10 minutes) |
+| `--challenge`, `--cache`, `--waf block\|off`, the `--no-…` switches | The same as `--switch`. `--cache` only at its default of 10 minutes (`--cache` or `--cache 10m`); a route whose cache is already on keeps its time |
+| `--uploads` | The default [upload limits](/proxy/upload-limits) (`--no-uploads` turns them off) |
 | `--middleware +NAME\|-NAME` | Add or remove a shared middleware; repeat for more |
 | `--service NAME` | Send them all to one upstream of Proxy → Upstreams |
 | `--serve-on +PROXY\|-PROXY` | Copy the routes to another proxy, or take them off one |
 
-Flags that carry a route's own values (servers, hostnames, users, headers, a cache time other than
-10 minutes, rate limit and waiting room numbers, `--waf log`) change one route on one proxy: run
-them without more hostnames or `all`. TCP and UDP routes take only `--service`, `--serve-on` and
+Flags that carry a route's own values (servers, hostnames, users, sign-in and who may sign in,
+headers, a cache time other than 10 minutes, upload limits such as `--upload-max`, WAF lists and
+sensitivity, rate limit and waiting room numbers, `--waf log`) change one route on one proxy. A
+batch refuses them and says why; run them without more hostnames or `all`
+(`dnz proxy routes edit edge app.example.com --cache 1h`). TCP and UDP routes take only `--service`, `--serve-on` and
 `rm`. In a zone whose changes wait for approval, `--serve-on` and `rm` are refused, since they
 change the names' DNS records at once.
 

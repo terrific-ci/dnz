@@ -154,7 +154,7 @@ and ask for the next page.
 | `proxy_waiting_rooms` | DNZ Proxy waiting rooms now: visitors in, the limit and visitors waiting, per hostname |
 | `proxy_waf_rules` | The [web application firewall](/proxy/waf)'s rules (id, category, level, what each catches), optionally only those a sensitivity runs |
 | `proxy_waf_hits` | Requests the web application firewall matched since each node started, per proxy, middleware, rule and action (`block` or `log`) |
-| `proxy_nodes` | DNZ Proxy nodes and their servers: state, version, uptime, upstreams, and the node's CPU and memory, the machine's or container's memory, load average and free disk |
+| `proxy_nodes` | DNZ Proxy nodes and their servers: state, version, uptime, upstreams, and the node's CPU and memory, the machine's or container's memory, load average and free disk; a page of them (`page`, `limit`, `proxy`) with the total and how many wait for approval, or one `node` |
 | `proxy_sites` | [Read-only proxies](/proxy/read-only) (a Caddy or Traefik DNZ only reads): their division, API, what DNS answers with, records mode, sync state and last error, and every hostname of their last read with its status |
 | `cloudflare_compare` | A local zone beside the Cloudflare zone of the same name, one row per name and type with both values and a status (same, split, only local, only Cloudflare, conflict) ([Compare with Cloudflare](/integrations/cloudflare#compare-with-cloudflare)) |
 | `cloudflare_zone` | A Cloudflare zone's traffic, SSL/TLS and security settings, DNSSEC and tunnel hostnames, each part on its own: a part the token has no permission for is `{ missing: "Zone → Analytics → Read" }` (the permission to add), and `missing_permissions` lists every one Cloudflare refused so far. Only with `dnz mcp` (stdio): assistants signed in over OAuth can't reach Cloudflare connections ([Token permissions](/integrations/cloudflare#token-permissions)) |
@@ -201,15 +201,22 @@ Each zone is also a resource, `dnz://zone/<name>`, with its zone file. And there
 
 The token an assistant gets acts as the user who allowed it, with their divisions and roles, and:
 
-- **Read only** reads what that user can read in the API, except accounts, sessions, users, API
-  tokens, DNS update keys, backups, settings, notification providers, Cloudflare connections, ACME
-  credentials and the cluster.
-- **Read and change** also creates, changes and deletes records, creates zones, clears the cache,
-  sets, switches and removes status pages, changes a route's upload limits, redirect, web
-  application firewall, rules and group, changes several routes at once (never their passwords or
-  sign-in), schedules maintenance (without deleting it), and makes and changes upstreams and
-  middlewares (without deleting or merging them).
-  Nothing else: no zone deletion, no rollbacks, no approvals, no settings.
+- **Read only** reads what that user can read in the API, except accounts, sessions, users, two-factor,
+  OAuth apps, API tokens and division members, DNS update keys, backups, settings, notification
+  providers, Cloudflare connections, ACME credentials, the server's system and setup pages, the
+  cluster, and the private CA's keys (a certificate's private key and the CA's export). Proxies,
+  routes, upstreams, middlewares, route groups, maintenance windows and the rest are readable. It
+  may also make the calls that only look: a live capture, planning a proxy's YAML (never applying
+  it), checking a route's rules and looking an upstream's DNS name up (nothing saved).
+- **Read and change** also creates, changes and deletes records, creates zones and changes a zone's
+  settings (typo help), clears the DNS cache and a proxy's cache, sets, switches and removes status
+  pages, edits a route (its upload limits, redirect, web application firewall and rules, group),
+  edits several routes at once (batch edit and *Set status page*), saves the route groups, and
+  creates and changes scheduled maintenance windows, upstreams and middlewares. DNZ still refuses
+  an assistant passwords and sign-in on routes and middlewares.
+  Nothing else: no zone deletion, no rollbacks, no approvals, no settings, no applying a proxy's
+  YAML, no new or deleted routes, and no deleting or merging maintenance windows, upstreams or
+  middlewares.
 
 Access tokens last an hour; the assistant renews them with a refresh token that lasts 30 days from
 its last use and is replaced every time. **Account → Connected apps** (your name in the top bar)

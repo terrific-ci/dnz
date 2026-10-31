@@ -43,6 +43,9 @@ The settings (`POST` / `PUT` / `POST /versions`):
 }
 ```
 
+An empty `intermediate_cn` is named after the root: `Example Root CA` gives `Example Issuing CA`, a
+root named otherwise `<Organization> Issuing CA`, else `DNZ Issuing CA`.
+
 `key_type` is `ecdsa-p256`, `ecdsa-p384`, `rsa-2048`, `rsa-3072` or `rsa-4096`. Empty `name_constraints`
 let the CA sign any name. A change to `subject`, `key_type`, `root_years`, the intermediate or
 `name_constraints` makes a new version; `crl`, `base_url` and `defaults` apply at once. A field left out

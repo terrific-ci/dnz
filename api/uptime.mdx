@@ -105,6 +105,42 @@ A check (`/check`, `/test`) answers `{"ok": true, "slow": false, "latency_ms": 4
 { "enabled": true, "title": "Company status", "description": "", "hostname": "status.example.com", "incident_days": 14 }
 ```
 
-`/status.json` answers with `title`, `description`, `status` (`level`, `label`), `groups` of
-`components` (`name`, `status`, `uptime_90d`, `uptime_30d`, `days`), `incidents` (`active`,
-`past`) and `updated_at`, with `Access-Control-Allow-Origin: *`. A page that is off answers 404.
+## The page as JSON
+
+`/status.json` carries what the public page shows, for scripts and widgets, and nothing more. It
+needs no sign-in, answers with `Access-Control-Allow-Origin: *`, and a page that is off answers 404.
+
+```json
+{
+  "title": "Example status",
+  "description": "",
+  "status": { "level": "ok", "label": "All systems operational" },
+  "groups": [{
+    "name": "Web",
+    "level": "ok",
+    "components": [{
+      "name": "Shop",
+      "status": { "level": "ok", "label": "Operational" },
+      "uptime_90d": 99.98,
+      "uptime_30d": 100.0,
+      "days": [{ "day": "2026-11-01", "uptime": 100.0, "level": "ok" }]
+    }]
+  }],
+  "incidents": { "active": [], "past": [] },
+  "scheduled_maintenance": [{
+    "title": "Weekly backups",
+    "starts_at": "2026-11-08T15:00:00Z",
+    "ends_at": "2026-11-08T17:00:00Z",
+    "affected": ["Shop"]
+  }],
+  "updated_at": "2026-11-01T10:00:00Z"
+}
+```
+
+| Field | |
+| --- | --- |
+| `level` | `ok`, `degraded`, `partial`, `major`, `maintenance` or `none` (no data yet); `label` is the words the page shows for it |
+| `groups[].components` | The monitors on the page under their public names: `status`, `uptime_90d`, `uptime_30d` and `days` (each day's uptime and level) |
+| `incidents.active`, `incidents.past` | Open incidents, and those of the page's past days: `title`, `status` (`investigating`, `identified`, `monitoring`, `resolved`), `impact`, `started_at`, `resolved_at`, `affected` (public names) and `updates` (`status`, `message`, `at`) |
+| `scheduled_maintenance` | The occurrences of [scheduled maintenance](/proxy/status-pages#scheduled-maintenance) windows shown on the public page that start in the next 7 days and cover a monitor on it, soonest first: the window's name as `title`, `starts_at` and `ends_at` in UTC, and `affected`, the public names of the monitors it covers. Empty when there are none |
+| `updated_at` | When the page was built (UTC) |

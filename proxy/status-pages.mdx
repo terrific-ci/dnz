@@ -149,7 +149,11 @@ approval doesn't hold them back.
 ```bash
 dnz status-page set app.example.com maintenance --also api.example.com --also shop.example.com --for 2h
 dnz status-page set app.example.com maintenance --routes     # every hostname of app.example.com's route
+dnz status-page clear app.example.com --also api.example.com --also shop.example.com   # Back to normal
+dnz status-page clear app.example.com --routes               # every hostname of app.example.com's route
 ```
+
+`--include-redirects`, with `set` or `clear`, is **Also the redirects**.
 
 ## Scheduled maintenance
 
