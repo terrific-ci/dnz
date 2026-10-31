@@ -102,7 +102,7 @@ Deleting a proxy deletes its history.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/proxies/{id}/route-history?host=&before=&limit=` | Versions newest first, each with `version`, `created_at`, `source`, `action`, `actor`, `host`, `hosts`, `summary`, `restore_of`, `changes` (`label`, `kind`, `before`, `after`), `current` and `restorable` |
+| `GET` | `/api/proxies/{id}/route-history?host=&page=&per_page=` | Versions newest first, a page at a time (50 by default, at most 200), with `total` (the versions `host` leaves), `page` and `per_page`. Older clients page with `before=<version>&limit=` (up to 500) instead. Each version has `version`, `created_at`, `source`, `action`, `actor`, `host`, `hosts`, `summary`, `restore_of`, `changes` (`label`, `kind`, `before`, `after`), `current` and `restorable` |
 | `GET` | `/api/proxies/{id}/route-history/{version}` | One version with the route `before` and `after` it, and `restore_changes` |
 | `POST` | `/api/proxies/{id}/route-history/{version}/restore` | Puts it back: `{"version", "restore_of", "id", "host"}` |
 | `GET` / `PUT` | `/api/settings/route-history` | `{"keep_days", "keep_versions"}` (superadmin) |

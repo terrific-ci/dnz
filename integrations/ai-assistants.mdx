@@ -124,6 +124,10 @@ with OAuth isn't possible.
 
 ## Tools
 
+Tools that list something long take `page` (from 1) and `limit` (rows per page, at most 200), and
+answer with `total`, `page` and `per_page` next to the list, so the assistant can tell there is more
+and ask for the next page.
+
 | Tool | Does |
 |---|---|
 | `whoami` | Who the connection acts as, its divisions, superadmin or not |
@@ -131,7 +135,7 @@ with OAuth isn't possible.
 | `get_zone` | One zone's settings |
 | `list_records` | A zone's records, by name, type or a search in name, value and comment |
 | `export_zone` | A zone as a zone file |
-| `zone_history` | A zone's versions: who changed what, when, from where |
+| `zone_history` | A zone's versions: who changed what, when, from where; `page` and `limit` (20 a page) |
 | `explain_query` | The decision path and answer for a name, type and client ([Query explain](/dns/query-explain)) |
 | `query_log` | Recent queries, filtered by name, client or source; the last 24 hours unless `range` (`1h`, `24h`, `7d`, `all`) or `since`/`until`. In a cluster every server's, each row naming its server; `node` (a node id) for one server ([Query logs](/dns/query-logs#in-a-cluster)) |
 | `capture_queries` | Watch live queries matching keywords (typed, or saved keyword lists) for a few seconds, grouped by domain ([Live capture](/dns/live-capture)) |
@@ -154,8 +158,8 @@ with OAuth isn't possible.
 | `cloudflare_compare` | A local zone beside the Cloudflare zone of the same name, one row per name and type with both values and a status (same, split, only local, only Cloudflare, conflict) ([Compare with Cloudflare](/integrations/cloudflare#compare-with-cloudflare)) |
 | `cloudflare_zone` | A Cloudflare zone's traffic, SSL/TLS and security settings, DNSSEC and tunnel hostnames, each part on its own: a part the token has no permission for is `{ missing: "Zone → Analytics → Read" }` (the permission to add), and `missing_permissions` lists every one Cloudflare refused so far. Only with `dnz mcp` (stdio): assistants signed in over OAuth can't reach Cloudflare connections ([Token permissions](/integrations/cloudflare#token-permissions)) |
 | `encrypted_dns` | Encrypted DNS: whether DoT, DoH, DoQ and DoH3 are on, the addresses devices use, the certificate in use and, for superadmins, the certificate DNZ issues itself |
-| `audit_log` | Who changed what |
-| `pending_changes` | Change requests waiting for approval |
+| `audit_log` | Who changed what, newest first; `page` and `limit` (50 a page) |
+| `pending_changes` | Change requests waiting for approval (or, with `status`, decided ones); `page` and `limit` (50 a page) |
 | `topology` | How divisions, zones, views, upstreams, proxies and replication fit together |
 | `view_records` | [Views](/dns/views) with their networks and record counts, or one view's records (zone, name, type, value, TTL, on/off) in the zones you may read |
 | `list_status_pages` | Hosts with a status page ([Status pages](/proxy/status-pages)): kind, state, schedule, allowed addresses, proxies |
@@ -167,7 +171,7 @@ with OAuth isn't possible.
 | `set_typo_help` ✎ | Sets a zone's [typo help](/dns/typo-help): the mode, the fallback DNZ Proxy and the suggested sites |
 | `clear_dns_cache` ✎ | Empties the forwarding and recursive caches (superadmin) |
 | `clear_proxy_cache` ✎ | Drops what a DNZ Proxy's nodes cached for a hostname (superadmin) |
-| `proxy_route_history` | A proxy's route versions (or one hostname's): who changed which route when, and what changed part by part; with `version`, the route before and after and what restoring would change. Restoring is left to people ([Route history](/proxy/route-history)) |
+| `proxy_route_history` | A proxy's route versions (or one hostname's), `page` and `limit` (20 a page): who changed which route when, and what changed part by part; with `version`, the route before and after and what restoring would change. Restoring is left to people ([Route history](/proxy/route-history)) |
 | `proxy_route_group` ✎ | Puts a hostname's route in a group (Web app, REST API, …) on every proxy serving it (or one), or in none (`group: ""`); only sorts the Routes page |
 | `set_status_page` ✎ | Sets or replaces a host's status page: maintenance, moved, blocked…, with a schedule and allowed addresses; `moved` is a 301 unless `permanent: false` (a 302) |
 | `switch_status_page` ✎ | Turns a host's status page on or off |

@@ -68,6 +68,44 @@ Commands that delete or replace something ask first. `--yes` (`-y`) skips the qu
   pass `--yes`.
 </Warning>
 
+### Long lists come a page at a time
+
+Lists that can grow long take the same two flags: `--limit` (rows per page, 50 by default, at most
+200) and `--page` (from 1). They are:
+
+| List | Command |
+| --- | --- |
+| Threat findings | `dnz threats list` |
+| Change requests | `dnz change list` |
+| The audit log | `dnz audit` |
+| Zone history | `dnz zone history` |
+| Route history | `dnz proxy routes history` |
+| Users | `dnz user list` |
+| Division members | `dnz division members` |
+| API tokens | `dnz token list` |
+| Update keys | `dnz update-key list` |
+
+Under a page that doesn't hold the whole list, a footer says where it is and how to get the next one:
+
+```bash
+dnz threats list --limit 100 --page 2
+# …
+# 101-200 of 1234 findings, page 2 of 13 (--page 3 for the next)
+```
+
+Users, members, API tokens and update keys also take `-q` (`--query`): the server searches before it
+pages, so the footer counts what matches.
+
+```bash
+dnz user list -q budi                         # user name, name or email
+dnz division members radiology -q editor      # also the role
+dnz token list -q certbot                     # name or prefix
+dnz update-key list -q kea                    # name
+```
+
+With `--json` the answer carries `total`, `page` and `per_page` next to the list, so a script can walk
+every page.
+
 ## Which server a command talks to
 
 The CLI picks the server in this order:

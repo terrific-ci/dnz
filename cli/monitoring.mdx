@@ -171,7 +171,7 @@ Who changed what, newest first:
 dnz audit
 dnz audit --division it --category record
 dnz audit --query 192.0.2.10 --limit 200
-dnz audit --before 1234                       # the next page
+dnz audit --page 2                            # older entries
 ```
 
 | Option | What it does |
@@ -179,8 +179,9 @@ dnz audit --before 1234                       # the next page
 | `-d`, `--division` | Only this division |
 | `-q`, `--query` | Text in the user, action, target, details or address |
 | `--category` | Action prefix, e.g. `record`, `zone`, `user`, `settings` |
-| `-l`, `--limit` | How many (default 50) |
-| `--before` | Entries older than this id: the next page |
+| `--limit` | Entries per page (default 50, at most 200; `-l` and `-n` still work) |
+| `--page` | Which page, from 1. A footer under the list gives the next one ([long lists](/cli/overview#long-lists-come-a-page-at-a-time)) |
+| `--before` | Entries older than this id, instead of a page (still works) |
 
 Superadmins see every division's entries. Others see the divisions where they have `audit.read`:
 the one given with `--division`, or their only one.

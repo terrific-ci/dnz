@@ -10,7 +10,7 @@ how history and change approval work, see [History and change approval](/dns/his
 
 ```bash
 dnz zone history example.com                  # newest versions: when, from where, who, what
-dnz zone history example.com -n 100           # more of them
+dnz zone history example.com --page 2         # older versions, 50 to a page (--limit 100 for more)
 dnz zone history example.com 12               # what version 12 changed
 dnz zone diff example.com 10 14               # from version 10 to version 14
 dnz zone diff example.com 10                  # from version 10 to the zone as it is now
@@ -56,6 +56,7 @@ dnz change list                               # pending ones you can see
 dnz change list --to-approve                  # the ones you can decide
 dnz change list --mine --status all
 dnz change list --zone example.com --status approved
+dnz change list --status all --page 2         # newest first, 50 to a page (--limit)
 dnz change show 42                            # what it changes, comments, who decided
 dnz change comment 42 "after the release, please"
 dnz change approve 42 --comment ok            # someone else's, with changes.approve
@@ -65,6 +66,9 @@ dnz change cancel 42                          # your own pending one
 
 An approval that conflicts with the zone as it is now fails with the reason, and the request stays
 pending.
+
+Zone history and change requests come [a page at a time](/cli/overview#long-lists-come-a-page-at-a-time):
+a footer under the list says where the page is and gives the `--page` for the next.
 
 ## Approval policies
 

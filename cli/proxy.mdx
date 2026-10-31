@@ -108,7 +108,7 @@ Every add, edit, delete and group move of a route is kept as a version ([Route h
 
 ```bash
 dnz proxy routes history edge                     # every change to edge's routes, newest first (deleted ones too)
-dnz proxy routes history edge app.example.com     # one hostname's route; -n 100 for more
+dnz proxy routes history edge app.example.com     # one hostname's route; --page 2 for older, --limit 100
 dnz proxy routes history edge app.example.com 7   # what version 7 changed, part by part
 dnz proxy routes restore edge app.example.com 7   # the route as it was right after version 7 (asks first; -y)
 dnz settings route-history --keep-days 365 --keep-versions 1000   # how long versions are kept (superadmin)

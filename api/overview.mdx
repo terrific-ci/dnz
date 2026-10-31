@@ -98,6 +98,34 @@ Errors come back as JSON with an HTTP status:
 | `409` | A conflict: a duplicate record, a CNAME next to other data |
 | `429` | Too busy right now, for example a [query log search](/dns/query-logs#two-searches-at-a-time) while two others run on the server. Wait the seconds in `Retry-After` and try again |
 
+## Long lists
+
+Lists that can grow long come a page at a time. Ask with `page` (from 1) and `per_page` (50 by
+default, at most 200; `limit` is read as `per_page`). The answer has `total`, `page` and `per_page`
+next to the list. Filters and searches apply before the page is cut, so `total` is what matches.
+
+| List | Path | Filters and search |
+| --- | --- | --- |
+| Change requests | `/api/changes` (`changes`) | `status`, `scope`, `zone_id`, `division_id` ([History and changes](/api/changes)) |
+| Audit log | `/api/audit` | `q`: text in the user, action, target, details or address |
+| Zone history | `/api/zones/{id}/versions` (`versions`) | – |
+| Route history | `/api/proxies/{id}/route-history` (`versions`) | `host` |
+| Threat findings | `/api/threats/findings`, `/api/threats/groups` | `q`: client or domain, and more ([Threats](/api/threats#listing-findings)) |
+| Middlewares | `/api/proxy/middlewares` | `q`, `protocol`, `own`, `firewalls`, `unused` |
+| Users | `/api/users` (`users`) | `q`: user name, name or email |
+| Division members | `/api/divisions/{id}/members` (`members`) | `q`: user name, name, email or role |
+| API tokens | `/api/divisions/{id}/tokens` (`tokens`) | `q`: name or prefix |
+| Update keys | `/api/divisions/{id}/update-keys` (`keys`) | `q`: name |
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" "https://dns.example.com/api/zones/3/versions?page=2&per_page=100"
+```
+
+<Note>
+  Older clients keep working: a list that used to answer a bare array, or page with a `before` cursor,
+  still answers that way when neither `page` nor `per_page` is given.
+</Note>
+
 ## Example: adding a record
 
 ```bash

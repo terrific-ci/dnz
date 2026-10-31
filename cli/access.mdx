@@ -9,6 +9,9 @@ divisions, roles and permissions fit together, see [Users, divisions and roles](
 Divisions and users are named by id, slug or name. Commands that act on a division's tokens or keys
 take `--division` (`-d`) when you belong to more than one.
 
+Users, members, API tokens and update keys come [a page at a time](/cli/overview#long-lists-come-a-page-at-a-time)
+(`--page`, `--limit`, 50 to a page by default), and `-q` (`--query`) searches them on the server first.
+
 ## Divisions
 
 ```bash
@@ -23,6 +26,7 @@ dnz division rm radiology                               # superadmin
 
 ```bash
 dnz division members radiology
+dnz division members radiology -q editor --page 2      # search user name, name, email or role; 50 to a page
 dnz division add-member radiology budi --role Editor    # add a member, or change their role
 dnz division rm-member radiology budi
 ```
@@ -33,6 +37,7 @@ User accounts are managed by superadmins.
 
 ```bash
 dnz user list
+dnz user list -q budi                         # user name, name or email
 dnz user add budi --name "Budi S"             # asks for a password; they change it at first sign-in
 dnz user add rina --name "Rina" --email rina@example.com --superadmin
 dnz user assign budi --division radiology --role Editor
@@ -70,6 +75,7 @@ needs the `tokens.manage` permission (the Owner role has it).
 ```bash
 dnz token create certbot -p records.write,zones.read -z example.com --expires-in-days 90
 dnz token list [--division it]
+dnz token list -q certbot --limit 100         # name or prefix
 dnz token rm 3                                # revoke
 ```
 
@@ -100,6 +106,7 @@ dnz update-key create kea-ddns -t A,AAAA,PTR,DHCID -m '*.dhcp.example.com' --all
 dnz update-key create external-dns -z example.com -t A,AAAA,CNAME,TXT --axfr
 dnz update-key create acme -t TXT -m '_acme-challenge.*'
 dnz update-key list
+dnz update-key list -q kea                    # by name
 dnz update-key set 2 --allow-from 10.0.0.0/8 --expires-in-days 365
 dnz update-key set 3 --type A,TXT --any-name --axfr off
 dnz update-key rm 2                           # revoke

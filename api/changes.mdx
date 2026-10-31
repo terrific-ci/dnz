@@ -9,14 +9,14 @@ For how history and change approval work, see [History and change approval](/dns
 
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
-| `GET` | `/api/zones/{id}/versions?before=&limit=` | `zones.read` | The zone's history, newest first |
+| `GET` | `/api/zones/{id}/versions?page=&per_page=` | `zones.read` | The zone's history, newest first, a page at a time |
 | `GET` | `/api/zones/{id}/versions/{version}` | `zones.read` | One version and what it changed |
 | `GET` | `/api/zones/{id}/versions/{version}/records` | `zones.read` | The records as they were right after that version |
 | `GET` | `/api/zones/{id}/diff?from=&to=` | `zones.read` | What changed between two versions |
 | `POST` | `/api/zones/{id}/rollback` | `records.write` | Roll back to a version |
 | `GET` | `/api/changes/{id}` | `zones.read` | A change request |
 | `DELETE` | `/api/changes/{id}` | `zones.read` | Cancel your own pending change request |
-| `GET` | `/api/changes` | `zones.read` | Change requests (session only) |
+| `GET` | `/api/changes?status=&scope=&zone_id=&division_id=&page=&per_page=` | `zones.read` | Change requests, newest first, a page at a time (session only; see [below](#list-change-requests)) |
 | `GET` | `/api/changes/count` | – | Waiting for you, and your own (session only) |
 | `POST` | `/api/changes/{id}/approve` | `changes.approve` | Apply someone else's change request (session only) |
 | `POST` | `/api/changes/{id}/reject` | `changes.approve` | Reject it with a comment (session only) |
@@ -49,8 +49,13 @@ For how history and change approval work, see [History and change approval](/dns
   Change requests of this zone waiting for approval.
 </ResponseField>
 
-Page back with `?before=<version>` (and `limit`, up to 500). `GET …/versions/{version}` adds what the
-version changed:
+<ResponseField name="total" type="integer">
+  The versions kept.
+</ResponseField>
+
+Ask for a page with `?page=2&per_page=50` (50 by default, at most 200); the answer adds `page` and
+`per_page`. Older clients page back with `?before=<version>&limit=` (up to 500) and get no `page` or
+`per_page`. `GET …/versions/{version}` adds what the version changed:
 
 ```json
 {
@@ -122,6 +127,19 @@ Location: /api/changes/42
 
 Without a policy covering the caller, every endpoint answers as usual (200, 201 or 204), so a client
 only needs to handle `202` when approval is in use.
+
+### List change requests
+
+`GET /api/changes` lists change requests newest first:
+
+- `status`: `pending` (default), `approved`, `rejected`, `cancelled` or `all`.
+- `scope`: `to_approve` (the ones you can decide) or `mine`.
+- `zone_id`, `division_id`: only those of a zone or division.
+
+With `page` or `per_page` (50 by default, at most 200) it answers
+`{"changes": [...], "total", "page", "per_page"}`, counting only the requests the caller may see.
+Without them it answers a bare array of at most `limit`
+(100), as before.
 
 ### Follow a change request
 
