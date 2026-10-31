@@ -95,9 +95,9 @@ each. Upgrading moves them into upstreams once:
 <Warning>
   DNZ copies a SQLite database (and the Redis backend's local copy) to
   `backups/before-upstreams-<time>.db` next to it before the move. With **Postgres or MySQL**, take a
-  dump before upgrading. From v1.28 on, the old per-proxy services are gone (DNZ makes another copy,
+  dump before upgrading. From v2.0.0 on, the old per-proxy services are gone (DNZ makes another copy,
   `backups/before-cleanup-<time>.db`, before dropping them), so going back to a version before v1.27
-  needs that backup.
+  needs that backup. See [Upgrading](/deploy/upgrading#breaking-changes).
 </Warning>
 
 ## Checking a proxy setup

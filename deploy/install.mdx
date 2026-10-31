@@ -50,6 +50,11 @@ The script downloads both binaries for the machine's architecture (amd64 or arm6
 makes sure they run, and puts them in `/usr/local/bin` (asking for `sudo` when it needs to). Run it
 again to upgrade; it tells you to restart the services if they're running.
 
+<Warning>
+  Take a backup before upgrading: some releases change the database in ways that can't be undone
+  without one. Read [Upgrading](/deploy/upgrading) for the steps and each version's breaking changes.
+</Warning>
+
 | Option | Meaning |
 | --- | --- |
 | `--service` | Also run `dnz` as a systemd service and start it; see [systemd](/deploy/systemd) |

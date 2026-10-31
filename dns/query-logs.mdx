@@ -374,14 +374,12 @@ The first start on a version with day files empties the old `query_logs` table. 
 into the day files: Query Logs starts empty and fills up from then on. The charts and top lists keep
 their history, since they come from the hourly counts.
 
-With SQLite, v1.16.0 deleted the old rows during the start, before DNS and the web UI were
-listening, so with gigabytes of log port 8080 stayed closed for many minutes after the upgrade.
-v1.16.1 to v1.27 set them aside at start (no wait) and delete them in the background shortly after.
-
 <Warning>
-  From v1.28 on, a SQLite database from v1.15 or older that still holds its query log is refused at
-  start, with a message asking you to upgrade to v1.27 first. Upgrade to v1.27, start it once, then
-  upgrade to the newer version. A database whose old log is empty upgrades directly.
+  A server on v1.15 or older loses the query log those versions kept in the main database. From
+  v2.0.0 on, the upgrade drops the old table in one step during the start: there is nothing to do
+  first, nothing to wait for, and nothing left to delete in the background afterwards. (v1.16.0
+  deleted the old rows one by one before DNS and the web UI were listening; v1.16.1 to v1.27 set
+  them aside and deleted them in the background.)
 </Warning>
 
 Postgres and MySQL give the table's space back at once. With SQLite, `dnz.db` keeps its size: DNZ

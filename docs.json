@@ -70,6 +70,7 @@
               "deploy/security",
               "deploy/clients",
               "deploy/backups",
+              "deploy/upgrading",
               "deploy/troubleshooting",
               "deploy/benchmarks"
             ]

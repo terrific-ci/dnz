@@ -1,0 +1,204 @@
+---
+title: "Upgrading"
+description: "Upgrade DNZ with Docker, the install script or a cluster, take a backup first, and what each release with breaking changes needs from you."
+---
+
+Most upgrades need nothing from you: DNZ upgrades its database by itself when the new version
+starts. Some releases change the database in ways that can't be undone without a backup. They are
+listed under [Breaking changes](#breaking-changes): read the ones between your version and the new
+one before you start.
+
+To see which version runs now:
+
+```bash
+dnz --version
+docker exec dnz dnz --version   # with Docker
+```
+
+## Take a backup first
+
+A newer DNZ upgrades the database when it starts, and an older version may refuse it afterwards.
+Take a backup before every upgrade, so you can go back.
+
+<Tabs>
+  <Tab title="DNZ's own backups">
+    With a target set up under **Settings → Backups**, run every target now and wait for the result:
+
+    ```bash
+    dnz backup run
+    ```
+
+    An archive restores onto the version that made it or a newer one; see
+    [Backups and restore](/admin/backups). This works on every database, Redis included.
+  </Tab>
+  <Tab title="SQLite (binary)">
+    ```bash
+    sqlite3 /var/lib/dnz/dnz.db ".backup '/root/dnz-before-upgrade-$(date +%F).db'"
+    ```
+  </Tab>
+  <Tab title="SQLite (Docker)">
+    The image has no `sqlite3`, so stop DNZ for a moment and copy the file out of the container:
+
+    ```bash
+    docker compose stop dnz
+    docker compose cp dnz:/data/dnz.db ./dnz-before-upgrade.db
+    docker compose cp dnz:/data/dnz.db-wal ./dnz-before-upgrade.db-wal 2>/dev/null || true
+    ```
+
+    The upgrade below starts it again.
+  </Tab>
+  <Tab title="Postgres or MySQL">
+    ```bash
+    pg_dump -Fc dnz > dnz-before-upgrade-$(date +%F).dump
+    mysqldump --single-transaction dnz > dnz-before-upgrade-$(date +%F).sql
+    ```
+
+    With the Postgres container from [Docker with Postgres](/deploy/database#docker-with-postgres):
+
+    ```bash
+    docker compose exec -T postgres pg_dump -U dnz -Fc dnz > dnz-before-upgrade-$(date +%F).dump
+    ```
+  </Tab>
+</Tabs>
+
+More on each database in [Backups and updates](/deploy/backups).
+
+## Upgrade
+
+<Tabs>
+  <Tab title="Docker Compose">
+    In the folder with your `docker-compose.yml`:
+
+    ```bash
+    docker compose pull && docker compose up -d
+    docker compose logs -f dnz
+    ```
+
+    With a pinned tag such as `terrificci/dnz:1.27.0`, change the tag in `docker-compose.yml` first.
+    The log says when the database upgrade is done and DNS is listening.
+  </Tab>
+  <Tab title="Install script">
+    Run the [install script](/deploy/install#linux-binary) again. It replaces `dnz` and `dnz-proxy`
+    in `/usr/local/bin`; then restart the service:
+
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh
+    sudo systemctl restart dnz
+    journalctl -u dnz -f
+    ```
+
+    Installed with `--service`, run it with `--service` again: it replaces the binary and restarts
+    `dnz` itself. Add `--version` for one exact version instead of the latest.
+  </Tab>
+  <Tab title="Binary">
+    [Copy the new binary](/deploy/install#linux-binary) out of the new image, replace it and
+    restart:
+
+    ```bash
+    sudo install -m 755 dnz/dnz /usr/local/bin/dnz
+    sudo systemctl restart dnz
+    ```
+  </Tab>
+</Tabs>
+
+Then check that it runs the new version and answers:
+
+```bash
+dnz --version
+dnz healthcheck
+```
+
+If you run [DNZ Proxy](/proxy/dnz-proxy) nodes, upgrade them to the same version right after DNZ:
+`docker compose pull && docker compose up -d` on each node, or the install script with
+`--only dnz-proxy`.
+
+### A cluster
+
+Upgrade one node at a time: the first node on the new version upgrades the shared database, the
+others keep answering meanwhile. Finish the other nodes soon after. See
+[Cluster → Upgrading](/deploy/cluster#upgrading).
+
+With [replication](/dns/replication), upgrade the primary and its secondaries to the same version.
+
+### Going back
+
+Stop DNZ, put the backup back in place of the database (for SQLite, remove any `dnz.db-wal` and
+`dnz.db-shm` next to it, or restore the dump with `pg_restore` / `mysql`), then start the version
+you came from. Changes made after the upgrade are lost. A DNZ archive restores onto the version that
+made it.
+
+## Breaking changes
+
+Newest first. Upgrading across several versions at once is fine: what each one needs applies on
+the way.
+
+### v2.0.0
+
+<Warning>
+  This release **permanently removes** what DNZ no longer reads: the old per-proxy services (replaced
+  by [Proxy → Upstreams](/proxy/upstreams) in v1.27.0) and other tables and columns nothing uses.
+  After it, going back to an older version needs a backup.
+</Warning>
+
+- **The copy DNZ makes.** Before dropping anything, DNZ copies a SQLite database (and the Redis
+  backend's local copy) to `backups/before-cleanup-<time>.db` in the folder of the database:
+  `/var/lib/dnz/backups/` with systemd, `/data/backups/` in the Docker volume. With **Postgres or
+  MySQL**, DNZ makes no copy: [take a dump](#take-a-backup-first) before upgrading.
+- **Going back.** After this upgrade, going back to an older version needs that copy or your own
+  backup (v1.27 could still go back to v1.26 without one); see [Going back](#going-back).
+- **Straight from v1.26 or older.** Allowed: the proxy services are moved into upstreams first, as
+  in v1.27.0 (below), then the old tables are dropped. DNZ makes one copy before both,
+  `backups/before-upstreams-<time>.db`. Check the proxies on a copy of the database before upgrading,
+  as v1.27.0 describes, with the new version's image.
+- **API.** `/api/proxies/{id}/services` is gone (v1.27 answered `410 Gone`). Use
+  [`/api/proxy/upstreams`](/proxy/upstreams) instead.
+- **From v1.15 or older.** The server loses the query log those versions kept in the main
+  database: it is dropped during the upgrade, in one step, with nothing to wait for (v1.16 and later
+  keep the query log in day files). See
+  [Upgrading to the day files](/dns/query-logs#upgrading-to-the-day-files).
+
+To get the SQLite copies out of the Docker volume:
+
+```bash
+docker compose cp dnz:/data/backups/ ./dnz-backups/
+ls ./dnz-backups
+```
+
+### v1.27.0
+
+Every proxy's services became shared upstreams on **Proxy → Upstreams**: services identical in
+content became one upstream, the same name with other servers stayed apart, and nothing visitors get
+changed. See [Upstreams](/proxy/upstreams#coming-from-per-proxy-services).
+
+- DNZ copied a SQLite database to `backups/before-upstreams-<time>.db` next to it before the move.
+  With **Postgres or MySQL**, take a dump before upgrading.
+- The proxy page's *Advanced* tab is gone. To see before upgrading which routes hold settings only
+  the proxy's YAML can change, check a copy of the database with the new version (read-only; the
+  running server isn't touched):
+
+  ```bash
+  mkdir -p ~/dnz-check
+  docker cp dnz:/data/dnz.db ~/dnz-check/
+  docker cp dnz:/data/dnz.db-wal ~/dnz-check/ 2>/dev/null || true
+  docker run --rm --user "$(id -u):$(id -g)" -v ~/dnz-check:/check terrificci/dnz:1.27.0 \
+    proxy advanced-check --database /check/dnz.db
+  ```
+
+  Without Docker:
+
+  ```bash
+  dnz proxy advanced-check --database ./dnz-backup.db
+  ```
+
+  `--database` also takes a `postgres://` or `mysql://` URL of a restored copy. See
+  [Checking a proxy setup](/proxy/upstreams#checking-a-proxy-setup).
+- `/api/proxies/{id}/services` answers `410 Gone`: use `/api/proxy/upstreams`.
+- Going back to v1.26 still works.
+
+### v1.16.0
+
+The query log moved out of the main database into one file per day on each server (`logs/` next to
+the database). The old log is **not copied**: Query Logs starts empty after the upgrade and fills up
+from then on. The charts and top lists keep their history. With SQLite, `dnz.db` keeps its old size
+until you run `dnz db vacuum`. See
+[Upgrading to the day files](/dns/query-logs#upgrading-to-the-day-files).
