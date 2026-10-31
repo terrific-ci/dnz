@@ -17,7 +17,7 @@ What is in there:
 - DNSSEC validation results and the recursive resolver,
 - zone transfers, NOTIFY, secondary zones and dynamic updates,
 - proxying on or off, proxies by kind, certificate expiry, DNZ Proxy nodes, Traefik and Caddy
-  proxies, GeoDNS health checks and the Caddy/Traefik record syncs.
+  proxies, GeoDNS health checks and the record syncs of read-only proxies and Traefik's routers.
 
 Metrics are **off by default**.
 
@@ -143,7 +143,7 @@ They cover:
 | `DnzDomainExpiring`, `DnzDomainExpired` | A [monitored domain](/dns/domain-expiry) expires within 14 days, or has expired |
 | `DnzProxyNodeDown`, `DnzTraefikDisconnected` | A DNZ Proxy node or a Traefik stopped reporting |
 | `DnzProxyNodeDiskFull`, `DnzProxyNodeMemoryHigh` | A DNZ Proxy node has less than 5% disk free, or its container is above 90% of its memory limit (its machine above 95%) |
-| `DnzHealthCheckFailing`, `DnzSyncFailing` | A GeoDNS health check, or a Caddy/Traefik record sync, fails |
+| `DnzHealthCheckFailing`, `DnzSyncFailing` | A GeoDNS health check, or a record sync (a read-only proxy's, or Traefik's routers), fails |
 | `DnzClusterNodeBehind`, `DnzClusterNoLeader` | A cluster node has not loaded the latest changes, or no node holds the leader lease |
 | `DnzBackupFailing`, `DnzBackupOverdue` | [Backups](/admin/backups) to a target failed twice in a row, or a scheduled one is more than an hour overdue |
 | `DnzHealthFindingFailing`, `DnzHealthFindingsStale` | A [health check](/admin/health-check) finding fails, or the health check stopped running |
@@ -188,7 +188,8 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_proxy_node_requests_in_flight_peak`, `dnz_proxy_node_connections_open_peak` `{proxy,node}` | The most requests in progress and connections open at once over the node's last report interval (5 s); per minute and over time in Proxy → Analytics. Same switch |
 | `dnz_proxy_waf_hits_total` `{proxy,node,middleware,rule,action}` | Requests a DNZ Proxy [web application firewall](/proxy/waf) matched, by rule id and action (`block`: refused, `log`: only logged). Starts at 0 when a node restarts |
 | `dnz_traefik_connected{proxy}`, `dnz_caddy_proxy_connected{proxy}` | 1 while a Traefik or Caddy proxy fetched its configuration in the last minute (`…_last_seen_timestamp_seconds` says when) |
-| `dnz_caddy_sync_success{id,caddy,kind}` | [Sites in DNS](/integrations/caddy): 1 when the last sync worked, `kind` `caddy` or `traefik` (not proxies; `dnz_caddy_sync_timestamp_seconds` says when) |
+| `dnz_proxy_sites_sync_success{proxy,kind}` | A [read-only proxy](/proxy/read-only): 1 when the last sync of its sites worked (those not paused), `kind` `caddy` or `traefik`; `dnz_proxy_sites_sync_timestamp_seconds` says when |
+| `dnz_caddy_sync_success`, `dnz_caddy_sync_timestamp_seconds` `{id,caddy,kind}` | The same under their names from before v2 (Sites in DNS; `id` is the proxy's), kept for one release: move dashboards and alerts to `dnz_proxy_sites_sync_*` |
 | `dnz_health_findings{status}` | [Health check](/admin/health-check) findings by status |
 | `dnz_uptime_up{monitor,kind}`, `dnz_uptime_response_seconds{monitor}`, `dnz_uptime_ratio_30d{monitor}` | [Uptime monitors](/dashboard/uptime): 1 while up (0 while down), the last check's response time, and the share of the last 30 days' checks it was up. Also `dnz_uptime_status`, `dnz_uptime_last_check_timestamp_seconds` and `dnz_uptime_open_incidents` |
 | `dnz_dhcp_leases{server}`, `dnz_dhcp_read_success{server}` | DHCP servers' live leases, and whether DNZ can read them |

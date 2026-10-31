@@ -1,0 +1,90 @@
+---
+title: "Read-only proxies"
+description: "Add a Caddy or Traefik DNZ only reads, preview its records and keep them in sync from the terminal."
+---
+
+`dnz proxy sites` manages **read-only proxies**: a Caddy (or, with `--traefik`, a Traefik) that
+keeps its own configuration. DNZ never configures it; it reads the sites it serves and keeps DNS
+records for them in a division's zones, like **Add proxy → Keep my Caddyfile** / **Keep my Traefik
+config** in the dashboard. For what they do, see [Read-only proxies](/proxy/read-only).
+
+Commands name a read-only proxy by its name or id, and take `--division` (`-d`) where a division
+matters.
+
+<Note>
+  Before v2 these were `dnz caddy` (Sites in DNS). `dnz caddy …` now only says which
+  `dnz proxy sites` command to use instead.
+</Note>
+
+## Permissions
+
+- Adding, changing, syncing, pausing, resuming and removing one need `proxy.manage`, or
+  `integrations.manage` in its division (a division's owners).
+- Listing them and previewing a sync need `proxy.manage`, or `zones.read` in its division.
+
+## Adding
+
+```bash
+dnz proxy sites check --api http://10.0.0.5:2020 --user dnz --password   # read its config, save nothing
+dnz proxy add edge-1 --kind caddy --read-only --api http://10.0.0.5:2020 --user dnz --password --address 203.0.113.5,2001:db8::5
+dnz proxy sites add edge-2 --api 10.0.0.6:2019 --cname edge.example.net --add-only --paused --division ops
+dnz proxy sites check --traefik --api http://10.0.0.12:8080              # a Traefik's routers (Host rules)
+dnz proxy sites add edge-t --traefik --api http://10.0.0.12:8081 --user dnz --password --address 203.0.113.12 --records proxied
+dnz proxy add edge-t2 --kind traefik --read-only --api http://10.0.0.13:8081 --user dnz --password --address 203.0.113.13
+```
+
+`check` lists the hostnames DNZ can read and the zone each one would go in. `add` saves the
+read-only proxy, shows what a sync would add and remove, and asks before it starts syncing;
+`--paused` only saves it. `dnz proxy add NAME --read-only` does the same as `dnz proxy sites add`
+and takes the same flags (with `--kind caddy` or `--kind traefik`; `--ipv4` / `--ipv6` count as
+addresses).
+
+| Flag | Meaning |
+| --- | --- |
+| `--traefik` | Read a Traefik's API instead of Caddy's admin API (`check` and `add` only; the kind can't change afterwards) |
+| `--api` | Caddy's admin API, e.g. `http://10.0.0.5:2019`, or Traefik's API (`http://` when left out) |
+| `--user` | Basic-auth user, for an API behind basic auth (the read-only way in) |
+| `--password` | Ask for the basic-auth password (without a terminal: `DNZ_SITES_PASSWORD`) |
+| `--no-password` | Remove a stored password |
+| `--records` | `dns` (default): plain records. `proxied`: records through this proxy (one IPv4 and one IPv6 at most, no `--cname`) |
+| `--address` | Addresses DNS answers each hostname with (A/AAAA), comma-separated, up to 8 |
+| `--cname` | Answer with a CNAME to this hostname instead (DNS only) |
+| `--ttl` | TTL of the records, in seconds (default 300) |
+| `--add-only` | Keep the records of sites that leave its config (`--remove-missing` goes back) |
+| `--interval` | How often to read its config, in seconds (default 60; 15 to 86400) |
+| `--division`, `-d` | The division whose zones get its records |
+| `--paused` | Only save it; start with `dnz proxy sites sync` |
+
+For the Caddyfile side (a read-only site with basic auth, or the open admin API), see
+[Connect a Caddy](/proxy/read-only#connect-a-caddy). For Traefik's side (a read-only router on
+port 8081 behind a password, or the open API on 8080), see
+[Connect a Traefik](/proxy/read-only#connect-a-traefik).
+
+## Watching and syncing
+
+```bash
+dnz proxy sites ls                          # every one you see (--division: one division's); KIND says caddy or traefik
+dnz proxy sites show edge-1                 # settings, and the hostnames of the last read
+dnz proxy sites plan edge-1                 # what a sync would add and remove now
+dnz proxy sites sync edge-1                 # previewed first; also starts a paused one
+```
+
+Each hostname shows one of `add`, `update`, `remove`, `stale` (kept by an add-only proxy), `taken`
+(records made by hand or kept by another proxy), `skipped` (with the reason) or `ok` (in DNS
+already).
+
+## Changing and removing
+
+```bash
+dnz proxy sites edit edge-1 --address 203.0.113.9 --ttl 600 --interval 30
+dnz proxy sites edit edge-1 --records proxied --division ops
+dnz proxy sites edit edge-1 --name edge-jkt
+dnz proxy sites pause edge-1                # its records stay
+dnz proxy sites resume edge-1               # previewed first
+dnz proxy sites rm edge-1                   # and the records it added
+dnz proxy sites rm edge-1 --keep-records    # they stay, as records made by hand
+```
+
+`edit` takes the flags above; a new `--division` needs the same permission there. A changed
+address, TTL or division shows in DNS right away while the proxy is syncing (not paused). `--json` prints the API's answers, and `--yes` skips the questions (needed without a
+terminal).

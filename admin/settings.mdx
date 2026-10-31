@@ -60,7 +60,7 @@ instead of the proxy. It shows:
 
 - the addresses saved here (IPs or networks, separated by commas);
 - `DNZ_TRUSTED_PROXIES`, read-only (change it in the environment and restart);
-- the proxies DNZ trusts automatically, because it manages them or reads them for Sites in DNS;
+- the proxies DNZ trusts automatically, because it manages them or reads them ([read-only proxies](/proxy/read-only));
 - a warning, with a **Trust** button, for each address that sent these headers without being trusted
   since DNZ started.
 
@@ -255,7 +255,7 @@ dnz settings route-history --keep-days 90 --keep-versions 500
 | Page | What it holds | See |
 | --- | --- | --- |
 | **Settings → Profile** | The logo and label at the top of every status page | [Logo and label](/proxy/status-pages#logo-and-label) |
-| **Settings → Proxy** | Proxying on/off, the proxies (Traefik, DNZ Proxy, Caddy) and their setup, the connect key, Sites in DNS (Caddy and Traefik) | [Proxy](/proxy/overview), [Sites in DNS](/integrations/caddy) |
+| **Settings → Proxy** | Proxying on/off, the proxies (Traefik, DNZ Proxy, Caddy) and their setup, the connect key, read-only proxies (Caddy and Traefik; division owners see their division's) | [Proxy](/proxy/overview), [Read-only proxies](/proxy/read-only) |
 | **Settings → Integrations** | The division's Cloudflare connection, the OAuth client | [Cloudflare](/integrations/cloudflare) |
 | **Settings → API tokens** | API tokens and DNS update keys | [API](/api/overview), [Dynamic updates](/dns/dynamic-updates) |
 | **Settings → Notifications** | Providers, alert thresholds, daily summary | [Notifications](/integrations/notifications) |

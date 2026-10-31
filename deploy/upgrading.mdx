@@ -159,8 +159,21 @@ the way.
 - **Transports become an upstream's connection settings.** An upstream that proxies connected to
   differently is split (`<upstream>-<proxy>`), and Caddy proxies start applying an upstream's
   connection settings. See [From per-proxy transports](/proxy/upstreams#from-per-proxy-transports).
+- **Sites in DNS becomes read-only proxies.** Every Caddy and Traefik under Settings → Proxy →
+  Sites in DNS becomes a [read-only proxy](/proxy/read-only) with the same settings (API and
+  password, addresses or CNAME, TTL, read interval, add only, paused, division) and the same
+  records, which it keeps managing. It keeps its name, or becomes `<name>-sites` when a proxy
+  already has that name. Records lose the `caddy_id`, `origin_port` and `origin_https` fields.
+  `dnz caddy` is now [`dnz proxy sites`](/cli/proxy-sites), and the API moved from
+  `/api/divisions/{id}/caddies` and `/api/caddies/{id}` to [`/api/proxy-sites`](/api/proxy-sites)
+  and `/api/proxies/{id}/sites`. See [Upgrading from v1](/proxy/read-only#upgrading-from-v1).
+- **Metrics renamed.** `dnz_caddy_sync_success` and `dnz_caddy_sync_timestamp_seconds` are now
+  `dnz_proxy_sites_sync_success` and `dnz_proxy_sites_sync_timestamp_seconds`, labelled `proxy`
+  and `kind`. The old names are still exported for one release: move dashboards and alerts to the
+  new ones. See [Prometheus](/dashboard/prometheus).
 - **Check first.** `dnz proxy advanced-check --database <copy>`, run with the new version's image on a
-  copy of the database, lists every merge, rename and split before you upgrade (see
+  copy of the database, lists every merge, rename and split before you upgrade, and each Caddy and
+  Traefik of Sites in DNS with the read-only proxy it becomes (see
   [Checking a proxy setup](/proxy/upstreams#checking-a-proxy-setup)).
 - **Proxy YAML.** Exports are `version: 2` and hold TCP and UDP routes and each upstream's connection
   settings. Version-1 files still apply; one naming a middleware or upstream the upgrade renamed is

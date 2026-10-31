@@ -48,8 +48,9 @@ with all of their addresses.
 
 **Add proxy** first asks what runs the proxy: **Traefik**, **DNZ Proxy** or **Caddy**. For a Caddy
 or a Traefik it then asks whether DNZ configures it: **Caddy proxy** / **Traefik proxy**, or **Keep
-my Caddyfile** / **Keep my Traefik config**, which only reads it and goes to
-[Sites in DNS](/integrations/caddy) instead. DNZ Proxy has no such step: its routes always come
+my Caddyfile** / **Keep my Traefik config**, which adds a [read-only proxy](/proxy/read-only)
+instead: DNZ only reads its configuration and keeps DNS records for its sites. DNZ Proxy has no
+such step: its routes always come
 from DNZ. Then it asks for the name and the addresses visitors reach the proxy at, and shows that
 kind's setup, ready to copy. A proxy's kind can't be changed once it is added.
 
@@ -76,11 +77,11 @@ with its nodes up, upstream servers a node finds down, certificates failing or e
 days, and the latest proxy alerts. Traefik and Caddy report no traffic, so only their health shows.
 See the [dashboard tour](/dashboard/tour#overview).
 
-Below the proxies, **Sites in DNS** keeps DNS records for the sites in a Caddy's or Traefik's own
-configuration, without proxying through it. It shows once one is connected. It isn't a proxy: DNZ
-only reads that Caddy or Traefik and never changes it. See [Sites in DNS](/integrations/caddy).
-Division owners (with `integrations.manage`) can open **Settings → Proxy** and see only that
-section, with its own **Caddy** and **Traefik** buttons. Everything else there needs a superadmin.
+Below the other proxies are the **read-only proxies**: a Caddy or Traefik that keeps its own
+configuration, which DNZ only reads to keep DNS records for its sites and never changes. See
+[Read-only proxies](/proxy/read-only) (before v2: *Sites in DNS*). Division owners (with
+`integrations.manage`) can open **Settings → Proxy** and see and manage only their division's
+read-only proxies there. Everything else there needs a superadmin.
 
 ### From the environment
 

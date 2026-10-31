@@ -56,9 +56,9 @@ sessions, sign-in lockouts, dynamic DNS, views and blocklists (DoH) use it.
 DNZ trusts three kinds of address:
 
 - **Proxies it already knows.** You don't have to set anything for approved Traefik, Caddy and
-  DNZ Proxy [proxies](/proxy/overview), active DNZ Proxy nodes or the Caddy and Traefik servers of
-  Sites in DNS. DNZ trusts the address each one calls from, the addresses DNS answers with, and the
-  Traefik API's host. It reads them again every 30 seconds and right after one changes.
+  DNZ Proxy [proxies](/proxy/overview), active DNZ Proxy nodes or
+  [read-only proxies](/proxy/read-only). DNZ trusts the address each one calls from, the addresses
+  DNS answers with, and the host of the Traefik API (or, for a read-only proxy, of the API DNZ reads). It reads them again every 30 seconds and right after one changes.
 - **Addresses you add** under **Settings → General → Server → Trusted reverse proxies**, or from the terminal:
 
   ```bash

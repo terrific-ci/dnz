@@ -32,8 +32,8 @@ Each version holds:
 | DNS UPDATE | RFC 2136 updates signed with an [update key](/dns/dynamic-updates) |
 | Dynamic DNS | `/nic/update` from routers and ddclient |
 | ACME | DNS-01 challenge records |
-| Caddy | Records a Caddy in [Sites in DNS](/integrations/caddy) keeps for its sites |
-| Traefik | Records from a [Traefik's own routers](/proxy/traefik-records), or kept by a Traefik in [Sites in DNS](/integrations/caddy) |
+| Caddy | Records a [read-only](/proxy/read-only) Caddy proxy keeps for its sites (before v2: Sites in DNS) |
+| Traefik | Records from a Traefik proxy's [own routers](/proxy/traefik-records), or that a [read-only](/proxy/read-only) Traefik proxy keeps for its sites |
 | Proxy | Records added from a proxy route |
 | Zone transfer | A [secondary zone](/dns/replication) copying its primary |
 
@@ -60,7 +60,7 @@ approval when change approval covers you.
 <Note>
   Turning a zone off or on and DNSSEC show in history but are never rolled back: DNSSEC goes on and
   off with its keys and the DS at your registrar. Restored records get new ids, count as made by
-  hand (no longer a Caddy's or Traefik's), and lose the GeoDNS, weights and health checks of the
+  hand (no longer a proxy's site), and lose the GeoDNS, weights and health checks of the
   deleted record. Secondary zones can't be rolled back; change their primary.
 </Note>
 

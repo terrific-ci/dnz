@@ -1,0 +1,101 @@
+---
+title: "Read-only proxies API"
+sidebarTitle: "Read-only proxies"
+description: "Endpoints for read-only proxies: a Caddy or Traefik DNZ only reads, and the DNS records it keeps for their sites."
+---
+
+For what these endpoints do, see [Read-only proxies](/proxy/read-only). They serve Caddies and
+Traefiks alike. They take a signed-in session (see [API overview](/api/overview)); API tokens can't
+hold `proxy.manage` or `integrations.manage`, so with a token only the `zones.read` endpoints work.
+
+A Caddy or Traefik proxy that DNZ configures is in the [Proxy API](/api/proxy) instead.
+
+<Note>
+  Before v2 these were `/api/divisions/{id}/caddies` and `/api/caddies/{id}` (Sites in DNS). Those
+  paths are gone: use the ones below.
+</Note>
+
+## Endpoints
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/proxy-sites[?division_id=]` | `proxy.manage`, or `zones.read` in the division | The read-only proxies the caller sees, with the hostnames of their last read |
+| `POST` | `/api/proxy-sites` | `proxy.manage`, or `integrations.manage` in `division_id` | Add one (paused until its first sync) |
+| `POST` | `/api/proxy-sites/check` | the same | Read a Caddy's or Traefik's config with unsaved settings: hostnames and their zones |
+| `POST` | `/api/proxy-sites/password-hash` | the same | A bcrypt hash for Caddy's `basic_auth` or Traefik's `basicAuth`: `{"password": "…", "division_id": 1}` → `{"hash"}` |
+| `GET` | `/api/proxies/{id}/sites` | `proxy.manage`, or `zones.read` in its division | One read-only proxy |
+| `PATCH` | `/api/proxies/{id}/sites` | `proxy.manage`, or `integrations.manage` in its division | Change its settings; `"enabled": false` pauses it; a new `division_id` needs the same there |
+| `DELETE` | `/api/proxies/{id}/sites?keep_records=false` | the same | Remove it, and its records unless `keep_records=true` |
+| `GET` | `/api/proxies/{id}/sites/plan` | `proxy.manage`, or `zones.read` in its division | Read its config now and show what a sync would do |
+| `POST` | `/api/proxies/{id}/sites/sync` | `proxy.manage`, or `integrations.manage` in its division | Sync now; also starts a paused one |
+| `GET` | `/api/zones/{id}/site-records` | `zones.read` | The zone's records a proxy keeps for a site: `{"<record id>": {"proxy_id", "proxy", "kind", "read_only"}}` |
+
+`DELETE /api/proxies/{id}` on a read-only proxy does the same as its `sites` delete, for a
+superadmin. The other proxy endpoints (edit, approve, token, setup, routes) refuse a read-only
+proxy, whose `status` is `read_only`.
+
+## A read-only proxy
+
+```json
+{
+  "kind": "caddy",
+  "name": "edge-1",
+  "division_id": 1,
+  "api_url": "http://10.0.0.5:2020",
+  "api_user": "dnz",
+  "api_password": "…",
+  "record_mode": "dns",
+  "addresses": ["203.0.113.5", "2001:db8::5"],
+  "target": "",
+  "ttl": 300,
+  "add_only": false,
+  "interval_secs": 60
+}
+```
+
+- `kind` is `caddy` (the default) or `traefik`, set when it's added; it can't change afterwards.
+- `record_mode` is `dns` (the default: plain records) or `proxied` (records through this proxy,
+  with one IPv4 and one IPv6 address at most and no `target`).
+- Give either `addresses` (A/AAAA, up to 8) or `target` (a CNAME), not both.
+- `interval_secs` is 15 to 86400.
+- On `PATCH`, fields left out keep their value, and an absent `api_password` keeps the stored one
+  (`""` removes it).
+
+Answers never include the password; they have `has_password` instead, plus `id`, `division`,
+`enabled`, `last_read_at`, `last_sync_at`, `last_error`, `record_count` (records it keeps in DNS),
+`summary` (counts per outcome), `last_plan` (the hostnames of the last read) and `can_manage`.
+
+`check` takes the same body, plus `proxy_id` to check an existing one's new settings (and use its
+stored password when none is given).
+
+## Plans
+
+`plan` and `sync` return the hostnames with what happens to each:
+
+```json
+{
+  "host": "www.example.com",
+  "zone_id": 1,
+  "zone": "example.com",
+  "name": "www",
+  "status": "update",
+  "add": [{ "type": "A", "value": "203.0.113.9" }],
+  "remove": [{ "type": "A", "value": "203.0.113.5" }]
+}
+```
+
+`status` is `ok` (in DNS already), `add`, `update`, `remove` (left the config), `stale` (left it,
+kept because the proxy only adds), `taken` (records made by hand or kept by another proxy) or
+`skipped`; `reason` says why for the last three. `plan` also returns a `summary`; `sync` returns
+`added`, `removed`, the `hosts` and the read-only `proxy`.
+
+When the Caddy or Traefik can't be read, `plan`, `sync` and `check` answer `502` with
+`"code": "proxy_unreachable"` and the reason.
+
+## Records
+
+Records no longer carry a `caddy_id`. Which records a proxy keeps for its sites comes from
+`GET /api/zones/{id}/site-records` (the zone editor's badges), for read-only proxies and for a
+Traefik proxy's [records from its own routers](/proxy/traefik-records) alike (`read_only` tells them
+apart). Changing a record by hand with `PATCH /api/records/{id}` takes it off the proxy, so the
+proxy leaves that record alone from then on.

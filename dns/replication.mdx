@@ -657,8 +657,10 @@ and back without losing anything.
 
 - **Views** go by name: one this server doesn't have is made, with its networks (a network that
   already belongs to another view stays there).
-- **Proxies** and **Caddy** servers go by name too; one this server doesn't have is left off the
-  record, which then answers with its own address.
+- **Proxies** go by name too; one this server doesn't have is left off the record, which then
+  answers with its own address. A record a [read-only proxy](/proxy/read-only) keeps is a plain
+  record, transferred like any other; the copy names the proxy, and a promoted server that has a
+  read-only proxy of that name keeps it as that proxy's, else as a record made by hand.
 - **Traffic steering** comes back with each record: places, weights and health checks, and the
   health each check last found.
 - A copy is used only when it belongs to the serial the zone holds; otherwise the transferred

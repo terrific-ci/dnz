@@ -119,6 +119,7 @@
               "proxy/overview",
               "proxy/traefik",
               "proxy/caddy",
+              "proxy/read-only",
               "proxy/routing",
               "proxy/upstreams",
               "proxy/upstream-discovery",
@@ -143,7 +144,6 @@
             "group": "Integrations",
             "pages": [
               "integrations/cloudflare",
-              "integrations/caddy",
               "integrations/dhcp",
               "integrations/notifications",
               "integrations/logpush",
@@ -196,10 +196,10 @@
               "cli/replication",
               "cli/cluster",
               "cli/proxy",
+              "cli/proxy-sites",
               "cli/status-pages",
               "cli/uptime",
               "cli/cloudflare",
-              "cli/caddy",
               "cli/dhcp",
               "cli/notifications",
               "cli/backups",
@@ -229,10 +229,10 @@
               "api/filtering",
               "api/threats",
               "api/settings",
-              "api/caddy",
               "api/dhcp",
               "api/acme-ddns",
               "api/proxy",
+              "api/proxy-sites",
               "api/dnz-proxy",
               "api/status-pages",
               "api/uptime",
@@ -287,6 +287,18 @@
     {
       "source": "/blog/the-orange-cloud-comes-home",
       "destination": "/blog/cloudflare-in-your-server-room"
+    },
+    {
+      "source": "/integrations/caddy",
+      "destination": "/proxy/read-only"
+    },
+    {
+      "source": "/cli/caddy",
+      "destination": "/cli/proxy-sites"
+    },
+    {
+      "source": "/api/caddy",
+      "destination": "/api/proxy-sites"
     }
   ]
 }

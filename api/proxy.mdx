@@ -13,7 +13,8 @@ For what these objects do, see [Proxied records](/proxy/overview),
 [Connecting Traefik](/proxy/traefik), [Connecting Caddy](/proxy/caddy),
 [Routers, services and middlewares](/proxy/routing) and
 [Records from Traefik's routers](/proxy/traefik-records). DNZ Proxy nodes, entry points and analytics
-are in the [DNZ Proxy API](/api/dnz-proxy).
+are in the [DNZ Proxy API](/api/dnz-proxy). Read-only proxies (a Caddy or Traefik DNZ only reads)
+have their own endpoints: see the [Read-only proxies API](/api/proxy-sites).
 
 ## Settings and proxies
 
@@ -308,7 +309,7 @@ Responses also carry:
 
 | Field | Meaning |
 | --- | --- |
-| `status` | `pending`, `approved` or `ignored` |
+| `status` | `pending`, `approved`, `ignored`, or `read_only` for a [read-only proxy](/api/proxy-sites) (which the endpoints here don't edit) |
 | `detected_ip`, `detected_name` | How a Traefik or Caddy with the connect key is recognized |
 | `has_token` | Whether the proxy has a token of its own |
 | `locked_fields` | In `GET /api/settings/proxy`: the fields `DNZ_PROXY_SEED_*` sets (`name`, `kind`, `token`, `auto_approve`, `ipv4`, `traefik_api_url`, `auto_records`, …); empty for other proxies |
