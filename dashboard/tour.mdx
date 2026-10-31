@@ -89,7 +89,9 @@ manage proxies:
 
 - **Traffic** over the last 24 hours through the DNZ Proxy nodes: visitors active now, requests,
   bandwidth, cache hit ratio, 5xx rate, blocked requests and p95 latency, requests by status class,
-  and the top hostnames and status codes. The full view is [Proxy → Analytics](/proxy/dnz-proxy#analytics).
+  and the top hostnames and status codes. Once a DNZ Proxy counts [peak concurrency](/proxy/dnz-proxy#peak-concurrency)
+  (off by default), a **Peak concurrent** tile shows the most requests in progress and connections
+  open at once. The full view is [Proxy → Analytics](/proxy/dnz-proxy#analytics).
 - **Proxies**: each proxy with its nodes up, and nodes waiting for approval.
 - **Health**: upstream servers a node finds down ([Server health](/proxy/upstreams#server-health)),
   certificates failing or expiring within 14 days, and the latest proxy alerts.

@@ -382,6 +382,21 @@ dnz proxy defaults edge --firewall none
 
 See [Route defaults](/proxy/dnz-proxy#route-defaults).
 
+### Settings (DNZ Proxy)
+
+A DNZ Proxy's own settings: joining without approval, the TTL of proxied answers, checking the nodes'
+ports, cache sizes, request log lines per second, the GeoIP database and peak concurrency.
+
+```bash
+dnz proxy settings edge                           # show them
+dnz proxy settings edge --peak-tracking on        # nodes count the most requests in progress and connections open at once
+dnz proxy settings edge --peak-tracking off       # stop counting, within seconds
+```
+
+[Peak concurrency](/proxy/dnz-proxy#peak-concurrency) is off by default, since counting it adds a
+little work to every request; turn it off again if the nodes get slower. The other settings are
+changed on the proxy's **Settings** tab.
+
 ### Certificates
 
 DNZ's automatic certificates for DNZ Proxy routes:
@@ -432,7 +447,9 @@ Nodes are named by name or id.
 `nodes` shows each node's CPU (a share of the CPUs it may use: its container's limit, else the
 machine's) and its process's memory. `nodes show` adds the load average, the container's and the
 machine's memory, the free disk and TCP sockets, from the node's last report (see
-[Servers](/proxy/dnz-proxy#servers)). With `--json`, `report.system` holds the raw numbers.
+[Servers](/proxy/dnz-proxy#servers)). With `--json`, `report.system` holds the raw numbers. While the
+proxy counts [peak concurrency](/proxy/dnz-proxy#peak-concurrency), `nodes show` also has a
+**Concurrency** line: `3 requests in progress, 12 connections open (at most 9 and 14 in the last 5 s)`.
 
 ### Clearing the cache
 
@@ -454,7 +471,8 @@ say on stderr which nodes didn't answer.
 
 ```bash
 dnz proxy analytics                               # last 24 h, every proxy: totals, active users now (per proxy), most requested URLs, top lists,
-                                                  # and what the web application firewall blocked and logged, with its top rules and addresses
+                                                  # and what the web application firewall blocked and logged, with its top rules and addresses;
+                                                  # "Peak concurrent: at most N requests in progress, M connections open" once a proxy counts it
 dnz proxy analytics -p "Edge JKT" --since 7d      # 1h, 6h, 24h, 7d or 30d
 dnz proxy analytics --host app.example.com -n 50  # that hostname's 50 busiest paths
 dnz proxy logs                                    # newest 50 request log lines
@@ -462,6 +480,9 @@ dnz proxy logs --host app.example.com --status 5xx -q /api
 dnz proxy logs --client 198.51.100.7 -n 200
 dnz proxy logs -f                                 # follow, oldest first (with --json: one JSON line each)
 ```
+
+The **Peak concurrent** line is the busiest minute (or hour) with the nodes' peaks added up, so at
+most that many. Peaks are counted per node, not per hostname: with `--host` the line says so.
 
 ### Waiting rooms
 

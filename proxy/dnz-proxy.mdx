@@ -415,7 +415,10 @@ holds:
 | **Certificates** | Where the routes' certificates come from: the ACME account and the DNS credentials added for names DNZ couldn't prove |
 | **Ports** | The [entry points](#entry-points) |
 | **Cache** | What each node holds, and **Clear cache** |
-| **Nodes and DNS** | Joining without approval, the TTL of proxied answers, checking the nodes' ports, cache sizes, request log sampling, the GeoIP database |
+| **Nodes and DNS** | Joining without approval, the TTL of proxied answers, checking the nodes' ports, cache sizes, request log sampling, **Peak concurrency** (off by default, see [Peak concurrency](#peak-concurrency)), the GeoIP database |
+
+From the CLI, `dnz proxy settings <proxy>` shows them and `--peak-tracking on|off` sets peak
+concurrency.
 
 ### Route defaults
 
@@ -719,6 +722,8 @@ hostname, over the last hour to 30 days:
 - what the [web application firewall](/proxy/waf) did, once a route has it on: blocked and logged
   requests over time, the rules that matched, and the addresses and paths it matched most (click one
   to show its requests in the request log)
+- the most requests and connections at once, once a proxy counts [peak concurrency](#peak-concurrency)
+  (off by default)
 - a **request log** with filters and a live view
 
 A node counts the web application firewall's numbers only when it matches a request, so a request it
@@ -737,6 +742,42 @@ per request. It remembers up to 100,000 hostname and address pairs; past that, o
 per hostname in 5 seconds, the count shows as a floor (`1,234+`). Nodes older than 1.22 don't count
 them, and the page shows `—`. Prometheus has the per-node count as `dnz_proxy_node_active_users`
 (a visitor that reached two nodes counts on both there).
+
+### Peak concurrency
+
+**Peak concurrent** (a tile among the totals, and a chart over the span) is the most HTTP requests in
+progress and the most TCP connections and UDP sessions open at the same moment. It is what to size a
+node for, which request counts per minute don't show.
+
+<Warning>
+  Peak concurrency is **off by default**, because counting it adds a little work to every request.
+  Turn it on per proxy under **Settings → Nodes and DNS → Peak concurrency**, or with
+  `dnz proxy settings <proxy> --peak-tracking on`. If the nodes get slower, turn it off the same way
+  (`--peak-tracking off`): they stop counting with their next configuration, within seconds. While it
+  is off, a visit only reads the switch from the configuration the node already holds.
+</Warning>
+
+- **What counts.** A request from the moment the node looks for its route until it is logged, however
+  it ends (answered, refused or failed); a TCP connection from its route lookup until it closes; a UDP
+  session while it is open.
+- **On the node.** Each node keeps the most at once per minute in its own analytics, kept as long as
+  the rest of its counters. An hour keeps its busiest minute.
+- **Across nodes.** DNZ adds the nodes' peaks up per minute (or hour). Their busiest moments may not
+  coincide, so the number is **at most** that many. The span's figure is its busiest minute.
+- **Per node, not per hostname.** With a hostname picked, the tile shows `—`.
+- **Off, or nodes older than 2.0**: the tile shows `—` with where to turn it on, the chart is left out,
+  and **Overview → Proxy** has no peak tile.
+
+While it is on, Prometheus gets `dnz_proxy_node_requests_in_flight`, `dnz_proxy_node_connections_open`
+and their most over the node's last 5 seconds (`…_peak`), see [Prometheus](/dashboard/prometheus#metrics-reference).
+`dnz proxy nodes show` has a **Concurrency** line, and `dnz proxy analytics` a **Peak concurrent** line.
+
+```bash
+dnz proxy settings edge                           # Peak concurrency  off
+dnz proxy settings edge --peak-tracking on
+dnz proxy analytics -p edge                       # Peak concurrent: at most 42 requests in progress, 7 connections open
+dnz proxy nodes show jkt-1                        # Concurrency: 3 requests in progress, 12 connections open (at most 9 and 14 in the last 5 s)
+```
 
 ### Visitors per hostname and zone
 

@@ -138,7 +138,7 @@ with OAuth isn't possible.
 | `capture_keyword_lists` | The saved keyword lists live capture can pick, server-wide and a division's |
 | `traffic_stats` | Query counts, NXDOMAIN ratio, top names and clients |
 | `threat_findings` | What threat detection found, newest first: `limit` per page (50, at most 200), `page`, and the `total` that match |
-| `proxy_analytics` | DNZ Proxy traffic: totals, most requested URLs per hostname and path, top lists |
+| `proxy_analytics` | DNZ Proxy traffic: totals, active users now (each visitor once, per proxy too), most requested URLs per hostname and path, top lists, and the web application firewall's blocked and logged requests with its top rules, addresses and paths; with `peaks` (a proxy counts [peak concurrency](/proxy/dnz-proxy#peak-concurrency)) the most requests in progress and connections open at once (`peak_inflight`, `peak_connections`: at most, the nodes' peaks added up) |
 | `proxy_visitors` | Distinct visitors of each hostname DNZ Proxy serves over the last hours, total and per hour |
 | `proxy_request_log` | DNZ Proxy request log lines, filtered by hostname, status, client or text |
 | `proxy_routes` | A proxy's routes (HTTP, TCP and UDP): hostnames, servers or the upstream they use, HTTPS and certificate progress, DNS, switches (custom headers and the web application firewall included) |
