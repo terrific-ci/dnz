@@ -467,12 +467,16 @@ dnz proxy certs upload --cert fullchain.pem --key privkey.pem   # your own certi
 ```
 
 `certs check` says per name how DNZ would prove it: DNZ's own zone, a Cloudflare connection, a DNS
-credential, HTTP-01 through the nodes, an uploaded certificate covering it (`uploaded`), or **needs a
-way**. `certs credential` adds and removes a test TXT record first and keeps the credential only when
+credential, HTTP-01 through the nodes, an uploaded certificate covering it (`uploaded`), DNZ's private
+CA for an internal name (`ca`), or **needs a way**. `certs credential` adds and removes a test TXT record first and keeps the credential only when
 that works. `certs upload` takes a certificate you bought or got from your own CA (PEM chain, leaf
 first, and its key); nodes serve it as it is, and it isn't renewed. `DNZ_CLOUDFLARE_TOKEN` and
 `DNZ_ACME_SECRET` keep secrets off the command line. See
 [Automatic certificates](/proxy/certificates#automatic-certificates).
+
+DNZ's private certificate authority for internal names has its own command, `dnz ca`: see
+[Private CA](/cli/ca). A route asks for it with the resolver `private-ca`; internal names on the `auto`
+resolver get a certificate from it by themselves.
 
 ## DNZ Proxy nodes
 

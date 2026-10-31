@@ -11,7 +11,8 @@ description: "Endpoints for the ACME accounts, DNS credentials, resolvers and ce
 For what accounts, credentials, resolvers and certificates do, see
 [Certificates for DNZ Proxy](/proxy/certificates). This is not the ACME DNS-01 endpoint that lego,
 Traefik and certbot use to solve challenges in DNZ's zones; that one is under
-[ACME and Dynamic DNS](/api/acme-ddns).
+[ACME and Dynamic DNS](/api/acme-ddns). DNZ's own certificate authority for internal names is in the
+[Private CA API](/api/ca).
 
 ## Overview
 
@@ -26,7 +27,7 @@ Traefik and certbot use to solve challenges in DNZ's zones; that one is under
 | --- | --- | --- |
 | `GET` | `/api/acme/auto` | `{resolver, accounts, terms_url}`: the `auto` resolver once set up |
 | `POST` | `/api/acme/auto` | `{account_id}`, or `{email?, agree: true}` to register a Let's Encrypt account: sets up the `auto` resolver |
-| `POST` | `/api/acme/auto/check` | `{proxy_id, names}` → `{ready, names: [{name, method, detail, http}]}`; `method` is `dnz`, `cloudflare`, `credential`, `http` or `none` |
+| `POST` | `/api/acme/auto/check` | `{proxy_id, names}` → `{ready, names: [{name, method, detail, http}]}`; `method` is `ca` (DNZ's [private CA](/api/ca), for an internal name), `uploaded` (an uploaded certificate covers it), `dnz`, `cloudflare`, `credential`, `http` or `none` |
 | `POST` | `/api/acme/auto/credentials` | `{name, suffix?, provider, config}`: tested with a TXT record added and removed, then saved with a rule of the `auto` resolver → `{ok, steps, suffix, error}` |
 
 See [Automatic certificates](/proxy/certificates#automatic-certificates).

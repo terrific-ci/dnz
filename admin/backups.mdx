@@ -4,8 +4,8 @@ description: "Scheduled, encrypted backups of the whole install to a folder, S3-
 ---
 
 DNZ backs up the whole install on a schedule: zones and records, users, divisions, roles and API
-tokens, settings, DNSSEC and TSIG keys, certificates and ACME accounts, filtering, forwarding,
-replication, proxies, notification providers, zone history and the audit log, plus the GeoIP
+tokens, settings, DNSSEC and TSIG keys, certificates and ACME accounts, the
+[private CA](/proxy/private-ca) with its keys, filtering, forwarding, replication, proxies, notification providers, zone history and the audit log, plus the GeoIP
 database and the local DNZ Proxy's state. Archives go to a folder, S3-compatible storage or an SFTP
 server, encrypted if you like, and old ones are pruned by a retention policy.
 
@@ -104,8 +104,8 @@ reordered or cut-off part is caught.
 <Warning>
   Keep the passphrase somewhere other than DNZ, in a password manager. DNZ keeps it for the scheduled
   backups but never shows it again, and without it the archives can't be restored. Archives hold
-  every secret DNZ keeps (DNSSEC and TSIG keys, provider credentials), so encrypt any copy that
-  leaves the server.
+  every secret DNZ keeps (DNSSEC and TSIG keys, provider credentials, the private CA's keys), so
+  encrypt any copy that leaves the server.
 </Warning>
 
 `dnz backup decrypt FILE` turns an encrypted archive into the plain zip, without a server.

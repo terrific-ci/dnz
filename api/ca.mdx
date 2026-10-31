@@ -1,0 +1,88 @@
+---
+title: "Private CA API"
+description: "Endpoints for DNZ's private certificate authority: the CA and its versions, the certificates it signs, export and import, and the public root and revocation lists."
+---
+
+<Note>
+  See [API overview](/api/overview) for how to authenticate. Reading the CA and its certificates needs
+  **Manage proxies** (`proxy.manage`); making, changing, exporting and importing it and a certificate's
+  private key need a **superadmin**. Every change is in the [audit log](/admin/audit-log).
+</Note>
+
+For what the CA does, see [Private certificate authority](/proxy/private-ca). Certificates from ACME
+are in the [Certificates API](/api/certificates).
+
+## The CA
+
+| Method | Path | Who | Body / answer |
+| --- | --- | --- | --- |
+| `GET` | `/api/ca` | `proxy.manage` | The active version, every version (with how often its root was downloaded), the download address and the root's SHA-256 fingerprint, the addresses to check trust against, certificate counts and DNZ's own certificate from the CA |
+| `GET` | `/api/ca/suggested` | `proxy.manage` | The settings a new CA starts with: the profile's label, DNZ's internal zones as name constraints |
+| `POST` | `/api/ca` | superadmin | Make the CA |
+| `PUT` | `/api/ca` | superadmin | Change it; `new_version` in the answer says whether it made one |
+| `POST` | `/api/ca/versions` | superadmin | A new version with new keys: the settings given, else the same |
+| `POST` | `/api/ca/versions/{id}/retire` | superadmin | Retire an older version: its keys are deleted, its last revocation list stays served |
+| `POST` | `/api/ca/export` | superadmin | `{"confirm": true}`: the active version with its keys, PEM |
+| `POST` | `/api/ca/import` | superadmin | `{"bundle": "…"}`: an export as the active version |
+| `GET` | `/api/ca/revocations` | `proxy.manage` | What each version's revocation list holds |
+
+The settings (`POST` / `PUT` / `POST /versions`):
+
+```json
+{
+  "subject": { "cn": "Example Root CA", "o": "Example Ltd", "ou": "IT", "c": "ID", "st": "Jawa Barat", "l": "Bandung", "email": "it@example.com" },
+  "key_type": "ecdsa-p256",
+  "root_years": 10,
+  "intermediate": true,
+  "intermediate_cn": "Example Issuing CA",
+  "intermediate_years": 3,
+  "name_constraints": { "dns": ["lab.internal", "office.lan"], "ip": ["10.0.0.0/8"] },
+  "crl": true,
+  "base_url": "http://192.168.1.10:8080",
+  "defaults": { "days": 397, "key_type": "ecdsa-p256", "uses": "server", "renew_days": 30, "subject": { "o": "Example Ltd" } }
+}
+```
+
+`key_type` is `ecdsa-p256`, `ecdsa-p384`, `rsa-2048`, `rsa-3072` or `rsa-4096`. Empty `name_constraints`
+let the CA sign any name. A change to `subject`, `key_type`, `root_years`, the intermediate or
+`name_constraints` makes a new version; `crl`, `base_url` and `defaults` apply at once. A field left out
+takes its default, so a `PUT` sends the whole settings: start from the active version's `settings` in
+`GET /api/ca`.
+
+## Certificates
+
+| Method | Path | Who | Body / answer |
+| --- | --- | --- | --- |
+| `GET` | `/api/ca/certificates` | `proxy.manage` | `{certificates, total, page, per_page}`, a page at a time (`page`, `per_page`): `q` (a name, a person's name or e-mail, a serial), `state`, `uses`, `kind` |
+| `POST` | `/api/ca/certificates` | `proxy.manage` | Issue one: `names`, `subject`, `days`, `key_type`, `uses` (`server`, `client`, `both`), `renew_days` |
+| `GET` | `/api/ca/certificates/{id}` | `proxy.manage` | One certificate with its log |
+| `POST` | `/api/ca/certificates/{id}/reissue` | `proxy.manage` | A new key and serial, from the active version |
+| `POST` | `/api/ca/certificates/{id}/revoke` | `proxy.manage` | `{"reason": "key_compromise"}`: `unspecified`, `key_compromise`, `superseded`, `cessation_of_operation` or `affiliation_changed` |
+| `GET` | `/api/ca/certificates/{id}/download` | `proxy.manage` | The certificate and its chain, PEM |
+| `GET` | `/api/ca/certificates/{id}/key` | superadmin | The same with its private key; never for an AI assistant signed in over OAuth |
+
+A certificate's `kind` is `manual` (issued by hand), `route` (a route needs it) or `server` (DNZ's own);
+its `state` is `pending`, `issuing`, `valid`, `renewing`, `failed` or `revoked`.
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"names": ["nas.lab.internal", "10.0.0.5"], "days": 397, "uses": "server"}' \
+  https://dns.example.com/api/ca/certificates
+```
+
+## The root and revocation lists
+
+No sign-in: these hold certificates only, no key.
+
+| Method | Path | Answer |
+| --- | --- | --- |
+| `GET` | `/ca/root.crt`, `/api/ca/root.crt` | The active root, PEM |
+| `GET` | `/ca/root.cer`, `/api/ca/root.cer` | The same, DER |
+| `GET` | `/ca/root.mobileconfig`, `/api/ca/root.mobileconfig` | An Apple configuration profile |
+| `GET` | `/ca/<id>.crl` | A version's revocation list (DER) |
+| `GET` | `/ca/check` | Over HTTPS: a page saying whether the device trusts the CA |
+
+## DNZ's own certificate
+
+`PUT /api/encrypted-dns/certificate` with `"resolver": "private-ca"` has the CA sign DNZ's own certificate
+for DoT, DoH and HTTPS. See [Encrypted DNS](/dns/encrypted-dns#from-the-private-ca).

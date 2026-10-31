@@ -12,6 +12,12 @@ Everything here is for superadmins. Routes get their certificates by themselves
 ([Automatic certificates](#automatic-certificates)); the accounts, credentials, resolvers and every
 certificate are under **Proxy → Certificates**.
 
+<Tip>
+  Internal names (`nas.office.lan`, `*.lab.internal`) can't get a certificate from a public CA. DNZ's
+  [private certificate authority](/proxy/private-ca) signs them itself, and routes on such names use it
+  by themselves.
+</Tip>
+
 <Note>
   This page is about certificates DNZ gets **for its own proxy**. To let lego, Traefik or certbot
   solve DNS-01 challenges in DNZ's zones for certificates they get themselves, see
@@ -41,13 +47,17 @@ by itself, through DNZ's resolver `auto`.
 
 The `auto` resolver proves each name the way DNZ can manage, in this order:
 
-1. a **rule** of the resolver: added when you gave DNZ a way for a name in the certificate step;
-2. **DNS-01 in DNZ's own zone**, when the internet asks DNZ for it (the zone's public name servers
+1. **DNZ's private CA**, for an internal name ([Private CA](/proxy/private-ca)): one the CA may sign
+   that is under `.internal`, `.lan`, `.local`, `.home.arpa` (and the like) or under one of the CA's
+   name constraints. The CA signs it at once, with no challenge and no ACME account; the check shows
+   it as **Private CA**. Devices need the CA's root;
+2. a **rule** of the resolver: added when you gave DNZ a way for a name in the certificate step;
+3. **DNS-01 in DNZ's own zone**, when the internet asks DNZ for it (the zone's public name servers
    answer with the serial DNZ has). A zone DNZ serves only inside, or split from a public copy
    elsewhere, isn't used;
-3. **DNS-01 through a division's Cloudflare connection** whose zones hold the name
+4. **DNS-01 through a division's Cloudflare connection** whose zones hold the name
    ([Cloudflare](/integrations/cloudflare));
-4. **HTTP-01 through the nodes**, not for wildcards.
+5. **HTTP-01 through the nodes**, not for wildcards.
 
 In the certificate step, a Cloudflare token (the link opens Cloudflare's form with **Zone · Read** and
 **DNS · Edit** filled in) or another DNS provider (RFC 2136, a webhook) is tested first: a TXT record
@@ -55,7 +65,8 @@ is added and removed, and only when that works is it saved, as a DNS credential 
 name under its domain. **Through the nodes** is offered once DNZ sees the name pointing at the
 proxy's nodes and port 80 answering. **I have my own certificate** takes a certificate you bought or
 got from your company's CA (PEM chain and private key, pasted or picked as files); it must cover the
-name.
+name. **Use DNZ's private CA** is offered when DNZ has a [private CA](/proxy/private-ca) that may sign
+every name of the route: the route's resolver becomes `private-ca` and the CA signs its certificate.
 
 A name an uploaded certificate already covers skips the certificate step: DNZ shows it as **Your
 certificate** and asks no CA for it while the upload is valid. Delete the upload, or let it expire,
@@ -221,7 +232,8 @@ A resolver that routers use can't be renamed or deleted.
 
 ## Certificates
 
-There are three kinds:
+There are three kinds, plus the ones DNZ's [private CA](/proxy/private-ca) signs, which are listed
+here too:
 
 - **For routers.** Every 30 seconds DNZ looks at the enabled TLS routers of the approved proxies whose
   certificate resolver is one of DNZ's. A router wants one certificate per `tls.domains` entry (main

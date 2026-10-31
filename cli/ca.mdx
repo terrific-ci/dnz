@@ -1,0 +1,109 @@
+---
+title: "Private CA"
+description: "Make DNZ's private certificate authority, change it, issue, revoke and download its certificates, and get the root devices install, from the terminal."
+---
+
+`dnz ca` matches **Proxy → Certificates → Private CA** in the dashboard: DNZ's own certificate
+authority for internal names. For what it does, see [Private certificate authority](/proxy/private-ca).
+
+## Permissions
+
+- Making, changing, exporting and importing the CA, and downloading a certificate with its private key,
+  are for **superadmins**.
+- Issuing, renewing, revoking and downloading certificates (without the key) need **Manage proxies**
+  (`proxy.manage`).
+- A DNZ secondary following a primary refuses changes: make and change the CA on the primary.
+
+## The CA
+
+```bash
+dnz ca                                            # = dnz ca show: the CA, its versions, download address, fingerprint
+dnz ca init                                       # suggested settings: the profile's label, DNZ's internal zones
+dnz ca init --cn "Example Root CA" --org "Example Ltd" --unit IT --country ID --state "Jawa Barat" \
+  --locality Bandung --email it@example.com --key-type ecdsa-p384 --root-years 10 \
+  --intermediate-cn "Example Issuing CA" --intermediate-years 3 \
+  --constraint lab.internal --constraint office.lan --ip-constraint 10.0.0.0/8 \
+  --address http://192.168.1.10:8080 --days 397
+dnz ca init --no-intermediate --any-name --yes    # the root signs certificates, any name (asked first)
+dnz ca edit --days 90 --crl off                   # applies at once
+dnz ca edit --org "Example Two"                   # a new version: asks first (--yes for scripts)
+dnz ca new-version --yes                          # new keys, the same settings
+dnz ca retire 1                                   # an older version, once nothing it signed is in use
+```
+
+`init` and `edit` take the same flags; a field left out keeps its value (for `init`, the suggested one):
+
+| Flag | Meaning |
+| --- | --- |
+| `--cn` | The root's common name, every certificate's issuer (`"Example Root CA"`) |
+| `--org`, `--unit` | Organization, organizational unit |
+| `--country` | Two letters, ISO 3166 (`US`, `DE`, `ID`) |
+| `--state`, `--locality`, `--email` | State or province, locality, e-mail |
+| `--key-type` | `ecdsa-p256` (default), `ecdsa-p384`, `rsa-2048`, `rsa-3072` or `rsa-4096` |
+| `--root-years` | How long the root is valid, 1 to 25 years |
+| `--intermediate` / `--no-intermediate` | The root signs only an intermediate, which signs certificates (the default), or signs them itself |
+| `--intermediate-cn`, `--intermediate-years` | The intermediate's common name and validity (not longer than the root) |
+| `--constraint` | A domain name the CA may sign (it and every name under it); repeat for more. Replaces the list |
+| `--ip-constraint` | An address range the CA may sign (`10.0.0.0/8`); repeat for more. Replaces the list |
+| `--any-name` | No name constraints: a leaked key could then sign any name for devices that trust the root |
+| `--crl` | The revocation list at `/ca/<id>.crl`, named in every certificate (`on` / `off`) |
+| `--address` | Where devices reach DNZ over HTTP (`http://192.168.1.10:8080`): the download and revocation list address |
+| `--days`, `--renew-days`, `--cert-key-type` | Defaults for new certificates: validity (397 days), renew before the end (30), key type |
+
+A new issuer, key type, root validity, intermediate or name constraints make a **new version**: `edit`
+says so and asks first. Certificates are then issued again from it, and devices need the new root. See
+[Changing the CA: versions](/proxy/private-ca#changing-the-ca-versions).
+
+### Export and import
+
+```bash
+dnz ca export -o ca-backup.pem --yes              # the CA with its private keys: keep it secret
+dnz ca import ca-backup.pem                       # an export as the active version
+```
+
+Use them to back the CA up, or to carry it to a new primary after a
+[take over](/proxy/private-ca#secondaries-and-clusters).
+
+## The root devices install
+
+```bash
+dnz ca root                                       # download address and SHA-256 to stderr, the PEM to stdout
+dnz ca root --format der -o dnz-root.cer          # DER, as Windows, Android and Java take it
+dnz ca root --format mobileconfig -o dnz-root.mobileconfig   # an Apple profile: iPhone, iPad, Mac
+```
+
+The steps per platform are in [Trusting the root on devices](/proxy/private-ca#trusting-the-root-on-devices).
+
+## Certificates
+
+```bash
+dnz ca list --search nas --state valid --limit 25 --page 2
+dnz ca issue nas.lab.internal 10.0.0.5 --days 397 --key-type rsa-2048
+dnz ca issue --client --cn "Alice Example" --email alice@example.com --days 365
+dnz ca issue api.lab.internal --uses both --org "Example Ltd"
+dnz ca reissue 7                                  # a new key and serial, from the active version
+dnz ca revoke 7 --reason key_compromise --yes     # into the revocation list, never served again
+dnz ca download 7 -o nas.pem                      # certificate and chain
+dnz ca download 7 --key -o nas-with-key.pem       # with the private key (superadmin, audited)
+```
+
+- `list` shows the certificates the CA signed (routes', issued by hand, DNZ's own), a page at a time.
+  `--search` is part of a name, a person's name or e-mail, or a serial; `--state` is `valid`, `failed`,
+  `pending` or `revoked`.
+- `issue` takes host names (wildcards like `*.lab.internal`) and IP addresses, the first being the main
+  one. `--client` makes a client certificate (mTLS) for a person or device: give `--cn` and/or
+  `--email`. `--uses` is `server`, `client` or `both`. The subject flags (`--cn`, `--org`, `--unit`,
+  `--country`, `--state`, `--locality`, `--email`) default to the CA's defaults for new certificates.
+- `revoke --reason` is `unspecified` (default), `key_compromise`, `superseded`,
+  `cessation_of_operation` or `affiliation_changed`.
+
+## Where the CA is used
+
+```bash
+dnz settings certificate dns.office.lan 192.168.1.10 --resolver private-ca   # DNZ's own certificate (DoT, DoH, HTTPS)
+dnz proxy certs check edge nas.lab.internal                                  # says "ca" for an internal name
+```
+
+A route asks for the CA with the resolver `private-ca`. Internal names on the `auto` resolver get a
+certificate from it by themselves. See [Certificates for DNZ Proxy](/proxy/certificates#automatic-certificates)
+and [Encrypted DNS](/dns/encrypted-dns#from-the-private-ca).

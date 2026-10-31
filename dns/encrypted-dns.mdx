@@ -25,12 +25,16 @@ cache, conditional forwarding and the query log.
 ## Turn it on
 
 Encrypted DNS needs a certificate for the hostname devices use (for example `dns.example.com`): a
-public name, from a CA that devices trust, such as Let's Encrypt. DNZ can get it two ways:
+public name, from a CA that devices trust, such as Let's Encrypt, or an internal name (or an IP
+address) from DNZ's own private CA, on devices that trust its root. DNZ can get it three ways:
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="DNZ issues it" icon="certificate" href="#dnz-issues-the-certificate">
     DNZ's own ACME engine gets the certificate over DNS-01 and renews it without a restart. No lego
     or certbot.
+  </Card>
+  <Card title="From the private CA" icon="shield-check" href="#from-the-private-ca">
+    DNZ's private CA signs it at once, for internal names and IP addresses: no public name needed.
   </Card>
   <Card title="Certificate files" icon="file-lines" href="#certificate-files">
     Any tool writes PEM files; DNZ reads `DNZ_TLS_CERT` and `DNZ_TLS_KEY` and reloads them when they
@@ -117,6 +121,39 @@ growing delay and send the same alerts as DNZ Proxy's certificates.
 - **Moving from lego or certbot**: keep the old files in place, set it up with the same names, wait
   until the card shows **Valid**, then remove `DNZ_TLS_CERT` / `DNZ_TLS_KEY` and the renewal timer or
   cron job, and restart once.
+
+## From the private CA
+
+For a DNZ reached by an internal name (`dns.office.lan`) or only by its IP address, no public CA can
+issue the certificate. DNZ's [private certificate authority](/proxy/private-ca) can: DoT and DoH then
+work inside the network without a public name.
+
+<Steps>
+  <Step title="Make the private CA">
+    **Proxy → Certificates → Private CA → Make the private CA**, or `dnz ca init`. Its name constraints
+    must cover the names and addresses below. See [Making the CA](/proxy/private-ca#making-the-ca).
+  </Step>
+  <Step title="Pick Private CA as the resolver">
+    **Settings → General → Encrypted DNS → Certificate from DNZ**: enter the names and IP addresses
+    devices use, pick **Private CA**, then **Get certificate**. Or:
+
+    ```bash
+    dnz settings certificate dns.office.lan 192.168.1.10 --resolver private-ca
+    ```
+
+    The CA signs it at once, with no challenge. Restart once the first time, as above.
+  </Step>
+  <Step title="Install the root on the devices">
+    **Proxy → Certificates → Private CA → Trust the root**: a guide per platform that ends with the
+    download address and a QR code. See [Trusting the root on devices](/proxy/private-ca#trusting-the-root-on-devices).
+  </Step>
+  <Step title="Check it">
+    With HTTPS served from this certificate, `https://<name>/ca/check` tells a device whether it trusts
+    the CA: it opens without a warning, saying so, once the root is installed.
+  </Step>
+</Steps>
+
+DNZ renews it before it ends. It is listed under **Private CA → Certificates** as DNZ's own.
 
 ## Certificate files
 

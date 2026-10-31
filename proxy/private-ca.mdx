@@ -1,0 +1,436 @@
+---
+title: "Private certificate authority"
+sidebarTitle: "Private CA"
+description: "DNZ signs certificates for internal names itself: routes, Traefik, Caddy and DNZ's own encrypted DNS get one at once, and every device that trusts its root accepts them."
+---
+
+Internal names (`nas.office.lan`, `*.lab.internal`, a zone DNZ serves only inside your network) can't get
+a certificate from Let's Encrypt or any other public CA: none of them can check a name the internet doesn't
+see. DNZ's **private certificate authority** signs them itself. Routes on such names get a certificate at
+once, with no challenge, and every device you install the CA's root on trusts it.
+
+It lives under **Proxy → Certificates → Private CA** in the dashboard, and `dnz ca` on the command line
+([CLI](/cli/ca)).
+
+<CardGroup cols={2}>
+  <Card title="Make the CA" icon="shield-check" href="#making-the-ca">
+    Your issuer name, key, validity and the names it may sign.
+  </Card>
+  <Card title="Trust the root" icon="mobile" href="#trusting-the-root-on-devices">
+    A step-by-step guide per device, ending with the download address and a QR code.
+  </Card>
+  <Card title="Certificates it signs" icon="certificate" href="#certificates">
+    For routes, Traefik, Caddy, DNZ's own DoT and DoH, and client certificates (mTLS).
+  </Card>
+  <Card title="Secondaries and clusters" icon="clone" href="#secondaries-and-clusters">
+    Shared in a cluster; carried across a take over by export and import.
+  </Card>
+</CardGroup>
+
+## Making the CA
+
+The CA is never made by default. A superadmin makes it on demand: **Make the private CA** on the Private
+CA tab (or `dnz ca init`). Every detail is yours to set, every one is editable later from the dashboard,
+and every one shows in the certificates the CA signs:
+
+| Field | Default | |
+| --- | --- | --- |
+| Common name | `<Settings → Profile label> Root CA`, else `DNZ Root CA` | What devices list the root as |
+| Organization, organizational unit | The profile's label / empty | |
+| Country, state or province, locality, e-mail | Empty | Country: two letters, ISO 3166 (`US`, `DE`, `ID`) |
+| Key type | ECDSA P-256 | P-384, RSA 2048, 3072 or 4096 (RSA for old devices and appliances) |
+| Root valid for | 10 years | 1 to 25 |
+| Intermediate | On, `… Issuing CA`, 3 years | The root signs only the intermediate; the intermediate signs certificates |
+| Names it may sign | DNZ's internal zones and the private address ranges | See [Name constraints](#name-constraints) |
+| Revocation list | On | Served at `/ca/<id>.crl` and named in every certificate |
+| The address devices reach DNZ on | **Settings → General → Server → Device address** and DNZ's HTTP port | Where devices download the root and the revocation list |
+| Defaults for new certificates | 397 days, ECDSA P-256, server, renew 30 days before the end | A subject (organization, country, …) for certificates too |
+
+Together, the subject fields are the **issuer** of every certificate the CA signs: the root's subject
+(common name, organization, unit, country, state, locality, e-mail), and with an intermediate, the
+intermediate's (its own common name, the rest the root's).
+
+### Name constraints
+
+The names the CA may sign are written into the root (and the intermediate). Devices refuse a certificate
+for any other name, so even a leaked key can't vouch for `google.com` or your bank.
+
+- A **domain name** covers itself and every name under it: `lab.internal` covers `nas.lab.internal`.
+- An **address range** covers its addresses: `10.0.0.0/8`.
+
+The suggested list holds DNZ's internal zones (primary zones under `.internal`, `.lan`, `.local`,
+`.home.arpa` and the like, or ones the internet doesn't ask DNZ for), else `internal`, `lan`, `local` and
+`home.arpa`, plus `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10` and `fc00::/7`.
+
+Empty lists let the CA sign any name; DNZ warns before making such a CA. DNZ refuses to sign a name
+outside the constraints.
+
+### Changing the CA: versions
+
+A root can't be edited in place: devices trust that exact certificate. **Change** on the CA card opens
+the same dialog, and changing the issuer, the key type, the root's validity, the intermediate or the name
+constraints makes a **new version** with a new root. The dialog says so before saving (**Make version
+N**).
+
+- The new version is active at once. DNZ issues every certificate again from it in the background
+  (within a minute); meanwhile the old ones stay valid and served.
+- Devices that installed the old root must install the new one. The **Versions** list shows how often
+  each old root was downloaded, as a reminder ("N devices may still trust only the old root").
+- Once nothing an old version signed is in use, **Retire** it: its keys are deleted for good, its root is
+  no longer offered, and its last revocation list stays served.
+
+The revocation list switch, the address and the defaults for new certificates apply at once, with no new
+version. **New version** with the same settings makes new keys (`dnz ca new-version`).
+
+## Certificates
+
+What the CA signs is listed under **Private CA → Certificates** (a page at a time, with a search) and with
+the other certificates under **Proxy → Certificates**. Each certificate has:
+
+| Field | Default |
+| --- | --- |
+| Names: host names (a wildcard like `*.lab.internal` covers one label) and IP addresses | The route's hostnames |
+| Subject: common name, organization, unit, country, state, locality, e-mail | The first name; the rest from the CA's *Defaults for new certificates*, else the CA's own |
+| Valid for | 397 days (browsers' limit for public certificates), never past the issuing CA's own end |
+| Key type | ECDSA P-256 |
+| Use | **Server** (TLS server authentication), **Client** (mTLS client authentication), or **Both** |
+| Renew | 30 days before it ends (at most a third of its lifetime) |
+
+Actions on a certificate:
+
+- **Issue again now**: a new key and serial.
+- **Revoke**: its serial goes into the revocation list, with a reason, and DNZ never serves it again. A
+  route that used it gets a new one.
+- **Download**: the certificate and its chain as PEM. With its private key for superadmins only; every
+  such download is in the audit log.
+
+**Issue a certificate** makes one by hand: a server certificate for a host DNZ doesn't proxy, or a
+**client certificate** for a person or device (a name, an e-mail address, a validity).
+
+### Where DNZ uses it by itself
+
+<AccordionGroup>
+  <Accordion title="DNZ Proxy routes" icon="route">
+    A route on internal names gets its certificate from the CA before any public CA is asked: it is the
+    first step of [Automatic certificates](/proxy/certificates#automatic-certificates). A name is
+    internal when the CA may sign it and it is under `.internal`, `.lan`, `.local`, `.home.arpa`,
+    `.localdomain`, `.intranet`, `.corp`, `.home`, `.private` or `.test`, or under one of the
+    constraints' domain names.
+
+    The route dialog's certificate step says **Private CA** for such names. For other names the CA may
+    sign, it offers **Use DNZ's private CA** (the route's resolver is then `private-ca`).
+  </Accordion>
+  <Accordion title="Traefik and Caddy proxies" icon="server">
+    They get the certificates of their internal routes the way they get uploaded ones (Traefik's
+    `tls.certificates`, Caddy's `load_pem`): Traefik routes without a resolver and Caddy routes, with
+    internal names or naming the `private-ca` resolver.
+  </Accordion>
+  <Accordion title="DNZ's own certificate (DoT, DoH, HTTPS)" icon="lock">
+    **Settings → General → Encrypted DNS → Certificate from DNZ** can pick **Private CA**, for internal
+    names and IP addresses too, so DoT and DoH work inside a network without a public name. See
+    [Encrypted DNS](/dns/encrypted-dns#from-the-private-ca).
+  </Accordion>
+  <Accordion title="Client certificates (mTLS)" icon="id-card">
+    Issue **client** certificates for people or devices and download them as PEM. For routes that
+    require client certificates, paste the root (the CA card's **Root as PEM**) into a TLS option's *CAs
+    that sign client certificates* (the proxy's TLS settings). For an upstream that wants a client
+    certificate, use one from the CA as the upstream's
+    [client certificate](/proxy/upstreams#connection-settings).
+  </Accordion>
+</AccordionGroup>
+
+## Trusting the root on devices
+
+A device trusts the CA's certificates once its root is installed there. **Trust the root** on the Private
+CA tab walks through it in four steps, with your address already filled in:
+
+<Steps>
+  <Step title="Pick where to install it">
+    Windows, macOS, iPhone / iPad, Android, Linux, Chrome / Edge, Firefox, or Docker / servers. The
+    guide picks the system of the browser you opened it in first. Install the root once per device (or
+    per container image); every certificate the CA signs is then trusted there.
+  </Step>
+  <Step title="Follow the steps for it">
+    Each step is a menu path to click through or one paste-and-run command, with a copy button. The
+    steps for every platform are below.
+  </Step>
+  <Step title="Download the root">
+    The guide ends with the **download address** in large type, a copy button and a **QR code**: on a
+    phone on the same network, scan it with the camera. Below it are the files for that platform
+    (`dnz-root.crt`, `dnz-root.cer`, `dnz-root.mobileconfig`) and the root's **SHA-256 fingerprint**, with
+    how to show it on the device: compare the two after installing.
+
+    The address comes from **Settings → General → Server → Device address** and DNZ's HTTP port, unless
+    the CA has one of its own. It can be changed right there (DNZ warns on `localhost` or `127.0.0.1`,
+    which is the machine you are on, not where devices reach DNZ; behind a reverse proxy, use the
+    proxy's address), and a superadmin can **Save as the CA's address**.
+  </Step>
+  <Step title="Check it">
+    The guide lists HTTPS addresses with a certificate from the CA: DNZ's own `/ca/check` when the CA
+    signs DNZ's certificate, and routes on internal names. Open one on the device: no warning means it
+    is trusted. **Test from this browser** checks it from the browser you are in.
+  </Step>
+</Steps>
+
+### The steps per platform
+
+Replace `http://192.168.1.10:8080` with the address the guide shows (the guide fills it in for you).
+
+<Tabs>
+  <Tab title="Windows">
+    Windows keeps one trust store for the whole machine: Chrome, Edge and most programs use it.
+
+    1. Open PowerShell as administrator (Start → type PowerShell → **Run as administrator**) and paste
+       this. It downloads the root and adds it to *Trusted Root Certification Authorities*:
+
+       ```powershell
+       Invoke-WebRequest -Uri "http://192.168.1.10:8080/ca/root.crt" -OutFile "$env:TEMP\dnz-root.crt"
+       certutil -addstore -f Root "$env:TEMP\dnz-root.crt"
+       ```
+
+    2. Or by hand: download `dnz-root.crt`, double-click it, then **Install Certificate…** → **Local
+       Machine** → **Place all certificates in the following store** → **Browse…** → **Trusted Root
+       Certification Authorities** → **Finish**.
+    3. Many PCs in a domain: import it once in a Group Policy instead: **Group Policy Management** →
+       Computer Configuration → Policies → Windows Settings → Security Settings → Public Key Policies →
+       Trusted Root Certification Authorities → **Import…**.
+    4. Close every browser window and open the browser again.
+
+    Fingerprint: `certutil -hashfile dnz-root.cer SHA256`.
+  </Tab>
+  <Tab title="macOS">
+    macOS trusts what the System keychain trusts: Safari, Chrome and Edge use it.
+
+    1. Paste this in Terminal (it asks for your password):
+
+       ```bash
+       curl -fsSL -o /tmp/dnz-root.crt "http://192.168.1.10:8080/ca/root.crt"
+       sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/dnz-root.crt
+       ```
+
+    2. Or with the profile: download `dnz-root.mobileconfig`, open it, then **System Settings** →
+       **General** → **Device Management** (or **Privacy & Security → Profiles**) → the root → **Install…**.
+    3. Restart the browser.
+
+    Fingerprint: `openssl x509 -in /tmp/dnz-root.crt -noout -fingerprint -sha256`.
+  </Tab>
+  <Tab title="iPhone / iPad">
+    iOS asks for two things: install the profile, then turn on full trust.
+
+    1. Scan the QR code with the Camera (or open `http://192.168.1.10:8080/ca/root.mobileconfig` in
+       Safari) and tap **Allow**: it downloads the profile.
+    2. Install it: **Settings** → **Profile Downloaded** (at the top) → **Install** → **Install**.
+    3. Turn on full trust for the root: **Settings** → **General** → **About** → **Certificate Trust
+       Settings** → the root → **Continue**.
+
+    Fingerprint: Settings → General → VPN & Device Management → the profile → More Details: SHA-256.
+  </Tab>
+  <Tab title="Android">
+    Android installs it as a user CA. Chrome and the system browser trust it; other apps only when their
+    makers allow user CAs (Android 7 and later).
+
+    1. Scan the QR code (or open `http://192.168.1.10:8080/ca/root.crt` in the browser) to download
+       `dnz-root.crt`.
+    2. Install it as a CA certificate (the names differ a little between phones): **Settings** →
+       **Security & privacy** → **More security settings** → **Encryption & credentials** → **Install a
+       certificate** → **CA certificate** → **Install anyway** → `dnz-root.crt`.
+    3. Older Android: Settings → Security → More → Install from storage → CA certificate.
+
+    Fingerprint: Settings → Encryption & credentials → Trusted credentials → User → the root.
+
+    <Note>
+      An app that won't trust it ignores user CAs on purpose; only its maker (or a managed device
+      profile) can change that.
+    </Note>
+  </Tab>
+  <Tab title="Linux">
+    The system store covers curl, wget, apt, Python and most programs. Chrome and Firefox on Linux keep
+    their own store.
+
+    ```bash
+    # Debian, Ubuntu and their relatives
+    sudo curl -fsSL -o /usr/local/share/ca-certificates/dnz-root.crt "http://192.168.1.10:8080/ca/root.crt"
+    sudo update-ca-certificates
+
+    # Fedora, RHEL, Rocky, Alma, CentOS
+    sudo curl -fsSL -o /etc/pki/ca-trust/source/anchors/dnz-root.crt "http://192.168.1.10:8080/ca/root.crt"
+    sudo update-ca-trust
+
+    # Arch and openSUSE (p11-kit)
+    curl -fsSL -o /tmp/dnz-root.crt "http://192.168.1.10:8080/ca/root.crt"
+    sudo trust anchor --store /tmp/dnz-root.crt
+
+    # Chrome and Chromium on Linux (needs libnss3-tools)
+    curl -fsSL -o /tmp/dnz-root.crt "http://192.168.1.10:8080/ca/root.crt"
+    certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "DNZ Root CA" -i /tmp/dnz-root.crt
+    ```
+
+    Fingerprint: `openssl x509 -in /tmp/dnz-root.crt -noout -fingerprint -sha256`.
+  </Tab>
+  <Tab title="Chrome / Edge">
+    Chrome and Edge trust what the system trusts.
+
+    1. Install the root in the system: the Windows, macOS or Linux steps (on Linux, its Chrome line).
+    2. Or only for this browser: **Settings** → **Privacy and security** → **Security** → **Manage
+       certificates** → **Custom** (or *Installed by you*) → **Trusted certificates: Import** →
+       `dnz-root.crt`.
+    3. Restart the browser: `chrome://restart` (Edge: `edge://restart`).
+
+    Fingerprint: the padlock on a site → Connection is secure → Certificate is valid → Details: the
+    root's SHA-256.
+  </Tab>
+  <Tab title="Firefox">
+    Firefox keeps a store of its own. Import the root there, or let Firefox use the system's (Windows and
+    macOS).
+
+    1. Import it: download `dnz-root.crt`, then **Settings** → **Privacy & Security** → **Certificates** →
+       **View Certificates…** → **Authorities** → **Import…** → `dnz-root.crt` → tick **Trust this CA to
+       identify websites**.
+    2. Or use the system's store (after installing the root in Windows or macOS): open `about:config`
+       and set `security.enterprise_roots.enabled` to `true`.
+    3. Many computers: put this in Firefox's `policies.json` (its `distribution` folder) so it installs
+       the root by itself:
+
+       ```json
+       {
+         "policies": {
+           "Certificates": {
+             "ImportEnterpriseRoots": true,
+             "Install": ["/usr/local/share/ca-certificates/dnz-root.crt"]
+           }
+         }
+       }
+       ```
+
+    Fingerprint: Settings → Certificates → View Certificates → Authorities → the root → View.
+  </Tab>
+  <Tab title="Docker / servers">
+    Containers and servers need the root in their own trust store, built into the image or mounted.
+
+    ```dockerfile
+    # Debian or Ubuntu images (Alpine: apk add --no-cache ca-certificates first)
+    ADD http://192.168.1.10:8080/ca/root.crt /usr/local/share/ca-certificates/dnz-root.crt
+    RUN update-ca-certificates
+    ```
+
+    Kubernetes: keep it in a ConfigMap and mount it where the image looks:
+
+    ```bash
+    curl -fsSL -o dnz-root.crt "http://192.168.1.10:8080/ca/root.crt"
+    kubectl create configmap dnz-root-ca --from-file=dnz-root.crt
+    ```
+
+    ```yaml
+    volumes:
+      - name: dnz-root-ca
+        configMap:
+          name: dnz-root-ca
+    # in the container:
+    volumeMounts:
+      - name: dnz-root-ca
+        mountPath: /usr/local/share/ca-certificates/dnz-root.crt
+        subPath: dnz-root.crt
+    ```
+
+    Programs with a store of their own (Node.js, Python requests, Java):
+
+    ```bash
+    export NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/dnz-root.crt
+    export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+    keytool -importcert -cacerts -alias dnz-root -file dnz-root.crt -storepass changeit -noprompt
+    ```
+
+    Fingerprint: `openssl x509 -in dnz-root.crt -noout -fingerprint -sha256`.
+  </Tab>
+</Tabs>
+
+### Public addresses
+
+The root is public and needs no sign-in: it is the certificate only, no key.
+
+| Address | What |
+| --- | --- |
+| `http://<DNZ>:<port>/ca/root.crt` | The active root as PEM: Windows, Linux, Android, Firefox, servers |
+| `http://<DNZ>:<port>/ca/root.cer` | The same as DER: Windows, Android, Java |
+| `http://<DNZ>:<port>/ca/root.mobileconfig` | An Apple configuration profile: iPhone, iPad, Mac |
+| `http://<DNZ>:<port>/ca/<id>.crl` | A version's revocation list (DER), signed by its issuing CA |
+| `https://<DNZ>/ca/check` | Says "This device trusts …" when it opens without a warning |
+
+The same files are also under `/api/ca/root.crt`, `/api/ca/root.cer` and `/api/ca/root.mobileconfig`.
+
+## Security
+
+- The CA's keys live in DNZ's database like every private key DNZ holds, so they are in its
+  [backups](/admin/backups) too: encrypt the archives. They never appear in an API answer, a list, the
+  proxy YAML export, the logs or to an AI assistant.
+- Making, changing, exporting and importing the CA, and downloading a certificate's private key, need a
+  superadmin. Issuing, renewing, revoking and downloading certificates need **Manage proxies**
+  (`proxy.manage`).
+- Everything is in the [audit log](/admin/audit-log): `ca.create`, `ca.change`, `ca.version`,
+  `ca.retire`, `ca.export`, `ca.import`, `ca.certificate.issue`, `ca.certificate.reissue`,
+  `ca.certificate.revoke` and `ca.certificate.download_key`.
+- **Export** (superadmin, confirmed) gives the active version with its keys as one PEM file, to back it
+  up or move it. **Import** makes such a file the active version. Anyone with the file can sign
+  certificates every device that trusts the root accepts: keep it like a password.
+- The [AI assistant tool](/integrations/ai-assistants) `private_ca` reads the CA, its certificates and
+  the root, never a key. An assistant signed in over OAuth can't download a certificate's key or export
+  the CA.
+
+## Secondaries and clusters
+
+- In a [cluster](/deploy/cluster) the servers share the CA (one database); the leader renews and moves
+  certificates.
+- A DNZ secondary following a primary over [replication](/dns/replication) signs nothing and refuses
+  changes to the CA: its certificates are the primary's. The CA isn't copied to a secondary
+  (certificates aren't DNS answers).
+- After a **take over**, the new primary has no CA of the old primary's. Export the CA on the old
+  primary first and import it on the new one, so devices keep trusting the same root.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    On the old primary: **Proxy → Certificates → Private CA → Export**. On the new primary: the same tab
+    → **Import**, and paste the file.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz ca export -o ca-backup.pem --yes   # on the old primary
+    dnz ca import ca-backup.pem            # on the new primary
+    ```
+
+  </Tab>
+</Tabs>
+
+## Metrics
+
+| Metric | What it tells |
+| --- | --- |
+| `dnz_ca_certificates{state}` | Certificates the CA signed, DNZ's own included, by `state` (`pending`, `valid`, `failed`, `revoked`) |
+| `dnz_ca_certificate_expiry_seconds{id,certificate}` | Seconds until a certificate of the CA ends (revoked ones left out) |
+| `dnz_ca_root_expiry_seconds{version}` | Seconds until a version's root ends (retired ones left out) |
+| `dnz_ca_intermediate_expiry_seconds{version}` | Seconds until a version's intermediate ends: no certificate it signs outlives it |
+
+Certificates the CA signs also count in `dnz_certificate_expiry_timestamp_seconds` (`source="ca"`) and in
+the [proxy alerts](/integrations/notifications#proxy-alerts) for certificates about to expire. See
+[Prometheus](/dashboard/prometheus).
+
+## From the terminal and the API
+
+```bash
+dnz ca show                                     # the CA, its versions, download address, fingerprint
+dnz ca init --cn "Example Root CA" --org Example --country ID --constraint lab.internal
+dnz ca root --format mobileconfig -o dnz-root.mobileconfig
+dnz ca issue nas.lab.internal 10.0.0.5 --days 397
+dnz ca issue --client --cn "Alice" --email alice@example.com
+```
+
+Every command is in [CLI → Private CA](/cli/ca), every endpoint in [Private CA API](/api/ca).
+
+## Not yet
+
+- An ACME server in DNZ, so Traefik, Caddy, cert-manager or servers elsewhere ask the CA for certificates
+  themselves.
+- OCSP (the revocation list covers revocation inside a network).
+- An offline root (only the intermediate inside DNZ).

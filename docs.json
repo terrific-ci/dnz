@@ -132,6 +132,7 @@
               "proxy/compose-dnz-proxy",
               "proxy/dnz-proxy",
               "proxy/certificates",
+              "proxy/private-ca",
               "proxy/status-pages",
               "proxy/waf",
               "proxy/rules",
@@ -197,6 +198,7 @@
               "cli/cluster",
               "cli/proxy",
               "cli/proxy-sites",
+              "cli/ca",
               "cli/status-pages",
               "cli/uptime",
               "cli/cloudflare",
@@ -237,6 +239,7 @@
               "api/status-pages",
               "api/uptime",
               "api/certificates",
+              "api/ca",
               "api/backups"
             ]
           }

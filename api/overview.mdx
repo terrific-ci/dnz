@@ -125,6 +125,7 @@ next to the list. Filters and searches apply before the page is cut, so `total` 
 | Threat blocks | `/api/threats/blocks` (`blocks`) | – |
 | Upstreams | `/api/proxy/upstreams` (`upstreams`) | `q`, `protocol`, `unused`, `own=hide`; also `counts` and `twins` ([Proxy](/api/proxy#upstreams)) |
 | Certificates | `/api/acme/certificates` (`certificates`) | `q`, `state` ([Certificates](/api/certificates)) |
+| Private CA certificates | `/api/ca/certificates` (`certificates`) | `q`, `state`, `uses`, `kind` ([Private CA](/api/ca#certificates)) |
 | DNZ Proxy nodes | `/api/proxy/dnz` (`nodes`) | `proxy_id`, `q`: name or address; nodes waiting for approval come whole in `pending` ([DNZ Proxy](/api/dnz-proxy)) |
 | Status pages | `/api/status-pages` (`items`) | `q`: hostname, `state`; also `counts` ([Status pages](/api/status-pages)) |
 | Uptime monitors | `/api/uptime/monitors` (`monitors`) | `q`, `status`; also `counts` ([Uptime](/api/uptime)) |

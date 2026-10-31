@@ -93,6 +93,7 @@ Lists that can grow long take the same two flags: `--limit` (rows per page, 50 b
 | A subnet's addresses | `dnz ipam show` |
 | Upstreams | `dnz proxy upstreams list` |
 | Certificates | `dnz proxy certs list` |
+| Private CA certificates | `dnz ca list` |
 | DNZ Proxy nodes | `dnz proxy nodes list` |
 | Status pages | `dnz status-page list` |
 | Uptime monitors | `dnz uptime list` |
@@ -236,6 +237,7 @@ DNZ_PASSWORD='a-long-password' dnz setup --username admin --division IT \
 | `filter` | Blocklists, allow/block rules, client networks | [Filtering](/cli/filtering) |
 | `replication` | Primaries, secondaries, join requests | [Replication](/cli/replication) |
 | `proxy` | Proxy routes and DNZ Proxy nodes | [Proxy](/cli/proxy) |
+| `ca` | DNZ's private certificate authority: the CA, its certificates, the root devices install | [Private CA](/cli/ca) |
 | `cloudflare` (`cf`) | A division's Cloudflare connection | [Cloudflare](/cli/cloudflare) |
 | `notify` | Notification providers and alerts | [Notifications](/cli/notifications) |
 | `backup` | Backup targets, schedules, backups now, archives and restores | [Backups](/cli/backups) |
@@ -264,6 +266,9 @@ DNZ_PASSWORD='a-long-password' dnz setup --username admin --division IT \
   </Card>
   <Card title="Proxy" icon="cloud" href="/cli/proxy">
     Proxy routes and DNZ Proxy nodes.
+  </Card>
+  <Card title="Private CA" icon="shield-check" href="/cli/ca">
+    Certificates for internal names, and the root devices install.
   </Card>
   <Card title="Cloudflare" icon="cloudflare" href="/cli/cloudflare">
     Connect, import and push zones.
