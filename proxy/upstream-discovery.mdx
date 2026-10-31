@@ -1,0 +1,170 @@
+---
+title: "Servers from a DNS name"
+description: "Let an upstream take its servers from every address of a DNS name, or from a Docker Swarm service's tasks, and follow them as they come and go."
+---
+
+An [upstream](/proxy/upstreams) normally lists its servers. Since DNZ v2 a load balancer can take them
+from a DNS name instead: **every address of the name is a server**, and the list follows the name as
+addresses come and go. It is how DNZ follows a Docker Swarm without being given Docker API
+credentials.
+
+The upstream dialog's **Servers from** has three cards:
+
+| Card | Who looks the name up | For |
+| --- | --- | --- |
+| **Listed here** | Nobody | Servers you type in (as before) |
+| **Every address of a DNS name** | DNZ, with its own DNS | A name with one address per server, such as `swarm-nodes.example.local` with an A record per Swarm node. HTTP, TCP and UDP |
+| **Docker Swarm tasks** | Each DNZ Proxy node, and Caddy | `tasks.<service>` inside the Swarm's overlay network. HTTP only, not on Traefik |
+
+## Every address of a DNS name
+
+DNZ asks **its own DNS server**, as a client on the same machine would: DNZ's zones and views first,
+then the cache and forwarding. A name in one of DNZ's zones needs nothing else, and CNAMEs are
+followed. Each address becomes one server, reached with the scheme (HTTP: `http`, `https` or `h2c`)
+and the port you give, from IPv4 (A), IPv6 (AAAA) or both. Each server has a weight of 1.
+
+- **When.** Again when the answer's TTL ends, but not sooner than **Not sooner than every** (30 seconds
+  by default, 5 to 3,600) and at least once an hour. The proxies get new servers only when the set of
+  addresses changes; Traefik and Caddy pick them up at their next poll.
+- **Errors keep the last servers.** No answer, SERVFAIL or a name without addresses never empties an
+  upstream: the list says *stale since …* with the error, and the proxies keep sending visits to the
+  last servers found.
+- **A name that stops existing.** After **10 minutes** of NXDOMAIN the upstream is emptied, an incident
+  is recorded and a proxy alert (origins) goes out; another one follows when the name answers again.
+- **Loops are refused.** Addresses of the proxies themselves (their own addresses and their DNZ Proxy
+  nodes'), on a port the proxies serve (80, 443 or an entry point's), are left out: such a server
+  would send visits back into the proxy. The list and **Test** name the addresses left out.
+- **Saving looks the name up at once**, so a new upstream has its servers when the proxies get it.
+- **In a cluster**, only the leader looks names up. A DNZ secondary following a primary doesn't: proxies
+  aren't replicated, and nothing here changes a DNS answer.
+
+### Setting the name up
+
+The dialog's guide offers **The name exists** or **Set it up**. For a Swarm behind its routing mesh,
+give every Swarm node's address: each one answers on the service's published port. The guide writes
+the record set for the zone the name is in, for example:
+
+```text
+swarm-nodes	60	IN	A	10.0.0.11
+swarm-nodes	60	IN	A	10.0.0.12
+swarm-nodes	60	IN	A	10.0.0.13
+```
+
+When that zone is one of DNZ's, **Add 3 records to example.local** adds them. A short TTL lets a Swarm
+node that leaves or joins reach the proxies within a minute. The upstream is then the name and the
+published port: `swarm-nodes.example.local`, port `8080`.
+
+<Tabs>
+  <Tab title="Dashboard">
+    **Proxy → Upstreams → Add upstream** → **Load balancer** → **Servers from** → **Every address of
+    a DNS name**, then the name, port and scheme. **Test** shows the servers the name gives now,
+    without saving.
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    dnz proxy upstreams add swarm --from-dns swarm-nodes.example.local:8080
+    dnz proxy upstreams add api --from-dns api.internal:443 --scheme https --family both --every 60
+    dnz proxy upstreams add pg --tcp --from-dns db.internal:5432 --tls
+    dnz proxy upstreams discover swarm               # look the name up now; nothing is saved
+    ```
+  </Tab>
+</Tabs>
+
+## Docker Swarm tasks
+
+`tasks.<service>` lists a Swarm service's running tasks, but only **Docker's DNS inside the service's
+overlay network** answers it, so DNZ can't. Each proxy looks the name up itself instead:
+
+- **DNZ Proxy** nodes look the name up every 10 seconds (and whenever a new configuration arrives) and
+  make **each address a server of its own**, with its own health checks, weight, sticky sessions and
+  line in the node's report, rather than one server for the whole name. A failed lookup keeps the last
+  set, with a warning in the node's report. A changed set never interrupts traffic: visits in flight
+  finish on the server they started with.
+- **Caddy** looks the name up itself every 10 seconds (dynamic upstreams from A records). Caddy takes
+  such an upstream only on its own: inside a Split, Fallback or Mirror only the name's servers are
+  used and the other upstreams are left out, with a warning.
+- **Traefik** can't make each address of a name a server, so DNZ refuses such an upstream on a Traefik
+  proxy, both when saving it and when a route there picks it. Use **Every address of a DNS name**
+  instead, or Traefik's own Docker Swarm provider.
+
+<Warning>
+  Task addresses are overlay addresses: only nodes **in that network** reach them. For proxy nodes
+  outside the Swarm, use [Every address of a DNS name](#every-address-of-a-dns-name) with the Swarm
+  nodes' addresses and the service's published port instead.
+</Warning>
+
+### Setting the Swarm up
+
+The dialog's guide (**Set it up**) is copy-paste, with DNZ's address and the connect key filled in,
+and never assumes the Swarm runs next to DNZ:
+
+<Steps>
+  <Step title="An attachable overlay network">
+    On a Swarm manager (skip it when the service already has a network the nodes may join):
+
+    ```bash
+    docker network create --driver overlay --attachable dnz-apps
+    ```
+  </Step>
+  <Step title="The service in that network">
+    ```bash
+    docker service update --network-add dnz-apps web
+    ```
+
+    Or add the network under the service's `networks:` in its stack file.
+  </Step>
+  <Step title="The DNZ Proxy nodes in that network">
+    In the [Swarm stack](/proxy/dnz-proxy#running-a-node) the nodes run from, add the network to the
+    service and declare it as external:
+
+    ```yaml dnz-proxy-stack.yml
+    services:
+      dnz-proxy:
+        # …
+        networks:
+          - "dnz-apps"
+    networks:
+      "dnz-apps":
+        external: true
+    ```
+
+    A node started with `docker run` gets `--network dnz-apps`; with Compose, the same `networks:`
+    as above.
+  </Step>
+  <Step title="The upstream">
+    The service's name (`web`) and the port its tasks listen on:
+
+    ```bash
+    dnz proxy upstreams add web --from-dns tasks.web:80 --resolve-on proxy
+    dnz proxy upstreams discover web                 # what each DNZ Proxy node found
+    ```
+
+    In the dashboard: **Servers from** → **Docker Swarm tasks**. **Test** shows what each DNZ Proxy
+    node found for it, from their reports.
+  </Step>
+</Steps>
+
+## In the upstream list
+
+The list says where the servers come from, for example *3 servers from swarm-nodes.example.local, 2 min
+ago*, or that they are stale while lookups fail. `dnz proxy upstreams list` shows `NAME:PORT (3 found)`
+(or `each proxy` for Swarm tasks) as the servers, and `show` the name, how many servers it gave and
+when, and the error while lookups fail.
+
+Everywhere else:
+
+- **Configuration as code**: `from_dns` takes the place of `servers` in the proxy's YAML; the servers
+  found are never in the file. See [Configuration as code](/proxy/config-as-code).
+- **Route history** shows the upstream's name, not the servers found.
+- **Topology**: an upstream's node says the name it follows. See [Topology map](/dashboard/topology).
+- **Prometheus**: `dnz_proxy_upstream_discovered_servers{upstream, stale}` and
+  `dnz_proxy_upstream_discovery_errors_total`. See [Prometheus](/dashboard/prometheus#metrics-reference).
+- **AI assistants**: `proxy_upstreams` shows where the servers come from and what was found,
+  `set_proxy_upstream` takes `from_dns`, and `discover_proxy_upstream` looks a name up. See
+  [AI assistants](/integrations/ai-assistants#tools).
+- **API**: see [Upstreams](/api/proxy#upstreams).
+
+<Note>
+  DNZ doesn't ask a Swarm manager's API for services, tasks and nodes. That would need a Docker API
+  client certificate, which gives root over the whole Swarm; the two ways above need no credentials.
+</Note>

@@ -321,6 +321,31 @@ dnz proxy upstreams edit secure-api --no-transport   # back to the defaults
 `--root-ca`, `--client-cert` and `--client-key` read PEM files on the machine running the CLI and
 send their text; `show` lists the settings (client certificates by name and expiry, never their keys).
 
+Servers **from a DNS name** instead of a list: every address of the name is a server, and the list
+follows the name. See [Servers from a DNS name](/proxy/upstream-discovery).
+
+```bash
+dnz proxy upstreams add swarm --from-dns swarm-nodes.example.local:8080            # DNZ looks it up (its own zones first)
+dnz proxy upstreams add api --from-dns api.internal:443 --scheme https --family both --every 60
+dnz proxy upstreams add web --from-dns tasks.web:80 --resolve-on proxy             # Docker Swarm tasks: each DNZ Proxy node (and Caddy) looks it up
+dnz proxy upstreams add pg --tcp --from-dns db.internal:5432 --tls
+dnz proxy upstreams edit swarm --every 120         # the name's other settings stay
+dnz proxy upstreams edit swarm -t http://10.0.0.11:8080   # listed servers again
+dnz proxy upstreams discover swarm                 # look the name up now (nothing saved); for tasks.<service>, what each node found
+```
+
+| Option | What it does |
+| --- | --- |
+| `--from-dns NAME:PORT` | Every address of `NAME` is a server, reached on `PORT` |
+| `--resolve-on` | Who looks the name up: `dnz` (default: DNZ's own DNS, its zones first) or `proxy` (each DNZ Proxy node and Caddy, for `tasks.<service>`). `proxy` is for HTTP upstreams and is refused on a Traefik proxy |
+| `--scheme` | HTTP: how the servers are reached, `http` (default), `https` or `h2c` |
+| `--family` | The addresses taken: `v4` (A, default), `v6` (AAAA) or `both` |
+| `--every SECONDS` | DNZ looks the name up again after its TTL, but not sooner than this (5 to 3600, default 30) |
+| `--tls` | TCP: the servers speak TLS |
+
+`list` shows `NAME:PORT (3 found)` (or `each proxy`) as the servers; `show` the name, how many servers
+it gave and when, and the error while lookups fail (the last servers stay).
+
 ### Middlewares and firewalls
 
 What happens to a visit on its way, one list for every proxy. A change reaches every route running

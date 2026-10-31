@@ -263,6 +263,13 @@ Compose, Docker Swarm and a plain command line.
       the other nodes keep serving. DNZ stops sending visitors to a node once its health checks fail.
     - **The connect key** comes from the shell at deploy time and is only needed to join; nodes that
       have joined don't use it again.
+    - **Visits straight to a service's tasks.** For an upstream of
+      [Docker Swarm tasks](/proxy/upstream-discovery#docker-swarm-tasks) (`tasks.<service>`), the
+      nodes join the service's overlay network: `networks: [dnz-apps]` on the `dnz-proxy` service and
+      `networks: {dnz-apps: {external: true}}` in the stack, with the network made by
+      `docker network create --driver overlay --attachable dnz-apps` (`docker run --network dnz-apps`
+      for a node outside a stack). The upstream dialog's guide writes it out, with DNZ's address and
+      the connect key filled in.
 
     Or download it: `curl -fsSLO https://raw.githubusercontent.com/terrific-ci/dnz/main/swarm/dnz-proxy-stack.yml`
 
@@ -471,6 +478,14 @@ Routers, services and middlewares work as described in
   HTTP/2 and h2c upstreams, WebSocket and gRPC.
 - **Headers to the upstream**: `X-Forwarded-For`, `-Proto`, `-Host`, `-Port`, `-Server` and
   `X-Real-Ip`.
+- **Server names**: a server URL with a hostname is **one** server, the name looked up per connection
+  (kept 30 seconds, a random address of its set). An upstream of
+  [Docker Swarm tasks](/proxy/upstream-discovery#docker-swarm-tasks) is different: the node looks
+  `tasks.<service>` up itself every 10 seconds and whenever a configuration arrives, and **each address
+  is a server of its own**, with its own health checks, weight and line in the node's report. A changed
+  set never touches visits in flight, and a failed lookup keeps the last set, with a warning in the
+  report. The node must be in the service's overlay network: only Docker's DNS there answers
+  `tasks.<service>`.
 - **Certificates**: HTTPS entry points pick the certificate by the name the visitor asks for (SNI),
   in this order: DNZ's issued and uploaded certificates, the TLS certificates of the proxy, the
   default certificate, then a self-signed one.

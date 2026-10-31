@@ -55,7 +55,7 @@ and the incident history too.
 | Alert | When | Default |
 | --- | --- | --- |
 | **Attack spike** | Requests blocked on a hostname (firewall rules and the [WAF](/proxy/waf)) over 5 minutes reach a rate a minute, and a factor of the hour before. The message names the rules and addresses behind them. DNZ Proxy | 30 a minute, 5 × |
-| **Origin down** | A service's server fails its health check on every DNZ Proxy node that checks it, or Traefik marks it `DOWN` (with its API address set). Needs a health check on the service; Caddy doesn't tell | after 60 s |
+| **Origin down** | A service's server fails its health check on every DNZ Proxy node that checks it, or Traefik marks it `DOWN` (with its API address set). Needs a health check on the service; Caddy doesn't tell. Also when an upstream whose servers come from a [DNS name](/proxy/upstream-discovery) loses them because the name hasn't existed (NXDOMAIN) for 10 minutes | after 60 s |
 | **Node down** | A DNZ Proxy node stops reporting or DNZ can't reach its port (drained nodes left out), a Traefik or Caddy stops fetching its configuration | after 60 s |
 | **Certificates** | Issuing or renewing fails in a row; a certificate in use ends soon | 3 failures, 14 days |
 

@@ -12,7 +12,9 @@ uses it, on every proxy.
 
 Each upstream shows its servers, its balancing (and whether visits are sticky), its health check and
 what uses it: routes and the proxies they are on, other upstreams that send visits to it, and error
-pages that ask it for their pages.
+pages that ask it for their pages. Servers taken from a DNS name say so, for example *3 servers from
+swarm-nodes.example.local, 2 min ago*, or that they are stale while lookups fail (see
+[Servers from a DNS name](/proxy/upstream-discovery)).
 
 - Filter by kind of traffic: **HTTP**, **TCP** or **UDP**.
 - **Hide routes' own** leaves out the upstreams made from a route's servers (see below).
@@ -51,8 +53,16 @@ dnz proxy upstreams show swarm-service   # each server: up on 3 of 3 nodes, or d
      dropped.
    - **Fallback**: another upstream while this one is down (or answers with the status codes you list).
 3. **Name** and **description**. The name is the service name every proxy knows the upstream by.
-4. **Servers**: URLs such as `http://10.0.0.10:8080` with a weight (HTTP), or `host:port` addresses
-   (TCP, optionally with TLS to the server; UDP).
+4. **Servers from** (a load balancer):
+   - **Listed here**: URLs such as `http://10.0.0.10:8080` with a weight (HTTP), or `host:port`
+     addresses (TCP, optionally with TLS to the server; UDP).
+   - **Every address of a DNS name**: DNZ looks the name up with its own DNS (its zones first) and keeps
+     one server per address, such as every Docker Swarm node behind its routing mesh.
+   - **Docker Swarm tasks** (HTTP): `tasks.<service>`, which each DNZ Proxy node and Caddy look up
+     themselves inside the service's overlay network. Refused on Traefik.
+
+   **Test** looks the name up now, and the guides write the record set or the Swarm network set-up
+   for you. See [Servers from a DNS name](/proxy/upstream-discovery).
 5. **Balancing**: weighted round robin, power of two choices, highest random weight or least time,
    and **sticky sessions** (a cookie keeps each visitor on the server it first reached).
 6. **Health check**: a path and how often to ask it; a server that doesn't answer well gets no visits.
@@ -236,6 +246,9 @@ dnz proxy upstreams merge swarm-service app-example-com
 dnz proxy upstreams edit secure-api --server-name api.internal --root-ca ./internal-ca.pem
 dnz proxy upstreams edit secure-api --client-cert ./dnz-client.pem --client-key ./dnz-client.key   # mTLS
 dnz proxy upstreams edit pg --proxy-protocol 2       # TCP: send the PROXY protocol
+dnz proxy upstreams add swarm --from-dns swarm-nodes.example.local:8080   # every address of a name
+dnz proxy upstreams add web --from-dns tasks.web:80 --resolve-on proxy    # Docker Swarm tasks
+dnz proxy upstreams discover swarm                   # look the name up now; nothing is saved
 ```
 
 See [Proxy commands](/cli/proxy) for every option.

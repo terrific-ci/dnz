@@ -76,12 +76,31 @@ upstreams:
 | `proxy`, `kind` | The proxy it is for, by name, and its kind (`traefik`, `dnz-proxy`, `caddy`), for the reader. A file applies to another proxy, of another kind too, as long as it uses nothing that kind lacks |
 | `defaults` | A DNZ Proxy's route defaults; left out, they stay as they are |
 | `routes` | The routes |
-| `upstreams` | Upstreams by name: servers, balancing, sticky sessions, health check, and `transport`: its [connection settings](/proxy/upstreams#connection-settings) in the shape of Traefik's servers transport (server name, `rootCAs`, client `certificates`, timeouts) |
+| `upstreams` | Upstreams by name: servers, balancing, sticky sessions, health check, and `transport`: its [connection settings](/proxy/upstreams#connection-settings) in the shape of Traefik's servers transport (server name, `rootCAs`, client `certificates`, timeouts). `from_dns` instead of `servers` takes them from a [DNS name](#servers-from-a-dns-name) |
 | `middlewares` | Middlewares by name: `kind` (the form, such as `stripPrefix` or `dnzFirewall`) and `config` in Traefik's shape. Every proxy's: one another proxy uses stays when this file prunes it, and a change reaches every proxy using it (the plan says which) |
 
 A route without a `name` is named after its first hostname (`app.example.com` becomes
 `app-example-com`); the name is how a route is found again, so the same name updates the same route.
 Unknown keys are refused, so a typo such as `cahce: 10m` is an error instead of being ignored.
+
+### Servers from a DNS name
+
+A load balancer whose servers come from [every address of a DNS name](/proxy/upstream-discovery) has
+`from_dns` instead of `servers`. The servers DNZ found are never in the file, so a plan doesn't change
+when the name's addresses do.
+
+```yaml
+upstreams:
+- name: swarm
+  from_dns:
+    mode: dns
+    name: swarm-nodes.example.local
+    port: 8080
+    scheme: http          # https or h2c; TCP upstreams take tls: true instead
+    family: v4            # v6 or both
+    resolve_on: dnz       # proxy: each DNZ Proxy node and Caddy look it up (tasks.<service>)
+    min_interval_secs: 30
+```
 
 ## TCP and UDP routes
 
