@@ -41,9 +41,19 @@ to be set up first; see [below](#the-oauth-client).
 
 ```bash
 dnz cf status                                     # connected, and to which account
-dnz cf verify                                     # re-check the token, e.g. after changing its permissions
+dnz cf verify                                     # re-check the token and each permission (read-only)
+dnz cf permissions                                # every permission DNZ uses, what each is for, the token link
 dnz cf disconnect                                 # forget the connection (and end the sign-in grant)
 ```
+
+`verify` checks the token and each permission against the token's first zone with read-only calls,
+never by changing anything on your zones, and prints what it found: works, reading works, checked
+when DNZ first uses it, missing (with what it turns off) or not checked yet. Run it after adding a
+permission to the token. To check against one zone, for a token limited to some zones, use
+**Re-check** on that zone's page. `permissions` lists the permissions, which are required and what
+each one is for, and the link that opens Cloudflare's token form with them filled in;
+Account → Cloudflare Tunnel → Edit has to be added there by hand. See
+[Token permissions](/integrations/cloudflare#token-permissions).
 
 ## Browsing Cloudflare
 

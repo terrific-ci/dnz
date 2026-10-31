@@ -15,14 +15,18 @@ Connecting needs the `integrations.manage` permission in the division (Owner by 
   <Tab title="API token">
     <Steps>
       <Step title="Create a token on Cloudflare">
-        Under **Settings → Integrations**, **Create token on Cloudflare** opens Cloudflare with
-        `Zone · Read` and `DNS · Edit` already filled in. Pick the zones the token may access, then
+        Under **Settings → Integrations → Cloudflare**, **Create token on Cloudflare** opens
+        Cloudflare's token form with the permissions DNZ uses filled in and a name like
+        *DNZ – Default*. Add **Account → Cloudflare Tunnel → Edit** by hand if you want the Tunnels
+        card (see [Token permissions](#token-permissions)). Pick the zones the token may access, then
         **Continue to summary → Create Token**.
 
-        Or make one yourself at **Cloudflare → API Tokens** with the **Edit zone DNS** template.
+        Or make one yourself at **Cloudflare → API Tokens** with the **Edit zone DNS** template: it
+        covers the two required permissions.
       </Step>
       <Step title="Paste the token">
-        Paste it into DNZ. DNZ checks it and lists the zones it can reach.
+        Paste it into DNZ. DNZ checks the token and each permission, read-only, and lists the zones
+        it can reach.
       </Step>
     </Steps>
 
@@ -30,7 +34,8 @@ Connecting needs the `integrations.manage` permission in the division (Owner by 
 
     ```bash
     dnz cloudflare connect --division it    # asks for the token (or DNZ_CLOUDFLARE_TOKEN)
-    dnz cf verify                           # re-check it, e.g. after changing its permissions
+    dnz cf verify                           # re-check the token and each permission, e.g. after changing them
+    dnz cf permissions                      # every permission DNZ uses, what each is for, the token link
     ```
   </Tab>
   <Tab title="Sign in with Cloudflare">
@@ -48,6 +53,62 @@ Connecting needs the `integrations.manage` permission in the division (Owner by 
 
 Right after signing in with Cloudflare, a dialog offers to **import the Cloudflare zones into local
 DNS**. You can also do that any time later, see below.
+
+## Token permissions
+
+Only the first two permissions are required. Each of the others turns on one part of a Cloudflare
+zone's page, and one that's missing turns off only that part.
+
+| Permission | Needed for | In the token link | Checked |
+|---|---|---|---|
+| Zone → Zone → Read | The zone list and each zone's page; compare, sync, import and push; certificates for names on Cloudflare | Yes | On connect |
+| Zone → DNS → Edit | Listing and editing records; keeping a local zone in sync and pushing records; DNSSEC; the CNAME records of tunnel hostnames; certificates by DNS-01 | Yes | Reading on connect, changing the first time DNZ changes something |
+| Zone → Zone Settings → Edit | The SSL/TLS and security settings | Yes | Reading on connect, changing the first time DNZ changes something |
+| Zone → Cache Purge → Purge | Purging the cache | Yes | The first time DNZ purges |
+| Zone → Analytics → Read | The Traffic card | Yes | On connect |
+| Account → Cloudflare Tunnel → Edit | The Cloudflare Tunnels card and its public hostnames | No: add it by hand | Reading on connect, changing the first time DNZ changes something |
+
+<Note>
+  Cloudflare's prefilled token link only takes the permissions its documentation lists and silently
+  drops any other, and it lists none for Cloudflare Tunnel. To use the Tunnels card, add
+  **Account → Cloudflare Tunnel → Edit** on the token form yourself (**+ Add more**). The link in the
+  [certificate](/proxy/certificates) wizard asks for the two required permissions only.
+</Note>
+
+### What DNZ checks
+
+Cloudflare has no call that lists what a token may do, so DNZ finds out by itself, and never by
+changing anything on your zones:
+
+- **On connect, Re-check and Sign in with Cloudflare**, it makes read-only calls against the token's
+  first zone (or, from a zone's page, that zone): the zone, one DNS record, the zone settings, an hour
+  of analytics and the account's tunnel list.
+- **Edit and Purge** can't be proven without a change, so DNZ notes them the first time it makes one
+  for you: a record saved, a setting changed, a purge. A change Cloudflare refuses marks the
+  permission missing; one that goes through marks it working. A read that works again, after you
+  added the permission, clears a *missing* too.
+
+**Settings → Integrations → Cloudflare** lists every permission with what was found:
+
+| State | Meaning |
+|---|---|
+| **Works** | Checked, or used and accepted |
+| **Reading works** | Reading was checked; changing isn't tried until DNZ first changes something |
+| **Checked the first time DNZ uses it** | Not tried yet (Cache Purge, before the first purge) |
+| **Missing** | Cloudflare refused it; the list says what it turns off |
+| **Not checked yet** | Connected before DNZ checked permissions, or no zone to check against: press **Re-check** |
+
+`dnz cf verify` re-checks and prints the same list; `dnz cf permissions` prints every permission with
+what it's for and the token link.
+
+### On a zone's page
+
+A permission the token lacks is named once, at the top of the Cloudflare zone's page, for example:
+*This token can't read Traffic or show or change SSL/TLS settings. Add Zone → Analytics → Read and
+Zone → Zone Settings → Edit.* Beside it, **Create a token with everything** opens the token form, and
+**Re-check** checks against this zone, which matters for tokens limited to some zones. The cards it
+turns off say *Needs a permission*, and a change refused for a missing permission shows the same
+line. The rest of the page keeps working.
 
 ### Register the OAuth client (superadmin)
 
@@ -73,6 +134,10 @@ DNS**. You can also do that any time later, see below.
     ```
   </Step>
 </Steps>
+
+A connection made with Sign in with Cloudflare has the OAuth client's scopes. The default ones cover
+the two required permissions; for the other parts of a zone's page, add their scopes to the client
+(`dnz cf oauth-app set … --scopes`).
 
 <Note>
   New Cloudflare OAuth clients are private: only members of your Cloudflare account can sign in.
@@ -175,9 +240,9 @@ Below a Cloudflare zone's records:
   </Card>
 </CardGroup>
 
-Each part needs its own token permission, and **Create token on Cloudflare** asks for all of them:
-Zone Read, DNS Edit, Zone Settings Edit, Cache Purge, Analytics Read and Account Cloudflare Tunnel
-Edit. A part the token can't do says which permission to add, and the rest keeps working.
+Each part needs its own token permission (see [Token permissions](#token-permissions)). A part the
+token can't do says *Needs a permission*, the notice at the top of the page names the permission to
+add, and the rest keeps working.
 
 ```bash
 dnz cf settings example.com --set ssl=strict --dnssec on
@@ -188,6 +253,33 @@ dnz cf tunnel add example.com office app.example.com http://localhost:8080
 
 See [Import and export](/dns/import-export) for BIND zone files, and the full
 [CLI reference](/cli/cloudflare).
+
+## API
+
+| Method | Path | |
+|---|---|---|
+| `GET` | `/api/cloudflare/permissions[?name=]` | Every permission DNZ uses and what each is for: `permissions`, `required`, `by_hand`, and the token links `token_url` and `dns_token_url` (`name` names the token) |
+| `GET` | `/api/divisions/{id}/cloudflare` | The connection, with `permissions` (each with `state`: `granted`, `reads`, `unchecked`, `missing` or `unknown`; `by`: `check` or `use`; `at`), `missing` (the permissions Cloudflare refused), `permissions_zone` and `permissions_checked_at` |
+| `POST` | `/api/divisions/{id}/cloudflare/verify[?zone=]` | Re-check, optionally against one zone (its Cloudflare id) |
+
+A zone's settings (`GET /api/divisions/{id}/cloudflare/zones/{zone}/settings`) answer a refused part
+as `{ error, code, missing }`, where `missing` is the permission to add, or `null`.
+
+### Errors
+
+A failed Cloudflare call answers `{ "error", "code" }` with DNZ's own sentence. Cloudflare's own
+text, which can name the token's id, goes to the server log only.
+
+| Code | HTTP | Meaning |
+|---|---|---|
+| `cloudflare_permission` | 502 | The token lacks one permission, named in `permission` (`"Zone → Analytics → Read"`) |
+| `cloudflare_auth` | 502 | Cloudflare refused the token as a whole: revoked, expired or wrong |
+| `cloudflare_rate_limited` | 429 | Too many calls; see `Retry-After` |
+| `cloudflare_unreachable` | 502 | DNZ couldn't reach Cloudflare |
+| `cloudflare_error` | 502 | Cloudflare failed |
+| `cloudflare_rejected` | 400 | Cloudflare refused the request itself, e.g. a record that clashes. Keeps Cloudflare's explanation, with anything that looks like an id left out |
+
+A Cloudflare error is never 401 or 403, so it never signs you out of DNZ.
 
 ## Other uses
 
