@@ -39,7 +39,9 @@ dnz settings auto-ptr on
 
 The **Device address** card sets the address devices and DHCP servers use to reach this server's
 DNS. The [setup guides](/get-started/first-run) name it, and so does the
-[Cluster page](/deploy/cluster). Left empty, DNZ works it out from the network interfaces. In a
+[Cluster page](/deploy/cluster). The server line at the bottom of the menu shows it under the
+server's name, with the round trip from your browser to DNZ (the median of the last few, e.g.
+`10.0.133.14 · 12 ms`; in a cluster, the node you're signed in to). Left empty, DNZ works it out from the network interfaces. In a
 Docker container those are the container's own (`172.x.x.x`), so DNZ uses the address you opened
 the UI at, and warns when it can't tell. Set it when DNZ runs in a container or behind NAT. Separate
 several addresses with commas.
