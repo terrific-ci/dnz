@@ -255,7 +255,7 @@ dnz settings file-cache                       # is the query log's file cache dr
 dnz settings file-cache on --idle-minutes 30  # drop it 30 minutes after the last search (default 10)
 dnz settings file-cache off                   # leave it to the kernel: searches stay fast
 dnz settings profile                          # the logo and label on status pages
-dnz settings profile --label "Perusahaan A" --logo https://example.com/logo.png
+dnz settings profile --label "Company" --logo https://example.com/logo.png
 dnz settings profile --logo "$(base64 < logo.png)"   # the image itself (base64, base64url or a data: URL)
 dnz settings profile --clear-logo             # remove it (--clear-label for the label)
 dnz settings metrics on --addr 0.0.0.0:9153   # Prometheus /metrics on a listen address of its own
