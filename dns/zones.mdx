@@ -354,6 +354,10 @@ Turn it off for a zone that is the whole truth for its domain.
     host), the client gets this zone's NODATA instead, so an AAAA lookup never denies a name
     whose A record is answered here.
 
+    A [proxied name](/proxy/overview)'s A and AAAA records are its proxies' addresses and nothing
+    else: an AAAA question for a name whose proxies have no IPv6 address gets this zone's NODATA
+    and never goes upstream (on a DNZ secondary too).
+
     Views are respected: a name that a client's view adds is answered for that client. Signed
     queries (update clients looking up a name's zone, secondaries) always get this server's answer.
     Changing the setting doesn't bump the serial.
