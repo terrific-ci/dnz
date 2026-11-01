@@ -137,7 +137,7 @@ and ask for the next page.
 | `export_zone` | A zone as a zone file |
 | `zone_history` | A zone's versions: who changed what, when, from where; `page` and `limit` (20 a page) |
 | `explain_query` | The decision path and answer for a name, type and client ([Query explain](/dns/query-explain)) |
-| `query_log` | Recent queries, filtered by name, client or source; the last 24 hours unless `range` (`1h`, `24h`, `7d`, `all`) or `since`/`until`. In a cluster every server's, each row naming its server; `node` (a node id) for one server ([Query logs](/dns/query-logs#in-a-cluster)); `page` (from 1, at most 50; `limit` is then the page size, 100) answers `more` and the `until` to pass for the next pages ([pages](/dns/query-logs#pages)) |
+| `query_log` | Recent queries, filtered by name, client or source; the last 24 hours unless `range` (`1h`, `24h`, `7d`, `all`) or `since`/`until`. In a cluster every server's, each row naming its server; `node` (a node id) for one server ([Query logs](/dns/query-logs#in-a-cluster)); `page` (from 1, 5,000 rows deep; `limit` is then the page size, 20 by default, at most 100) answers `more` and the `until` to pass for the next pages ([pages](/dns/query-logs#pages)) |
 | `capture_queries` | Watch live queries matching keywords (typed, or saved keyword lists) for a few seconds, grouped by domain ([Live capture](/dns/live-capture)) |
 | `capture_keyword_lists` | The saved keyword lists live capture can pick, server-wide and a division's |
 | `traffic_stats` | Query counts, NXDOMAIN ratio, top names and clients |
@@ -159,15 +159,15 @@ and ask for the next page.
 | `cloudflare_compare` | A local zone beside the Cloudflare zone of the same name, one row per name and type with both values and a status (same, split, only local, only Cloudflare, conflict) ([Compare with Cloudflare](/integrations/cloudflare#compare-with-cloudflare)) |
 | `cloudflare_zone` | A Cloudflare zone's traffic, SSL/TLS and security settings, DNSSEC and tunnel hostnames, each part on its own: a part the token has no permission for is `{ missing: "Zone → Analytics → Read" }` (the permission to add), and `missing_permissions` lists every one Cloudflare refused so far. Only with `dnz mcp` (stdio): assistants signed in over OAuth can't reach Cloudflare connections ([Token permissions](/integrations/cloudflare#token-permissions)) |
 | `encrypted_dns` | Encrypted DNS: whether DoT, DoH, DoQ and DoH3 are on, the addresses devices use, the certificate in use and, for superadmins, the certificate DNZ issues itself |
-| `audit_log` | Who changed what, newest first; `page` and `limit` (50 a page) |
-| `pending_changes` | Change requests waiting for approval (or, with `status`, decided ones); `page` and `limit` (50 a page) |
+| `audit_log` | Who changed what, newest first; `page` and `limit` (20 a page) |
+| `pending_changes` | Change requests waiting for approval (or, with `status`, decided ones); `page` and `limit` (20 a page) |
 | `topology` | How divisions, zones, views, upstreams, proxies and replication fit together |
 | `view_records` | [Views](/dns/views) with their networks and record counts, or one view's records (zone, name, type, value, TTL, on/off) in the zones you may read; one view's records a page at a time (`page`, `limit`, 50) |
 | `list_status_pages` | Hosts with a status page ([Status pages](/proxy/status-pages)): kind, state, schedule, allowed addresses, proxies; a page at a time (`page`, `limit`, 50) unless `host` names one |
 | `status_page_hosts` | Hosts a status page can be set on, with the proxies serving each |
 | `private_ca` | DNZ's [private certificate authority](/proxy/private-ca): the issuer (subject), key type, intermediate, name constraints, revocation list, versions, where devices download the root and its SHA-256 fingerprint, and a page of the certificates it signed (`search`, `state`, `page`, `limit`); `root: true` adds the root's PEM. Never a private key; issuing is left to people |
 | `list_uptime_monitors` | [Uptime](/dashboard/uptime) monitors: state and since when, what each checks, uptime over 24 hours, 7, 30 and 90 days, response time, last error, public name; open incidents and watched route groups; a page of monitors at a time (`page`, `limit`, 50) unless `monitor` names one |
-| `list_uptime_incidents` | Uptime incidents (automatic and written by people): status, impact, affected monitors, duration and timeline; `page` and `limit` (50 a page) |
+| `list_uptime_incidents` | Uptime incidents (automatic and written by people): status, impact, affected monitors, duration and timeline; `page` and `limit` (20 a page) |
 | `proxy_incidents` | [Proxy incidents](/integrations/notifications#proxy-alerts) going on now (nodes, origins, attack spikes, with when each started) and the latest incidents and recoveries, certificates included; the latest a page at a time (`page`, `limit`, 20, with `total`) |
 | `create_record` ✎ | Adds a record |
 | `update_record` ✎ | Changes a record by id; fields left out stay |

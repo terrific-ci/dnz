@@ -154,7 +154,7 @@ dnz record tags example.com                   # tags in use and how many records
 ```
 
 The list comes [a page at a time](/cli/overview#long-lists-come-a-page-at-a-time), counted in
-**names**: a page holds `--limit` names (50 by default, at most 200) with every matching record of
+**names**: a page holds `--limit` names (20 by default, at most 200) with every matching record of
 each, so a name's records never split across pages. The filters run on the server before the page is
 cut, and the footer counts the names that match.
 

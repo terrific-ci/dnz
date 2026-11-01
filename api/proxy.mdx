@@ -144,7 +144,7 @@ paged on the server, so `total` and every count are over every route.
 | `type` | `on`, `off`, `redirect`, `https`, `http`, `cert-failing`, `dns-missing`, `advanced`, or a switch: `cache`, `firewall`, `waf`, `under-attack`, `waiting-room`, `rate-limit`, `password`, `sign-in`, `allow`, `headers`, `uploads`, `rules` |
 | `group`, `zone` | A route group's or a zone's name, or `-` for routes in none |
 | `view` | `zones` or `groups`: rows ordered by zone or group, and each one's count in `groups` |
-| `page`, `per_page` | 50 a page by default, at most 200 |
+| `page`, `per_page` | 20 a page by default, at most 200 |
 
 ```json
 {
@@ -271,7 +271,7 @@ the proxies themselves).
 
 ### A page of upstreams
 
-`GET /api/proxy/upstreams?page=&per_page=` (50 a page, at most 200) answers
+`GET /api/proxy/upstreams?page=&per_page=` (20 a page, at most 200) answers
 `{"upstreams": [...], "total", "page", "per_page", "counts", "twins"}`, after these filters:
 
 | Parameter | |

@@ -53,7 +53,7 @@ For how history and change approval work, see [History and change approval](/dns
   The versions kept.
 </ResponseField>
 
-Ask for a page with `?page=2&per_page=50` (50 by default, at most 200); the answer adds `page` and
+Ask for a page with `?page=2&per_page=50` (20 by default, at most 200); the answer adds `page` and
 `per_page`. Older clients page back with `?before=<version>&limit=` (up to 500) and get no `page` or
 `per_page`. `GET …/versions/{version}` adds what the version changed:
 
@@ -141,7 +141,7 @@ only needs to handle `202` when approval is in use.
 - `scope`: `to_approve` (the ones you can decide) or `mine`.
 - `zone_id`, `division_id`: only those of a zone or division.
 
-With `page` or `per_page` (50 by default, at most 200) it answers
+With `page` or `per_page` (20 by default, at most 200) it answers
 `{"changes": [...], "total", "page", "per_page"}`, counting only the requests the caller may see.
 Without them it answers a bare array of at most `limit`
 (100), as before.

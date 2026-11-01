@@ -23,7 +23,7 @@ dnz logs --page 2 --until 2026-10-31T08:00:01Z   # the second page; page 1's foo
 
 | Option | What it does |
 | --- | --- |
-| `-n`, `--limit` | How many, newest first (default 50); with `--page`, the page size (at most 100) |
+| `-n`, `--limit` | How many, newest first (default 20); with `--page`, the page size (at most 100) |
 | `--page` | A page of `--limit` queries, from 1 to 50 (see [below](#pages-of-the-query-log)) |
 | `-q`, `--query` | Name or client contains this |
 | `--client` | Only this client address |
@@ -196,7 +196,7 @@ dnz audit --page 2                            # older entries
 | `-d`, `--division` | Only this division |
 | `-q`, `--query` | Text in the user, action, target, details or address |
 | `--category` | Action prefix, e.g. `record`, `zone`, `user`, `settings` |
-| `--limit` | Entries per page (default 50, at most 200; `-l` and `-n` still work) |
+| `--limit` | Entries per page (default 20, at most 200; `-l` and `-n` still work) |
 | `--page` | Which page, from 1. A footer under the list gives the next one ([long lists](/cli/overview#long-lists-come-a-page-at-a-time)) |
 | `--before` | Entries older than this id, instead of a page (still works) |
 

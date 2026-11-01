@@ -118,12 +118,12 @@ The list comes **100 queries a page**, newest first. **Older** opens the next pa
 - **The address keeps the place.** The page, the pinned end and the time window are in the browser's
   address, so a link or a reload opens the same page.
 - **A new search or filter starts at page 1** again.
-- **Pages stop at 50** (5,000 queries). There is no total: counting every query of a window
-  would mean reading all of it. On page 50 the list says *Narrow the time window for older queries*:
+- **Pages stop at 250** (5,000 queries, 20 a page). There is no total: counting every query of a window
+  would mean reading all of it. On page 250 the list says *Narrow the time window for older queries*:
   pick a shorter window, or a **Custom…** range that ends earlier.
 
 `dnz logs --page`, the API's `page` and the MCP tool's `page` work the same way (see
-[From the command line](#from-the-command-line) and [API](#api)); `dnz logs` shows 50 a page unless
+[From the command line](#from-the-command-line) and [API](#api)); `dnz logs` shows 20 a page unless
 `-n` says otherwise (at most 100).
 
 ## In a cluster
@@ -196,8 +196,8 @@ period (see [How long data is kept](#how-long-data-is-kept)).
 
     | Option | Meaning |
     | --- | --- |
-    | `-n`, `--limit` | How many queries, newest first (default 50); with `--page`, the page size (at most 100) |
-    | `--page` | One [page](#pages) of the window, from 1 to 50. The footer gives the next `--page` and the `--until` that keeps it in place |
+    | `-n`, `--limit` | How many queries, newest first (default 20); with `--page`, the page size (at most 100) |
+    | `--page` | One [page](#pages) of the window, from 1 (5,000 queries deep: page 250 at 20 a page). The footer gives the next `--page` and the `--until` that keeps it in place |
     | `-q`, `--query` | The name or client contains this text |
     | `--client` | Only this client address |
     | `--source` | `local`, `forwarded`, `cached`, `blocked`, `error`, or one source such as `conditional` |
@@ -260,7 +260,7 @@ Both lists take:
 | `range` | `1h`, `24h` (the default), `7d` or `all` |
 | `since`, `until` | RFC 3339 times instead of `range`; without `since`, the range reaches back from `until` |
 | `node` | One server of a cluster, by node id; default: every server |
-| `page`, `per_page` | [Pages](#pages-in-the-api), if you ask for them: 100 rows a page (at most 100), pages 1 to 50 |
+| `page`, `per_page` | [Pages](#pages-in-the-api), if you ask for them: 20 rows a page unless `per_page` says (at most 100), 5,000 rows deep (page 250 at 20 a page) |
 
 An [API token](/api/overview) with `logs.read` can read its division's log:
 
@@ -305,7 +305,7 @@ Retry-After: 2
 
 ### Pages in the API
 
-With `page` (from 1, at most 50) or `per_page` (100 by default, at most 100), the answer is an object
+With `page` (from 1, 5,000 rows deep: page 250 at 20 a page) or `per_page` (20 by default, at most 100), the answer is an object
 instead of a plain array:
 
 ```json
@@ -322,7 +322,7 @@ instead of a plain array:
 - There is **no total**: counting a window would read all of it. `more` says an older page follows.
 - Page 1 answers `until`, just after its newest row. Pass it back with pages 2 and on
   (`&until=2026-10-31T08:00:01Z`), so queries logged meanwhile don't shift them.
-- Page N reads N pages of rows on every server, so pages stop at 50 (`last_page`). For older queries,
+- Page N reads N pages of rows on every server, so pages stop at 5,000 rows (page 250 at 20 a page; `last_page`). For older queries,
   narrow the window with `since` / `until`.
 - Searches on pages count towards the [two at a time](#two-searches-at-a-time) like any other.
 
