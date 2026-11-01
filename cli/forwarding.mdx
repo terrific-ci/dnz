@@ -16,6 +16,7 @@ dnz forwarding edit 1.1.1.1 --weight 3 --enabled off
 dnz forwarding edit 1.1.1.1 --position 1      # move it to the top
 dnz forwarding rm 8.8.8.8
 dnz forwarding strategy least_time
+dnz forwarding activate 1.1.1.1               # Set active: first, strategy failover
 ```
 
 `dnz fwd` is a short alias for `dnz forwarding`.
@@ -33,6 +34,10 @@ format.
 
 The strategies are `failover`, `wrr`, `p2c`, `hrw` and `least_time`. Changing it takes effect without a
 restart.
+
+`dnz forwarding activate <address>` (alias `set-active`) makes one upstream the one in use: it goes
+first (switched on if it was off), the others stay after it as fallbacks in their order, and the
+strategy becomes `failover`. See [Set an upstream active](/dns/forwarding#set-an-upstream-active).
 
 ## Recursive resolution
 

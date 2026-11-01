@@ -106,6 +106,31 @@ answers.
 
 Weights run from 1 to 100. With `p2c` and `least_time`, the order is only a tie-breaker.
 
+### Set an upstream active
+
+To send every query to one upstream right now (an upstream misbehaves, or you want to compare),
+use **Set active**: that upstream goes first in the order (switched on if it was off), the others
+stay after it as fallbacks in their order, and the strategy becomes **Failover**, in one change
+applied at once. The others take over only if it fails.
+
+<Tabs>
+  <Tab title="Dashboard">
+    Open the **Forward DNS** status in the top bar (*N DNS upstreams healthy*), then right-click an
+    upstream or click its **⋯** and choose **Set active**. The popover then shows
+    *Failover · 1.1.1.1 active*. The same menu is on each upstream under **DNS → Forwarding** (save or
+    discard unsaved changes first).
+  </Tab>
+  <Tab title="CLI">
+    ```bash
+    dnz forwarding activate 1.1.1.1
+    ```
+  </Tab>
+</Tabs>
+
+It needs the same permission as editing forwarding, is written to the audit log, and isn't offered
+while DNZ resolves recursively. A [secondary](/dns/replication) follows its primary's upstream order
+and strategy, so it switches too. AI assistants can do it with the `set_active_upstream` tool.
+
 ## Cache, timeout and rate limit
 
 These are server settings in the config file or the environment (see
