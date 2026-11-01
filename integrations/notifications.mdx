@@ -92,7 +92,7 @@ dnz notify add Ops --kind telegram --set bot_token=123456:ABC… --set chat_id=-
   --event down --event recovered --event daily_summary
 dnz notify add Mail --kind smtp --set host=smtp.example.com --set port=587 --set security=starttls \
   --set username=dnz --set password=… --set from=dnz@example.com --set to=ops@example.com,it@example.com
-dnz notify add Hook --kind webhook --config @webhook.json
+dnz notify add Hook --kind webhook --settings @webhook.json
 dnz notify test 1
 dnz notify alerts --nxdomain-percent 40 --rate-limited 500 --summary-hour 7
 dnz notify proxy-alerts --attack-factor 10 --origin-after 120

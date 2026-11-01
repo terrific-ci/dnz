@@ -18,7 +18,7 @@ dnz notify add Ops --kind telegram --set bot_token=123456:ABC… --set chat_id=-
   --event down --event recovered --event daily_summary
 dnz notify add Mail --kind smtp --set host=smtp.example.com --set port=587 --set security=starttls \
   --set username=dnz --set password=… --set from=dnz@example.com --set to=ops@example.com,it@example.com
-dnz notify add Hook --kind webhook --config @webhook.json
+dnz notify add Hook --kind webhook --settings @webhook.json
 dnz notify list                                   # secrets are shown masked
 dnz notify test 1                                 # send a test message now
 dnz notify set 1 --set chat_id=-100999 --enabled off
@@ -31,13 +31,13 @@ dnz notify rm 1
 | --- | --- | --- | --- |
 | `-k`, `--kind` | yes | – | `telegram`, `resend`, `smtp` or `webhook`. Required |
 | `--set KEY=VALUE` | yes | yes | One setting (repeatable) |
-| `--config` | yes | yes | All settings as JSON, or `@FILE` to read them from a file |
+| `--settings` | yes | yes | All settings as JSON, or `@FILE` to read them from a file |
 | `--event` | yes | yes | An event to send (repeatable). Default on `add`: `down` and `recovered`. On `set`, replaces the events |
 | `--disabled` | yes | – | Add it switched off |
 | `--enabled` | – | yes | `on` or `off` |
 | `--name` | – | yes | Rename it |
 
-`notify set --set` changes only the settings you give and keeps the stored secrets. `--config`
+`notify set --set` changes only the settings you give and keeps the stored secrets. `--settings`
 replaces them all.
 
 ### Settings per kind

@@ -424,8 +424,8 @@ dnz proxy middlewares list                         # shared ones: type, the prox
 dnz proxy middlewares list --own --unused          # routes' own switches too; only the ones nothing uses
 dnz proxy middlewares show strip-api               # its settings and every route (and proxy), chain and route defaults using it
 dnz proxy middlewares usage office
-dnz proxy middlewares add strip-api --config '{"stripPrefix": {"prefixes": ["/api"]}}'
-dnz proxy middlewares add office-only --tcp --config '{"ipAllowList": {"sourceRange": ["10.0.0.0/8"]}}'
+dnz proxy middlewares add strip-api --settings '{"stripPrefix": {"prefixes": ["/api"]}}'
+dnz proxy middlewares add office-only --tcp --settings '{"ipAllowList": {"sourceRange": ["10.0.0.0/8"]}}'
 dnz proxy middlewares add office --file ./office-firewall.json   # {"dnzFirewall": {"rules": [...]}}
 dnz proxy middlewares edit strip-api --rename strip-v1 --description "Old API clients"
 dnz proxy middlewares edit app-example-com-headers --shared   # a route's own switch becomes a shared middleware
@@ -435,7 +435,7 @@ dnz proxy firewalls list                           # every firewall, its rule co
 dnz proxy firewalls show office                    # its rules, in order
 ```
 
-`--kind` defaults to the type `--config` holds. A TCP route picks TCP middlewares with
+`--kind` defaults to the type `--settings` holds. A TCP route picks TCP middlewares with
 `dnz proxy routes add-tcp … --middleware office-only`.
 
 ### Route defaults (DNZ Proxy)
