@@ -164,7 +164,7 @@
               "admin/audit-log",
               "admin/backups",
               "admin/settings",
-              "admin/health-check"
+              "admin/diagnostics"
             ]
           },
           {
@@ -287,6 +287,10 @@
     ]
   },
   "redirects": [
+    {
+      "source": "/admin/health-check",
+      "destination": "/admin/diagnostics"
+    },
     {
       "source": "/blog/the-orange-cloud-comes-home",
       "destination": "/blog/cloudflare-in-your-server-room"

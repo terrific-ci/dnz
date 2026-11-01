@@ -3,8 +3,8 @@ title: "Troubleshooting"
 description: "Common problems when deploying DNZ and how to fix them."
 ---
 
-Start with `dnz doctor` (or **Settings → Health check**): it finds most of these by itself and prints
-the fix. See [Health check](/admin/health-check).
+Start with `dnz doctor` (or **Settings → Diagnostics**): it finds most of these by itself and prints
+the fix. See [Diagnostics](/admin/diagnostics).
 
 | Symptom | Cause and fix |
 | --- | --- |
@@ -28,7 +28,7 @@ the fix. See [Health check](/admin/health-check).
 ## Useful commands
 
 ```bash
-dnz doctor                          # the health check: what is wrong, and how to fix it
+dnz doctor                          # Diagnostics: what is wrong, and how to fix it
 dnz config show                     # effective settings and where they come from
 dnz healthcheck                     # exit 0 when the API answers
 journalctl -u dnz -f                # logs (systemd)

@@ -94,7 +94,7 @@ check → Open the setup wizard** or `dnz setup` picks it up where it stopped.
     - **Encrypted DNS**: Android Private DNS, Apple profiles, Windows 11 DoH, systemd-resolved DoT
       and browsers, once DNZ has a certificate;
     - **Registrar**, for a public zone: the nameservers, their glue, the DS when DNSSEC is on, the
-      firewall, and **Check now**, which runs the [health check](/admin/health-check) of the
+      firewall, and **Check now**, which runs [Diagnostics](/admin/diagnostics) of the
       delegation right there.
 
     In a Docker container DNZ may only see the container's own address. The step then asks for the
@@ -113,7 +113,7 @@ one, `--guide registrar` for the first public zone).
   use it.
 - Set up [notifications](/integrations/notifications) so you hear when an upstream goes down.
 - Point your network at DNZ. See [Pointing clients at DNZ](/deploy/clients).
-- Run the [health check](/admin/health-check) (**Settings → Health check** or `dnz doctor`): port
+- Run [Diagnostics](/admin/diagnostics) (**Settings → Diagnostics** or `dnz doctor`): port
   53, the delegation of public zones, DNSSEC at the registrar, certificates, the clock and weak
   settings, each with a copy-paste fix.
 

@@ -301,8 +301,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "DNZ health check: {{ $labels.id }} fails"
-          description: "Settings → Health check (or `dnz doctor`) shows the evidence and a copy-paste fix."
+          summary: "DNZ Diagnostics: {{ $labels.id }} fails"
+          description: "Settings → Diagnostics (or `dnz doctor`) shows the evidence and a copy-paste fix."
 
       - alert: DnzHealthFindingsStale
         expr: time() - dnz_health_last_check_timestamp_seconds > 6 * 3600
@@ -310,5 +310,5 @@ groups:
         labels:
           severity: info
         annotations:
-          summary: "The DNZ health check has not run for 6 hours"
+          summary: "DNZ Diagnostics has not run for 6 hours"
           description: "Its schedule is off, or the cluster has no leader to run the install checks."

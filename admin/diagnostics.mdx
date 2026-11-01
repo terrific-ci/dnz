@@ -1,16 +1,21 @@
 ---
-title: "Health check"
-description: "Find the usual mistakes of a DNS install, each with the evidence and a copy-paste fix: port 53, zone delegations, DS records, secondaries, certificates, the clock and weak settings."
+title: "Diagnostics"
+description: "Settings → Diagnostics checks DNZ's own setup for the usual mistakes of a DNS install, each with the evidence and a copy-paste fix: port 53, zone delegations, DS records, secondaries, certificates, the clock and weak settings."
 ---
 
-The health check looks at a DNZ install for the usual mistakes: port 53 taken, a zone the registrar
+Diagnostics looks at a DNZ install for the usual mistakes: port 53 taken, a zone the registrar
 doesn't point at DNZ, a DS record that breaks DNSSEC, a secondary that stopped transferring, a
 certificate about to expire, a clock that is off, a resolver open to the whole internet. Each
 finding says what was seen and how to fix it, with commands or settings to paste.
 
+<Note>
+  Diagnostics checks DNZ's own setup. It was called **Health check** before v2.0 and is not the
+  [health check of an upstream](/proxy/upstreams), which decides where visits go.
+</Note>
+
 It runs in three places:
 
-- **Settings → Health check** (superadmins): the findings, **Check now**, muting and the settings. A
+- **Settings → Diagnostics** (superadmins): the findings, **Check now**, muting and the settings. A
   badge in the header shows how many findings need fixing.
 - **`dnz doctor`** in the terminal, `--json` for scripts. When no server answers (often because port
   53 is taken), it checks the machine it runs on by itself.
@@ -77,7 +82,7 @@ dnz doctor --mute version          # leave a finding out of the badge and the al
 
 ```console
 $ dnz doctor
-DNZ health check: 1 thing to fix (1 fail, 0 warn, 0 info, 0 skipped, 9 ok)
+DNZ diagnostics: 1 thing to fix (1 fail, 0 warn, 0 info, 0 skipped, 9 ok)
 checked 2026-10-22T09:14:03Z
 
 FAIL  example.com: DS doesn't match the DNSKEY  (ds:example.com)
@@ -112,16 +117,19 @@ dnz version --json   # GET /api/update
 
 Every node runs the schedule for its own machine; the cluster's leader also checks the install and
 sends the alerts, so each goes out once. One message lists what turned bad, with the fixes; another
-follows when it's fine again. Subscribe a provider to **Health check finds a problem**.
+follows when it's fine again. Subscribe a provider to **Diagnostics finds a problem** (`health_check`).
 
 **Mute** a finding you accept (a resolver meant to be public, a zone you don't delegate yet): it
 stays listed, greyed out, but leaves the badge, the counts and the alerts.
 
 ## Settings
 
+Under **Settings → Diagnostics**, or `dnz settings diagnostics` (`dnz settings health-check`, its old
+name, still works).
+
 | Setting | Default | CLI |
 | --- | --- | --- |
-| Schedule | on, every 60 minutes | `dnz settings health-check --enabled on --interval 30` |
+| Schedule | on, every 60 minutes | `dnz settings diagnostics --enabled on --interval 30` |
 | Release check | on | `--version-check off` (or `DNZ_VERSION_CHECK=false` before it is saved) |
 | Public resolvers | 1.1.1.1, 8.8.8.8, 9.9.9.9 | `--resolvers 10.0.0.53,1.1.1.1` |
 | Time servers | time.cloudflare.com, pool.ntp.org | `--time-servers ntp.internal` (`""` turns the clock check off) |

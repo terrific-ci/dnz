@@ -1,6 +1,6 @@
 ---
 title: "Maintenance"
-description: "Write and check the configuration, move to another database, give back SQLite space, run health checks, print the version and factory-reset a server."
+description: "Write and check the configuration, move to another database, give back SQLite space, check liveness and run Diagnostics, print the version and factory-reset a server."
 ---
 
 These commands look after the server itself rather than its DNS data. For the settings themselves,
@@ -98,7 +98,7 @@ Exits with status 0 when this machine's server answers (`GET /api/health`), so i
 
 ## Doctor
 
-`dnz doctor` runs the [health check](/admin/health-check): port 53, zone delegations (NS, glue, DS,
+`dnz doctor` runs [Diagnostics](/admin/diagnostics) (Settings → Diagnostics): port 53, zone delegations (NS, glue, DS,
 lame nameservers), secondaries, certificates, the clock, disk space, the DNZ version and weak
 settings, each finding with its evidence and a copy-paste fix. Superadmin.
 
@@ -110,7 +110,7 @@ dnz doctor --cached                # the last stored report
 dnz doctor --local                 # this machine only, without the server (e.g. before it starts)
 dnz doctor --mute version          # leave a finding (or a whole check) out of the badge and alerts
 dnz doctor --unmute version
-dnz settings health-check --interval 30 --version-check off
+dnz settings diagnostics --interval 30 --version-check off   # was settings health-check
 ```
 
 When no server answers, `dnz doctor` checks the machine it runs on by itself: whether DNZ can bind
@@ -124,7 +124,7 @@ dnz version          # the server's version, the latest release on GitHub and ho
 ```
 
 `dnz version` is what the **Update** badge in the web UI shows (see
-[Health check](/admin/health-check#update-badge)); it says so when the release check is turned off.
+[Diagnostics](/admin/diagnostics#update-badge)); it says so when the release check is turned off.
 
 ## Factory reset
 

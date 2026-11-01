@@ -75,12 +75,12 @@ Each threshold alerts once per expiry date: a zone turned on with 5 days left al
 dnz zone expiry set example.com --thresholds 45,14,3
 ```
 
-## Health check and metrics
+## Diagnostics and metrics
 
-Each monitored zone is a [health check](/admin/health-check) finding (`domain_expiry:<zone>`): a
+Each monitored zone is a [Diagnostics](/admin/diagnostics) finding (`domain_expiry:<zone>`): a
 failure when the domain expired, is on hold or being deleted, a warning within the largest
-threshold or when lookups keep failing, each with how to fix it. They show on **Settings → Health
-check** and in `dnz doctor`.
+threshold or when lookups keep failing, each with how to fix it. They show on **Settings →
+Diagnostics** and in `dnz doctor`.
 
 With [metrics](/dashboard/prometheus) on, `dnz_domain_expiry_days{zone,domain}` gives the days left
 (negative once expired), with `dnz_domain_expiry_timestamp_seconds` and
