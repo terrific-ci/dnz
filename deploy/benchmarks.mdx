@@ -15,7 +15,7 @@ For DNZ Proxy against nginx, HAProxy, Envoy, Caddy and Traefik, see [Proxy bench
 
 ## Results
 
-Measured on 2026-10-30 on a dedicated server: a KVM virtual machine with 4 CPUs (Intel Xeon Silver
+Measured on 2026-11-01 on a dedicated server: a KVM virtual machine with 4 CPUs (Intel Xeon Silver
 4114, 2.2 GHz), x86_64, nothing else running. 2 CPUs and 1 GiB per server, dnsperf on the other 2
 CPUs over UDP, 32 clients, 500 queries outstanding, median of 3 runs of 20 s.
 
@@ -23,43 +23,43 @@ CPUs over UDP, 32 clients, 500 queries outstanding, median of 3 runs of 20 s.
 
 | Server | Queries/s | Avg latency | Memory |
 | --- | ---: | ---: | ---: |
-| **DNZ 1.22** | **146,152** | **1.75 ms** | **45.4 MiB** |
-| NSD 4.12.0 | 140,030 | 0.80 ms | 74.5 MiB |
-| Knot DNS 3.4.6 | 139,706 | 0.57 ms | 8.4 MiB |
-| PowerDNS Authoritative 4.9.18 | 129,503 | 0.89 ms | 59.4 MiB |
-| gdnsd 3.8.3 | 127,507 | 0.59 ms | 2.2 MiB |
-| Unbound 1.26.2 (`auth-zone`) | 124,491 | 0.81 ms | 14.7 MiB |
-| BIND 9.20.30 | 123,850 | 1.29 ms | 11.7 MiB |
-| YADIFA 3.0.2 ¹ | 78,136 | 1.67 ms | 58.7 MiB |
-| CoreDNS 1.12.1 (`file`) | 53,392 | 3.83 ms | 79.8 MiB |
-| Technitium 15.6.2 | 39,776 | 10.75 ms | 85.0 MiB |
-| Hickory DNS 0.26.3 | 11,953 | 15.07 ms | 16.3 MiB |
+| **DNZ 2.1.0** | **145,528** | **1.58 ms** | **44.9 MiB** |
+| NSD 4.12.0 | 141,999 | 0.74 ms | 76.8 MiB |
+| Knot DNS 3.4.6 | 141,103 | 0.59 ms | 8.5 MiB |
+| gdnsd 3.8.3 | 131,413 | 0.66 ms | 3.2 MiB |
+| PowerDNS Authoritative 4.9.18 | 130,984 | 0.79 ms | 64.4 MiB |
+| Unbound 1.26.2 (`auth-zone`) | 127,628 | 0.74 ms | 19.0 MiB |
+| BIND 9.20.30 | 127,190 | 1.25 ms | 16.4 MiB |
+| YADIFA 3.0.2 ¹ | 80,352 | 1.62 ms | 64.6 MiB |
+| CoreDNS 1.12.1 (`file`) | 53,650 | 3.96 ms | 83.3 MiB |
+| Technitium 15.6.2 | 38,838 | 11.25 ms | 147.9 MiB |
+| Hickory DNS 0.26.3 | 12,122 | 14.21 ms | 20.6 MiB |
 
 ### Cached forwarding
 
 | Server | Queries/s | Avg latency | Memory |
 | --- | ---: | ---: | ---: |
-| **DNZ 1.22** | **147,302** | **1.67 ms** | **51.2 MiB** |
-| dnsdist 1.9.16 (packet cache) | 136,023 | 2.45 ms | 36.7 MiB |
-| Knot Resolver 5.7.5 | 131,431 | 0.89 ms | 10.3 MiB |
-| PowerDNS Recursor 5.2.13 | 129,786 | 2.16 ms | 19.8 MiB |
-| Unbound 1.26.2 | 125,865 | 0.67 ms | 21.8 MiB |
-| BIND 9.20.30 | 124,822 | 1.29 ms | 17.6 MiB |
-| CoreDNS 1.12.1 | 67,982 | 3.04 ms | 91.6 MiB |
-| dnsmasq 2.91 | 66,229 | 2.46 ms | 3.0 MiB |
-| Technitium 15.6.2 | 39,617 | 10.98 ms | 107.4 MiB |
-| AdGuard Home 0.107.79 | 30,867 | 7.17 ms | 57.9 MiB |
-| Pi-hole 2026.10.0 | 21,673 | 7.63 ms | about 44 MiB ² |
-| Hickory DNS 0.26.3 | 20,063 | 8.71 ms | 34.7 MiB |
-| Blocky 0.35.0 | 17,770 | 12.05 ms | 48.0 MiB |
+| **DNZ 2.1.0** | **144,171** | **1.49 ms** | **53.2 MiB** |
+| dnsdist 1.9.16 (packet cache) | 143,134 | 2.16 ms | 45.9 MiB |
+| BIND 9.20.30 | 141,648 | 1.01 ms | 22.5 MiB |
+| PowerDNS Recursor 5.2.13 | 141,492 | 1.42 ms | 29.6 MiB |
+| Unbound 1.26.2 | 123,702 | 0.76 ms | 26.2 MiB |
+| Knot Resolver 5.7.5 | 121,598 | 1.29 ms | 11.8 MiB |
+| CoreDNS 1.12.1 | 69,390 | 2.88 ms | 94.9 MiB |
+| dnsmasq 2.91 | 68,670 | 2.38 ms | 4.9 MiB |
+| Technitium 15.6.2 | 38,272 | 11.69 ms | 169.7 MiB |
+| AdGuard Home 0.107.79 | 32,122 | 6.68 ms | 75.0 MiB |
+| Pi-hole 2026.10.0 | 22,702 | 7.28 ms | about 44 MiB ² |
+| Hickory DNS 0.26.3 | 20,328 | 8.40 ms | 38.1 MiB |
+| Blocky 0.35.0 | 17,541 | 12.23 ms | 75.4 MiB |
 
-DNZ is 1.22 with the UDP hand-over after 512 queries (see *1.22: against Knot DNS* below), the
-`dnz` binary built from its commit. It answers the most queries a second in both scenarios, but not
-the fastest: at dnsperf's limit its average latency is 1.7 ms against Knot DNS's 0.6 ms, and higher
-than the 1.1 ms of the build before the hand-over change. The same day's run of that build: Knot DNS
-134,060, NSD 129,591, DNZ 124,504 authoritative; dnsdist 135,731, BIND 127,351, DNZ 126,367 cached.
-Other servers vary 3 to 8% between runs, so compare places within one run. v1.5.0 answered 66,772
-authoritative and 65,581 cached queries a second at 2.3 ms; what changed is below.
+DNZ is the 2.1.0 release image from Docker Hub with its defaults. It answers the most queries a
+second in both scenarios, but not the fastest: at dnsperf's limit its average latency is 1.5 to
+1.6 ms against Knot DNS's 0.6 ms. In the cached scenario the top four (DNZ, dnsdist, BIND 9,
+PowerDNS Recursor) are within 2% of each other. Other servers vary 3 to 8% between runs, so compare
+places within one run. The run before (2026-10-30, DNZ 1.22): DNZ 146,152, NSD 140,030, Knot DNS
+139,706 authoritative; DNZ 147,302, dnsdist 136,023, Knot Resolver 131,431 cached. v1.5.0 answered
+66,772 authoritative and 65,581 cached queries a second at 2.3 ms; what changed is below.
 
 1. YADIFA 3.0.2 (the Debian 13 package) sends malformed NXDOMAIN answers (the SOA in the wrong
    section), one query in ten here, so its number is not quite comparable.
@@ -67,21 +67,22 @@ authoritative and 65,581 cached queries a second at 2.3 ms; what changed is belo
 
 What the numbers say:
 
-- **The top group is the load generator's limit.** DNZ, NSD, Knot DNS, PowerDNS, gdnsd, Unbound,
-  BIND 9, dnsdist, Knot Resolver and PowerDNS Recursor all land between 123k and 148k queries a
+- **The top group is the load generator's limit.** DNZ, NSD, Knot DNS, gdnsd, PowerDNS, Unbound,
+  BIND 9, dnsdist, Knot Resolver and PowerDNS Recursor all land between 121k and 146k queries a
   second, within 20% of each other. That is what dnsperf sends from its 2 CPUs; their real capacity
   is higher, and this run doesn't rank them among themselves.
 - **DNZ is at the top of that group** in both scenarios, while writing every query to its query
-  log, with 1.7 ms of latency at the limit. v1.5.0 answered half as many at twice the latency (below). DNZ
-  answers 2.7 times what CoreDNS does authoritative and twice what CoreDNS and dnsmasq do cached.
+  log, with 1.5 to 1.6 ms of latency at the limit. v1.5.0 answered half as many at twice the
+  latency (below). DNZ answers 2.7 times what CoreDNS does authoritative and 2.1 times what CoreDNS
+  and dnsmasq do cached.
 - **Against the servers with a web UI, a query log and filtering**, the ones people often pick
-  instead of DNZ: Technitium answers 27% of what DNZ does, AdGuard Home 21%, Pi-hole 15% and
-  Blocky 12%, with 4 to 7 times DNZ's latency.
+  instead of DNZ: Technitium answers 27% of what DNZ does, AdGuard Home 22%, Pi-hole 16% and
+  Blocky 12%, with 4.5 to 8 times DNZ's latency.
 - **Hickory DNS**, the other DNS server written in Rust, answers 8% of DNZ's authoritative and 14%
   of its cached queries (with its default `info` logging of every request).
-- **Memory**: the C servers that only answer DNS mostly hold 2 to 22 MiB; NSD, PowerDNS
-  Authoritative and YADIFA set aside 59 to 75 MiB. DNZ holds 45 to 51 MiB with its web API, query
-  log and cache: less than AdGuard Home and CoreDNS here, about half of Technitium.
+- **Memory**: the C servers that only answer DNS mostly hold 3 to 30 MiB; NSD, PowerDNS
+  Authoritative and YADIFA set aside 64 to 77 MiB. DNZ holds 45 to 53 MiB with its web API, query
+  log and cache: less than AdGuard Home, Blocky and CoreDNS here, about a third of Technitium.
 
 ### Cache hits, before and after
 
@@ -216,8 +217,8 @@ earlier set of the same runs, taken while other work ran on the same server, had
 
 ## Features compared
 
-Speed is half the picture: the servers ahead of DNZ answer DNS and little else, and the ones
-with a comparable feature set (Technitium, AdGuard Home, Pi-hole, Blocky) answer 3 to 8 times
+Speed is half the picture: the servers level with DNZ answer DNS and little else, and the ones
+with a comparable feature set (Technitium, AdGuard Home, Pi-hole, Blocky) answer 4 to 8 times
 fewer queries. What each server has built in, for the versions measured above, from each
 project's own documentation. A dash means not built in; much of it is possible with a separate
 tool (PowerDNS-Admin for a PowerDNS UI, an exporter for Prometheus, dnsdist in front for
@@ -329,7 +330,7 @@ Every cell above that isn't a dash counts, limited ones included (local zones, A
 | NSD | 3 |
 | gdnsd | 3 |
 
-Technitium comes closest, and it has a DHCP server of its own, which DNZ doesn't: DNZ takes names from the DHCP server you already run. The servers that beat DNZ on queries a second have 3 to 12 of the 25.
+Technitium comes closest, and it has a DHCP server of its own, which DNZ doesn't: DNZ takes names from the DHCP server you already run. The servers closest to DNZ on queries a second have 3 to 12 of the 25.
 
 ## Method
 
