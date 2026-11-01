@@ -6,18 +6,30 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.1.0**, released November 1, 2026. To install or upgrade to it:
+The latest release is **v2.1.1**, released November 1, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.1.0
-docker pull terrificci/dnz-proxy:2.1.0   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.1.0
+docker pull terrificci/dnz:2.1.1
+docker pull terrificci/dnz-proxy:2.1.1   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.1.1
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.1.0" description="November 1, 2026" tags={["Latest"]}>
+<Update label="v2.1.1" description="November 1, 2026" tags={["Latest"]}>
+
+- **Routes: the health check of a route's own servers is set in the route dialog again.** v2.1.0 left the route dialog and a record's route without any way to set it. Each server row now has a heart button between its address and its weight: it opens the server's health check (the upstream's path, a path of its own, or not checked, on DNZ Proxy) and shows the choice at a glance: muted at the upstream's path, highlighted with its own path, struck through when not checked, with the nodes' health colour on it. Under the servers, **Health check** sets the path every server is asked and how often. The upstream dialog has the same heart on each server and keeps **Health check → Per server** as an overview.
+- **Routes on a shared upstream: its health check in the route dialog.** Picking an upstream from the list shows its health check path and interval under it, to change right there; saving the route saves them on the upstream, and a note says the change reaches every route using it. **Edit upstream…** opens the upstream's own dialog for the rest.
+- **A record's route keeps each server's settings.** Making a route from the record dialog dropped each server's certificate check (Skip TLS verification) and its own health check path; both are kept now, with the route's health check.
+- **CLI:** `dnz proxy routes add|edit` and `dnz record add|edit --upstream` take `--health-check PATH` (`none` to stop) and `--health-interval SECONDS` for the route's own servers.
+- **Under attack check: let addresses and user agents through from the route dialog.** With the check on, the route dialog shows **Let these addresses through** (addresses and ranges) and **Let these user agents through** (crawlers and monitors that can't run JavaScript), and under **More** its difficulty and how long a pass lasts. They are the same settings as the route's check in Proxy → Middlewares, so a change in either place shows in the other. Route history shows them, and `dnz proxy routes add|edit` takes `--challenge-allow-ip` and `--challenge-allow-agent`.
+- **Fixed: record search by a full name.** Searching a zone's records for a name as DNS writes it (`www.example.com`, in any case, with or without the final dot) found only records whose value mentioned it, not the record itself. It now finds the record and lists it first, followed by names ending in it (such as `*.www`); the zone's own name finds the apex. The same search works in `dnz record list -q`, MCP's `list_records` and the records of a Cloudflare zone, the zones list finds the zone a full name is in, and Find (⌘K) finds a zone by a name inside it or with a final dot. On PostgreSQL, searching records no longer fails.
+- **DNZ Proxy: visitors can no longer pass for another address through a trusted forwarder.** Behind a CDN or proxy listed under an entry point's **Trusted forwarders**, DNZ Proxy took the leftmost `X-Forwarded-For` address as the visitor's, and that part is whatever the visitor sends: the firewall, the WAF's *Never check these addresses*, Under attack's allowed addresses, rate limits, IP allow lists, sign-in, analytics and the request log could all be fooled. It now reads the list from the right and takes the first address that isn't a trusted forwarder, and reads `X-Real-IP` or `Forwarded` from a forwarder that sends only those (until now it took the forwarder's own address). Upstreams always get the visitor's address in `X-Real-Ip`, and a `Forwarded` header from an address that isn't trusted is dropped like `X-Forwarded-*`. **If several proxies sit in front of DNZ Proxy (for example Cloudflare, then nginx), list every one of them as a trusted forwarder**, or visitors will show as the address of the one that isn't listed.
+
+</Update>
+
+<Update label="v2.1.0" description="November 1, 2026">
 
 - **Routes: servers' health.** On Proxy → Routes and a proxy's own route list, hovering **Goes to** shows each server's health when DNZ Proxy nodes health-check its upstream: a green, amber or red icon with *Up*, *Down on 1 of 2 nodes* or *Down*, and each node's reason under a server that is down. Hovering the icon shows what is checked (*Checks GET /healthz every 10s*); a server whose own check is off says *Not checked*. A small dot on the row shows a down server before you hover, and `dnz proxy routes list` marks such servers `(down)`.
 - **Route dialog: room to read.** Each switch in the route dialog (Stop attacks, Who gets in, Speed and headers, HTTPS) shows its name on one line and its explanation under it, in roomier boxes, instead of squeezing both into one row where names such as *Under attack check* broke over two lines. The TCP route dialog, a record's route, sticky sessions and a moved status page's *Keep the path* use the same layout.
