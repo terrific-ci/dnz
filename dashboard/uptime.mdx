@@ -129,8 +129,10 @@ a [repeating window](/proxy/status-pages#scheduled-maintenance), or a **maintena
 
 - A monitor of such a hostname (an HTTP monitor's URL host, a service monitor's hostname) keeps
   checking and keeping its results, but while the maintenance is on a failed check counts nothing:
-  no failures in a row, no automatic incident, no alert. Its row says *In maintenance until 23:00*.
-  A monitor that was already down stays down, with its incident open.
+  no failures in a row, no automatic incident, no alert, and nothing in its days or its uptime. Its
+  row says *In maintenance until 23:00*. A monitor that was already down stays down, with its
+  incident open. A monitor whose checks have all failed in maintenance is still *not checked yet*
+  and shows **—** for its uptime, never 100%; a passing check counts, maintenance or not.
 - At each occurrence of a repeating window that covers a monitor, DNZ opens an incident
   "Scheduled maintenance: *name*" (impact **Maintenance**, so those days show as maintenance) and
   resolves it with "Maintenance finished." at the end. It is on the public page when the window is
