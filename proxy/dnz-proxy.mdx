@@ -469,6 +469,10 @@ Per entry point:
   replaced, and `X-Real-Ip` and `Forwarded` are dropped. See [The visitor's address](#the-visitors-address).
 - Timeouts for idle connections and for reading a request.
 
+Changing these on a running node keeps the port open. New connections get the new settings at once,
+and connections already open finish their request on the old ones and close. A new address opens
+before the old one closes (on the same port, the old one closes first, for a moment).
+
 ### The visitor's address
 
 The firewall, the WAF's *Never check these addresses*, Under attack's allowed addresses, rate
