@@ -148,6 +148,7 @@ dnz record list example.com [--name www] [--type A]
 dnz record list example.com --tag prod
 dnz record list example.com --enabled off
 dnz record list example.com -q "main site"    # text in the name, value or comment
+dnz record list example.com -q www.example.com # a name in full (any case, final dot or not): that record first
 dnz record list example.com --group           # one row per name and type, with all its values
 dnz record list example.com --page 2 --limit 100   # the next 100 names, each with all its records
 dnz record tags example.com                   # tags in use and how many records carry each

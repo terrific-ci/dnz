@@ -133,7 +133,7 @@ and ask for the next page.
 | `whoami` | Who the connection acts as, its divisions, superadmin or not |
 | `list_zones` | Zones you can see, optionally of one division or matching `search`; a page of each division at a time (`page`, `limit`, 50), with each division's total |
 | `get_zone` | One zone's settings |
-| `list_records` | A zone's records, by name, type or a search in name, value and comment; a page of names at a time (`page`, `limit` names, 50), each with all its records: `total` counts names, `matching` records |
+| `list_records` | A zone's records, by name, type or a search in name, value and comment (a name may be given in full, `www.example.com`: that record comes first); a page of names at a time (`page`, `limit` names, 50), each with all its records: `total` counts names, `matching` records |
 | `export_zone` | A zone as a zone file |
 | `zone_history` | A zone's versions: who changed what, when, from where; `page` and `limit` (20 a page) |
 | `explain_query` | The decision path and answer for a name, type and client ([Query explain](/dns/query-explain)) |
