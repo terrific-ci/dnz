@@ -36,9 +36,19 @@ last 30 seconds:
 | Red | No node finds it up |
 
 Hover a server to see which nodes find it down and why (*connection refused*, for example). An
-upstream with servers down on some nodes says how many, such as *1 of 3 servers down on some nodes*.
+upstream with servers down says how many, such as *2 of 9 servers down*, or *1 of 3 servers down on
+some nodes* when other nodes still reach it.
+
+Servers that are down come first, so the two servers the list shows always include a failing one.
+**+ N more** (or, for an upstream of two servers, its *servers down* line) opens a list of every
+server with its dot, and under each server that is down, which node finds it down and why. Long lists
+scroll inside it.
+
+The upstream's dialog shows the same dot after each server's address; tap it for the nodes and the
+reason. For servers from a DNS name, the dialog lists the servers found now, each with its dot.
+
 A server no DNZ Proxy node checks (an upstream used only by Traefik or Caddy, or not used at all) has
-no dot. A node's own page shows the node only; the health of the servers is here.
+no dot: only DNZ Proxy nodes report health. A node's own page shows the node only; the health of the servers is here.
 
 ```bash
 dnz proxy upstreams show swarm-service   # each server: up on 3 of 3 nodes, or down on which node and why
