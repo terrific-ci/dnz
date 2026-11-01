@@ -60,9 +60,11 @@ dnz proxy upstreams show swarm-service   # each server: up on 3 of 3 nodes, or d
    - **Listed here**: servers with a weight (HTTP), or `host:port` addresses (TCP, optionally with
      TLS to the server; UDP). For HTTP, type each server as `address:port` (`10.0.0.10:8080`): its
      **scheme badge** (`http://` at first) picks http or https for that server, and with https whether
-     its certificate is checked (**Skip TLS verification**). A full URL typed or pasted sets the row's
-     scheme, and **Enter** adds the next server. See [Typing the servers](/proxy/overview#typing-the-servers)
-     and [Certificate checks per server](#certificate-checks-per-server).
+     its certificate is checked (**Skip TLS verification**), and a **Health check path** of its own.
+     Both are per server on DNZ Proxy only. A full URL typed or pasted sets the row's scheme, and
+     **Enter** adds the next server. See [Typing the servers](/proxy/overview#typing-the-servers),
+     [Certificate checks per server](#certificate-checks-per-server) and
+     [Health checks per server](#health-checks-per-server).
    - **Every address of a DNS name**: DNZ looks the name up with its own DNS (its zones first) and keeps
      one server per address, such as every Docker Swarm node behind its routing mesh.
    - **Docker Swarm tasks** (HTTP): `tasks.<service>`, which each DNZ Proxy node and Caddy look up
@@ -73,6 +75,7 @@ dnz proxy upstreams show swarm-service   # each server: up on 3 of 3 nodes, or d
 5. **Balancing**: weighted round robin, power of two choices, highest random weight or least time,
    and **sticky sessions** (a cookie keeps each visitor on the server it first reached).
 6. **Health check**: a path and how often to ask it; a server that doesn't answer well gets no visits.
+   On DNZ Proxy a server can have a path of its own, or none.
 7. **Connection** (folded): pass the visitor's `Host` header on, keep the server URLs' paths, and how every proxy connects to the servers: server name,
    trusted CAs, a client certificate, timeouts and, for TCP, the PROXY protocol. See
    [Connection settings](#connection-settings).
@@ -139,14 +142,39 @@ Whether an HTTPS server's certificate is checked is each server's own setting, i
 server with a certificate worth checking and one without. On upgrade, every HTTPS server of an
 upstream that accepted any certificate (the default) keeps doing so.
 
-| Proxy kind | All HTTPS servers alike | Some skip the check, some don't |
-| --- | --- | --- |
-| DNZ Proxy | As before | Each server is checked as set, for visits and health checks |
-| Traefik | As before | A weighted service under the upstream's name over two load balancers, one for the servers that skip (its transport doesn't check) and one for the rest. Each weighs what its servers weigh, so every server keeps its share; sticky sessions stick at both levels, and with a health check a load balancer whose servers are all down is skipped |
-| Caddy | As before | Caddy has one TLS setting per upstream: it **checks every server's certificate**, so the servers that skip need valid certificates on Caddy too. The proxy page and the server editor warn |
+Skipping the check per server is **DNZ Proxy only**. Traefik and Caddy have one certificate setting
+per upstream, and the servers decide it:
+
+| Proxy kind | Every HTTPS server skips | None skips | Some skip, some don't |
+| --- | --- | --- | --- |
+| DNZ Proxy | Skipped | Checked | Each server as set, for visits and health checks |
+| Traefik | Skipped | Checked | **Every certificate checked**, and the proxy page warns that skipping per server is DNZ Proxy only |
+| Caddy | Skipped | Checked | **Every certificate checked**, with the same warning |
+
+So on Traefik and Caddy, a server that skips the check in a mixed upstream needs a valid certificate.
+The server editor marks the switch *DNZ Proxy* and says so when Traefik or Caddy routes use the upstream.
 
 From the command line, write such a server `https+insecure://10.0.0.5:8443`; `--scheme https+insecure`
 does the same for the servers of a DNS name.
+
+### Health checks per server
+
+The upstream's health check (path and interval) applies to all its servers. On **DNZ Proxy** a server
+can have its own: **Health check path** in its scheme badge's popover, marked *DNZ Proxy*, or **Don't
+health-check this server** (it then counts as up). Empty is the upstream's path. A path of its own is
+asked at the upstream's interval, with the upstream's other health-check settings, and the row shows
+it after the address. In the API and proxy YAML it is `health_check_path` on the server (`off` for no
+check).
+
+| Proxy kind | A server's own health check path |
+| --- | --- |
+| DNZ Proxy | Used for that server. Nodes older than v2.0 check it at the upstream's path |
+| Traefik | Not used: every server is checked at the upstream's path, and the proxy page warns |
+| Caddy | Not used, the same, with a warning |
+
+From the command line, put it after the URL and weight: `http://10.0.0.5:8080=3?health=/status`, or
+`?health=off`. Uptime service monitors and proxy alerts follow each server's own check, as the nodes
+report it.
 
 ### From per-proxy transports
 
@@ -265,6 +293,7 @@ dnz proxy upstreams list
 dnz proxy upstreams add swarm-service -t http://10.0.133.31:80 -t http://10.0.133.32:80 --sticky
 dnz proxy upstreams add mixed -t https://app.internal:8443 -t https+insecure://10.0.0.21:8443   # the second: any certificate
 dnz proxy upstreams edit swarm-service --health-check /healthz
+dnz proxy upstreams edit mixed -t http://10.0.0.20:8080?health=/status -t https://app.internal:8443?health=off   # per server (DNZ Proxy)
 dnz proxy upstreams merge swarm-service app-example-com
 dnz proxy upstreams edit secure-api --server-name api.internal --root-ca ./internal-ca.pem
 dnz proxy upstreams edit secure-api --client-cert ./dnz-client.pem --client-key ./dnz-client.key   # mTLS

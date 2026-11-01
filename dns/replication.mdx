@@ -736,8 +736,10 @@ sync, in percent of zones with the same SOA serial on both sides:
   missing.
 
 The state is **In sync** (every zone current), **Behind** (some zones behind, missing or
-unanswered), **Unreachable** (no zone got an answer) or **Unknown** (no address to ask, or no
-zones). Open a row to see everything it copies, part by part (below), and which zones aren't
+unanswered, or a secondary that refused this server's last NOTIFY: its error line names the answer,
+and changes reach it only at its own SOA refresh), **Unreachable** (no zone got an answer) or
+**Unknown** (no address to ask, no zones, or a secondary that serves none of the zones: *No
+transfers yet*, never *In sync* with 0 of 0). Open a row to see everything it copies, part by part (below), and which zones aren't
 current, with both serials.
 
 ### What else is copied

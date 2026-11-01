@@ -41,8 +41,10 @@ dialog does the same before you save.
 
 Uptime is the share of checks the monitor wasn't down (degraded counts as up), the same way over
 24 hours (the checks of the last 24 hours, by the hour) as over 7, 30 and 90 days (the days with
-checks). A monitor without checks in that time shows **—**, not 0%. Days follow the display time
-zone and are kept 400 days.
+checks). A monitor without checks in that time shows **—**, not 0%, and so does a new one without any
+checks of its own yet (on the public status page too, never 100%). For a monitor younger than the
+window, its uptime is since the day it was made, and the public page says so ("100% uptime since
+28 Oct"). Days follow the display time zone and are kept 400 days.
 
 <Info>
   Checks run on one server: the cluster's leader, so each runs once and alerts go out once. A DNZ

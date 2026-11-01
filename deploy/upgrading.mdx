@@ -183,8 +183,9 @@ the way.
   `410 Gone` too: use [`/api/proxy/middlewares`](/api/proxy#routes-routers-services-and-middlewares).
 - **Certificate checks per server.** An upstream's *accept any certificate* switch moves onto each of
   its HTTPS servers (**Skip TLS verification** on the server's badge, `skip_tls_verify` on each server
-  in the API and proxy YAML), so nothing changes for visitors. On **Caddy**, an upstream mixing servers
-  that skip the check with servers that don't has every server's certificate checked. See
+  in the API and proxy YAML), so nothing changes for visitors. Skipping it per server is DNZ Proxy
+  only: on **Traefik and Caddy**, an upstream mixing servers that skip the check with servers that
+  don't has every server's certificate checked, with a warning on the proxy page. See
   [Certificate checks per server](/proxy/upstreams#certificate-checks-per-server).
 - **CLI.** `dnz proxy middlewares add|edit`, `dnz notify add|set` and `dnz backup targets add|set` take
   their settings with `--settings` instead of `--config` (it clashed with the config file flag
