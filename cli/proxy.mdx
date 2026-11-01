@@ -186,6 +186,7 @@ every zone, or one the proxy already routes, is refused, and the closest names a
 | `--firewall` | Run one of the firewalls (Proxy → Middlewares, shared by every proxy) first (DNZ Proxy) |
 | `--waf` | The [web application firewall](/proxy/waf) (DNZ Proxy): `block` or `log` (only log). See [below](#web-application-firewall) for its other flags |
 | `--challenge` | The "under attack" browser check (DNZ Proxy) |
+| `--challenge-allow-ip CIDR`, `--challenge-allow-agent USER_AGENT` | What the check lets through, each repeatable: addresses or ranges, and user agents (crawlers and monitors without JavaScript). Each one given replaces that list (`none` empties it), the other stays; either turns the check on. One route at a time |
 | `--waiting-room` | A waiting room letting this many visitors in at once (DNZ Proxy); `--queue-all` makes everyone wait |
 | `--rate-limit` | Requests a second per visitor, optionally with a burst: `100` or `100/300` |
 | `--user` | `NAME:PASSWORD` for a password; repeat for more. Only a bcrypt hash is kept |

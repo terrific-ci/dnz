@@ -668,7 +668,9 @@ switch. See [Web application firewall](/proxy/waf).
 Browsers get a short page that solves a small proof of work. A cookie, signed for the visitor's
 network and valid for **Valid for**, then lets them through.
 
-- Bots can be let through by user agent and by address.
+- Bots can be let through by user agent and by address. For a route's own check, the route dialog
+  sets both lists (**Let these addresses through**, **Let these user agents through**) and, under
+  **More**, the difficulty and how long a pass lasts.
 - The page shows **Checking your browser** in the style of the status pages, with a request ID.
 - Requests that aren't a browser page (APIs, forms) get a 403 (a page, JSON or text by `Accept`)
   until a page has been visited.
