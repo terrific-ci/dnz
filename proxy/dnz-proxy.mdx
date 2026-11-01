@@ -620,6 +620,15 @@ not**, **in range**, **contains**, **starts with** or **matches** (a regular exp
 | **Allow** | Skips the rules after it |
 | **Log** | Notes it in the request log and goes on |
 
+Written as JSON (`dnz proxy middlewares add --settings`, the proxy YAML, the API), a condition is
+`{"field", "name", "op", "values"}`: `field` is `ip`, `country`, `host`, `path`, `method`, `header`,
+`query` or `userAgent` (`header` and `query` with a `name`), `op` is `is`, `isNot`, `in`, `notIn`,
+`inRange`, `contains`, `startsWith`, `matches`, `exists` or `missing`, and a rule's `action` is
+`allow`, `block`, `challenge` or `log`. DNZ checks them when the firewall is saved, with the same
+check the nodes use: an unknown field or operator, an address that isn't one, or a broken regular
+expression is refused, naming the rule (a node would otherwise refuse the firewall and the routes
+using it).
+
 Countries need a GeoIP database. Set **GeoIP database URL** on the proxy's **Settings** tab to an
 `.mmdb` (or `.mmdb.gz`) file, such as MaxMind GeoLite2 Country or DB-IP's IP to Country Lite. Each
 node downloads it.
