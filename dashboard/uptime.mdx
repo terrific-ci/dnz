@@ -90,6 +90,33 @@ An incident can be kept off the public page. Open incidents show above the monit
 Both lists come a page at a time: the monitors with a search and a filter by state (up, degraded,
 down, unknown, paused), the incident history newest first.
 
+### Incidents written afterwards
+
+A power cut takes DNZ down with everything else: its checks can't see the outage, and nobody can
+write the incident until it is back. So an incident's times can be in the past, never in the future:
+**Started** (default now), **Resolved** when you open it as resolved or edit it later, and each
+update's **time** (default now). They go in order: started, then the updates, then resolved. The
+newest update sets the incident's status; an update dated before it fills in the timeline and leaves
+the status as it is. The fields are on the server's clock, the time zone of Settings → General,
+shown beside them.
+
+When DNZ was off for more than 5 minutes, the Uptime page offers it once it is back: *DNZ wasn't
+checking from 13:04 to 14:31 — open an incident for it?* **Open incident** fills in both times;
+**Dismiss** ends the offer.
+
+Where DNZ checked, its checks count. Where it wasn't checking, an incident you wrote counts for the
+monitors it names, as the checks they would have made then:
+
+| Impact | Counts as |
+| --- | --- |
+| Critical, Major | Down |
+| Minor | Degraded (up in the percentages) |
+| Maintenance | Nothing (the bars show maintenance) |
+
+That goes into the bars, the 24-hour, 7, 30 and 90-day uptime, the public page (for incidents shown
+there) and the metrics. Hovering a bar says how many of its checks were filled in. Incidents DNZ
+opened itself fill nothing, nor does time before a monitor was added.
+
 ### Scheduled maintenance
 
 Maintenance planned under **Proxy → Status pages** keeps uptime quiet for the hostnames it covers:
@@ -187,7 +214,7 @@ The bundled alert rules include `DnzUptimeMonitorDown` (2 minutes down). See
 
 `dnz uptime` does all of this from the terminal (see [Uptime CLI](/cli/uptime)); the
 [API](/api/uptime) has the same. AI assistants connected over [MCP](/integrations/ai-assistants) can
-read monitors and incidents with `list_uptime_monitors` and `list_uptime_incidents`, and scheduled
+read monitors and incidents with `list_uptime_monitors` (with the times DNZ wasn't checking) and `list_uptime_incidents`, and scheduled
 maintenance with `maintenance_windows` (`dnz proxy maintenance` in the terminal).
 
 Reading needs **Manage monitoring**, **Manage proxies** or **Post incidents**; changing needs

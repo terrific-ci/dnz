@@ -76,6 +76,24 @@ dnz uptime incident rm 12
 identified, monitoring, resolved), `--monitor` (repeat it for more), `-m` for the first update and
 `--hidden` to keep it off the public page.
 
+### Written afterwards
+
+```bash
+dnz uptime incidents add "Power cut" --impact major --monitor Website --started "2026-11-01 13:04" --resolved "2026-11-01 14:31"
+dnz uptime incident update 13 identified -m "The building lost power." --at "2026-11-01 13:20"   # fills in the timeline
+dnz uptime incident resolve 14 --at "2026-11-01 15:10"
+dnz uptime incident edit 13 --resolved "2026-11-01 14:35"      # only what you pass changes; also --title, --impact, --monitor, --started, --hidden/--shown
+dnz uptime gaps                              # times DNZ wasn't checking (it was off), and what was done about each
+dnz uptime incidents add "Power cut" --gap 3 --monitor Website   # the gap's times
+dnz uptime gaps dismiss 3                    # no incident for it
+```
+
+`add` (or `open`) takes `--started`, `--resolved` (it is opened as resolved), `--at` (the first
+update's time) and `--gap`; `update` and `resolve` take `--at`. Times are on the server's clock
+(`2026-11-01 13:04`) or RFC 3339 (`2026-11-01T05:04:00Z`), never in the future, and in order:
+started, the updates, resolved. See [Uptime](/dashboard/uptime#incidents-written-afterwards) for what
+they count for.
+
 ## The public status page
 
 ```bash
