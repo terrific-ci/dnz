@@ -84,17 +84,19 @@ The first argument is the proxy, by name or id. In the output, **DNS** shows a n
 ```bash
 dnz proxy routes list                             # every proxy's routes, one row per hostname: PROXIES, where they go
                                                   # (→ ADDRESS for a redirect), HTTPS (tcp/udp for TCP and UDP routes), switches
-dnz proxy routes list edge                        # one proxy's
+dnz proxy routes list edge                        # one proxy's (edge office, or edge,office: several proxies')
 dnz proxy routes list --page 2 --limit 100        # 20 a page by default (at most 200); the footer says "51-100 of 1240 routes"
 dnz proxy routes list --by-zone                   # under the zone of each hostname (no zone last)
 dnz proxy routes list --search shop               # only routes whose hostname (or path, upstream, group, proxy) contains it
 dnz proxy routes list --by-group                  # under each route's group (no group last)
 dnz proxy routes list --group "Web app"           # one group's routes (--group - : those in none)
+dnz proxy routes list --group "Web app" --group - # several groups: routes in any of them
 dnz proxy routes list --zone example.com          # one zone's routes (--zone - : those in none)
 dnz proxy routes list edge --visitors             # plus VISITORS (24H): distinct visitors and a line per hour (DNZ Proxy)
-dnz proxy routes list --type redirect             # one type: on, off, redirect, https, http, cert-failing, dns-missing,
+dnz proxy routes list --type redirect             # one type: on, off, redirect, https, http, tcp, udp, cert-failing, dns-missing,
                                                   # advanced, or a switch (cache, firewall, waf, under-attack, waiting-room,
                                                   # rate-limit, password, sign-in, allow, headers, uploads, rules)
+dnz proxy routes list --type http,tcp             # several types (or --type http --type tcp): routes of any of them
 dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000
 dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000=3 -u http://10.0.1.21:3000 \
   --also www.example.com --cache 10m --user admin:s3cret --allow 10.0.0.0/8
@@ -112,7 +114,7 @@ dnz proxy routes clear-cache edge app.example.com
 dnz proxy routes rm edge app.example.com          # its DNS records stop going through edge
 ```
 
-`routes list` is Proxy → Routes in the terminal. The proxy is optional: without it (or with `all`),
+`routes list` is Proxy → Routes in the terminal. The proxy is optional (one or several): without it (or with `all`),
 every proxy's routes are listed, one row per hostname, and the **PROXIES** column names the proxies
 serving it. The server searches, filters and pages before a page is cut, so the footer counts every
 route that matches; with `--by-zone` or `--by-group` a zone or group can run on over several pages.

@@ -143,9 +143,13 @@ paged on the server, so `total` and every count are over every route.
 | Parameter | |
 | --- | --- |
 | `q` | Text in a hostname, the path, an upstream address, the group's or a proxy's name |
-| `proxy` | A proxy's id or name: only its copies (a route's copies on the other proxies come in `others`) |
-| `type` | `on`, `off`, `redirect`, `https`, `http`, `cert-failing`, `dns-missing`, `advanced`, or a switch: `cache`, `firewall`, `waf`, `under-attack`, `waiting-room`, `rate-limit`, `password`, `sign-in`, `allow`, `headers`, `uploads`, `rules` |
+| `proxy` | Proxies' ids or names: only their copies (a route's copies on the other proxies come in `others`) |
+| `type` | `on`, `off`, `redirect`, `https` and `http` (HTTP routes), `tcp`, `udp`, `cert-failing`, `dns-missing`, `advanced`, or a switch: `cache`, `firewall`, `waf`, `under-attack`, `waiting-room`, `rate-limit`, `password`, `sign-in`, `allow`, `headers`, `uploads`, `rules` |
 | `group`, `zone` | A route group's or a zone's name, or `-` for routes in none |
+
+`proxy`, `type` and `group` take several values, comma-separated: a row matches any of them, and
+every filter given (`?proxy=1,3&type=http,tcp&group=Web%20app,-`). A group or proxy whose name has a
+comma in it stays one value. A single value works as it always did.
 | `view` | `zones` or `groups`: rows ordered by zone or group, and each one's count in `groups` |
 | `page`, `per_page` | 20 a page by default, at most 200 |
 
