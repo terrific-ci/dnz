@@ -82,7 +82,8 @@ The first argument is the proxy, by name or id. In the output, **DNS** shows a n
 ### List, add, edit, delete
 
 ```bash
-dnz proxy routes list                             # every proxy's routes, one row per hostname: PROXIES, where they go, HTTPS, switches
+dnz proxy routes list                             # every proxy's routes, one row per hostname: PROXIES, where they go
+                                                  # (→ ADDRESS for a redirect), HTTPS (tcp/udp for TCP and UDP routes), switches
 dnz proxy routes list edge                        # one proxy's
 dnz proxy routes list --page 2 --limit 100        # 50 a page by default (at most 200); the footer says "51-100 of 1240 routes"
 dnz proxy routes list --by-zone                   # under the zone of each hostname (no zone last)

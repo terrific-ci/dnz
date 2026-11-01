@@ -170,6 +170,7 @@ paged on the server, so `total` and every count are over every route.
 
 - `entries` holds each proxy's copy of the route as `GET /api/proxies/{id}/routes` shows it, with
   its certificate and latest steps on a DNZ Proxy (shortened above).
+- `redirect_to`, on a redirect route's row only, is the address it sends visitors to.
 - `unfiltered` counts the rows before the search and filters (the proxy filter applied).
 - `proxies` lists each proxy's `name`, `kind` and `auto_certificates`, and for the page's routes the
   names DNS answers with it (`proxied`) and the last reachability `checks` (by route id).
