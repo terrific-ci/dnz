@@ -18,9 +18,9 @@ GeoIP lookup, which any signed-in user may call.
 | `GET` | `/api/settings/profile` | superadmin | The logo and label on status pages |
 | `PUT` | `/api/settings/profile` | superadmin | Change either |
 | `POST` | `/api/settings/profile/preview` | superadmin | A status page with a logo and label that aren't saved yet (HTML) |
-| `GET` | `/api/geoip` | superadmin | The GeoIP database in use, where it comes from, automatic updates |
-| `PUT` | `/api/geoip` | superadmin | Where to download from and whether to update monthly |
-| `POST` | `/api/geoip/download` | superadmin | Download the database now |
+| `GET` | `/api/geoip` | server-wide `resolver.manage` | The GeoIP database in use (its file named within the data folder), where it comes from, automatic updates |
+| `PUT` | `/api/geoip` | server-wide `resolver.manage` | Where to download from and whether to update monthly |
+| `POST` | `/api/geoip/download` | server-wide `resolver.manage` | Download the database now |
 | `GET` | `/api/geoip/lookup?ip=` | signed in | Where an address is, as GeoDNS sees it |
 | `GET` | `/api/cluster` | superadmin | The [cluster](/deploy/cluster): nodes, leader, change feed |
 | `DELETE` | `/api/cluster/nodes/{id}` | superadmin | Remove a node that is gone for good from the list |
