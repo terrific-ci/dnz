@@ -39,8 +39,10 @@ failed checks in red. Open a monitor for its uptime over 24 hours, 7, 30 and 90 
 and error. **Check now** runs one check and shows what it saw without keeping it; **Test** in the
 dialog does the same before you save.
 
-Uptime is the share of checks the monitor wasn't down (degraded counts as up). Days follow the
-display time zone and are kept 400 days.
+Uptime is the share of checks the monitor wasn't down (degraded counts as up), the same way over
+24 hours (the checks of the last 24 hours, by the hour) as over 7, 30 and 90 days (the days with
+checks). A monitor without checks in that time shows **—**, not 0%. Days follow the display time
+zone and are kept 400 days.
 
 <Info>
   Checks run on one server: the cluster's leader, so each runs once and alerts go out once. A DNZ
@@ -123,7 +125,7 @@ as JSON at `/status.json` ([its fields](/api/uptime#the-page-as-json), scheduled
 - open incidents with their timeline
 - **Scheduled maintenance**: the coming 7 days' occurrences of [repeating maintenance](#scheduled-maintenance) that covers a monitor on the page
 - the monitors you put on it, under the **public name** and **group** you give them, with their state, uptime bars and uptime
-- past incidents of the last 14 days (1 to 90), day by day
+- past incidents of the last 14 days (1 to 90), under the days that had one (one line when there were none)
 
 Visitors see only what you chose for them: public names, groups, incident titles and the updates
 you write. Never a monitor's own name, URL, address, status code or error.
