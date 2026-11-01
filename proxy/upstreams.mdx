@@ -70,8 +70,8 @@ dnz proxy upstreams show swarm-service   # each server: up on 3 of 3 nodes, or d
    - **Listed here**: servers with a weight (HTTP), or `host:port` addresses (TCP, optionally with
      TLS to the server; UDP). For HTTP, type each server as `address:port` (`10.0.0.10:8080`): its
      **scheme badge** (`http://` at first) picks http or https for that server, and with https whether
-     its certificate is checked (**Skip TLS verification**), and a **Health check path** of its own.
-     Both are per server on DNZ Proxy only. A full URL typed or pasted sets the row's scheme, and
+     its certificate is checked (**Skip TLS verification**, per server on DNZ Proxy only). A server's
+     own health check path is set under **Health check** (below). A full URL typed or pasted sets the row's scheme, and
      **Enter** adds the next server. See [Typing the servers](/proxy/overview#typing-the-servers),
      [Certificate checks per server](#certificate-checks-per-server) and
      [Health checks per server](#health-checks-per-server).
@@ -170,11 +170,16 @@ does the same for the servers of a DNS name.
 ### Health checks per server
 
 The upstream's health check (path and interval) applies to all its servers. On **DNZ Proxy** a server
-can have its own: **Health check path** in its scheme badge's popover, marked *DNZ Proxy*, or **Don't
-health-check this server** (it then counts as up). Empty is the upstream's path. A path of its own is
-asked at the upstream's interval, with the upstream's other health-check settings, and the row shows
-it after the address. In the API and proxy YAML it is `health_check_path` on the server (`off` for no
-check).
+can have its own, set in the upstream's **Health check** under **Per server** (marked *DNZ Proxy*):
+each listed server is checked at **Upstream's path** (the default), at **A path of its own**, or
+**Not checked** (it then counts as up). While no server differs, the list is folded behind
+**Different path per server…**; when some do, it opens by itself, and folded it still names them
+(`10.0.5.12:8080 · /status`). A path of its own is asked at the upstream's interval, with the
+upstream's other health-check settings. In **Servers**, a row with its own check shows the path (or
+*not checked*) after the address; clicking it, or the line at the bottom of the scheme badge's popover,
+opens that server in **Per server**. The route dialog shows the marker but doesn't set it: the
+upstream's dialog does. In the API and proxy YAML it is `health_check_path` on the server
+(`off` for no check).
 
 | Proxy kind | A server's own health check path |
 | --- | --- |
