@@ -109,10 +109,20 @@ dnz proxy routes add-udp edge -e dns --service resolvers                        
 dnz proxy routes add edge old.example.com --redirect-to https://new.example.com --keep-path   # a redirect, no upstream
 dnz proxy routes edit edge app.example.com --no-cache --user ops:other-pass --remove-user admin
 dnz proxy routes edit edge app.example.com --https off
+dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000 -u http://10.0.1.21:3000?health=/status \
+  --health-check /healthz --health-interval 15                                  # its servers' health check
+dnz proxy routes edit edge app.example.com --health-check /ready                # `none` stops the checks
 dnz proxy routes cert edge app.example.com        # the certificate's state and latest steps; --renew gets it again
 dnz proxy routes clear-cache edge app.example.com
 dnz proxy routes rm edge app.example.com          # its DNS records stop going through edge
 ```
+
+`--health-check PATH` and `--health-interval SECONDS` (default 10) are the health check of a route's
+own servers, as the route dialog's **Health check**: each server is asked for the path and gets no
+visits while it fails. A server's own path goes after its `--upstream` as `?health=PATH` (or
+`?health=off`), DNZ Proxy only. `routes edit` changes only what it names; a route on a shared upstream
+is refused with the `dnz proxy upstreams edit NAME --health-check PATH` that sets it for every route
+using it. `dnz record add|edit --upstream` takes the same two flags.
 
 `routes list` is Proxy → Routes in the terminal. The proxy is optional (one or several): without it (or with `all`),
 every proxy's routes are listed, one row per hostname, and the **PROXIES** column names the proxies

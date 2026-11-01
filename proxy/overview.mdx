@@ -187,14 +187,18 @@ middlewares and the DNS record.
 
 Where it goes is one of two option cards under the hostname:
 
-- **Servers of its own**: typed in the dialog, with weights, this route's alone. They make the
-  route's own upstream (listed in Proxy → Upstreams as *For app.example.com*), the same one on every
-  proxy the route is on.
+- **Servers of its own**: typed in the dialog, with weights and each one's health check, this route's
+  alone. They make the route's own upstream (listed in Proxy → Upstreams as *For app.example.com*),
+  the same one on every proxy the route is on. **Health check** under them sets its path and interval
+  (see [Typing the servers](#typing-the-servers)).
 - **An upstream from the list**: one of [Proxy → Upstreams](/proxy/upstreams), shared by every proxy,
   picked from a list that shows where each goes and what uses it. The route uses it as it is: the
   dialog never changes it, several routes (on any proxy) can share it, and deleting the route leaves
   it; a change to it reaches every route using it. Going back to **Servers of its own** gives the
   route a new upstream of its own; leaving its own upstream for one of the list deletes the old one.
+  Its **Health check** (path and interval) shows under it and can be changed right there: saving the
+  route saves it on the upstream, and a note says it reaches every route using that upstream.
+  **Edit upstream…** opens the upstream's own dialog on top for the rest.
 
 #### Typing the servers
 
@@ -211,6 +215,13 @@ and in the [record dialog's route](/dns/zones#a-record-makes-its-route):
    it shows is accepted (self-signed, made for another name), as servers reached by their IP address
    often need. Off, its certificate must be valid for its address. The badge shows a closed lock when
    the certificate is checked and an open lock when it isn't.
+4. The **heart button** between the address and the weight is the server's health check. Click it to
+   pick **Upstream's path** (the path every server is asked, such as `GET /healthz`), **A path of its
+   own** (type it, such as `/status`) or **Not checked** (it always counts as up). A path of its own
+   and *Not checked* are DNZ Proxy's: Traefik and Caddy check every server at the upstream's path.
+   The heart shows the choice: muted at the upstream's path, highlighted with a path of its own,
+   struck through when not checked. Once DNZ Proxy nodes check a saved server, its health colour sits
+   on the heart, and the popover lists each node's state and reasons.
 
 A full URL typed or pasted (`https://10.0.0.10:8443`) sets the row's scheme by itself. Servers mix
 freely: one over `http://`, one over `https://` checked and one that skips the check can share an
@@ -218,6 +229,9 @@ upstream. See [Certificate checks per server](/proxy/upstreams#certificate-check
 what each proxy kind makes of a mix.
 
 The servers' weights stay beside them; with two or more, the dialog asks how they share the visits.
+In the route dialog and the record dialog's route, **Health check** under the servers sets the path
+every server is asked (empty: no checks) and how often, and the heart's popover holds the same two
+fields, so a route's whole health check is set without leaving the dialog.
 Whether certificates are checked is kept in the route's [history](/proxy/route-history) too.
 
 The switches are each the route's own middleware, made and removed with it, one for every proxy the

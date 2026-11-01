@@ -88,8 +88,8 @@ Prometheus has the time as `dnz_proxy_upstream_check_seconds{upstream,server}` (
    - **Listed here**: servers with a weight (HTTP), or `host:port` addresses (TCP, optionally with
      TLS to the server; UDP). For HTTP, type each server as `address:port` (`10.0.0.10:8080`): its
      **scheme badge** (`http://` at first) picks http or https for that server, and with https whether
-     its certificate is checked (**Skip TLS verification**, per server on DNZ Proxy only). A server's
-     own health check path is set under **Health check** (below). A full URL typed or pasted sets the row's scheme, and
+     its certificate is checked (**Skip TLS verification**, per server on DNZ Proxy only). Its **heart
+     button**, before the weight, sets its health check. A full URL typed or pasted sets the row's scheme, and
      **Enter** adds the next server. See [Typing the servers](/proxy/overview#typing-the-servers),
      [Certificate checks per server](#certificate-checks-per-server) and
      [Health checks per server](#health-checks-per-server).
@@ -188,15 +188,18 @@ does the same for the servers of a DNS name.
 ### Health checks per server
 
 The upstream's health check (path and interval) applies to all its servers. On **DNZ Proxy** a server
-can have its own, set in the upstream's **Health check** under **Per server** (marked *DNZ Proxy*):
-each listed server is checked at **Upstream's path** (the default), at **A path of its own**, or
-**Not checked** (it then counts as up). While no server differs, the list is folded behind
-**Different path per server…**; when some do, it opens by itself, and folded it still names them
-(`10.0.5.12:8080 · /status`). A path of its own is asked at the upstream's interval, with the
-upstream's other health-check settings. In **Servers**, a row with its own check shows the path (or
-*not checked*) after the address; clicking it, or the line at the bottom of the scheme badge's popover,
-opens that server in **Per server**. The route dialog shows the marker but doesn't set it: the
-upstream's dialog does. In the API and proxy YAML it is `health_check_path` on the server
+can have its own: the **heart button** of its row in **Servers** (between the address and the weight)
+picks **Upstream's path** (the default), **A path of its own**, or **Not checked** (it then counts as
+up). The heart shows the choice: muted at the upstream's path, highlighted with a path of its own,
+struck through when not checked. It is the same in the upstream dialog, the
+[route dialog](/proxy/overview#typing-the-servers) and the record dialog's route, which also set the
+route's own upstream's path and interval under the servers. A path of its own is asked at the
+upstream's interval, with the upstream's other health-check settings.
+
+The upstream dialog's **Health check → Per server** (marked *DNZ Proxy*) lists every server's check
+as an overview and can change it too. While no server differs, it is folded behind **Different path
+per server…**; when some do, it opens by itself, and folded it still names them
+(`10.0.5.12:8080 · /status`). In the API and proxy YAML it is `health_check_path` on the server
 (`off` for no check).
 
 | Proxy kind | A server's own health check path |
