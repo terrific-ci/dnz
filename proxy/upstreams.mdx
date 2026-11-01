@@ -50,9 +50,27 @@ reason. For servers from a DNS name, the dialog lists the servers found now, eac
 A server no DNZ Proxy node checks (an upstream used only by Traefik or Caddy, or not used at all) has
 no dot: only DNZ Proxy nodes report health. A node's own page shows the node only; the health of the servers is here.
 
+### Health check times
+
+Next to each server's dot is how long its last health check took, such as *42 ms*: the time from the
+check's start to the server's answer, connecting included. With several nodes it is the slowest of
+the nodes that find the server up. It turns **amber when slow**: 500 ms or more, or a quarter of the
+check's timeout when that is shorter (250 ms for a 1 s timeout).
+
+The **+ N more** list and the dot's popover in the dialog add a line per node with its last time and
+the range of its last 20 passing checks (*node-1 (Edge): 42 ms · last 20: 38–55 ms, avg 44 ms*). A
+server that is down says how long its check took to fail, such as *timed out after 5 s* or
+*connection refused after 0.6 ms*. Nodes older than DNZ v2.1 report no times, and their servers show
+none.
+
 ```bash
-dnz proxy upstreams show swarm-service   # each server: up on 3 of 3 nodes, or down on which node and why
+dnz proxy upstreams show swarm-service   # each server: up on 3 of 3 nodes and the check's time, a line per node,
+                                         # or down on which node and why ("timed out after 5 s")
+dnz proxy routes list                    # servers marked "(42 ms)", "(slow: 812 ms)" or "(down)"
 ```
+
+Prometheus has the time as `dnz_proxy_upstream_check_seconds{upstream,server}` (see
+[Prometheus](/dashboard/prometheus)).
 
 ## Adding and editing
 

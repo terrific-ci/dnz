@@ -146,8 +146,10 @@ hostname opens the app; the icon beside it copies the name. Small icons next
 to the hostname show how its certificate and DNS are doing; hover one for the details and what to do
 (**Add DNS record**, **Try again now**, the certificate log). Hover **Goes to** for every server.
 When the upstream has a health check that DNZ Proxy nodes run, each server there has a health icon and
-its state (*Up*, *Down on 1 of 2 nodes*, *Down*) with each node's reason under a server that is down;
-hover the icon for what is checked (*Checks GET /healthz every 10s*). A small amber or red dot before
+its state (*Up*, *Down on 1 of 2 nodes*, *Down*) and how long the last check took (*Up · 42 ms*,
+amber when slow; see [Health check times](/proxy/upstreams#health-check-times)), with each node's
+reason under a server that is down (*timed out after 5 s*); hover the icon for what is checked
+(*Checks GET /healthz every 10s*) and each node's time. A small amber or red dot before
 **Goes to** shows a server is down before you hover. Only DNZ Proxy nodes report health: a route served
 only by Traefik or Caddy shows none.
 **By zone** gives each zone a list of its own, and **By group** each [route group](#route-groups);
