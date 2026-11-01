@@ -21,7 +21,8 @@ The upstream dialog's **Servers from** has three cards:
 DNZ asks **its own DNS server**, as a client on the same machine would: DNZ's zones and views first,
 then the cache and forwarding. A name in one of DNZ's zones needs nothing else, and CNAMEs are
 followed. Each address becomes one server, reached with the scheme (HTTP: `http`, `https` or `h2c`)
-and the port you give, from IPv4 (A), IPv6 (AAAA) or both. Each server has a weight of 1.
+and the port you give, from IPv4 (A), IPv6 (AAAA) or both. Each server has a weight of 1. With
+`https`, **Skip TLS verification** accepts any certificate from all of them.
 
 - **When.** Again when the answer's TTL ends, but not sooner than **Not sooner than every** (30 seconds
   by default, 5 to 3,600) and at least once an hour. The proxies get new servers only when the set of

@@ -163,7 +163,7 @@ DNZ translates the proxy's routers, services and middlewares into Caddy's own JS
 | Conditions: Path, PathPrefix, PathRegexp, Method, Header, HeaderRegexp, Query, ClientIP, each negatable | The matching Caddy matchers, `not` for Not |
 | Load balancer with http, https and h2c upstreams | `reverse_proxy` |
 | Strategy `wrr`, `p2c`, `leasttime`, `hrw` | Round robin or weighted round robin, random choose 2, least conn, client IP hash |
-| Sticky cookie, active health checks, accept any certificate, preserve path | The `reverse_proxy` equivalents |
+| Sticky cookie, active health checks, HTTPS servers that skip the certificate check, preserve path | The `reverse_proxy` equivalents. Caddy checks certificates for all of an upstream's servers or none: when some skip and some don't, it checks them all, and the proxy page warns |
 | Pass Host header off | The upstream's host |
 | An upstream's [connection settings](/proxy/upstreams#connection-settings): server name, CAs (inline or files), timeouts, idle connections | The `reverse_proxy` transport, HTTP/1.1 only. Client certificates aren't sent (Caddy reads them from files only; the proxy page says so) |
 | Weighted services | One upstream list, the weights multiplied |

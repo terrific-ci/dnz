@@ -195,7 +195,7 @@ own routers (Docker labels, files, Kubernetes) can name one as `dnz-<name>@http`
 | Load-balancing strategy | `loadBalancer.strategy` (left out for `wrr`, Traefik's default) |
 | Sticky sessions, cookie name | `loadBalancer.sticky.cookie` (`httpOnly`, `sameSite: lax`) |
 | Health check path and interval | `loadBalancer.healthCheck` (timeout 5 s) |
-| Accept any certificate (HTTPS servers) | the `dnz-insecure` servers transport with `insecureSkipVerify` |
+| HTTPS servers that skip the certificate check | All of them: the `dnz-insecure` servers transport with `insecureSkipVerify`. Some: a `weighted` service under the upstream's name over two load balancers, `dnz-defaults-<upstream>-tls-checked` and `-tls-skipped`, with the same shares and sticky sessions ([Certificate checks per server](/proxy/upstreams#certificate-checks-per-server)) |
 | Other load-balancer settings | merged into `loadBalancer` (health-check details only with a path, cookie details only when sticky) |
 | Weighted, mirroring, failover | `weighted` / `mirroring` / `failover`, with the proxy's service names prefixed `dnz-` |
 | Middleware | its Traefik object, as written by the form or as JSON; the names in a chain and an error-pages service get `dnz-` too |

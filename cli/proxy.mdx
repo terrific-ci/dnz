@@ -160,7 +160,7 @@ every zone, or one the proxy already routes, is refused, and the closest names a
 
 | Option (`add`) | What it does |
 | --- | --- |
-| `-u`, `--upstream` | Upstream URL with scheme and port; repeat for more. Append `=WEIGHT` to share visits unevenly, e.g. `http://10.0.0.10:8080=3`. Required unless `--service` or `--redirect-to` |
+| `-u`, `--upstream` | Upstream URL with scheme and port; repeat for more. Append `=WEIGHT` to share visits unevenly, e.g. `http://10.0.0.10:8080=3`; `https+insecure://HOST:PORT` accepts any certificate from that server. Required unless `--service` or `--redirect-to` |
 | `--service` | Send the visits to an upstream of Proxy → Upstreams instead, by name or id. The route uses it as it is, and deleting the route leaves it |
 | `--redirect-to` | Redirect every visit to this address instead of upstreams (a [redirect route](/proxy/overview#redirect-routes)) |
 | `--keep-path` | With `--redirect-to`: keep the path and query (`/a?b` → `<URL>/a?b`) |
@@ -369,7 +369,14 @@ dnz proxy upstreams merge swarm-service app-example-com
 dnz proxy upstreams rm yrdy                       # refused while anything uses it
 ```
 
-`-t` replaces the servers on `edit`; leave it out to keep them.
+`-t` replaces the servers on `edit`; leave it out to keep them. Each HTTPS server's certificate is
+checked unless it is written `https+insecure://HOST:PORT` (any certificate accepted, for that server
+only; [Certificate checks per server](/proxy/upstreams#certificate-checks-per-server)). `show` and
+`list` write such servers the same way, so a server copied from them keeps its setting.
+
+```bash
+dnz proxy upstreams add mixed -t http://10.0.0.20:8080 -t https://app.internal:8443 -t https+insecure://10.0.0.21:8443=2
+```
 
 `show` prints each server with its health from the DNZ Proxy nodes' last reports, for example
 `(up on 2 of 3 nodes; down on jkt-2: connection refused)`. A server no node checks has none. See
@@ -407,7 +414,7 @@ dnz proxy upstreams discover swarm                 # look the name up now (nothi
 | --- | --- |
 | `--from-dns NAME:PORT` | Every address of `NAME` is a server, reached on `PORT` |
 | `--resolve-on` | Who looks the name up: `dnz` (default: DNZ's own DNS, its zones first) or `proxy` (each DNZ Proxy node and Caddy, for `tasks.<service>`). `proxy` is for HTTP upstreams and is refused on a Traefik proxy |
-| `--scheme` | HTTP: how the servers are reached, `http` (default), `https` or `h2c` |
+| `--scheme` | HTTP: how the servers are reached, `http` (default), `https`, `https+insecure` (https, any certificate accepted) or `h2c` |
 | `--family` | The addresses taken: `v4` (A, default), `v6` (AAAA) or `both` |
 | `--every SECONDS` | DNZ looks the name up again after its TTL, but not sooner than this (5 to 3600, default 30) |
 | `--tls` | TCP: the servers speak TLS |

@@ -190,20 +190,20 @@ Where it goes is one of two option cards under the hostname:
 The route's own servers are typed the same way here, in the [upstream dialog](/proxy/upstreams#adding-and-editing)
 and in the [record dialog's route](/dns/zones#a-record-makes-its-route):
 
-1. Pick once how the proxy reaches them: **Insecure** (`http://`, plain HTTP, the default) or
-   **Secure** (`https://`, TLS to the servers). The scheme then shows as a badge in front of every
-   server.
-2. Type each server as `address:port`, for example `10.0.0.10:8080`. **Enter** adds the next row and
-   moves to it (it never saves the dialog).
-3. With **Secure**, the route dialog and the record dialog offer **Skip TLS verify**: whether the
-   servers' certificates are checked. It is on by default, as before: any certificate is accepted
-   (self-signed, another name), since servers are often reached by their IP address. Turned off,
-   each server's certificate must be valid for its address. In the upstream dialog the same choice is
-   **Accept any certificate**, under [Connection](/proxy/upstreams#connection-settings).
+1. Type each server as `address:port`, for example `10.0.0.10:8080`. **Enter** adds the next row,
+   reached the same way as the row above, and moves to it (it never saves the dialog).
+2. The **scheme badge** in front of each server (`http://` at first) says how the proxy reaches it.
+   Click it (or Tab to it and press Enter) to pick **http** (plain HTTP) or **https** (TLS to the
+   server); arrow keys move between them.
+3. With **https**, the same popover offers **Skip TLS verification** for that server: any certificate
+   it shows is accepted (self-signed, made for another name), as servers reached by their IP address
+   often need. Off, its certificate must be valid for its address. The badge shows a closed lock when
+   the certificate is checked and an open lock when it isn't.
 
-A full URL typed or pasted (`https://10.0.0.10:8443`) sets the choice by itself, and the badge
-follows. Servers of mixed schemes, such as `h2c://` or `http://` and `https://` together, are edited
-as full URLs, with the scheme and port in each.
+A full URL typed or pasted (`https://10.0.0.10:8443`) sets the row's scheme by itself. Servers mix
+freely: one over `http://`, one over `https://` checked and one that skips the check can share an
+upstream. See [Certificate checks per server](/proxy/upstreams#certificate-checks-per-server) for
+what each proxy kind makes of a mix.
 
 The servers' weights stay beside them; with two or more, the dialog asks how they share the visits.
 Whether certificates are checked is kept in the route's [history](/proxy/route-history) too.

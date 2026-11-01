@@ -62,7 +62,7 @@ as on (`traefik`, `dnz`) or off.
 | `GET` | `/api/proxies/{id}/routes` | `{"routes": [...], "auto_certificates"}`: each route's `id` (its router), `hosts`, `path_prefix`, `tls`, `cert_resolver`, `redirect_router`, `service_id`, `service_name`, `own_service` (false: a service of the proxy's it uses), `servers`, `options` (the switches), other `middlewares`, `simple` / `advanced` and, on DNZ Proxy, `certificate`. One proxy's routes, whole |
 | `GET` | `/api/proxy/routes` | [The Routes page](#the-routes-page): every approved proxy's routes, one row per hostname, filtered and paged on the server |
 | `GET` | `/api/proxy/routes/targets` | Every route the same filters match, as the batch edit takes them (*Pick all matching*) |
-| `POST` | `/api/proxies/{id}/routes` | One step: `{"host" or "hosts", "servers" or "service_id" (one of the proxy's services, used as it is), "tls", "redirect_http", "options", "middlewares", "path_prefix", "dns_record", "skip_tls_verify"}` adds the service, router(s), switches and proxied DNS records. `skip_tls_verify` is for the route's own HTTPS servers (see [Skip TLS verify](#skip-tls-verify)). With `dns_record` (the default) it is refused (409) in a zone whose changes wait for approval for you: it would write the records at once |
+| `POST` | `/api/proxies/{id}/routes` | One step: `{"host" or "hosts", "servers" or "service_id" (one of the proxy's services, used as it is), "tls", "redirect_http", "options", "middlewares", "path_prefix", "dns_record"}` adds the service, router(s), switches and proxied DNS records. Each of the route's own HTTPS servers says whether its certificate is checked (see [Certificate checks](#certificate-checks)). With `dns_record` (the default) it is refused (409) in a zone whose changes wait for approval for you: it would write the records at once |
 | `POST` | `/api/proxy/routes/bulk` | [Several routes at once](#several-routes-at-once), on any proxies, all or nothing |
 | `PUT` | `/api/proxies/{id}/routes/{router}` | The same body: changes the route (409 for one set up under Advanced); also `"clear_redirect": true` |
 | `DELETE` | `/api/proxies/{id}/routes/{router}[?unproxy=true]` | Deletes its routers, its own service (a picked one stays) and switches; `unproxy` takes the proxy off its DNS records instead of refusing |
@@ -118,17 +118,20 @@ or Caddy route with it gets `400`. A route's `certificate` has `state`, `not_aft
 **Auth users.** `POST /api/proxy/auth-user` with `{"user", "password"}` returns `{"line"}` for basic
 auth. Add `"digest": true` and an optional `"realm"` for digest auth.
 
-### Skip TLS verify
+### Certificate checks
 
-`"skip_tls_verify": true` on `POST` and `PUT` makes the proxies accept any certificate from the
-route's own `https://` servers (the dialogs' **Skip TLS verify**); `false` checks that each server's
-certificate is valid for its address. Left out, a new route accepts any certificate (as routes always
-did) and an edited one keeps what its upstream has. `POST /api/zones/{id}/records/route` (the record
-dialog's route) takes it too. A route that uses an upstream from the list follows that upstream's
-[connection settings](/proxy/upstreams#connection-settings) instead.
+Each `https://` server of a route or upstream carries `"skip_tls_verify": true` when the proxies
+accept any certificate from it (the server's **Skip TLS verification**); left out or `false`, its
+certificate must be valid for its address. On an `http://` server it is dropped. Routes, upstreams
+and `POST /api/zones/{id}/records/route` (the record dialog's route) answer and take it per server.
+For older clients, one `"skip_tls_verify"` on a route or upstream body still applies to each of its
+HTTPS servers; it is never answered. See [Certificate checks per server](/proxy/upstreams#certificate-checks-per-server).
 
 ```json
-{ "host": "app.example.com", "servers": [{ "url": "https://10.0.0.10:8443", "weight": 1 }], "tls": true, "skip_tls_verify": false }
+{ "host": "app.example.com", "tls": true, "servers": [
+  { "url": "https://10.0.0.10:8443", "weight": 1, "skip_tls_verify": true },
+  { "url": "https://app.internal:8443", "weight": 1 }
+] }
 ```
 
 ### The Routes page
@@ -399,7 +402,7 @@ Responses also carry:
 {
   "name": "app",
   "servers": [{ "url": "http://10.0.0.10:8080", "weight": 3 }, { "url": "http://10.0.0.11:8080", "weight": 1 }],
-  "pass_host_header": true, "skip_tls_verify": true, "health_check_path": "", "health_check_interval_secs": 10,
+  "pass_host_header": true, "health_check_path": "", "health_check_interval_secs": 10,
   "strategy": "wrr", "sticky": false, "sticky_cookie": ""
 }
 ```

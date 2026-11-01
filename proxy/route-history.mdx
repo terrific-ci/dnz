@@ -35,8 +35,7 @@ dnz proxy routes restore edge app.example.com 7   # back to version 7 (shows the
 | Part | Shows |
 | --- | --- |
 | Hostnames, Path, Route | The hostnames, the path prefix, on or off |
-| Goes to, Load balancing | The route's own servers with their weights, or the proxy's service it uses; round robin or fewest connections, sticky |
-| Server certificates | For the route's own HTTPS servers: *any accepted* ([Skip TLS verify](/proxy/overview#typing-the-servers)) or *checked* |
+| Goes to, Load balancing | The route's own servers with their weights (an HTTPS server that skips the certificate check says *any certificate*, see [Typing the servers](/proxy/overview#typing-the-servers)), or the proxy's service it uses; round robin or fewest connections, sticky |
 | HTTPS, HTTP to HTTPS | On or off, the certificate resolver, the redirect from `http://` |
 | Redirect | The address every visit goes to, 301 or 302, keeping the path |
 | Group, DNS proxied | Its route group; which hostnames' DNS records go through the proxy |
