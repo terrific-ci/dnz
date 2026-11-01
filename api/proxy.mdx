@@ -56,7 +56,7 @@ as on (`traefik`, `dnz`) or off.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/proxies/{id}/setup` | The proxy's routers, services and middlewares, and its proxied names |
+| `GET` | `/api/proxies/{id}/setup` | The proxy's routers, upstreams and middlewares, its TCP/UDP routers (each with `upstream`: name, servers), `redirects` (each redirect route's target by router id), and its proxied names |
 | `GET` | `/api/proxies/{id}/routes/hosts` | What Add route offers: `{"zones": [...], "records": [{"host", "types", "routed"}]}`. DNZ's primary zones and the names with A/AAAA/CNAME records (`routed` when this proxy has a router for one) |
 | `GET` | `/api/proxies/{id}/routes/entry-points` | The proxy's HTTP entry points for the router and Add route dialogs: `{"list": [{"name", "address"}], "http", "https", "from", "http_found", "https_found", "error"}` |
 | `GET` | `/api/proxies/{id}/routes` | `{"routes": [...], "auto_certificates"}`: each route's `id` (its router), `hosts`, `path_prefix`, `tls`, `cert_resolver`, `redirect_router`, `service_id`, `service_name`, `own_service` (false: a service of the proxy's it uses), `servers`, `options` (the switches), other `middlewares`, `simple` / `advanced` and, on DNZ Proxy, `certificate`. One proxy's routes, whole |

@@ -34,6 +34,29 @@ says which routes on which proxies the change reaches.
 Middlewares can also be made and edited from the route dialog: *New firewall…*, *Edit rules…* and
 *More → New middleware…*.
 
+## Flow
+
+**Flow** (in a middleware's **⋯** menu; for those who may only read, a click on its row) draws a
+visit's path through the middleware, left to right, with animated lines:
+
+1. Visitors → each proxy that runs it → each route that runs it (its hostname, HTTP or HTTPS, the
+   path). Chains are expanded, and a firewall in a DNZ Proxy's route defaults shows as **Every route**.
+2. The middlewares the route runs **before** it.
+3. What the middleware does, with an example built from the route's own hostname. Visits it answers
+   itself branch off below: a redirect with its target and status
+   (`http://app.example.com/` → 301 → `https://app.example.com/`), the sign-in page, a password
+   prompt (401), 429 over a rate limit, a cache hit. A firewall shows its rules as a step of their own,
+   then what they block (403) or challenge. A path rule shows what it does to the path
+   (`/api/users` → `/users`) on the line the visit goes on by.
+4. The middlewares it runs **after** it.
+5. Where the visit ends up: the route's upstream with its servers, or for a redirect route where its
+   page sends visitors (`→ b.example.com`).
+
+A TCP middleware draws the TCP routes running it (by SNI), the other TCP middlewares around it, the
+connections it closes or refuses, and the route's TCP upstream. Routes switched off, and proxy kinds
+that leave the middleware out, are drawn grey. Up to six routes per proxy and six proxies are drawn;
+the rest are counted. The diagram has a **full screen** button at its top right (Esc leaves).
+
 ## Route switches
 
 The route dialog's switches (cache, web application firewall, sign-in, custom headers, password,

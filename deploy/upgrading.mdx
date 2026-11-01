@@ -181,6 +181,17 @@ the way.
 - **API.** `/api/proxies/{id}/services` is gone (v1.27 answered `410 Gone`). Use
   [`/api/proxy/upstreams`](/proxy/upstreams) instead. `/api/proxies/{id}/middlewares` answers
   `410 Gone` too: use [`/api/proxy/middlewares`](/api/proxy#routes-routers-services-and-middlewares).
+- **Certificate checks per server.** An upstream's *accept any certificate* switch moves onto each of
+  its HTTPS servers (**Skip TLS verification** on the server's badge, `skip_tls_verify` on each server
+  in the API and proxy YAML), so nothing changes for visitors. On **Caddy**, an upstream mixing servers
+  that skip the check with servers that don't has every server's certificate checked. See
+  [Certificate checks per server](/proxy/upstreams#certificate-checks-per-server).
+- **CLI.** `dnz proxy middlewares add|edit`, `dnz notify add|set` and `dnz backup targets add|set` take
+  their settings with `--settings` instead of `--config` (it clashed with the config file flag
+  `-c`/`--config`). `dnz dhcp leases --search` is `-q` for short, no longer `-s`. List commands that
+  page print the API's page with `--json` (`{zones, total, page, per_page}` and so on) instead of a
+  bare array, and `dnz proxy routes list --json` prints `rows` with each proxy's copy in `entries`:
+  scripts reading the old shapes need updating.
 - **From v1.15 or older.** The server loses the query log those versions kept in the main
   database: it is dropped during the upgrade, in one step, with nothing to wait for (v1.16 and later
   keep the query log in day files). See
