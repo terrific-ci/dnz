@@ -196,12 +196,12 @@ groups:
           description: "DNZ leaves the address out of answers for {{ $labels.name }} while the check fails."
 
       - alert: DnzSyncFailing
-        expr: dnz_caddy_sync_success == 0 or dnz_traefik_sync_success == 0
+        expr: dnz_proxy_sites_sync_success == 0 or dnz_traefik_sync_success == 0
         for: 15m
         labels:
           severity: warning
         annotations:
-          summary: "Record sync from {{ if $labels.caddy }}Caddy {{ $labels.caddy }}{{ else }}Traefik {{ $labels.proxy }}{{ end }} fails"
+          summary: "Record sync from {{ if $labels.kind }}read-only proxy{{ else }}Traefik routers of{{ end }} {{ $labels.proxy }} fails"
           description: "DNZ cannot read the hostnames it should keep records for; existing records stay as they are."
 
       - alert: DnzClusterNodeBehind

@@ -2588,8 +2588,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "dnz_caddy_sync_success{instance=~\"$instance\"}",
-          "legendFormat": "Caddy {{caddy}}",
+          "expr": "dnz_proxy_sites_sync_success{instance=~\"$instance\"}",
+          "legendFormat": "{{kind}} {{proxy}} (read only)",
           "refId": "A",
           "range": true
         },
