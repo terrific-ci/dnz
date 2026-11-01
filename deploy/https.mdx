@@ -53,6 +53,11 @@ address from the proxy's headers (`X-Forwarded-For`, else `X-Real-IP`, else `For
 but only from a proxy it trusts, since anyone else could claim any address. The audit log,
 sessions, sign-in lockouts, dynamic DNS, views and blocklists (DoH) use it.
 
+`X-Forwarded-For` is read from the right: a proxy appends the address it saw to whatever the client
+sent, so DNZ walks the list from the nearest proxy back, past trusted addresses, and takes the first
+one it doesn't trust. With several proxies in a row (a CDN, then nginx), trust each of them, or the
+first one DNZ doesn't trust is taken for the client.
+
 DNZ trusts three kinds of address:
 
 - **Proxies it already knows.** You don't have to set anything for approved Traefik, Caddy and

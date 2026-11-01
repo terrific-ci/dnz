@@ -466,8 +466,29 @@ Per entry point:
 - **PROXY protocol from**: addresses or ranges of load balancers in front of the nodes that send a
   PROXY protocol header (v1 or v2). The visitor's address comes from it.
 - **Trusted forwarders**: peers whose `X-Forwarded-*` headers are kept. From anyone else they are
-  replaced.
+  replaced, and `X-Real-Ip` and `Forwarded` are dropped. See [The visitor's address](#the-visitors-address).
 - Timeouts for idle connections and for reading a request.
+
+### The visitor's address
+
+The firewall, the WAF's *Never check these addresses*, Under attack's allowed addresses, rate
+limits, IP allow lists, `ClientIP` rules, sign-in, analytics and the request log all use the
+visitor's address. From a peer that isn't a trusted forwarder, it is the peer (after the PROXY
+protocol, when that is on). From a trusted forwarder, it comes from the headers the forwarder sends:
+
+- **`X-Forwarded-For`, read from the right.** Every proxy appends the address it saw to whatever the
+  visitor sent, so the leftmost entry is the visitor's to choose. DNZ Proxy walks the list from the
+  nearest hop back, passes over the addresses inside the trusted forwarders, and takes the first one
+  that isn't. Several header lines are one list, in order. If every entry is trusted, the leftmost
+  counts; an entry that isn't an address (`unknown`, junk) ends the walk at the address before it.
+- Without `X-Forwarded-For`, **`X-Real-IP`**, then **`Forwarded: for=`** (RFC 7239, walked the same
+  way; quoted values, ports and `[IPv6]:port` are read).
+
+<Warning>
+With several proxies in front (for example Cloudflare, then nginx, then DNZ Proxy), **list every
+hop** as a trusted forwarder: Cloudflare's ranges and nginx's address. A hop that isn't listed is
+taken for the visitor, so every request seems to come from it.
+</Warning>
 
 ## Routing
 
@@ -481,7 +502,8 @@ Routers, services and middlewares work as described in
   health checks, weighted, mirroring (without request bodies) and failover services. HTTP/1.1,
   HTTP/2 and h2c upstreams, WebSocket and gRPC.
 - **Headers to the upstream**: `X-Forwarded-For`, `-Proto`, `-Host`, `-Port`, `-Server` and
-  `X-Real-Ip`.
+  `X-Real-Ip`. `X-Forwarded-For` gets the peer appended (a trusted forwarder's list is kept); `X-Real-Ip`
+  is always the [visitor's address](#the-visitors-address), never one passed on.
 - **Server names**: a server URL with a hostname is **one** server, the name looked up per connection
   (kept 30 seconds, a random address of its set). An upstream of
   [Docker Swarm tasks](/proxy/upstream-discovery#docker-swarm-tasks) is different: the node looks
