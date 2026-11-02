@@ -122,6 +122,14 @@ groups:
           summary: "Secondary zone {{ $labels.zone }} cannot reach its primaries"
           description: "DNZ {{ $labels.instance }} keeps answering from its copy until the zone expires."
 
+      - alert: DnzNotifyNotGettingThrough
+        expr: sum by (instance, secondary) (increase(dnz_notify_results_total{result!="ok"}[1h])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "NOTIFY from DNZ {{ $labels.instance }} doesn't get through to secondary {{ $labels.secondary }}"
+          description: "Unanswered, refused or not sent in the last hour: changes reach {{ $labels.secondary }} only at its hourly SOA check. Overview → Replication says why; check that UDP port 53 from the primary reaches the secondary's NOTIFY address."
+
       - alert: DnzSecondaryZoneExpiring
         expr: (dnz_secondary_expiry_timestamp_seconds - time()) < 86400
         for: 10m

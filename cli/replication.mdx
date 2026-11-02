@@ -21,6 +21,38 @@ a note or error in brackets:
   ns2: Zones 100% · Record details (tags, views, proxies) 100% · Resolver settings 100% · Filtering 2 of 3 (66.7%) · …
 ```
 
+For a secondary of this server, the next lines say how the last NOTIFY to each of its addresses
+ended (or that NOTIFY is off for it), what that means, and for each zone it lags on what the
+secondary itself reported about its last check:
+
+```text
+  ns2: last NOTIFY to 10.0.99.99:53 at 2026-11-02T10:02:11.402Z (example.com): no answer
+  ns2: NOTIFY to 10.0.99.99:53 got no answer (3 tries): changes reach ns2 only at its own SOA check (hourly for this server's zones). Check that UDP port 53 from this server reaches 10.0.99.99, and that it is ns2's DNS address.
+  ns2: example.com (behind); ns2 says: 10.0.100.201:53: connection refused, tries again at 2026-11-02T10:10:00Z; NOTIFY at 2026-11-02T10:02:11.402Z: no answer
+```
+
+## Send NOTIFY to a secondary now
+
+`notify` sends NOTIFY to a secondary (by name or id) and waits for its answers. Without `--zone` it
+goes for the zones the secondary lags on (asked now), or when none lag, for the catalog (a DNZ
+secondary) or a zone it answers for (another one): one NOTIFY that shows whether it gets through.
+
+```bash
+dnz replication notify ns2
+dnz replication notify ns2 --zone example.com
+dnz replication notify 3 --all                # every zone and the catalog
+```
+
+```text
+ZONE         ADDRESS          RESULT     SENT
+example.com  10.0.99.99:53    no answer  2026-11-02T10:04:30.118Z
+
+ns2: 0 answered, 0 refused, 1 no answer, 0 not sent
+NOTIFY to 10.0.99.99:53 got no answer (3 tries): …
+```
+
+See [When a secondary falls behind](/dns/replication#when-a-secondary-falls-behind).
+
 ## On the primary: allow a secondary
 
 ```bash

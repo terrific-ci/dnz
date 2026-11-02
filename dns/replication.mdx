@@ -714,7 +714,8 @@ The promotion lists it under *still copied*. A take over moves only the old prim
 - Large zones are split into messages of about 16 KB, each signed (TSIG over the whole stream).
 - The catalog serial goes up whenever a primary zone is added or removed; zones keep their own
   serials, which change with every record edit. Both trigger NOTIFY to all secondaries, retried
-  three times.
+  three times (2 seconds apart). How the last one to each secondary ended shows in its sync status
+  (see [When a secondary falls behind](#when-a-secondary-falls-behind)).
 - A disabled zone counts as removed: it leaves the catalog (secondaries following it drop the zone)
   and transfers of it are refused with NOTAUTH until it is turned on again. Disabled records are
   left out of transfers.
@@ -736,8 +737,8 @@ sync, in percent of zones with the same SOA serial on both sides:
   missing.
 
 The state is **In sync** (every zone current), **Behind** (some zones behind, missing or
-unanswered, or a secondary that refused this server's last NOTIFY: its error line names the answer,
-and changes reach it only at its own SOA refresh), **Unreachable** (no zone got an answer) or
+unanswered, or a secondary whose last NOTIFY from this server was refused, got no answer or
+couldn't be sent: its error line says which, and changes reach it only at its own SOA refresh), **Unreachable** (no zone got an answer) or
 **Unknown** (no address to ask, no zones, or a secondary that serves none of the zones: *No
 transfers yet*, never *In sync* with 0 of 0). Open a row to see everything it copies, part by part (below), and which zones aren't
 current, with both serials.
@@ -801,6 +802,77 @@ no extra load.
 Right-click a server for its actions: this server, while it follows a DNZ primary, **Take over as
 primary**; a primary it follows **Take over as primary**, **Sync now** and **Leave**; a secondary
 **Set as primary** (DNZ ones), **New join code** and **Remove**.
+
+## When a secondary falls behind
+
+A secondary shows **Behind** in **Overview → Replication** (and in `dnz replication status`) when
+some of its zones have an older serial than here, or when this server's NOTIFY doesn't reach it.
+Open its row: everything below is on the **primary**, so you don't have to sign in to the secondary
+to see why.
+
+How often things sync:
+
+| What | When |
+|---|---|
+| A zone | right after a change, on NOTIFY; without one, at the secondary's SOA check: every hour (refresh 3600 s in DNZ's SOA), every 10 minutes after a failed check (retry 600 s) |
+| The zone list (the catalog) | on NOTIFY; without one, at least every 15 minutes |
+| Resolver settings, accounts, the sync report | every minute, at the DNZ secondary's check-in |
+
+So a NOTIFY that never arrives doesn't stop replication, it only slows it down to the hourly check:
+a secondary can be *Behind* for up to an hour after each change.
+
+### The NOTIFY box
+
+An open secondary lists the last NOTIFY to each of its NOTIFY addresses since this server started:
+where it went, when, for which zone, and how it ended.
+
+| Line | Means | Check |
+|---|---|---|
+| *Last NOTIFY to 10.0.99.99:53 2 minutes ago (example.com): answered* | It took it and checks the zone now | Nothing |
+| *…: no answer — changes reach ns2 only at its hourly SOA check; check that UDP/53 from this server reaches it* | Nothing came back after 3 tries | A firewall between the servers (UDP port 53 from this server's address), or a NOTIFY address that isn't the secondary's DNS (a reverse proxy, a container address): fix it with **Edit** or `dnz replication secondary edit <id> --notify <IP>` |
+| *…: refused (NOTAUTH)* or *(REFUSED)* | It answered, but ignores NOTIFY from this server | On a BIND, Knot or PowerDNS secondary, allow NOTIFY from this server's address (and the TSIG key). A non-DNZ secondary that doesn't carry a zone (or the catalog) refuses its NOTIFY rightly: that isn't counted against it |
+| *…: not sent (…)* | This server couldn't send it (no IPv6 route, …) | The error says why |
+| *NOTIFY is off for bind: it has no NOTIFY address* | Nothing is sent to it | Fine if it should only use its SOA timers; add an address to speed it up |
+| *No NOTIFY sent to … since this server started* | Nothing changed since the last restart | Send one to try (below) |
+
+A NOTIFY that got no answer, was refused or couldn't be sent makes the secondary **Behind** even
+when all its zones are current, with the reason as its error line: the next change would wait for
+its hourly check again. A newer NOTIFY that is answered clears it.
+
+### Send NOTIFY again
+
+The paper plane button on the secondary's row (or in its NOTIFY box, or right-click → *Send NOTIFY
+again*) sends NOTIFY now for the zones it lags on (when none lag, for the catalog, or a zone it answers for on a non-DNZ secondary), waits for the
+answers (up to 6 seconds) and shows the result. Right-click a lagging zone for *Send NOTIFY for this
+zone*. From the command line:
+
+```bash
+dnz replication notify ns2                    # the zones it lags on, or the catalog
+dnz replication notify ns2 --zone example.com
+dnz replication notify ns2 --all              # every zone and the catalog
+```
+
+Over the API: `POST /api/replication/servers/{id}/notify` with `{}`, `{"zones": ["example.com"]}`
+or `{"all": true}` (superadmin); it answers with each NOTIFY and its result, and is written to the
+audit log.
+
+### The lagging zones table
+
+Per zone it names the last NOTIFY of that zone and how it ended, and, for a DNZ secondary, the error
+of its own last check of the zone as it reported it at its check-in, with when it tries again (e.g.
+*ns2 says: 10.0.100.201:53: connection refused · tries again in 8 minutes*). That is the secondary
+failing to reach this server's DNS for the transfer (TCP port 53, its allowed address, its TSIG key)
+rather than NOTIFY. The first such error is also the secondary's error line. Secondaries before DNZ
+2.2 don't report it; the table then shows the serials only.
+
+| Problem | Means |
+|---|---|
+| *behind* | It has an older serial; it catches up at the next NOTIFY that reaches it or its hourly check |
+| *REFUSED*, *NOTAUTH*, *not authoritative* | It doesn't serve the zone: a DNZ secondary hasn't picked the zone up from the catalog yet (catalog NOTIFY lost, or within 15 minutes), another secondary doesn't carry it |
+| *… did not answer* | The secondary's DNS didn't answer this server's SOA question |
+
+For alerts, the metric `dnz_notify_results_total{secondary, result}` counts NOTIFY by how it ended
+(`ok`, `refused`, `no_answer`, `error`), and the alert rules include *DnzNotifyNotGettingThrough*.
 
 ## Test with dig
 

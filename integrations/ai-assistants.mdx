@@ -162,6 +162,7 @@ and ask for the next page.
 | `audit_log` | Who changed what, newest first; `page` and `limit` (20 a page) |
 | `pending_changes` | Change requests waiting for approval (or, with `status`, decided ones); `page` and `limit` (20 a page) |
 | `topology` | How divisions, zones, views, upstreams, proxies and replication fit together |
+| `replication_status` | How far each replica is in sync ([Replication](/dns/replication#sync-status)): state, zones current and lagging with both serials, the other parts copied, and for a secondary of this server the last NOTIFY to each address (answered, refused, no answer) and the transfer errors it reported (superadmin) |
 | `view_records` | [Views](/dns/views) with their networks and record counts, or one view's records (zone, name, type, value, TTL, on/off) in the zones you may read; one view's records a page at a time (`page`, `limit`, 50) |
 | `list_status_pages` | Hosts with a status page ([Status pages](/proxy/status-pages)): kind, state, schedule, allowed addresses, proxies; a page at a time (`page`, `limit`, 50) unless `host` names one |
 | `status_page_hosts` | Hosts a status page can be set on, with the proxies serving each |
