@@ -19,6 +19,9 @@ dnz proxy on                                      # or: dnz proxy off
 dnz proxy add edge-1 --ipv4 203.0.113.10          # a Traefik (the default kind)
 dnz proxy add edge-2 --kind caddy --ipv4 203.0.113.20 --connects-from 10.0.0.20
 dnz proxy add "Edge JKT" --kind dnz --ipv4 203.0.113.30   # DNZ Proxy nodes join it
+dnz proxy add office --ipv4 10.20.0.5             # private: every address is (--access private|public says so)
+dnz proxy edit edge-1 --access private            # reached only from inside the network (LAN, VPN)
+dnz proxy edit edge-1 --name edge-jkt --ipv6 ""   # only what you pass changes; "" clears an address
 dnz proxy caddy edge-2                            # what the Caddy is sent, and what it can't take
 dnz proxy add edge-3 --kind caddy --read-only --api http://10.0.0.5:2020 --user dnz --password --address 203.0.113.5
 ```
@@ -34,7 +37,12 @@ A proxy declared with `DNZ_PROXY_SEED_*` shows **environment** under
 | `--kind` | What runs it: `traefik` (default), `dnz` (or `dnz-proxy`) or `caddy`. Can't change later |
 | `--ipv4`, `--ipv6` | Where visitors reach it; DNS answers with these. At least one |
 | `--connects-from` | The address a Traefik or Caddy calls DNZ from, when it isn't one of the above |
+| `--access` | `private` (reached only from inside your network: a LAN, a VPN) or `public` (from the internet). Left out: private when every address is private, else public. See [Private and public proxies](/proxy/overview#private-and-public-proxies) |
 | `--read-only` | A Caddy or Traefik that keeps its own configuration: DNZ never configures it, it reads its sites from `--api` and keeps DNS records for them. Takes the flags of [`dnz proxy sites add`](/cli/proxy-sites#adding) (`--ipv4` / `--ipv6` count as addresses), `--division` and `--paused` |
+
+`show` lists each proxy's **ACCESS**. `dnz proxy edit PROXY` changes a proxy DNZ configures (a
+read-only one is [`dnz proxy sites edit`](/cli/proxy-sites)): `--name`, `--ipv4`, `--ipv6` and
+`--access`; only what you pass changes.
 
 See [Connecting Traefik](/proxy/traefik), [Connecting Caddy](/proxy/caddy),
 [Read-only proxies](/proxy/read-only) and [DNZ Proxy](/proxy/dnz-proxy). Read-only proxies are
@@ -97,7 +105,9 @@ dnz proxy routes list --type redirect             # one type: on, off, redirect,
                                                   # advanced, or a switch (cache, firewall, waf, under-attack, waiting-room,
                                                   # rate-limit, password, sign-in, allow, headers, uploads, rules)
 dnz proxy routes list --type http,tcp             # several types (or --type http --type tcp): routes of any of them
+dnz proxy routes list --access private            # only the private proxies' routes (--access public: the public ones')
 dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000
+dnz proxy routes add office intranet.example.com -u http://10.0.9.4 --serve-on private   # on every private proxy too
 dnz proxy routes add edge app.example.com -u http://10.0.1.20:3000=3 -u http://10.0.1.21:3000 \
   --also www.example.com --cache 10m --user admin:s3cret --allow 10.0.0.0/8
 dnz proxy routes add edge api.example.com -u http://10.0.2.11:8080 --rate-limit 100/300 --firewall office
@@ -116,6 +126,10 @@ dnz proxy routes cert edge app.example.com        # the certificate's state and 
 dnz proxy routes clear-cache edge app.example.com
 dnz proxy routes rm edge app.example.com          # its DNS records stop going through edge
 ```
+
+`--serve-on private|public|all` saves the route on every other approved proxy of that access too,
+one after the other as the route dialog's **Serve on** does (one that fails is reported and the rest
+go on). It picks the proxies as they are now: a proxy added later doesn't get the route.
 
 `--health-check PATH` and `--health-interval SECONDS` (default 10) are the health check of a route's
 own servers, as the route dialog's **Health check**: each server is asked for the path and gets no
@@ -234,6 +248,7 @@ dnz proxy routes edit edge app.example.com api.example.com --switch waf=on --swi
 dnz proxy routes edit all app.example.com api.example.com --middleware +strip-api --middleware -old-headers
 dnz proxy routes edit all app.example.com api.example.com --service web       # one shared upstream
 dnz proxy routes edit edge app.example.com api.example.com --serve-on +edge2   # copy them to edge2; -edge2 takes them off
+dnz proxy routes edit all app.example.com --serve-on +public                    # onto every public proxy (now)
 dnz proxy routes rm all app.example.com api.example.com                         # asks first; -y
 ```
 
@@ -249,7 +264,7 @@ A batch takes:
 | `--uploads` | The default [upload limits](/proxy/upload-limits) (`--no-uploads` turns them off) |
 | `--middleware +NAME\|-NAME` | Add or remove a shared middleware; repeat for more |
 | `--service NAME` | Send them all to one upstream of Proxy → Upstreams |
-| `--serve-on +PROXY\|-PROXY` | Copy the routes to another proxy, or take them off one |
+| `--serve-on +PROXY\|-PROXY` | Copy the routes to another proxy, or take them off one. `+private`, `+public`, `+all` (or with `-`): every approved proxy of that access now; a proxy named so is named by its id |
 
 Flags that carry a route's own values (servers, hostnames, users, sign-in and who may sign in,
 headers, a cache time other than 10 minutes, upload limits such as `--upload-max`, WAF lists and

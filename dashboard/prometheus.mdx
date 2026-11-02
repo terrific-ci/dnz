@@ -178,6 +178,7 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_ca_certificate_expiry_seconds{id,certificate}` | Seconds until a certificate of the private CA ends (revoked ones left out) |
 | `dnz_ca_root_expiry_seconds{version}`, `dnz_ca_intermediate_expiry_seconds{version}` | Seconds until a CA version's root or intermediate ends (retired versions left out); no certificate the intermediate signs outlives it |
 | `dnz_proxy_enabled`, `dnz_proxies{kind}` | Whether proxying is on (1), and approved proxies by kind (`traefik`, `dnz`, `caddy`) |
+| `dnz_proxies_by_access{access}` | Approved proxies by [access](/proxy/overview#private-and-public-proxies): `private` (reached only from inside the network) or `public` |
 | `dnz_proxy_upstreams{protocol}` | Upstreams (Proxy → Upstreams, shared by every proxy) by kind of traffic: `http`, `tcp`, `udp` |
 | `dnz_proxy_upstream_discovered_servers{upstream,stale}` | Servers DNZ found for an upstream whose servers come from a [DNS name](/proxy/upstream-discovery); `stale="true"` while lookups fail and these are the last good ones. Not for names each proxy looks up itself (Docker Swarm tasks) |
 | `dnz_proxy_upstream_check_seconds{upstream,server}` | How long an upstream server's last [health check](/proxy/upstreams) on DNZ Proxy took, to the answer: the slowest of the nodes that find it up. Only servers a node checks (nodes from v2.1) |

@@ -180,7 +180,7 @@ dnz record add example.com intranet A 10.1.1.1 --view lan
 | `--view` | Only for clients of this split-horizon view |
 | `--comment` | A note on the record |
 | `--tag` | Tags (repeat or comma-separate) |
-| `--proxy` | Serve it through these proxies (name or id) |
+| `--proxy` | Serve it through these proxies (name or id; `private`, `public` or `all`: every approved proxy of that access now) |
 | `--disabled` | Add it turned off |
 
 Put `--` before a value that starts with a dash.
@@ -214,6 +214,7 @@ dnz record rm example.com --tag legacy --all
 ```bash
 dnz record add example.com shop A 10.0.0.5 --proxy edge-jkt,edge-sgp   # DNS answers with both proxies
 dnz record edit example.com shop --proxy edge-jkt,edge-ams --all       # every A/AAAA/CNAME of the name at once
+dnz record edit example.com shop --proxy private --all                 # through every private proxy
 dnz record edit example.com shop --proxy none --all                    # back to DNS only
 dnz record add example.com app A 10.0.1.20 --proxy edge --upstream http://10.0.1.20:3000   # makes edge's route too
 dnz record edit example.com db A --proxy edge --upstream http://10.0.133.10 --group "Web app"

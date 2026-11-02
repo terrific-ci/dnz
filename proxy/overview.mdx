@@ -83,6 +83,36 @@ configuration, which DNZ only reads to keep DNS records for its sites and never 
 `integrations.manage`) can open **Settings → Proxy** and see and manage only their division's
 read-only proxies there. Everything else there needs a superadmin.
 
+### Private and public proxies
+
+Every proxy is **private** or **public**: where visitors reach it from. A private proxy is reached
+only from inside your network (the office LAN, a VPN); a public one from the internet. **Add proxy**
+and **Edit** ask for it as **Access**, two cards: *Private* and *Public*. For a new proxy it is
+picked from the addresses you type: private when every one is private (`10.0.0.0/8`,
+`172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10`, loopback, link-local, IPv6 `fc00::/7`), else
+public. Change it when visitors reach the proxy another way, such as a private address published
+through NAT. Each card on **Proxy → Proxies** shows a small **Private** or **Public** badge.
+
+Access changes nothing a proxy serves or what DNS answers. It feeds the quick picks in a route's
+**Serve on**: **All private (2)**, **All public (3)** and **All proxies (5)** tick exactly the
+proxies of that access, with how many there are, and you can still tick or untick each one
+afterwards. They are shortcuts, not rules: they pick the proxies as they are now, and a proxy you add
+later doesn't join routes saved before. A pick with no proxy of its access is greyed out. The same
+picks are in **Add route** (*On which proxies?*) on Proxy → Routes, in the record dialog's proxies
+and in the bulk bar's **Serve on** (*Add to all private (2)*, …). The route dialog opens on one
+proxy, which stays on whatever you pick; when a pick leaves it out, the dialog says so.
+
+When you upgrade, proxies that already exist get their access once, the same way: private when
+every address they are known by is private (their own addresses, their DNZ Proxy nodes' public
+addresses, the addresses a read-only proxy's records answer with), else public. A
+[read-only proxy](/proxy/read-only) follows its addresses whenever its settings are saved; it serves
+no routes, so Serve on never offers it.
+
+**Filters** on Proxy → Routes has an **Access** list too (`?access=private`). From the command line:
+`dnz proxy add office --ipv4 10.20.0.5 --access private`, `dnz proxy edit edge --access public` and
+`dnz proxy routes add office intranet.example.com -u http://10.0.9.4 --serve-on private` (see
+[Proxy commands](/cli/proxy)).
+
 ### From the environment
 
 You can also turn proxying on or off when DNZ starts. The switch in the UI is then read-only.
@@ -154,8 +184,9 @@ reason under a server that is down (*timed out after 5 s*); hover the icon for w
 only by Traefik or Caddy shows none.
 **By zone** gives each zone a list of its own, and **By group** each [route group](#route-groups);
 the list shows 25 routes a page (50 or 100 can be picked below it), and the page is in the address
-(`?page=2`). **Filters**, beside the search, has three lists of checkboxes and each takes several
-values at once: **Proxies** (*Edge* and *Office*), **Types** (on or off, redirects, HTTPS, HTTP only,
+(`?page=2`). **Filters**, beside the search, has lists of checkboxes and each takes several
+values at once: **Proxies** (*Edge* and *Office*), **Access** (the
+[private or public](#private-and-public-proxies) proxies' routes), **Types** (on or off, redirects, HTTPS, HTTP only,
 TCP routes, UDP routes, certificate failing, DNS not proxied, set up in YAML, or a switch: cache,
 firewall, under attack, password, …) and **Groups** (*Web app* and *No group*). A route shows when it
 matches any value ticked in a list, and every list that has one. The button counts the values set,
@@ -163,7 +194,8 @@ each is a chip under the toolbar with its own ×, and **Clear all** drops them. 
 the address, comma-separated (`?type=http,tcp&group=Web%20app,-`), and works with the views and the
 pages. **Add route** is the one button: on Proxy → Routes it
 asks which proxies (one or several, with a search), and the same dialog edits a route later. Its
-**Serve on** saves the route on every proxy picked. Its switches are one set of
+**Serve on** saves the route on every proxy picked; **All private**, **All public** and **All
+proxies** above the list pick them [by access](#private-and-public-proxies). Its switches are one set of
 [middlewares](/proxy/middlewares) for all of them (a visitor signs in once, whichever proxy DNS sends
 them to), and the DNZ Proxy switches go only to DNZ Proxies. A route that goes to a service from the list goes to the service of the same name on
 each proxy (made there from the same servers when a proxy has none), so the same servers never become
@@ -360,7 +392,7 @@ The bar's actions, in this order:
 | **Switches** | Turn the web application firewall, *Under attack*, cache, waiting room, upload limits and rate limit on (with the route dialog's defaults; a switch that is already on keeps its settings) or off; turn the address list, custom headers, rules, firewall, password and sign-in off |
 | **Middleware** | Add or remove a shared [middleware](/proxy/middlewares) on every proxy of the routes |
 | **Upstream** | Send them all to one [upstream](/proxy/upstreams) (HTTP routes to an HTTP one, TCP to TCP). A route's own servers go once nothing else uses them |
-| **Serve on** | Copy the routes to another proxy, as the route dialog's **Serve on** does, or take them off one |
+| **Serve on** | Copy the routes to another proxy, as the route dialog's **Serve on** does, or take them off one. **Add to all private**, **Add to all public** and **Add to all proxies** copy them to every proxy of that access at once |
 | **Delete** | The routes go, and their names' DNS records stop going through those proxies |
 
 <Tip>

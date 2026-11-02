@@ -23,9 +23,9 @@ have their own endpoints: see the [Read-only proxies API](/api/proxy-sites).
 | `GET` | `/api/settings/proxy` | `enabled`, `locked`, `kinds`, `traefik_path`, `caddy_path`, `connect_key`, `connect_key_locked`, `max_pending` and `proxies` (see below) |
 | `PUT` | `/api/settings/proxy` | `{"enabled": true}` or `{"enabled": false}` |
 | `POST` | `/api/settings/proxy/connect-key` | Replace the connect key (400 while `DNZ_PROXY_CONNECT_KEY` sets it) |
-| `GET` | `/api/proxies` | `{"enabled": true, "proxies": [{"id", "name", "kind", "ipv4", "ipv6", "routes": [...]}]}`: approved proxies only, with their enabled routers |
-| `POST` | `/api/proxies` | Add a proxy by its `kind` and addresses |
-| `PUT` | `/api/proxies/{id}` | Change a proxy |
+| `GET` | `/api/proxies` | `{"enabled": true, "proxies": [{"id", "name", "kind", "access", "ipv4", "ipv6", "routes": [...]}]}`: approved proxies only, with their enabled routers |
+| `POST` | `/api/proxies` | Add a proxy by its `kind` and addresses, and `access` (`private` or `public`; left out: private when every address is private, else public) |
+| `PUT` | `/api/proxies/{id}` | Change a proxy (the whole proxy; `access` left out stays as it is) |
 | `DELETE` | `/api/proxies/{id}` | Delete a proxy (409 while records use it) |
 | `POST` | `/api/proxies/{id}/approve` | Approve a detected (or ignored) Traefik or Caddy, with a proxy body |
 | `POST` | `/api/proxies/{id}/ignore` | Ignore a detected Traefik or Caddy |
@@ -144,6 +144,7 @@ paged on the server, so `total` and every count are over every route.
 | --- | --- |
 | `q` | Text in a hostname, the path, an upstream address, the group's or a proxy's name |
 | `proxy` | Proxies' ids or names: only their copies (a route's copies on the other proxies come in `others`) |
+| `access` | `private` or `public`: only the copies on [proxies of that access](/proxy/overview#private-and-public-proxies) (with `proxy`, those of them; `private,public`: every proxy) |
 | `type` | `on`, `off`, `redirect`, `https` and `http` (HTTP routes), `tcp`, `udp`, `cert-failing`, `dns-missing`, `advanced`, or a switch: `cache`, `firewall`, `waf`, `under-attack`, `waiting-room`, `rate-limit`, `password`, `sign-in`, `allow`, `headers`, `uploads`, `rules` |
 | `group`, `zone` | A route group's or a zone's name, or `-` for routes in none |
 
@@ -170,7 +171,7 @@ comma in it stays one value. A single value works as it always did.
   "page": 1,
   "per_page": 50,
   "unfiltered": 1240,
-  "proxies": [{ "id": 1, "name": "edge", "kind": "dnz", "auto_certificates": true, "proxied": [], "checks": {} }],
+  "proxies": [{ "id": 1, "name": "edge", "kind": "dnz", "access": "public", "auto_certificates": true, "proxied": [], "checks": {} }],
   "middlewares": []
 }
 ```
@@ -179,7 +180,7 @@ comma in it stays one value. A single value works as it always did.
   its certificate and latest steps on a DNZ Proxy (shortened above).
 - `redirect_to`, on a redirect route's row only, is the address it sends visitors to.
 - `unfiltered` counts the rows before the search and filters (the proxy filter applied).
-- `proxies` lists each proxy's `name`, `kind` and `auto_certificates`, and for the page's routes the
+- `proxies` lists each proxy's `name`, `kind`, `access` and `auto_certificates`, and for the page's routes the
   names DNS answers with it (`proxied`) and the last reachability `checks` (by route id).
 - `middlewares` holds the shared middlewares and those the page's routes name.
 - `groups`, only with `view=zones` or `groups`, is `[{"name", "count"}]` (`name` is `null` for routes
