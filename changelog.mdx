@@ -6,18 +6,24 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.1.1**, released November 1, 2026. To install or upgrade to it:
+The latest release is **v2.1.2**, released November 2, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.1.1
-docker pull terrificci/dnz-proxy:2.1.1   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.1.1
+docker pull terrificci/dnz:2.1.2
+docker pull terrificci/dnz-proxy:2.1.2   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.1.2
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.1.1" description="November 1, 2026" tags={["Latest"]}>
+<Update label="v2.1.2" description="November 2, 2026" tags={["Latest"]}>
+
+- **Fixed: DNZ Proxy stopped answering on a port for about 10 seconds when its entry point was edited.** Changing an HTTP or HTTPS entry point on a running node (its trusted forwarders, PROXY protocol addresses or timeouts) closed the port and opened it again only 10 seconds later, so every visitor in between was refused. The port now stays open: new connections get the new settings at once, and connections already open finish their request and close. Moving an entry point to another address opens the new one before the old one closes.
+
+</Update>
+
+<Update label="v2.1.1" description="November 1, 2026">
 
 - **Routes: the health check of a route's own servers is set in the route dialog again.** v2.1.0 left the route dialog and a record's route without any way to set it. Each server row now has a heart button between its address and its weight: it opens the server's health check (the upstream's path, a path of its own, or not checked, on DNZ Proxy) and shows the choice at a glance: muted at the upstream's path, highlighted with its own path, struck through when not checked, with the nodes' health colour on it. Under the servers, **Health check** sets the path every server is asked and how often. The upstream dialog has the same heart on each server and keeps **Health check → Per server** as an overview.
 - **Routes on a shared upstream: its health check in the route dialog.** Picking an upstream from the list shows its health check path and interval under it, to change right there; saving the route saves them on the upstream, and a note says the change reaches every route using it. **Edit upstream…** opens the upstream's own dialog for the rest.
