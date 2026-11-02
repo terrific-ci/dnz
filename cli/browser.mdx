@@ -1,0 +1,106 @@
+---
+title: "CLI in the browser"
+description: "Type dnz commands in the dashboard: a terminal that runs them on the server, as you."
+---
+
+For who prefers typing to clicking: **CLI** in the dashboard's menu (right above **Settings**) opens
+a terminal where you type `dnz` commands and see what the [command line](/cli/overview) prints,
+colours included, while it runs.
+
+```text
+dnz › zone list
+ID  NAME             DIVISION  KIND     ON   RECORDS  DNSSEC  SERIAL
+1   example.com      Default   primary  yes  3        no      2026110203
+dnz › record add example.com www A 192.0.2.10
+```
+
+The `dnz` in front is optional: `zone list` and `dnz zone list` are the same. `help` lists the
+commands, `<command> --help` explains one.
+
+## As you, with your permissions
+
+A command runs on the DNZ server you are signed in to, as you:
+
+- the **same permissions** as in the dashboard: what your role can't do is refused exactly as it is
+  with the CLI on your own machine (`permission denied`),
+- the **same validation**, and changes that wait for [approval](/dns/history#change-approval) wait here too,
+- every change in the [audit log](/admin/audit-log) under your name and your browser's address.
+
+Every line you type is in the audit log too (category *CLI commands*), with how it ended: `ok`,
+`failed`, `stopped`, `timeout`, `output_limit` or `refused`. Values that look like secrets
+(`--password`, `--secret`, `--token`, keys of the same names in JSON) show as `***`.
+
+<Note>
+  Only people signed in to the dashboard can use it. API tokens and AI assistants signed in over MCP
+  can't; assistants have [their own tools](/cli/mcp), and there is no MCP tool for the terminal.
+</Note>
+
+## What doesn't run here
+
+The terminal runs on the server, so anything that works on "the machine it runs on" would work on the
+server itself. That is refused before anything starts, with the reason:
+
+| Refused | Why |
+| --- | --- |
+| `serve`, `healthcheck` | They start or check a server |
+| `config`, `db`, `backup decrypt`, `backup restore --offline`, `doctor --local`, `proxy advanced-check --database` | They work on the machine's own files and settings |
+| `setup`, `login`, `logout` | A new server before anyone can sign in; you are signed in already (sign out from the account menu) |
+| `mcp`, `externaldns-webhook` | Servers of their own |
+| `--server`, `--token`, `--config`, `--ca-cert`, server options (`--dns-addr`, `--no-ui`, `--set`…) | Commands here always run against this server, as you |
+| Any argument that names a file: `zone import example.com zone.txt`, `-o zone.txt`, `--file`, `--cert`, `@hook.json` | The file would be on the server's disk, not your computer |
+
+Without `-o`, an export prints in the terminal, and JSON can be typed in place of `@file`. For the
+rest, use the `dnz` CLI on your machine.
+
+The terminal doesn't ask questions: a command that would ask for confirmation says to run it again
+with `--yes`, and one that would ask for a password or a secret says to do it in the dashboard or with
+the CLI on your machine (a secret typed here would stay in the terminal's history).
+
+There is no shell behind it: pipes (`|`), redirects (`>`), `;`, `&&` and `$( )` are refused instead
+of being passed on, `*.example.com` stays as typed, and quotes work as in a shell:
+
+```text
+dnz › record add example.com @ TXT "v=spf1 -all"
+```
+
+## Keys
+
+| Key | Does |
+| --- | --- |
+| Enter | Runs the line |
+| Tab | Completes a command, a flag, or one of a flag's values; lists the choices when there are several |
+| ↑ ↓ | Earlier lines (the last 500, kept in this browser) |
+| Ctrl+C | Stops the running command (with text selected: copies it); at the prompt, drops the line |
+| Ctrl+L, `clear` | Clears the screen |
+| Ctrl+A / Ctrl+E, Home / End | Start / end of the line |
+| Ctrl+U / Ctrl+K / Ctrl+W | Delete to the start / to the end / the word before the cursor |
+| ⌘V, Ctrl+V | Paste (a pasted newline doesn't run anything) |
+
+`history` lists the earlier lines; **Copy output** copies everything on the screen.
+
+## Limits
+
+- One command at a time per sign-in (another tab waits until it ends or is stopped), and at most 8 on
+  a server at once.
+- A command stops after 5 minutes; one that follows something live (`capture`, `proxy logs --follow`)
+  after an hour. Stopping, with Ctrl+C or by leaving the page, works like Ctrl+C in a terminal:
+  `capture` still prints its summary.
+- At most 8 MiB of output per command.
+
+`dnz_web_terminal_runs_total{result}` in [Prometheus](/dashboard/prometheus) counts the lines by how
+they ended. A server running without the web UI (`--no-ui`) has no terminal: use the CLI.
+
+## How it keeps the server safe
+
+Nothing runs in a shell. The line is split into words and checked against the CLI's own definition of
+every command and flag; then DNZ starts its own binary with those words as arguments, with an empty
+environment, no input, and a private, empty folder (removed when the command ends). The command calls
+the server's API over loopback with a credential that acts as your dashboard session: it exists only
+in the server's memory, works only from the server itself, ends when the command does, and stops
+working as soon as you sign out. Even a file that slipped past the check is refused: the command
+doesn't read or write files on the server's disk.
+
+For scripts, the endpoints are `GET /api/cli/commands` (the command tree the terminal completes from),
+`POST /api/cli/run` (`{"line": "zone list", "columns": 120}`, answered with server-sent events `start`,
+`out`, `err` and `end`) and `POST /api/cli/stop`, all for a dashboard session only. To script DNZ, the
+[CLI](/cli/overview) with an API token is the better tool.

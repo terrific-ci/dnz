@@ -182,7 +182,8 @@
             "group": "Basics",
             "pages": [
               "cli/overview",
-              "cli/authentication"
+              "cli/authentication",
+              "cli/browser"
             ]
           },
           {
