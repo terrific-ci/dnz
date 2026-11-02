@@ -6,18 +6,27 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.1.2**, released November 2, 2026. To install or upgrade to it:
+The latest release is **v2.2.0**, released November 2, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.1.2
-docker pull terrificci/dnz-proxy:2.1.2   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.1.2
+docker pull terrificci/dnz:2.2.0
+docker pull terrificci/dnz-proxy:2.2.0   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.2.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.1.2" description="November 2, 2026" tags={["Latest"]}>
+<Update label="v2.2.0" description="November 2, 2026" tags={["Latest"]}>
+
+- **CLI in the browser.** **CLI** in the menu (right above **Settings**) opens a terminal for `dnz` commands, with colours, live output for commands that keep running (`capture`, `proxy logs --follow`), Tab completion, history and Ctrl+C to stop. Commands run on the server you are signed in to, as you, with your permissions, and each one goes to the audit log (secrets shown as `***`). Commands that would work on the server's own machine (starting a server, its configuration and database, reading or writing files on its disk, `login`/`logout`) are refused with the reason: use the dnz CLI on your own machine for those. Only signed-in people can use it, not API tokens or MCP.
+- **Proxies: private or public, and Serve on for all of them at once.** Adding, editing or approving a proxy now asks for its **Access**: *Private* (reached only from inside your network, such as the office LAN or a VPN) or *Public* (reached from the internet). Existing proxies were sorted from their addresses (private only when every known address is private) and can be changed under **Proxy → Proxies**, where a badge shows each one's access. A route's **Serve on**, the **Add route** proxy picker, a record's proxies and the batch edit of routes have quick picks **All private**, **All public** and **All proxies**, which tick the matching proxies of that moment; a proxy added later doesn't join existing routes. The Routes page filters by access, and the topology map shows it. CLI: `dnz proxy add --access`, the new `dnz proxy edit`, `--serve-on private|public|all` on route commands, `dnz proxy routes list --access` and `dnz record add|edit --proxy private|public|all`. MCP: `proxy_routes` filters by access, and `bulk_edit_routes` takes `private`, `public` or `all` for `serve_on`. Prometheus: `dnz_proxies_by_access`.
+- **Replication: why a secondary falls behind, seen from the primary.** **Secondaries of this server** now shows the last NOTIFY sent to each secondary's address and how it ended: answered, refused, no answer, or not sent. A NOTIFY that gets no answer marks the secondary as behind, with what to check, since changes then reach it only at its own hourly SOA check. The lagging zones list the secondary's own transfer error and when it tries again (from secondaries on 2.2 or newer), and **Send NOTIFY again** (also on each lagging zone) sends one at once and shows the result. A secondary without a NOTIFY address now shows "NOTIFY is off" instead of an error. CLI: `dnz replication status` shows the same, and `dnz replication notify <secondary> [--zone …] [--all]` sends one. MCP: a new `replication_status` tool. Prometheus: `dnz_notify_results_total` and a `DnzNotifyNotGettingThrough` alert rule. The docs have a new section, *When a secondary falls behind*, with how often each part syncs.
+- **Fixed: a secondary renewed certificates and sent alerts beside its primary.** A server that was a primary before it joined another as a DNZ secondary kept renewing its certificates and sending the daily summary, the NXDOMAIN spike alert and domain expiry alerts, so they went out twice. Only the primary does these now. Alerts about the secondary itself (its upstreams, rate limiting, a full cache, threats, its backups) still go out from it.
+
+</Update>
+
+<Update label="v2.1.2" description="November 2, 2026">
 
 - **Fixed: DNZ Proxy stopped answering on a port for about 10 seconds when its entry point was edited.** Changing an HTTP or HTTPS entry point on a running node (its trusted forwarders, PROXY protocol addresses or timeouts) closed the port and opened it again only 10 seconds later, so every visitor in between was refused. The port now stays open: new connections get the new settings at once, and connections already open finish their request and close. Moving an entry point to another address opens the new one before the old one closes.
 
