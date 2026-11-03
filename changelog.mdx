@@ -6,18 +6,29 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.2.0**, released November 2, 2026. To install or upgrade to it:
+The latest release is **v2.3.0**, released November 3, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.2.0
-docker pull terrificci/dnz-proxy:2.2.0   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.2.0
+docker pull terrificci/dnz:2.3.0
+docker pull terrificci/dnz-proxy:2.3.0   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.3.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.2.0" description="November 2, 2026" tags={["Latest"]}>
+<Update label="v2.3.0" description="November 3, 2026" tags={["Latest"]}>
+
+- **Reverse proxies only.** Start DNZ with `--proxy-only` (or `DNZ_PROXY_ONLY=true`, or `proxy_only = true` in the config file) to manage DNZ Proxy, Traefik and Caddy without its DNS server: no port 53, zones, filtering, query log, DHCP or DNS replication, and none of their pages, API endpoints (they answer `DNS is off on this server (--proxy-only)`), CLI commands, MCP tools or metrics. Everything else stays: proxies, routes, upstreams, the WAF and firewall, certificates, the private CA, status pages, Uptime, analytics, users and roles, backups, Cloudflare. `docker-compose.proxy-only.yml` runs it in one container: at its first start DNZ turns proxying on, makes a DNZ Proxy called *Default* and runs a node of it in the same container on ports 80 and 443. On Linux, `install.sh --proxy-only` sets up the service the same way. The setup asks only for the admin and the first division, and starting the same data folder without the flag later turns DNS on with everything kept. A full DNZ works as before.
+- **Reverse proxies only: DNS records on Cloudflare.** With no DNS server of its own, a route's *Keep its DNS records on Cloudflare* writes one A/AAAA record per address of the proxy in the name's Cloudflare zone, through the division's Cloudflare connection, and moves them when a DNZ Proxy node comes or goes. Records made on Cloudflare by hand are never changed: the route says so. *Proxied by Cloudflare* sends visitors through Cloudflare first. A name in no connected zone gets the addresses to point it at, in the dialog and from `dnz proxy routes add`. Read-only proxies (Sites in DNS) write their names the same way. CLI: `dnz proxy routes add --cloudflare-proxied`, `dnz proxy routes cloudflare <proxy> [hosts] [--proxied on|off]`.
+- **Reverse proxies only: certificates.** **Prove names with** (Proxy → Certificates, `dnz proxy certs prove http|dns`) picks the order: HTTP-01 through the nodes first (the default), or DNS-01 through Cloudflare and DNS credentials first. Wildcards always take DNS-01, and the route dialog says how to add a way for them. An upstream's servers from a DNS name are looked up through the server's own resolvers.
+- **Reverse proxies only: standbys.** A second proxy-only DNZ with its own database can follow this one (**High availability → Standby**, `dnz standby`): it copies everything every 30 seconds (proxies, nodes, certificates and their keys, the private CA, integrations, Uptime, users and roles), takes no changes while it follows, and can **Take over** while the primary runs (the old primary and the other standbys follow it from then on) or be **Promoted** when the primary is gone. DNZ Proxy nodes learn where the standbys are and move by themselves, serving their last configuration meanwhile. **Serve traffic while standby** (`dnz standby serve on`) makes the standby's own node one more node of the primary's proxy, so both hosts take visitors.
+- **DNZ Proxy: several addresses per node.** A node can have more than one address, for example a LAN and a public one: each is answered in DNS or not, to every client or only to one view's clients (a view's addresses replace the default ones for its clients). The node dialog and the Nodes list show them; nodes report the addresses they were started with and those on their interfaces, and an address a node names replaces one DNZ only guessed. DNZ secondaries answer the same. CLI: `dnz proxy nodes addresses <node>` and `dnz proxy nodes address <node> <ip> [--view …] [--dns on|off] [--remove]`; MCP: `proxy_nodes` shows them.
+- **Fixed: DNZ's own DNZ Proxy node got its old address back after a restart** when it had been changed in the node dialog. The node's settings now follow the dialog.
+
+</Update>
+
+<Update label="v2.2.0" description="November 2, 2026">
 
 - **CLI in the browser.** **CLI** in the menu (right above **Settings**) opens a terminal for `dnz` commands, with colours, live output for commands that keep running (`capture`, `proxy logs --follow`), Tab completion, history and Ctrl+C to stop. Commands run on the server you are signed in to, as you, with your permissions, and each one goes to the audit log (secrets shown as `***`). Commands that would work on the server's own machine (starting a server, its configuration and database, reading or writing files on its disk, `login`/`logout`) are refused with the reason: use the dnz CLI on your own machine for those. Only signed-in people can use it, not API tokens or MCP.
 - **Proxies: private or public, and Serve on for all of them at once.** Adding, editing or approving a proxy now asks for its **Access**: *Private* (reached only from inside your network, such as the office LAN or a VPN) or *Public* (reached from the internet). Existing proxies were sorted from their addresses (private only when every known address is private) and can be changed under **Proxy → Proxies**, where a badge shows each one's access. A route's **Serve on**, the **Add route** proxy picker, a record's proxies and the batch edit of routes have quick picks **All private**, **All public** and **All proxies**, which tick the matching proxies of that moment; a proxy added later doesn't join existing routes. The Routes page filters by access, and the topology map shows it. CLI: `dnz proxy add --access`, the new `dnz proxy edit`, `--serve-on private|public|all` on route commands, `dnz proxy routes list --access` and `dnz record add|edit --proxy private|public|all`. MCP: `proxy_routes` filters by access, and `bulk_edit_routes` takes `private`, `public` or `all` for `serve_on`. Prometheus: `dnz_proxies_by_access`.
