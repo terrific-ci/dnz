@@ -101,6 +101,11 @@ DNZ answers no DNS here, so a route's name has to point at the proxy where its D
   node that flaps doesn't rewrite them), and they go with the route.
 - Records made on Cloudflare by hand for the same name are never changed: the route says so, and the
   name keeps pointing where it did.
+- **Proxied by Cloudflare**, under the same option, writes them through Cloudflare's proxy instead:
+  visitors reach Cloudflare, which forwards them to the proxy. Trust Cloudflare's addresses on the
+  entry point (its forwarded-from list), or the firewall, rate limits and logs see Cloudflare instead of
+  the visitor; DNS-01 proves names behind it most reliably. Switch it on an existing route in its
+  dialog, or with `dnz proxy routes cloudflare <proxy> <host> --proxied on|off`.
 - **Without one** (or for a name in no connected zone), the route dialog and
   `dnz proxy routes add` show the addresses to point the name at yourself.
 
