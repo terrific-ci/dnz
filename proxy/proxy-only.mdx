@@ -82,7 +82,7 @@ curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | s
 - Local zones and records, changes and approvals, views, forwarding, filtering, threats, DHCP & IPAM,
   typo help.
 - The query log, Live Capture, Query Explain.
-- DNS replication (primary and secondary servers).
+- DNS replication (primary and secondary servers); proxy-only servers have [standbys](#a-standby) instead.
 - DNS alerts (upstreams, NXDOMAIN spikes, domain expiry, the daily summary) and DNS metrics.
 
 Their pages are gone from the menu (their addresses lead to the Overview), their API endpoints answer
@@ -128,6 +128,58 @@ one. See [Certificates](/proxy/certificates).
 
 DNZ looks an upstream's name up through the server's own resolvers (`/etc/resolv.conf`), with their
 TTLs. Names each proxy looks up itself (Docker Swarm's `tasks.<service>`) work as always.
+
+## A standby
+
+A second proxy-only DNZ, on another server with its own database, can hold a copy of this one and
+take over when it is gone.
+
+<Steps>
+  <Step title="Make its join code">
+    On this server: **High availability → Standby → Add standby**, or:
+
+    ```bash
+    dnz standby add dnz-b
+    ```
+
+    Give this server's address as the standby reaches it. DNZ shows the join code once.
+  </Step>
+  <Step title="Follow from the standby">
+    On the second server (a fresh DNZ started with `--proxy-only`): **High availability → Standby →
+    Follow a primary** and paste the code, or:
+
+    ```bash
+    dnz standby follow 'dnz-standby:…'
+    ```
+  </Step>
+</Steps>
+
+The standby then copies everything every 30 seconds: proxies, routes, upstreams, middlewares, nodes
+(with their tokens), certificates with their keys, the private CA, ACME accounts, DNS credentials,
+Cloudflare connections, notifications, uptime monitors, incidents and their history, users and roles.
+Each server keeps its own sessions, audit log and diagnostics. An unchanged copy costs one small
+request.
+
+<Warning>
+The join code carries a secret: anyone with it can copy the server, keys included. When the two
+servers talk over the internet, give the standby an `https://` address of the primary.
+</Warning>
+
+While it follows, the standby is read-only (it refuses changes and says so), serves no traffic of its
+own, and tells DNZ Proxy nodes that call it where the primary is.
+
+### When the primary is gone
+
+Promote the standby (**Promote**, or `dnz standby promote`). It takes changes from then on. The DNZ
+Proxy nodes know where it is: the primary lists its standbys to them, and a node that can't reach its
+DNZ three times in a row tries the next one, so they move by themselves and keep serving their last
+configuration meanwhile.
+
+If the old primary comes back, stop it: two primaries would each think they manage the nodes. To make
+it a standby of the new one, start it fresh (an empty data folder) and follow the new primary.
+
+Both servers must run the same DNZ version, or the standby a newer one: a standby refuses a copy from
+a newer primary until it is updated.
 
 ## A cluster
 
