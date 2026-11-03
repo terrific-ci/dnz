@@ -168,6 +168,15 @@ servers talk over the internet, give the standby an `https://` address of the pr
 While it follows, the standby is read-only (it refuses changes and says so), serves no traffic of its
 own, and tells DNZ Proxy nodes that call it where the primary is.
 
+### Swapping the two while the primary runs
+
+Moving the primary to new hardware, or upgrading it: take over from the standby (**Take over**, or
+`dnz standby take-over --url <this server's address>`). The primary stops taking changes, sends its
+last copy and follows the standby from then on; the standby becomes the primary, with the old primary
+and the other standbys as its standbys. Standbys and DNZ Proxy nodes that still call the old primary
+are told where the new one is and go there by themselves. If the standby can't finish, the old primary
+is the primary again.
+
 ### When the primary is gone
 
 Promote the standby (**Promote**, or `dnz standby promote`). It takes changes from then on. The DNZ
