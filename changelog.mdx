@@ -6,18 +6,24 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.3.0**, released November 3, 2026. To install or upgrade to it:
+The latest release is **v2.3.1**, released November 3, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.3.0
-docker pull terrificci/dnz-proxy:2.3.0   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.3.0
+docker pull terrificci/dnz:2.3.1
+docker pull terrificci/dnz-proxy:2.3.1   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.3.1
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.3.0" description="November 3, 2026" tags={["Latest"]}>
+<Update label="v2.3.1" description="November 3, 2026" tags={["Latest"]}>
+
+- **Fixed: first setup refused a common password only at its last step.** A password such as `password123` passed the admin account step and the refusal showed under the division name. The admin step now refuses it right away, and a refusal from the server takes you back to that step. The step bar at the top also lines up to the right edge again.
+
+</Update>
+
+<Update label="v2.3.0" description="November 3, 2026">
 
 - **Reverse proxies only.** Start DNZ with `--proxy-only` (or `DNZ_PROXY_ONLY=true`, or `proxy_only = true` in the config file) to manage DNZ Proxy, Traefik and Caddy without its DNS server: no port 53, zones, filtering, query log, DHCP or DNS replication, and none of their pages, API endpoints (they answer `DNS is off on this server (--proxy-only)`), CLI commands, MCP tools or metrics. Everything else stays: proxies, routes, upstreams, the WAF and firewall, certificates, the private CA, status pages, Uptime, analytics, users and roles, backups, Cloudflare. `docker-compose.proxy-only.yml` runs it in one container: at its first start DNZ turns proxying on, makes a DNZ Proxy called *Default* and runs a node of it in the same container on ports 80 and 443. On Linux, `install.sh --proxy-only` sets up the service the same way. The setup asks only for the admin and the first division, and starting the same data folder without the flag later turns DNS on with everything kept. A full DNZ works as before.
 - **Reverse proxies only: DNS records on Cloudflare.** With no DNS server of its own, a route's *Keep its DNS records on Cloudflare* writes one A/AAAA record per address of the proxy in the name's Cloudflare zone, through the division's Cloudflare connection, and moves them when a DNZ Proxy node comes or goes. Records made on Cloudflare by hand are never changed: the route says so. *Proxied by Cloudflare* sends visitors through Cloudflare first. A name in no connected zone gets the addresses to point it at, in the dialog and from `dnz proxy routes add`. Read-only proxies (Sites in DNS) write their names the same way. CLI: `dnz proxy routes add --cloudflare-proxied`, `dnz proxy routes cloudflare <proxy> [hosts] [--proxied on|off]`.
