@@ -58,6 +58,7 @@ again to upgrade; it tells you to restart the services if they're running.
 | Option | Meaning |
 | --- | --- |
 | `--service` | Also run `dnz` as a systemd service and start it; see [systemd](/deploy/systemd) |
+| `--proxy-only` | The service manages [reverse proxies only](/proxy/proxy-only): no DNS server (port 53 stays free), its own DNZ Proxy node on 80 and 443. Implies `--service` |
 | `--version 1.0.0` | One exact version instead of the latest release (also `1.0` for the newest patch) |
 | `--only dnz` | Only `dnz`; `--only dnz-proxy` for a [DNZ Proxy](/proxy/dnz-proxy) node |
 | `--dir DIR` | Install into another directory |

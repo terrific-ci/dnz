@@ -74,6 +74,7 @@ and the systemd sandbox.
         Environment=DNZ_DATABASE_URL=sqlite:///var/lib/dnz/dnz.db
         Environment=DNZ_DNS_ADDR=0.0.0.0:53
         Environment=DNZ_HTTP_ADDR=127.0.0.1:8080
+        # Environment=DNZ_PROXY_ONLY=true  (reverse proxies only, no DNS server)
         # Settings here override the ones above.
         EnvironmentFile=-/etc/dnz/dnz.env
         # DoT/HTTPS: let the service read TLS keys owned by group ssl-cert (Debian/Ubuntu).

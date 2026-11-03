@@ -1,0 +1,135 @@
+---
+title: "Reverse proxies only"
+description: "Run DNZ as a manager for DNZ Proxy, Traefik and Caddy without its DNS server: one container, records on Cloudflare, certificates over HTTP-01 or DNS-01."
+---
+
+DNZ manages reverse proxies as well as DNS. When your DNS lives somewhere else (Cloudflare, your
+registrar, your own servers) and you only want the proxies, start DNZ with `--proxy-only`: no DNS
+server, and none of its pages, commands or tools.
+
+```bash
+dnz --proxy-only
+```
+
+The same as `DNZ_PROXY_ONLY=true`, or at the top of the config file:
+
+```toml
+proxy_only = true
+```
+
+It is the same `dnz` and the same database. Starting the same data folder without `--proxy-only`
+later turns DNS on, and everything made meanwhile is still there.
+
+## In one container
+
+```yaml docker-compose.proxy-only.yml
+services:
+  dnz:
+    image: terrificci/dnz:latest
+    command: ["--proxy-only"]
+    restart: unless-stopped
+    ports:
+      - "80:80"      # visitors: the DNZ Proxy node in this container
+      - "443:443"
+      - "8080:8080"  # the UI and API
+    volumes:
+      - dnz-data:/data
+    environment:
+      TZ: UTC
+      # The address visitors reach this host at, for the records DNZ writes on Cloudflare:
+      # DNZ_PROXY_PUBLIC_IPV4: 203.0.113.10
+
+volumes:
+  dnz-data:
+```
+
+```bash
+docker compose -f docker-compose.proxy-only.yml up -d
+```
+
+At its first start (no proxy yet) DNZ turns proxying on, makes a DNZ Proxy called **Default** and runs
+a node of it in the same container, which serves your routes on ports 80 and 443. Open
+`http://<host>:8080`, create the admin (two steps: the admin and the first division) and add a route
+under **Proxy → Routes**. More nodes on other servers join the same proxy as always
+([DNZ Proxy](/proxy/dnz-proxy)).
+
+On a Linux server without Docker, the installer sets up the service the same way:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --proxy-only
+```
+
+## What stays
+
+- **Proxies:** every kind, nodes, routes (HTTP, TCP, UDP), groups, batch edit, route history,
+  [configuration as code](/proxy/config-as-code), upstreams (health checks,
+  [servers from a DNS name](/proxy/upstream-discovery)), middlewares, [rules](/proxy/rules), the
+  [WAF](/proxy/waf), the firewall, Under attack, rate limits, the waiting room,
+  [sign-in](/proxy/sign-in), caching, analytics, request logs, visitors and
+  [status pages](/proxy/status-pages).
+- **Certificates:** ACME (Let's Encrypt, ZeroSSL, any ACME CA), uploads, the
+  [private CA](/proxy/private-ca), DNZ's own certificate (Settings → General → Certificate).
+- **Operations:** Uptime and the public status page, proxy alerts, notifications, the
+  [cluster](/deploy/cluster), backups, the audit log, diagnostics, Prometheus.
+- **Access:** users, roles, divisions, API tokens, two-factor, sign-in with Google, the CLI, the CLI in
+  the browser, MCP.
+- **Cloudflare:** connections per division and the Cloudflare zones (DNS → Zones): records, traffic,
+  SSL/TLS, DNSSEC, cache purge, tunnels.
+
+## What is off
+
+- Port 53, DNS over TLS, HTTPS (`/dns-query`), QUIC and HTTP/3.
+- Local zones and records, changes and approvals, views, forwarding, filtering, threats, DHCP & IPAM,
+  typo help.
+- The query log, Live Capture, Query Explain.
+- DNS replication (primary and secondary servers).
+- DNS alerts (upstreams, NXDOMAIN spikes, domain expiry, the daily summary) and DNS metrics.
+
+Their pages are gone from the menu (their addresses lead to the Overview), their API endpoints answer
+`404` with `DNS is off on this server (--proxy-only)`, the CLI prints the same, and MCP lists none of
+their tools. The Overview opens on **Proxy**. Local zones a server had before it was started with
+`--proxy-only` are kept, but not served or shown.
+
+## DNS records for your routes
+
+DNZ answers no DNS here, so a route's name has to point at the proxy where its DNS is:
+
+- **With a Cloudflare connection** (Settings → Integrations), *Keep its DNS records on Cloudflare* in
+  the route dialog writes them: one A/AAAA record per address of the proxy (for a DNZ Proxy, its
+  healthy nodes that aren't drained), in the name's Cloudflare zone, DNS only, with the comment
+  *Synced from DNZ*. When a node comes or goes the records follow within about a minute and a half (a
+  node that flaps doesn't rewrite them), and they go with the route.
+- Records made on Cloudflare by hand for the same name are never changed: the route says so, and the
+  name keeps pointing where it did.
+- **Without one** (or for a name in no connected zone), the route dialog and
+  `dnz proxy routes add` show the addresses to point the name at yourself.
+
+[Read-only proxies](/proxy/read-only) (a Caddy or Traefik DNZ doesn't configure) write their names'
+records on Cloudflare the same way.
+
+## Certificates
+
+Automatic certificates never use DNZ's own zones here. **Prove names with** (Proxy → Certificates)
+picks the order:
+
+| Choice | How a name is proven |
+| --- | --- |
+| **HTTP-01 first** (default) | Let's Encrypt asks the nodes for a token on port 80 once the name points at them; names that don't yet go through Cloudflare or a DNS credential (DNS-01) |
+| **DNS-01 first** | A TXT record through the zone's Cloudflare account or a DNS credential (a Cloudflare token, RFC 2136 or a webhook); the nodes answer for names neither covers |
+
+```bash
+dnz proxy certs prove http   # or dns
+```
+
+Wildcards (`*.example.com`) always take DNS-01; without a way for it, the route dialog says how to add
+one. See [Certificates](/proxy/certificates).
+
+## Upstreams from a DNS name
+
+DNZ looks an upstream's name up through the server's own resolvers (`/etc/resolv.conf`), with their
+TTLs. Names each proxy looks up itself (Docker Swarm's `tasks.<service>`) work as always.
+
+## A cluster
+
+Every server of a [cluster](/deploy/cluster) runs in the same mode: a server started with
+`--proxy-only` next to full ones (or the other way) refuses to start and says why.

@@ -11,6 +11,8 @@
 #
 # Options (after `sh -s --` when piped):
 #   --service       also set up and start the dnz systemd service
+#   --proxy-only    the service manages reverse proxies only: no DNS server
+#                   (port 53 stays free), its own DNZ Proxy node on 80/443
 #   --version X     install version X (default: the latest release)
 #   --only NAME     install only dnz or only dnz-proxy
 #   --dir DIR       install into DIR (default: /usr/local/bin)
@@ -24,6 +26,7 @@ VERSION=${DNZ_VERSION:-latest}
 DIR=${DNZ_INSTALL_DIR:-/usr/local/bin}
 ONLY=""
 SERVICE=""
+PROXY_ONLY=""
 
 if [ -t 1 ]; then B=$(printf '\033[1m') C=$(printf '\033[36m') R=$(printf '\033[31m') N=$(printf '\033[0m'); else B='' C='' R='' N=''; fi
 step() { printf '%s→%s %s\n' "$C" "$N" "$*"; }
@@ -34,6 +37,8 @@ Install DNZ (dnz and dnz-proxy) from the DNZ image on Docker Hub.
 
 Options:
   --service       also set up and start the dnz systemd service
+  --proxy-only    the service manages reverse proxies only: no DNS server
+                  (port 53 stays free), its own DNZ Proxy node on 80/443
   --version X     install version X (default: the latest release)
   --only NAME     install only dnz or only dnz-proxy
   --dir DIR       install into DIR (default: /usr/local/bin)
@@ -44,6 +49,7 @@ EOF
 while [ $# -gt 0 ]; do
   case "$1" in
     --service) SERVICE=1; shift ;;
+    --proxy-only) PROXY_ONLY=1; SERVICE=1; shift ;;
     --version) [ $# -ge 2 ] || fail "--version needs a value"; VERSION=$2; shift 2 ;;
     --version=*) VERSION=${1#*=}; shift ;;
     --only) [ $# -ge 2 ] || fail "--only needs a value"; ONLY=$2; shift 2 ;;
@@ -65,6 +71,8 @@ if [ -n "$SERVICE" ]; then
   # setup (Settings → Proxy → Set up DNZ Proxy).
   [ "$ONLY" != dnz-proxy ] || fail "--service sets up dnz; for dnz-proxy use Settings → Proxy → Set up dnz-proxy in the dashboard"
   BINARIES=dnz
+  # --proxy-only: dnz runs a DNZ Proxy node of its own.
+  [ -z "$PROXY_ONLY" ] || BINARIES="dnz dnz-proxy"
 fi
 # Image tags have no leading v: 1.0.0, 1.0, latest.
 VERSION=${VERSION#v}
@@ -231,9 +239,17 @@ UNIT=/etc/systemd/system/dnz.service
 ENVFILE=/etc/dnz/dnz.env
 echo
 
+if [ -n "$PROXY_ONLY" ]; then
+  DESCRIPTION="DNZ (reverse proxies only)"
+  MODE_LINE="Environment=DNZ_PROXY_ONLY=true"
+else
+  DESCRIPTION="DNZ DNS server"
+  MODE_LINE="# Environment=DNZ_PROXY_ONLY=true  (reverse proxies only, no DNS server)"
+fi
+
 cat > "$TMP/dnz.service" <<EOF
 [Unit]
-Description=DNZ DNS server
+Description=$DESCRIPTION
 After=network-online.target
 Wants=network-online.target
 
@@ -250,6 +266,7 @@ WorkingDirectory=/var/lib/dnz
 Environment=DNZ_DATABASE_URL=sqlite:///var/lib/dnz/dnz.db
 Environment=DNZ_DNS_ADDR=0.0.0.0:53
 Environment=DNZ_HTTP_ADDR=127.0.0.1:8080
+$MODE_LINE
 # Settings here override the ones above.
 EnvironmentFile=-/etc/dnz/dnz.env
 # DoT/HTTPS: let the service read TLS keys owned by group ssl-cert (Debian/Ubuntu).
@@ -338,8 +355,9 @@ DNS_ADDR=$(setting DNZ_DNS_ADDR 0.0.0.0:53)
 HTTP_ADDR=$(setting DNZ_HTTP_ADDR 127.0.0.1:8080)
 
 # Port 53: only a wildcard address clashes with systemd-resolved's stub on
-# 127.0.0.53; a server bound to one LAN address doesn't.
+# 127.0.0.53; a server bound to one LAN address doesn't. --proxy-only binds none.
 start=1
+[ -z "$PROXY_ONLY" ] || DNS_ADDR=none
 case "$DNS_ADDR" in
   0.0.0.0:*|"[::]":*|:*)
     port=${DNS_ADDR##*:}
@@ -403,6 +421,10 @@ case "$HTTP_ADDR" in
     echo "             only on this server; from your computer:"
     echo "             ssh -L ${dash##*:}:$dash $(id -un)@$(hostname)  then open http://localhost:${dash##*:}" ;;
 esac
-echo "  DNS        $DNS_ADDR"
+if [ -n "$PROXY_ONLY" ]; then
+  echo "  Proxy      ports 80 and 443 (DNZ's own DNZ Proxy node, \"Default\")"
+else
+  echo "  DNS        $DNS_ADDR"
+fi
 echo "  Settings   $ENVFILE, then: sudo systemctl restart dnz"
 echo "  Logs       journalctl -u dnz -f"
