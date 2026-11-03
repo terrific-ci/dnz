@@ -170,8 +170,11 @@ The join code carries a secret: anyone with it can copy the server, keys include
 servers talk over the internet, give the standby an `https://` address of the primary.
 </Warning>
 
-While it follows, the standby is read-only (it refuses changes and says so), serves no traffic of its
-own, and tells DNZ Proxy nodes that call it where the primary is.
+While it follows, the standby is read-only (it refuses changes and says so) and tells DNZ Proxy nodes
+that call it where the primary is. Its own node serves no traffic by default. **Serve traffic while
+standby** (on its Standby page, or `dnz standby serve on`) makes that node one more node of the
+primary's proxy: both hosts take visitors, and nothing stops when the standby takes over. DNS, or the
+records on Cloudflare, then answer with the standby's address too.
 
 ### Swapping the two while the primary runs
 
