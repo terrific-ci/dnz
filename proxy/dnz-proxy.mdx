@@ -294,7 +294,8 @@ A node joins with the connect key, in one of three ways:
 - **Added by address.** On the proxy's **Nodes** tab, **Add node** with the address it calls DNZ
   from. A node calling from there joins at once.
 - **Approved.** Any other node shows up as **New node waiting** on the **Proxy** page. Approve it
-  into a proxy (check its public addresses), or ignore it. At most 20 wait at once.
+  into a proxy (check its addresses, see [Node addresses](#node-addresses)), or ignore it. At most
+  20 wait at once.
 - **Automatically.** A proxy with **Let nodes join without approval** (its **Settings** tab) takes
   every node that names it.
 
@@ -377,12 +378,51 @@ on, while DNZ can connect to its HTTPS (or HTTP) port.
 **Drain** takes a node out of the answers for maintenance. It keeps serving visitors who still reach
 it.
 
+### Node addresses
+
+A server often has more than one address, such as a LAN one and a public one. A node keeps a list
+of them. Open **Edit** on its row (or approve it) and set, for each address:
+
+- **In DNS**: whether proxied names are answered with it. Switched off, the address stays on the
+  list but nobody gets it.
+- **Answered to**: **All clients**, or one [view](/dns/views) (**View: Internal**). For the clients
+  in that view, the view's addresses take the place of the ones for all clients, the way a view's
+  records replace the default ones.
+
+So with a view *Internal* of your own networks (LAN, VPN), answer the node's LAN address to
+**View: Internal** and its public address to **All clients**: your own devices reach the node over
+the LAN, everyone else over the internet. The name's other records (TXT, MX) are answered in the view
+too. A proxy whose nodes have no address for a view answers that view's clients with the ones for
+all clients, and a record you put in the view yourself still wins. DNZ secondaries answer the same
+way.
+
+Where an address comes from:
+
+| Source | What it means |
+|---|---|
+| The node's `--public-ipv4` / `--public-ipv6` | `DNZ_PROXY_PUBLIC_IPV4` / `DNZ_PROXY_PUBLIC_IPV6`, the **Public IPv4** field of the setup guide. Sent when the node joins and in every report, so changing it and restarting the node is enough. |
+| Where it called DNZ from | Used when the node named no address. With DNZ on your LAN this is a LAN address. The addresses a node names replace it as soon as it reports them. |
+| A person | Anything set in the node dialog or with the CLI. DNZ never changes it again; edit it there. |
+
+The node dialog also offers, to add with one click, the addresses the node was started with, the
+ones on its network interfaces (in a container: the container's own) and where it calls DNZ from,
+each marked private or public.
+
+<Note>
+  For the node DNZ runs itself, the IPv4 and IPv6 in **Settings → Proxy** are its addresses for
+  all clients. Editing the node in the list updates them too, so a restart keeps what you set.
+</Note>
+
 ### Managing nodes from the CLI
 
 ```bash
 dnz proxy show                                    # proxying on/off, proxies, connect key
 dnz proxy nodes                                   # every node: proxy, state, addresses, config, CPU, memory
 dnz proxy nodes show jkt-1                        # one node and its server: CPU, load, memory, disk
+dnz proxy nodes addresses jkt-1                   # its addresses, and what it found on itself
+dnz proxy nodes address jkt-1 10.0.0.5 --view Internal # a LAN address for the view Internal only
+dnz proxy nodes address jkt-1 203.0.113.10 --dns off   # keep it, but out of DNS
+dnz proxy nodes address jkt-1 10.0.0.5 --remove
 dnz proxy approve jkt-1 --proxy "Edge JKT" --ipv4 203.0.113.10
 dnz proxy ignore node-10-0-0-9
 dnz proxy drain jkt-1                             # out of DNS answers, still serving
@@ -895,6 +935,13 @@ again after 30 days). Those visits are counted in [analytics](#analytics) as one
     A node leaves the answers once it stops reporting for 15 seconds, or once DNZ can't connect to
     its port when **Check the nodes' ports from DNZ** is on. Resolvers may keep the old answer for the
     **TTL of proxied answers**. If no node is healthy, DNS answers with all of them.
+  </Accordion>
+  <Accordion title="DNS answers with the node's LAN address">
+    The node was started without `--public-ipv4`, so DNZ used the address it called from, which is a
+    LAN address when DNZ is on your LAN. Set `--public-ipv4` (or `DNZ_PROXY_PUBLIC_IPV4`) and restart
+    the node, or set the addresses in the node dialog. To give the LAN address to your own network
+    only, answer it to a view (see [Node addresses](#node-addresses)). Resolvers may keep the old
+    answer for the **TTL of proxied answers**.
   </Accordion>
   <Accordion title="A router is off with a warning on the node">
     It uses something the node couldn't run, such as a plugin middleware. The node's report lists

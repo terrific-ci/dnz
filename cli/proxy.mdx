@@ -536,6 +536,10 @@ resolver get a certificate from it by themselves.
 dnz proxy nodes                                   # every node: proxy, state, addresses, version, config, CPU, memory
 dnz proxy nodes list -q jkt --page 2              # a page of the nodes in a proxy (waiting ones always listed)
 dnz proxy nodes show jkt-1                        # one node: its report and its server's CPU, load, memory, disk
+dnz proxy nodes addresses jkt-1                   # its addresses: in DNS or not, to all clients or one view, set by whom
+dnz proxy nodes address jkt-1 10.0.0.5 --view Internal # add a LAN address answered only to the clients in the view Internal
+dnz proxy nodes address jkt-1 203.0.113.10 --dns off   # keep an address but leave it out of DNS (--dns on: back in)
+dnz proxy nodes address jkt-1 10.0.0.5 --remove
 dnz proxy approve jkt-1 --proxy "Edge JKT" --ipv4 203.0.113.10
 dnz proxy ignore node-10-0-0-9                    # turn a waiting node away
 dnz proxy drain jkt-1                             # out of DNS answers, still serving
