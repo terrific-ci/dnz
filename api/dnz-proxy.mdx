@@ -49,8 +49,10 @@ The stream stays open and must not be buffered by a reverse proxy in front of DN
 | `GET /api/proxies/{id}/dnz/updates` | [Updating nodes](/proxy/dnz-proxy#updating-nodes): `version` (what DNZ asks for), `nodes` with each one's `update` (`state`: `ready`, `current`, `by_hand`, `offline`, `with_dnz`; `why`; `command`), `running` (the update under way, with `steps`), and a page of `history` |
 | `POST /api/proxies/{id}/dnz/updates` | Update nodes one at a time: `{"nodes": [ids], "allow_outage": false}`; without `nodes`, every node that can. 409 with the reason when one can't, or for the last healthy node without `allow_outage` |
 | `POST /api/proxies/{id}/dnz/updates/{rollout}/stop` | No further node is asked |
-| `POST /api/proxies/{id}/entrypoints` | Add an entry point |
-| `PUT /api/proxies/{id}/entrypoints/{eid}` | Change an entry point |
+| `POST /api/proxies/{id}/entrypoints` | Add an entry point: `name`, `address`, `protocol`, `proxy_protocol_from`, `forwarded_from`, `idle_timeout_secs`, `read_timeout_secs`, `http3`, `http3_advertised_port` |
+| `PUT /api/proxies/{id}/entrypoints/{eid}` | Change an entry point. Without `http3`, both HTTP/3 settings stay as they are |
+| `GET /api/proxy/http3`, `GET /api/proxies/{id}/http3` | Where visitors get [HTTP/3](/proxy/dnz-proxy#http3), on every kind of proxy: `on` (null: DNZ can't tell), `switch` (`entry_point`, `proxy`, `traefik_static`, `caddy_own`), `entry_points` (a DNZ Proxy's with `listening` nodes and `errors`), `counts` |
+| `PUT /api/proxies/{id}/http3` | A Caddy's HTTP/3: `{"on": false}` (refused on other kinds, which say where theirs is) |
 | `DELETE /api/proxies/{id}/entrypoints/{eid}` | Delete an entry point |
 | `POST /api/proxies/{id}/purge` | Clear the cache on every node: `{"target": {"kind": "everything" \| "host" \| "url" \| "prefix", …}}` |
 

@@ -588,6 +588,26 @@ with. New nodes wait for approval; they can only join DNZ Proxies. `approve` tak
 
 Nodes are named by name or id.
 
+### Entry points and HTTP/3
+
+The ports a DNZ Proxy's nodes listen on ([entry points](/proxy/dnz-proxy#entry-points)), and
+[HTTP/3](/proxy/dnz-proxy#http3) for visitors:
+
+```bash
+dnz proxy entrypoints list "Edge JKT"             # name, address, protocol, HTTP/3, trusted forwarders, timeouts
+dnz proxy entrypoints add "Edge JKT" alt --address :8443 --protocol https
+dnz proxy entrypoints edit "Edge JKT" websecure --http3 on        # also UDP on its port, and Alt-Svc on its answers
+dnz proxy entrypoints edit "Edge JKT" websecure --http3-port 8443 # Alt-Svc names the port visitors reach
+dnz proxy entrypoints edit "Edge JKT" websecure --http3 off       # closes the UDP port and stops Alt-Svc at once
+dnz proxy entrypoints rm "Edge JKT" alt           # refused while routers use it
+dnz proxy http3                                   # every proxy: where visitors get HTTP/3, and how to switch it
+dnz proxy http3 "Edge JKT"                        # per entry point: nodes with the port open, errors, requests served
+dnz proxy edit edge --http3 off                   # a Caddy's
+```
+
+HTTP/3 is off by default and needs UDP open on each host's firewall, published in Docker
+(`-p 443:443/udp`); `--http3 on` says so, as DNZ can't do it. `edit` changes only what is passed.
+
 `nodes` shows each node's CPU (a share of the CPUs it may use: its container's limit, else the
 machine's) and its process's memory. `nodes show` adds the load average, the container's and the
 machine's memory, the free disk and TCP sockets, from the node's last report (see
