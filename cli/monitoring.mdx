@@ -180,6 +180,26 @@ dnz stats --json
   default).
 </Note>
 
+## Checking your own names
+
+What DNZ found looking at the names it manages the way an attacker would: see
+[Name checks](/dashboard/name-checks). It only lists them, with how to fix each.
+
+```bash
+dnz check names                               # how the last round went, and what's open
+dnz check names --run                         # ask for a round now, then list
+dnz check names --kind exposed_file --state all
+dnz check names -q example.com --page 2       # 20 to a page (--limit)
+dnz check dismiss 7 --reason "ours, parked on purpose"
+dnz check reopen 7
+dnz check settings                            # what is checked and how often
+dnz check settings --every-hours 24
+dnz check settings --schedule off             # only when asked
+dnz check settings --exposed-files on         # off until asked: odd requests to your own applications
+```
+
+An origin with "can't tell" had nowhere outside its proxy to be tried from: it doesn't mean safe.
+
 ## Audit log
 
 Who changed what, newest first:

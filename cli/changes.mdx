@@ -6,6 +6,24 @@ description: "Zone history, diffs and rollbacks, change requests waiting for app
 These commands do what the **History** tab of a zone and **DNS → Changes** do in the dashboard. For
 how history and change approval work, see [History and change approval](/dns/history).
 
+## What changed
+
+One timeline of records, routes, rules, certificates, settings and nodes, around an incident or in
+any window: see [What changed?](/dashboard/what-changed). Each line only if you may read its source.
+It shows what happened before and never says what caused anything.
+
+```bash
+dnz changes                                   # the last 30 minutes
+dnz changes --since 2h --near app.example.com # lines about the name first (marked *)
+dnz changes --incident uptime:12              # the 30 minutes before that incident, its names first
+dnz changes --since 7d --kind routes,firewall # records, routes, firewall, certificates, nodes, settings, incidents
+dnz changes --since 2026-11-04T07:00:00Z --until 2026-11-04T08:00:00Z
+dnz changes -q alice --division it --page 2   # 20 to a page (--limit)
+```
+
+`--json` has each line's links: its diff and its restore, as API paths. With a subcommand
+(`dnz changes list`, `show`, `approve`…), `dnz changes` does what `dnz change` does.
+
 ## Zone history
 
 ```bash

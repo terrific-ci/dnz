@@ -1,0 +1,83 @@
+---
+title: "What changed?"
+description: "One timeline of records, routes, rules, certificates, settings and nodes around an incident or in any window. It shows what happened before and never says what caused it."
+---
+
+**High availability → What changed?** puts what changed in DNZ on one timeline: records, routes, WAF
+and firewall rules, certificates, settings, nodes joining or leaving. When something breaks, the
+first question is usually what happened just before, and this answers it without opening five pages.
+
+<Note>
+It shows what happened before. **It never says what caused anything.** Lines about the incident's
+route or name come first because they are the place to start looking, not because DNZ knows they
+are to blame.
+</Note>
+
+Nothing here writes anything, and nothing runs while visitors or DNS clients are being served: DNZ
+reads what it keeps anyway.
+
+## Opening it
+
+- **High availability → What changed?**, with a window, a name and a kind to filter on.
+- **What changed?** on an open uptime incident, **What changed before it?** in the incident history,
+  and on a proxy or forward DNS incident in the bell at the top of the page. The window then ends
+  when the incident began, and the incident's names come first.
+- From the terminal:
+
+```bash
+dnz changes                                   # the last 30 minutes
+dnz changes --since 2h --near app.example.com # lines about the name first (marked *)
+dnz changes --incident uptime:12              # the 30 minutes before that incident, its names first
+dnz changes --since 7d --kind routes,firewall # records, routes, firewall, certificates, nodes, settings, incidents
+```
+
+- For AI assistants, the `list_changes` tool ([AI assistants](/integrations/ai-assistants)).
+
+## What a line comes from
+
+| Line | From | Who may see it |
+| --- | --- | --- |
+| Records and a zone's settings | The zone's [history](/dns/history) | *View zones* in the zone's division |
+| Routes | The proxy's [route history](/proxy/route-history) | *Manage proxies* |
+| WAF, firewalls and other middlewares | The audit log | *View audit log* in the entry's division; server-wide entries: *Manage proxies* |
+| Certificates issued or renewed | Each certificate's progress log | *Manage proxies* |
+| Nodes joining, leaving, moving to another version | The audit log | As the audit log's lines; server-wide entries: *Manage proxies* |
+| Settings and everything else | The audit log | Superadmins for server-wide entries, *View audit log* for a division's |
+| Earlier incidents | The incident list and uptime incidents | Who can read those incidents |
+
+A line shows only if you may see its source, **division by division**: with *View zones* in one
+division you get that division's zones and nothing of another's. An API token sees what its own
+permissions read, and a token limited to some zones sees those zones only. The page says which
+kinds your roles don't show, so a short list isn't mistaken for a quiet window.
+
+## Near the cause first
+
+Give a name, or open the timeline from an incident, and these come before the rest of the window,
+each part newest first:
+
+- route versions whose hostnames cover the name, a wildcard route included;
+- zone versions that change a record of that name, or the settings of the zone it is in;
+- middlewares, firewalls and upstreams of the routes serving it;
+- certificates covering it, and anything else whose target mentions it.
+
+## The window
+
+The last 30 minutes by default, or the 30 minutes before the incident's start. Widen it to 2 hours,
+24 hours or 7 days on the page, or anything up to 31 days with `--since`. Long lists come a page at
+a time. If more changed than one answer reads (2,000 lines of each source), the page says so and
+asks you to narrow the window.
+
+## Diffs and restoring
+
+Open a zone or route version to see its diff, as on the history pages. **History and rollback** and
+**History and restore** lead to its history, where putting it back goes through the usual
+confirmation and, for a zone, the usual change approval. An audit entry shows the before and after
+it kept. Nothing is restored from the timeline by itself, and assistants can only read it.
+
+## API
+
+`GET /api/what-changed` takes `since` (`30m`, `2h`, `7d` or a time), `until`, `near`, `incident`
+(`uptime:<id>` or `alert:<id>`), `kind` (comma-separated), `q`, `division_id` (only narrows what you
+may see), `page` and `per_page` (20 a page, at most 200). Each line has `id`, `source`, `kind`, `at`,
+`actor`, `via`, `target`, `summary`, `near`, `action` and `links` (`page`, and for versions `diff`
+and `restore` as API paths).
