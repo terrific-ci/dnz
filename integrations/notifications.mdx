@@ -28,6 +28,7 @@ automatically, and **Send test** checks a provider right away.
 | `rate_limited` | Clients go over the per-client rate limit |
 | `cache_full` | The cache drops answers before their TTL; `cache_size` is too small |
 | `daily_summary` | Yesterday's numbers, at the hour you choose |
+| `waf_report` | The [weekly WAF report](/proxy/waf-page#the-weekly-report), Mondays at 08:00. A new provider doesn't get it until you tick it |
 | `proxy_attack` | Requests blocked on a hostname spike (see [Proxy alerts](#proxy-alerts)); and when it is over |
 | `proxy_origin` | A proxy service's server fails its health check; and when it answers again |
 | `name_finding` | [Name checks](/dashboard/name-checks) found something new: one message per round, however much it found |

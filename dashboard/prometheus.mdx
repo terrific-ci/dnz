@@ -203,6 +203,8 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_proxy_waf_hits_total` `{proxy,node,middleware,rule,action}` | Requests a DNZ Proxy [web application firewall](/proxy/waf) matched, by rule id and action (`block`: refused, `log`: only logged). Starts at 0 when a node restarts |
 | `dnz_proxy_waf_routes` `{proxy,state}` | A DNZ Proxy's HTTP routes to an upstream by what the WAF does on them: `block`, `log` or `off` |
 | `dnz_proxy_waf_page_blocks` `{kind}` | Different addresses and ranges (`ip`) or countries (`country`) blocked from Proxy → WAF, each counted once however many firewalls hold it |
+| `dnz_proxy_waf_previews` `{proxy}` | A DNZ Proxy's routes [previewing a higher sensitivity](/proxy/waf-page#preview-a-higher-sensitivity) now; `dnz_proxy_waf_hits_total` has the action `shadow` for what they counted |
+| `dnz_proxy_waf_report_sent_timestamp_seconds` | When the last scheduled [weekly WAF report](/proxy/waf-page#the-weekly-report) went out |
 | `dnz_proxy_waf_bans` `{proxy,source}` | Addresses banned now (`proxy="all"`: every DNZ Proxy's; `source`: `auto`, a node decided, `page`, by hand, or `decoy`, a [decoy name](/proxy/decoys)) |
 | `dnz_decoy_names` | [Decoy names](/proxy/decoys) this server is watching for |
 | `dnz_decoy_touches_total` `{kind}` | Times a decoy name was touched, as this server heard of it (`visit`, `dns`) |
