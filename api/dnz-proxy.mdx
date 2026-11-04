@@ -46,6 +46,9 @@ The stream stays open and must not be buffered by a reverse proxy in front of DN
 | `GET /api/proxies/{id}/dnz` | A proxy's nodes, entry points and settings |
 | `PUT /api/proxies/{id}/dnz/settings` | Change a proxy's settings. `peak_tracking` turns [peak concurrency](/proxy/dnz-proxy#peak-concurrency) on (off by default); left out of the body, it stays as it is |
 | `PUT /api/proxies/{id}/dnz/defaults` | Route defaults: `{"redirect_https", "compress", "security_headers", "firewall_id"}` |
+| `GET /api/proxies/{id}/dnz/updates` | [Updating nodes](/proxy/dnz-proxy#updating-nodes): `version` (what DNZ asks for), `nodes` with each one's `update` (`state`: `ready`, `current`, `by_hand`, `offline`, `with_dnz`; `why`; `command`), `running` (the update under way, with `steps`), and a page of `history` |
+| `POST /api/proxies/{id}/dnz/updates` | Update nodes one at a time: `{"nodes": [ids], "allow_outage": false}`; without `nodes`, every node that can. 409 with the reason when one can't, or for the last healthy node without `allow_outage` |
+| `POST /api/proxies/{id}/dnz/updates/{rollout}/stop` | No further node is asked |
 | `POST /api/proxies/{id}/entrypoints` | Add an entry point |
 | `PUT /api/proxies/{id}/entrypoints/{eid}` | Change an entry point |
 | `DELETE /api/proxies/{id}/entrypoints/{eid}` | Delete an entry point |

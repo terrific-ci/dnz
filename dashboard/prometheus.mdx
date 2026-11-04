@@ -184,6 +184,10 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_proxy_upstream_check_seconds{upstream,server}` | How long an upstream server's last [health check](/proxy/upstreams) on DNZ Proxy took, to the answer: the slowest of the nodes that find it up. Only servers a node checks (nodes from v2.1) |
 | `dnz_proxy_upstream_discovery_errors_total` | Failed lookups of upstreams' DNS names on this server (it looks them up while it leads the cluster) |
 | `dnz_proxy_middlewares{protocol,shared}` | [Middlewares and firewalls](/proxy/middlewares) (Proxy → Middlewares, shared by every proxy) by kind of traffic (`http`, `tcp`), and `shared` `true` for shared ones, `false` for a route's own switches |
+| `dnz_proxy_node_version_info{proxy,node,version}` | The DNZ Proxy version a node runs, as a label; always 1 |
+| `dnz_proxy_node_behind{proxy,node}` | 1 while a node runs an older version than DNZ |
+| `dnz_proxy_node_updating{proxy,node}` | 1 while an [update](/proxy/dnz-proxy#updating-nodes) has the node out of DNS or waits for it to come back |
+| `dnz_proxy_rollout_running{proxy}`, `dnz_proxy_rollout_stopped{proxy}` | 1 while a proxy's nodes are being updated; 1 while its latest update ended early (a node failed, or someone stopped it) |
 | `dnz_proxy_node_memory_bytes`, `dnz_proxy_node_cpu_ratio`, `dnz_proxy_node_cpus` `{proxy,node}` | A DNZ Proxy node's [server](/proxy/dnz-proxy#servers): its process's memory (RSS), its CPU use as a share (0 to 1) of the CPUs it may use, and those CPUs (container limit, else the machine's). Also `dnz_proxy_node_uptime_seconds`, `dnz_proxy_node_host_cpus` and `dnz_proxy_node_tcp_sockets` |
 | `dnz_proxy_node_load1`, `…_load5`, `…_load15` `{proxy,node}` | The node's machine's load average |
 | `dnz_proxy_node_host_memory_total_bytes`, `…_used_bytes`, `…_available_bytes` `{proxy,node}` | The node's machine's memory |

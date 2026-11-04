@@ -558,6 +558,11 @@ dnz proxy nodes addresses jkt-1                   # its addresses: in DNS or not
 dnz proxy nodes address jkt-1 10.0.0.5 --view Internal # add a LAN address answered only to the clients in the view Internal
 dnz proxy nodes address jkt-1 203.0.113.10 --dns off   # keep an address but leave it out of DNS (--dns on: back in)
 dnz proxy nodes address jkt-1 10.0.0.5 --remove
+dnz proxy nodes update jkt-1                      # update it to DNZ's version: out of DNS, the signed release, restart, back
+dnz proxy nodes update --proxy "Edge JKT" --wait  # every node of the proxy that can, one at a time; follows it, fails if it stops on a node
+dnz proxy nodes update jkt-1 --allow-outage       # go ahead with a proxy's last healthy node: its sites go down while it restarts
+dnz proxy nodes update --status --proxy "Edge JKT" # what an update would do per node (by hand: the command), and how the last one went
+dnz proxy nodes update --stop --proxy "Edge JKT"  # no further node is asked
 dnz proxy approve jkt-1 --proxy "Edge JKT" --ipv4 203.0.113.10
 dnz proxy ignore node-10-0-0-9                    # turn a waiting node away
 dnz proxy drain jkt-1                             # out of DNS answers, still serving

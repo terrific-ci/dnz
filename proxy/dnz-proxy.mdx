@@ -208,6 +208,10 @@ Compose, Docker Swarm and a plain command line.
               # Only needed to join; taken from the shell at deploy time.
               DNZ_PROXY_KEY: ${DNZ_PROXY_KEY:?paste the connect key from Settings → Proxy}
               DNZ_PROXY_NAME: "{{.Node.Hostname}}"
+              # Swarm owns these containers: DNZ shows `docker service update` for them
+              # instead of updating them itself.
+              DNZ_PROXY_INSTALL: swarm
+              DNZ_PROXY_SERVICE: "{{.Service.Name}}"
               # The proxy to join, by name; with "Let nodes join without approval" on
               # that proxy, new servers join by themselves.
               DNZ_PROXY_PROXY: Edge
@@ -318,8 +322,8 @@ reconnects by itself.
 The node list keeps two things apart:
 
 - **Version**: the DNZ Proxy release the node runs. DNZ and DNZ Proxy share one version number, so a
-  node on an older release is marked **Older than DNZ** until you upgrade it. Nodes built before the
-  shared version report `0.1.0`.
+  node on an older release is marked **Older than DNZ** until you [update it](#updating-nodes). Nodes
+  built before the shared version report `0.1.0`.
 - **Config**: whether the node serves the proxy's current configuration, with its short hash.
 
 <Warning>
@@ -377,6 +381,72 @@ on, while DNZ can connect to its HTTPS (or HTTP) port.
 
 **Drain** takes a node out of the answers for maintenance. It keeps serving visitors who still reach
 it.
+
+### Updating nodes
+
+A node older than DNZ gets an **Update** button in the proxy's **Nodes** tab, and the tab offers to
+update every node of the proxy that can. No SSH, no `docker compose pull`.
+
+```bash
+dnz proxy nodes update jkt-1                      # one node
+dnz proxy nodes update --proxy "Edge JKT" --wait  # every node that can, one at a time, and follow it
+dnz proxy nodes update --status --proxy "Edge JKT" # what it would do per node, and how the last one went
+```
+
+**What happens**, one node at a time:
+
+<Steps>
+  <Step title="Visitors move on">
+    While other nodes serve, the node leaves DNS, and DNZ waits the proxy's DNS TTL (at most a minute).
+  </Step>
+  <Step title="The node takes the release">
+    DNZ asks it to take DNZ's own version. The node downloads that release of `dnz-proxy` from the public
+    release page, checks its signature, checks it starts, and restarts on it.
+  </Step>
+  <Step title="DNZ waits for it">
+    Until it reports the new version, serving the current configuration, healthy, with its ports open,
+    for 15 seconds. It goes back into DNS, and the next node's turn begins.
+  </Step>
+</Steps>
+
+**When it stops.** A node that says it failed, stops reporting for 2 minutes, or isn't back within 10
+stops the update, and the page names it and says why. Nodes not reached stay as they were. **Stop**
+asks no further node (one that is downloading may still finish).
+
+<Warning>
+  **The last healthy node** isn't updated without asking: taking it down takes the proxy's sites down, for
+  the seconds a restart takes. The dialog says so and you can accept it (`--allow-outage`). Open
+  connections to a restarting node drop, so a proxy with one node is best given a second one first.
+</Warning>
+
+**Only a real release, only the version DNZ asks for.** DNZ asks for its own version and no other, so a
+node never gets ahead of DNZ, and a node takes nothing older than it runs. The release's signature
+(ed25519, over the version, the architecture and the binary) is checked with a key compiled into the
+node. A node built without a key says so and refuses. DNZ can only ask: the node downloads the release
+itself and runs nothing DNZ sends.
+
+**How it depends on how the node was installed** (a node's details show it):
+
+| Installed as | What happens |
+| --- | --- |
+| systemd | Updates itself. The unit may not write `/usr/local/bin`, so the new binary is kept in the state directory and started from there; the unit and the service name stay |
+| Docker, Compose | Updates itself. The image's binary hands over to the newest verified one in `/data` at each start, with no Docker socket. **`docker images` then shows an older tag than what runs** (a node's details show both). Pulling a newer image takes over from what is kept |
+| Plain command | Updates itself, like systemd, as the same process |
+| Docker Swarm | By hand, since Swarm owns the containers. The page shows `docker service update --image terrificci/dnz-proxy:<version> <service>`, to run on a manager. The stack above sets `DNZ_PROXY_INSTALL` and `DNZ_PROXY_SERVICE` for that; a stack from before this updates itself like Docker |
+| Kubernetes | By hand: the page shows `kubectl set image` |
+
+The page also lists a node as **by hand** when it is older than the updates themselves (once, for the
+last time), when it was started with `--no-self-update` / `DNZ_PROXY_NO_SELF_UPDATE=true` (for setups
+whose changes go through their own tooling), or when it binds low ports through `setcap` on its file,
+which a new binary wouldn't have. A node run by DNZ itself goes with DNZ.
+
+Before a new version replaces anything, the node checks that it starts and names the right version.
+Should it still crash after the restart, a restart of the container or unit tries again, and after 3
+starts that didn't stay up the node goes back to what it was installed with and reports the failure.
+The kept files are in `update/` in the state directory; deleting that folder also goes back.
+
+An air-gapped node can take releases from a mirror of the same files with `DNZ_PROXY_RELEASES_URL`
+(`<url>/v<version>/dnz-proxy-linux-amd64` and `.sig`): the signature check stays.
 
 ### Node addresses
 
