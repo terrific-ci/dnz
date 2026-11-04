@@ -259,9 +259,10 @@ A batch takes:
 | `--enabled on\|off` | Turn the routes on or off |
 | `--group NAME`, `--no-group` | Put them in a [route group](#route-groups), or in none |
 | `--https on\|off`, `--redirect on\|off` | HTTPS, and whether `http://` redirects to it |
-| `--switch NAME=on\|off` | On, with the route dialog's defaults: `waf`, `challenge`, `cache`, `waiting_room`, `uploads`, `rate_limit`. Off also: `allow_ips`, `headers`, `rules`, `firewall`, `basic_auth`, `sign_in`. Repeat for more; a switch already on keeps its settings |
+| `--switch NAME=on\|off` | On, with the route dialog's defaults: `waf`, `challenge`, `cache`, `waiting_room`, `uploads`, `rate_limit`. Off also: `allow_ips`, `headers`, `rules`, `firewall`, `basic_auth`, `sign_in`, `leaked_passwords`. Repeat for more; a switch already on keeps its settings |
 | `--challenge`, `--cache`, `--waf block\|off`, the `--no-…` switches | The same as `--switch`. `--cache` only at its default of 10 minutes (`--cache` or `--cache 10m`); a route whose cache is already on keeps its time |
 | `--uploads` | The default [upload limits](/proxy/upload-limits) (`--no-uploads` turns them off) |
+| `--no-leaked-passwords` | [Leaked password checks](/proxy/leaked-passwords) off. On is one route at a time: `dnz proxy routes edit PROXY HOST --leaked-passwords --leaked-path /login` |
 | `--middleware +NAME\|-NAME` | Add or remove a shared middleware; repeat for more |
 | `--service NAME` | Send them all to one upstream of Proxy → Upstreams |
 | `--serve-on +PROXY\|-PROXY` | Copy the routes to another proxy, or take them off one. `+private`, `+public`, `+all` (or with `-`): every approved proxy of that access now; a proxy named so is named by its id |
