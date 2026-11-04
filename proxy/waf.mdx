@@ -88,6 +88,8 @@ Each rule starts at one sensitivity and runs at every higher one:
 
 ## See what it matched
 
+- **Proxy → WAF**: everything in one place, with a world map of where attacks came from, each event,
+  an address's place and network, blocking and one-click exceptions. See [The WAF page](/proxy/waf-page).
 - **Proxy → Analytics → Web application firewall**: blocked and logged requests, over time, the rules
   that matched (`SQL injection · sqli-union`, Blocked or Logged), and the addresses and paths it matched
   most. Click an address or a path to show its requests in the request log. It follows the page's
@@ -119,7 +121,9 @@ turning the whole firewall off.
 
 <Steps>
   <Step title="Find the request">
-    In **Proxy → Analytics → Web application firewall**, click the visitor's address (or the path)
+    In **Proxy → WAF**, find the event (filter by the address or hostname) and use **Not an
+    attack…**: it adds the exception for you ([The WAF page](/proxy/waf-page#when-it-wasnt-an-attack)).
+    Or in **Proxy → Analytics → Web application firewall**, click the visitor's address (or the path)
     to show its requests in the request log, or filter the log by the hostname and the address. The
     line names the rule; **Copy rule id** copies it.
 

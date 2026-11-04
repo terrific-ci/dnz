@@ -1,0 +1,111 @@
+---
+title: "The WAF page"
+description: "See what the web application firewall caught and where it came from on a world map, look an attacker's address up, block it, its network or its country, and fix a false alarm in one click."
+---
+
+**Proxy → WAF** brings the [web application firewall](/proxy/waf) into one place: what it caught,
+where it came from, and what to do about it. It shows once a [DNZ Proxy](/proxy/dnz-proxy) is
+approved. Traefik and Caddy have no WAF.
+
+Each node counts what its WAF matched and keeps it. DNZ asks the nodes when you open the page, and
+adds a place and a network to each address from its own databases. No address is sent to an
+outside service.
+
+## What it shows
+
+Pick a span (1 hour to 30 days), a proxy and a hostname at the top.
+
+| Part | What you get |
+| --- | --- |
+| **Totals** | Blocked requests (answered with the `403` *Access blocked* page), logged ones (log-only routes let them through), their share of all traffic, the addresses and countries they came from, the most common attack type |
+| **Where it came from** | A world map: the deeper the colour, the more requests. **Hover** a country for its count, share and rank. **Click** it for its addresses, the rules they set off and the hostnames they went for. The list beside the map lights the map up as you move over it |
+| **Over time** | Blocked and logged requests per minute or hour |
+| **Attack types, rules, addresses, hostnames, paths** | The busiest of each. Click a rule for its events, an address for its details, a hostname to show only that one |
+| **Events** | Each request the WAF matched, newest first. Filter by action, rule, country, address, or search a path, user agent or request ID. Open a row for what the rule catches, the full URL, the answer and the node |
+| **Coverage** | How many DNZ Proxy routes have the WAF, blocking or log only, at which sensitivity. Pick the routes without it and turn it on |
+| **Blocked from this page** | Everything you blocked here, with **Unblock** |
+| **Location data** | Where places and networks come from (see below) |
+
+<Note>
+  Events come from the nodes' request logs, which keep a sample of what they serve. Blocked requests
+  get ten times the room, so the totals are exact while the event list can miss some. Nodes older
+  than DNZ 2.5 can't filter their log for the WAF: the page names them until they are updated.
+</Note>
+
+## Look an address up
+
+Click any address on the page.
+
+- **Place**: the country, and the region and city with a city database.
+- **Network**: its ASN and owner, such as `AS14061 DigitalOcean, LLC`. **Hosting** marks the network
+  of a company that rents out servers: requests from there are usually scripts, not people.
+- **Reverse name**: the name the address points back to. **Confirmed** means that name points to the
+  address again; an unconfirmed name proves nothing, since anyone can write any name in their own
+  reverse zone.
+- First and last seen, the rules it set off, the hostnames, paths and user agents it used, and its
+  latest events.
+- The firewalls already blocking it.
+
+## Block an attacker
+
+<Steps>
+  <Step title="Pick what to block">
+    In an address's details: **Block address**, **Block** its network (the `/24` of an IPv4
+    address, the `/48` of an IPv6 one) or **Block** its country. A country's panel and each event
+    offer the same.
+  </Step>
+  <Step title="Pick where">
+    **These hostnames** (the default) blocks it on the routes serving the hostnames it went for, so
+    nothing else is touched. **Every route with the WAF** blocks it on every DNZ Proxy route whose
+    WAF is on.
+  </Step>
+  <Step title="Block">
+    Its requests get the `403` page before they reach your servers, within seconds on every node.
+  </Step>
+</Steps>
+
+A block is a rule in each route's [firewall](/proxy/dnz-proxy#firewall-dnzfirewall):
+`waf-page-addresses` holds the addresses and ranges, `waf-page-countries` the countries. Both go
+after the firewall's own rules, so your allow rules still act first. A route without a firewall gets
+the shared `waf-blocklist` firewall. A firewall other routes use blocks the address there too.
+**Unblock** takes it out of every firewall again.
+
+## When it wasn't an attack
+
+When the WAF stops a real visitor or app, use **Not an attack…** on its event and pick the narrowest
+exception:
+
+| Exception | When |
+| --- | --- |
+| **Skip the rule** | One rule trips on a normal request of the site; the other rules keep working |
+| **Leave the path alone** | A form or API sends code-like text on purpose; no rule looks at that path or below it |
+| **Trust the address** | Your office, a scanner you run, a partner's server |
+
+It goes into the route's [WAF exceptions](/proxy/waf#exceptions), and
+[route history](/proxy/route-history) keeps a version, so you can undo it there.
+
+## Location data
+
+- **Countries on the map** are counted on the nodes. Set a **GeoIP database URL** in the proxy's DNZ
+  Proxy settings, as for country rules in the firewall. Without one, DNZ places the busiest
+  addresses with its own country database and says so above the map.
+- **Places and networks of addresses** come from DNZ's own country and ASN databases. **Download**
+  fetches DB-IP's free *IP to Country Lite* and *IP to ASN Lite* (CC BY 4.0); DNZ downloads them
+  again every month. MaxMind GeoLite2 works too.
+
+## From the command line
+
+```bash
+dnz proxy waf overview --since 7d                  # totals, attack types, rules, countries, addresses, hostnames
+dnz proxy waf events --action block --country CN   # each request it matched, newest first
+dnz proxy waf address 203.0.113.9                  # place, network, reverse name, what it set off
+dnz proxy waf block 203.0.113.9 --host shop.example.com
+dnz proxy waf block 203.0.113.0/24 --everywhere
+dnz proxy waf unblock 203.0.113.0/24
+dnz proxy waf except shop.example.com --skip-path /search
+dnz proxy waf coverage                             # routes with and without the WAF
+dnz proxy waf locations --download                 # DNZ's country and ASN databases
+```
+
+AI assistants get the MCP tools `proxy_waf_overview`, `proxy_waf_events`, `proxy_waf_address`,
+`proxy_waf_coverage` and, with write access, `waf_block`, `waf_unblock` and `waf_exception`.

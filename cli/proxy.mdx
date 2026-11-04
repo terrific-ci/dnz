@@ -308,6 +308,21 @@ it on first (`--waf block` or `--waf log`). Turning it off and on again starts w
 Traefik or Caddy route refuses it. `routes list` shows it as `WAF (block, medium)` or
 `WAF (log only, …)`.
 
+What it caught, from where, and what to do about it ([The WAF page](/proxy/waf-page)):
+
+```bash
+dnz proxy waf overview --since 7d -p edge          # totals, attack types, rules, countries, addresses, hostnames
+dnz proxy waf events --action block --country CN   # each request it matched, newest first (--ip, --rule, --host, -n)
+dnz proxy waf address 203.0.113.9                  # place, network, reverse name, what it set off, blocked where
+dnz proxy waf block 203.0.113.9 --host shop.example.com
+dnz proxy waf block CN --everywhere                # every DNZ Proxy route with the WAF
+dnz proxy waf unblock CN
+dnz proxy waf except shop.example.com --skip-rule sqli-union   # or --skip-path /search, --allow-ip 198.51.100.7
+dnz proxy waf coverage                             # routes with and without it
+dnz proxy waf blocks                               # what was blocked, and in which firewalls
+dnz proxy waf locations --download                 # DNZ's country and ASN databases
+```
+
 ### Rules
 
 A route's [rules](/proxy/rules): redirects, rewrites and header changes when conditions hold, run from
