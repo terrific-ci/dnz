@@ -786,7 +786,9 @@ network and valid for **Valid for**, then lets them through.
 - Bots can be let through by user agent and by address. For a route's own check, the route dialog
   sets both lists (**Let these addresses through**, **Let these user agents through**) and, under
   **More**, the difficulty and how long a pass lasts.
-- The page shows **Checking your browser** in the style of the status pages, with a request ID.
+- The page shows **Checking your browser** in the style of the status pages: a dial that fills as the
+  work goes, the steps (secure connection, verifying, letting you in) and a request ID. Once the answer
+  is found it turns green and says **You're verified** while the site loads.
 - Requests that aren't a browser page (APIs, forms) get a 403 (a page, JSON or text by `Accept`)
   until a page has been visited.
 - **Difficulty** is in bits: each one doubles the work. 16 takes well under a second.
