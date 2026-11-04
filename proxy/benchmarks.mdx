@@ -249,6 +249,21 @@ Docker's bridge and connection tracking), and the rest Pingora's HTTP/1 handling
 before ("Tried and not kept" above). There is no change in DNZ Proxy's code left that would move
 these numbers by more than the noise.
 
+## 2.4: Server: dnz and request IDs
+
+One DNZ Proxy, HTTP 1 KiB, the builds taking turns, medians:
+
+| Build | Requests a second | CPU per request at 5,000/s |
+| --- | ---: | ---: |
+| 2.3.1 | 13,438 | 95.2 µs |
+| 2.4, `Server: dnz`, request ID off (the default) | 13,386 (−0.4%, within the noise) | 94.9 µs |
+| 2.4, request ID on | about 1–3% fewer | about the same to +3% |
+
+`Server: dnz` costs nothing: it replaces a header the origin already sent. The
+[request ID](/proxy/dnz-proxy#a-requests-id-dnz-request-id) adds a header to every answer and to every
+request to the origin, which the origin and the client read too, so it is off by default. Off, it
+costs nothing.
+
 ## 2.0 against 1.27
 
 The check before 2.0's release (2026-11-01), on the server above, one DNZ Proxy on one CPU. What

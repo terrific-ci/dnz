@@ -456,10 +456,10 @@ holds:
 | **Certificates** | Where the routes' certificates come from: the ACME account and the DNS credentials added for names DNZ couldn't prove |
 | **Ports** | The [entry points](#entry-points) |
 | **Cache** | What each node holds, and **Clear cache** |
-| **Nodes and DNS** | Joining without approval, the TTL of proxied answers, checking the nodes' ports, cache sizes, request log sampling, **Peak concurrency** (off by default, see [Peak concurrency](#peak-concurrency)), the [Server header](#the-server-header), the GeoIP database |
+| **Nodes and DNS** | Joining without approval, the TTL of proxied answers, checking the nodes' ports, cache sizes, request log sampling, **Peak concurrency** (off by default, see [Peak concurrency](#peak-concurrency)), the [Server header](#the-server-header), the [Request ID](#a-requests-id-dnz-request-id), the GeoIP database |
 
 From the CLI, `dnz proxy settings <proxy>` shows them, `--peak-tracking on|off` sets peak
-concurrency and `--server-header dnz|origin` the Server header.
+concurrency, `--server-header dnz|origin` the Server header and `--request-id on|off` the request ID.
 
 ### Route defaults
 
@@ -527,8 +527,8 @@ says `Server: Pingora`. Nodes older than 2.4 ignore the setting and pass the ori
 
 ### A request's ID (`DNZ-Request-Id`)
 
-Every request a node answers gets an ID of 16 hex digits, sent as `DNZ-Request-Id: 8f2a1b3c4d5e6f70`
-(as Cloudflare sends `CF-Ray`). The same ID goes:
+Turn on **Request ID** (off by default) and every request a node answers gets an ID of 16 hex digits,
+sent as `DNZ-Request-Id: 8f2a1b3c4d5e6f70` (as Cloudflare sends `CF-Ray`). The same ID goes:
 
 - to the visitor, on every answer (the site's, the cache's and DNZ Proxy's own pages),
 - to the origin, as a `DNZ-Request-Id` request header, so its own logs can name it. One the visitor
@@ -543,20 +543,25 @@ its ID. The line tells you which node answered.
 <Tabs>
   <Tab title="Dashboard">
 
-    **Proxy** → **Analytics** → the request log's search box.
+    Turn it on: **Proxy** → open the proxy → **Settings** → **Nodes and DNS** → **Request ID**.
+    Find a request: **Proxy** → **Analytics** → the request log's search box.
 
   </Tab>
   <Tab title="CLI">
 
     ```bash
+    dnz proxy settings edge --request-id on
     dnz proxy logs -q 8f2a1b3c4d5e6f70
     ```
 
   </Tab>
 </Tabs>
 
-`DNZ-Request-Id` is always sent, whatever the Server header setting. A route's rules can remove it
-like any other header. TCP and UDP routes have none, and nodes older than 2.4 send none.
+It is independent of the Server header setting, and a route's rules can remove it like any other
+header. TCP and UDP routes have none, and nodes older than 2.4 send none. Off, answers and the origin
+get no `DNZ-Request-Id` (one a visitor sends passes through untouched), and DNZ Proxy's own pages show
+an ID of their own. On, it costs about 1–3% of the most requests per second a node handles;
+off, nothing.
 
 ## Entry points
 
