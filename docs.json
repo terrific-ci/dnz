@@ -81,6 +81,7 @@
               "dashboard/tour",
               "dashboard/monitoring",
               "dashboard/uptime",
+              "dashboard/what-changed",
               "dashboard/prometheus",
               "dashboard/topology"
             ]
