@@ -22,6 +22,9 @@ dnz uptime                                   # list: state, 24h/30d/90d uptime, 
 dnz uptime list --status down -q web --page 2   # a page of monitors, by state or a search
 dnz uptime add Website --url https://www.example.com/ --keyword Welcome --public Website --group Web
 dnz uptime add "App servers" --service app.example.com --interval 30
+dnz uptime add Shop --url https://shop.example.com/ --from jkt-1,singapore   # from DNZ and these nodes or regions
+dnz uptime edit Shop --from ""               # from DNZ only again
+dnz uptime places                            # the nodes and regions it can check from
 dnz uptime add Billing --url https://billing.internal/health --expect 200 --slow-ms 800 --insecure true --paused
 dnz uptime show Website                      # last check, uptime 24h/7d/30d/90d, last checks, 30 days, incidents
 dnz uptime check Website                     # one check now; shown, not kept

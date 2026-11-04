@@ -287,6 +287,7 @@ Compose, Docker Swarm and a plain command line.
 | `--name` | `DNZ_PROXY_NAME` | The node's name in its proxy. Empty: DNZ picks one. |
 | `--proxy` | `DNZ_PROXY_PROXY` | The proxy to join, by name. Empty: whoever approves it picks one. |
 | `--public-ipv4`, `--public-ipv6` | `DNZ_PROXY_PUBLIC_IPV4`, `DNZ_PROXY_PUBLIC_IPV6` | Where visitors reach this server; DNS answers with these |
+| `--region` | `DNZ_PROXY_REGION` | The place this server is in (`jakarta`): uptime monitors can [check from it](/dashboard/uptime#checks-from-several-places) |
 | `--state-dir` | `DNZ_PROXY_STATE_DIR` | Identity, last configuration, analytics (`analytics.db`) and disk cache (`/var/lib/dnz-proxy` on Linux) |
 | `--insecure` | `DNZ_PROXY_INSECURE` | Accept a self-signed certificate from DNZ |
 | | `DNZ_PROXY_LOG` | Log filter, for example `info` or `debug,pingora=warn` |

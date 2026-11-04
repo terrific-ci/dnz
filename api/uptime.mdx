@@ -24,8 +24,9 @@ token (see [API overview](/api/overview)).
 | `GET` | `/api/uptime/monitors/{id}` | One monitor and its incidents |
 | `PUT` | `/api/uptime/monitors/{id}` | Replace a monitor (send every field) |
 | `DELETE` | `/api/uptime/monitors/{id}` | Remove a monitor and its history (204) |
-| `POST` | `/api/uptime/monitors/{id}/check` | One check now, not kept |
+| `POST` | `/api/uptime/monitors/{id}/check` | One check now, not kept; with places, `places`: what each saw |
 | `POST` | `/api/uptime/test` | One check of an unsaved monitor (a monitor body), not kept |
+| `GET` | `/api/uptime/places?q=&page=&per_page=` | The nodes and regions a monitor can check from (50, at most 200): `place`, `kind` (`node`, `region`), `proxy`, `region`, `nodes`, `connected`, `can_check` |
 | `GET` | `/api/uptime/hosts` | Hostnames proxies serve, `dnz_proxy` when a DNZ Proxy serves one |
 | `GET` | `/api/uptime/incidents?days=30&monitor=3` | Incidents: open ones and those of the last days; `resolved=true` or `false` for only one kind. With `page` / `per_page` (50, at most 200): `{items, total, page, per_page}` |
 | `POST` | `/api/uptime/incidents` | Write an incident (201) |
