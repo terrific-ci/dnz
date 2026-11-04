@@ -6,18 +6,26 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.3.1**, released November 3, 2026. To install or upgrade to it:
+The latest release is **v2.4.0**, released November 4, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.3.1
-docker pull terrificci/dnz-proxy:2.3.1   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.3.1
+docker pull terrificci/dnz:2.4.0
+docker pull terrificci/dnz-proxy:2.4.0   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.4.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.3.1" description="November 3, 2026" tags={["Latest"]}>
+<Update label="v2.4.0" description="November 4, 2026" tags={["Latest"]}>
+
+- **DNZ Proxy: `Server: dnz`.** Like Cloudflare's `server: cloudflare`, a DNZ Proxy can answer every visitor with `Server: dnz` in place of the origin's own `Server` header, so the origin's software and version (`Apache/2.4.41 (Ubuntu)`, `nginx/1.18.0`) no longer show. DNZ Proxy's own answers say it too: status pages, the block page, the browser check, the waiting room, typo help, redirects, 404s and errors. Pick it per proxy under **Settings → Nodes and DNS → Server header**: `dnz`, or `origin` to pass the origin's header on as before. New proxies start with `dnz`; proxies you already have keep `origin`, so nothing changes for them on upgrade. A route's own rules for the `Server` header (removing it, or setting a value of your own) still win. CLI: `dnz proxy settings <proxy> --server-header dnz|origin`.
+- **DNZ Proxy: a request ID on every answer.** With **Settings → Nodes and DNS → Request ID** on (off by default; `dnz proxy settings <proxy> --request-id on`), each request gets a 16-digit ID, sent to the visitor as `DNZ-Request-Id` and to the origin as a request header of the same name (one a visitor sends is replaced), so the origin's own logs can name it. It is the **Request ID** shown on DNZ Proxy's own pages, and it is kept on the request log line, so a visitor's report or an origin log line leads straight to the proxy's line: search the request log for it under **Proxy → Analytics**, or with `dnz proxy logs -q <id>`. Each line in `dnz proxy logs` ends with it.
+- **Zones: Sync to Cloudflare once.** A local zone's menu (right-click it in the zone list) has **Sync to Cloudflare**: after a preview, it updates the records the Cloudflare zone of the same name has under another value (keeping their proxy switch, comment and tags) and adds the ones it lacks. Nothing on Cloudflare is deleted, and A/AAAA records with private addresses stay local unless **Send private addresses too** is ticked. CLI: `dnz cf push <zone> --update [--dry-run] [--private]`.
+
+</Update>
+
+<Update label="v2.3.1" description="November 3, 2026">
 
 - **Fixed: first setup refused a common password only at its last step.** A password such as `password123` passed the admin account step and the refusal showed under the division name. The admin step now refuses it right away, and a refusal from the server takes you back to that step. The step bar at the top also lines up to the right edge again.
 
