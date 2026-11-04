@@ -829,7 +829,7 @@ not**, **in range**, **contains**, **starts with** or **matches** (a regular exp
 | **Log** | Notes it in the request log and goes on |
 
 Written as JSON (`dnz proxy middlewares add --settings`, the proxy YAML, the API), a condition is
-`{"field", "name", "op", "values"}`: `field` is `ip`, `country`, `list` (with `in`: the [lists of bad networks](/proxy/waf-page#lists-of-bad-networks)), `host`, `path`, `method`, `header`,
+`{"field", "name", "op", "values"}`: `field` is `ip`, `country`, `list` (with `in`: the [lists of bad networks](/proxy/waf-page#lists-of-bad-networks)), `leakedPassword` (with `exists` or `missing`: [leaked password checks](/proxy/leaked-passwords)), `host`, `path`, `method`, `header`,
 `query` or `userAgent` (`header` and `query` with a `name`), `op` is `is`, `isNot`, `in`, `notIn`,
 `inRange`, `contains`, `startsWith`, `matches`, `exists` or `missing`, and a rule's `action` is
 `allow`, `block`, `challenge` or `log`. DNZ checks them when the firewall is saved, with the same

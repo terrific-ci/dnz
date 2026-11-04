@@ -158,6 +158,7 @@ and ask for the next page.
 | `zone_decoys` | A zone's [decoy names](/proxy/decoys): on or off, the DNZ Proxy, the ban, each name's state |
 | `decoy_touches` | Who touched a decoy name in the last 30 days: visits, which ban, and DNS queries, which only alert (paged) |
 | `proxy_waf_lists` | The [lists of bad networks](/proxy/waf-page#lists-of-bad-networks): size, last update, terms and the firewalls naming each |
+| `proxy_waf_leaked_passwords` | [Leaked password checks](/proxy/leaked-passwords): the filter's source, size, last update and terms, the routes with the check on and what each node serving them checked |
 | `proxy_waf_campaigns` | Attacks [grouped by network](/proxy/waf-page#campaigns), across hostnames: addresses, requests, hostnames, attack types, times (paged) |
 | `proxy_nodes` | DNZ Proxy nodes and their servers: state, version, uptime, upstreams, and the node's CPU and memory, the machine's or container's memory, load average and free disk; a page of them (`page`, `limit`, `proxy`) with the total and how many wait for approval, or one `node` |
 | `proxy_node_updates` | [Updating DNZ Proxy nodes](/proxy/dnz-proxy#updating-nodes), per proxy: what an update would do for each node (`ready`, `current`, `by_hand` with the command, `offline`), the update under way node by node, and past ones with why one stopped. Read-only: starting one is for people |

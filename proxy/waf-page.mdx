@@ -28,6 +28,7 @@ Pick a span (1 hour to 30 days), a proxy and a hostname at the top.
 | **Blocked from this page** | Everything you blocked here, with **Unblock** |
 | **Location data** | Where places and networks come from (see below) |
 | **Lists of bad networks** | Outside lists DNZ keeps up to date, their size and last update (see below) |
+| **Leaked passwords** | The [leaked password](/proxy/leaked-passwords) filter, the routes checking logins and the nodes serving them |
 
 <Note>
   Events come from the nodes' request logs, which keep a sample of what they serve. Blocked requests
@@ -213,6 +214,6 @@ dnz proxy waf campaign-block AS4134 --host shop.example.com   # its addresses; -
 ```
 
 AI assistants get the MCP tools `proxy_waf_overview`, `proxy_waf_events`, `proxy_waf_address`,
-`proxy_waf_coverage`, `proxy_waf_bans`, `proxy_waf_lists`, `proxy_waf_campaigns` and, with write
+`proxy_waf_coverage`, `proxy_waf_bans`, `proxy_waf_lists`, `proxy_waf_leaked_passwords`, `proxy_waf_campaigns` and, with write
 access, `waf_block`, `waf_unblock`, `waf_exception`, `waf_ban` and `waf_unban`. Downloading lists
 and location databases is left to people.

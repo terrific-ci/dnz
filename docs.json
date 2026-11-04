@@ -139,6 +139,7 @@
               "proxy/status-pages",
               "proxy/waf",
               "proxy/waf-page",
+              "proxy/leaked-passwords",
               "proxy/decoys",
               "proxy/rules",
               "proxy/upload-limits",
