@@ -44,7 +44,7 @@ The stream stays open and must not be buffered by a reverse proxy in front of DN
 | Method and path | What it does |
 | --- | --- |
 | `GET /api/proxies/{id}/dnz` | A proxy's nodes, entry points and settings |
-| `PUT /api/proxies/{id}/dnz/settings` | Change a proxy's settings. `peak_tracking` turns [peak concurrency](/proxy/dnz-proxy#peak-concurrency) on (off by default); left out of the body, it stays as it is |
+| `PUT /api/proxies/{id}/dnz/settings` | Change a proxy's settings. `peak_tracking` turns [peak concurrency](/proxy/dnz-proxy#peak-concurrency) on (off by default); `ban` sets [bans that expire](/proxy/waf-page#bans-that-expire) (`enabled`, `blocks`, `within_minutes`, `minutes`, `scope`: `proxy` or `all`, `private`; off by default). Left out of the body, each stays as it is |
 | `PUT /api/proxies/{id}/dnz/defaults` | Route defaults: `{"redirect_https", "compress", "security_headers", "firewall_id"}` |
 | `POST /api/proxies/{id}/entrypoints` | Add an entry point |
 | `PUT /api/proxies/{id}/entrypoints/{eid}` | Change an entry point |
@@ -92,6 +92,13 @@ nodes in `nodes`, with `answered: false` and an `error` for any that didn't answ
 | --- | --- |
 | `GET /api/proxy/waf/counts` | What it blocked and logged per hostname over the last `hours` (default 24): `hosts` (`host`, `blocked`, `logged`) and `nodes` |
 | `GET /api/proxy/waf/rules` | The [web application firewall](/proxy/waf)'s rules (`id`, `category`, `category_label`, `level`, `about`) and `sensitivities` (`value`, `label`, `level`, `about`) |
+| `GET /api/proxy/waf/bans` | [Bans](/proxy/waf-page#bans-that-expire) in force, newest first (`proxy_id`, `q`, `page`, `per_page`): `bans` (`ip`, `reason`, `hits`, `node`, `source`, `expires_at`, `proxy_id`, null for every DNZ Proxy), `total`, `proxies` with each one's `ban` settings, `nodes_without` (nodes too old to ban) |
+| `POST /api/proxy/waf/ban` | Bans one address: `{ ip, minutes?, proxy_id?, reason? }`, 60 minutes on every DNZ Proxy unless given (at most 30 days) |
+| `POST /api/proxy/waf/unban` | `{ ip, proxy_id? }` |
+| `GET /api/proxy/waf/lists` | The [lists of bad networks](/proxy/waf-page#lists-of-bad-networks): `lists` (`name`, `title`, `about`, `site`, `terms`, `every_hours`, `enabled`, `ranges`, `updated_at`, `checked_at`, `error`, `firewalls`), `nodes_without` |
+| `PUT /api/proxy/waf/lists/{name}` | `{ enabled }`; off is refused while a firewall names it |
+| `POST /api/proxy/waf/lists/{name}/download` | Downloads a list now |
+| `GET /api/proxy/waf/campaigns` | [Attacks grouped by network](/proxy/waf-page#campaigns) (`proxy_id`, `host`, `from`, `to`, `page`, `per_page`): `campaigns` (`key`, `asn`, `organization`, `hosting`, `addresses`, `ranges`, `requests`, `hosts`, `rules`, `categories`, `first_seen`, `last_seen`), `total`, `nodes` |
 
 A route turns it on with `options.waf` (see [Proxy API](/api/proxy)).
 

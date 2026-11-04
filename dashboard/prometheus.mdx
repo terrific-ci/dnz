@@ -195,6 +195,11 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_proxy_waf_hits_total` `{proxy,node,middleware,rule,action}` | Requests a DNZ Proxy [web application firewall](/proxy/waf) matched, by rule id and action (`block`: refused, `log`: only logged). Starts at 0 when a node restarts |
 | `dnz_proxy_waf_routes` `{proxy,state}` | A DNZ Proxy's HTTP routes to an upstream by what the WAF does on them: `block`, `log` or `off` |
 | `dnz_proxy_waf_page_blocks` `{kind}` | Different addresses and ranges (`ip`) or countries (`country`) blocked from Proxy → WAF, each counted once however many firewalls hold it |
+| `dnz_proxy_waf_bans` `{proxy,source}` | Addresses banned now (`proxy="all"`: every DNZ Proxy's; `source`: `auto`, a node decided, or `page`, by hand) |
+| `dnz_proxy_node_bans_held` `{proxy,node}` | Bans a node holds, as it last reported (only while its proxy has bans on) |
+| `dnz_proxy_banned_requests_total` `{proxy,node}` | Requests a node refused because of a ban (also in its blocked requests). Starts at 0 when a node restarts |
+| `dnz_proxy_waf_list_ranges` `{list}` | Ranges a [list of bad networks](/proxy/waf-page#lists-of-bad-networks) holds, for each list turned on |
+| `dnz_proxy_waf_list_updated_timestamp_seconds` `{list}` | When a list last changed |
 | `dnz_traefik_connected{proxy}`, `dnz_caddy_proxy_connected{proxy}` | 1 while a Traefik or Caddy proxy fetched its configuration in the last minute (`…_last_seen_timestamp_seconds` says when) |
 | `dnz_proxy_sites_sync_success{proxy,kind}` | A [read-only proxy](/proxy/read-only): 1 when the last sync of its sites worked (those not paused), `kind` `caddy` or `traefik`; `dnz_proxy_sites_sync_timestamp_seconds` says when |
 | `dnz_caddy_sync_success`, `dnz_caddy_sync_timestamp_seconds` `{id,caddy,kind}` | The same under their names from before v2 (Sites in DNS; `id` is the proxy's), kept for one release: move dashboards and alerts to `dnz_proxy_sites_sync_*` |
