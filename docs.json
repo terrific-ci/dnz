@@ -140,6 +140,7 @@
               "proxy/waf",
               "proxy/waf-page",
               "proxy/decoys",
+              "proxy/shields",
               "proxy/rules",
               "proxy/upload-limits",
               "proxy/sign-in",

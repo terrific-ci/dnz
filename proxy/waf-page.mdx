@@ -23,6 +23,7 @@ Pick a span (1 hour to 30 days), a proxy and a hostname at the top.
 | **Attack types, rules, addresses, hostnames, paths** | The busiest of each. Click a rule for its events, an address for its details, a hostname to show only that one |
 | **Events** | Each request the WAF matched, newest first. Filter by action, rule, country, address, or search a path, user agent or request ID. Open a row for what the rule catches, the full URL, the answer and the node |
 | **Coverage** | How many DNZ Proxy routes have the WAF, blocking or log only, at which sensitivity. Pick the routes without it and turn it on |
+| **Shields** | [Virtual patches](/proxy/shields) for apps that can't be upgraded: each one's CVE, product and release, the routes with it on, what it stopped, and routes worth a look |
 | **Campaigns** | The addresses grouped by network, across hostnames, with what they did (see below) |
 | **Banned now** | Addresses refused for a while, with the time left, why and where, and **Unban** (see below) |
 | **Blocked from this page** | Everything you blocked here, with **Unblock** |
@@ -256,7 +257,8 @@ exception:
 | **Trust the address** | Your office, a scanner you run, a partner's server |
 
 It goes into the route's [WAF exceptions](/proxy/waf#exceptions), and
-[route history](/proxy/route-history) keeps a version, so you can undo it there.
+[route history](/proxy/route-history) keeps a version, so you can undo it there. When a
+[shield](/proxy/shields) stopped it, the one choice is to turn that shield off on those routes.
 
 ## Location data
 
@@ -297,3 +299,11 @@ AI assistants get the MCP tools `proxy_waf_overview`, `proxy_waf_events`, `proxy
 access, `waf_block`, `waf_unblock`, `waf_exception`, `waf_ban` and `waf_unban`. Downloading lists
 and location databases is left to people. `proxy_bot_traffic` reads the Bots section and, with write
 access, `set_ai_crawlers` sets what AI crawlers may do.
+dnz proxy waf shields --since 7d                   # each shield's CVE, routes and hits; routes worth a look
+```
+
+AI assistants get the MCP tools `proxy_waf_overview`, `proxy_waf_events`, `proxy_waf_address`,
+`proxy_waf_coverage`, `proxy_waf_shields`, `proxy_waf_bans`, `proxy_waf_lists`, `proxy_waf_campaigns`
+and, with write access, `waf_block`, `waf_unblock`, `waf_exception`, `waf_ban`, `waf_unban` and
+`set_shields`. Downloading lists
+and location databases is left to people.

@@ -274,6 +274,7 @@ route is on (see [Route switches](/proxy/middlewares#route-switches)):
 | **Cache** (DNZ Proxy) | Keeps answers on the nodes; **Clear cache** right next to it when editing |
 | **Firewall** (DNZ Proxy) | Runs one of the [firewalls](/proxy/middlewares#firewalls), shared by every proxy |
 | **Web application firewall** (DNZ Proxy) | Ready-made rules against SQL injection, XSS, path traversal, Log4Shell and attack tools: **Block attacks** or **Log only**, a sensitivity, and exceptions. See [Web application firewall](/proxy/waf) |
+| **Shields for apps that can't be upgraded** (DNZ Proxy) | Virtual patches for known vulnerabilities, each a checkbox with its CVE, product, what it stops and what it costs; all off by default. See [Shields](/proxy/shields) |
 | **Rate limit** | Requests a second per visitor, with a burst |
 | **Password** | Any number of users, each added by name and password; only a bcrypt hash is kept. A user typed but not added yet is added on save |
 | **Only from these addresses** | Addresses or ranges; everyone else gets 403 |

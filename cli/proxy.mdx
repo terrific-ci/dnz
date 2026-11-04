@@ -262,6 +262,7 @@ A batch takes:
 | `--switch NAME=on\|off` | On, with the route dialog's defaults: `waf`, `challenge`, `cache`, `waiting_room`, `uploads`, `rate_limit`. Off also: `allow_ips`, `headers`, `rules`, `firewall`, `basic_auth`, `sign_in`. Repeat for more; a switch already on keeps its settings |
 | `--challenge`, `--cache`, `--waf block\|off`, the `--no-…` switches | The same as `--switch`. `--cache` only at its default of 10 minutes (`--cache` or `--cache 10m`); a route whose cache is already on keeps its time |
 | `--uploads` | The default [upload limits](/proxy/upload-limits) (`--no-uploads` turns them off) |
+| `--shield ID` | A [shield](/proxy/shields) on them; `--shield -ID` takes it off, `--shield off` takes every one off; repeat for more |
 | `--middleware +NAME\|-NAME` | Add or remove a shared middleware; repeat for more |
 | `--service NAME` | Send them all to one upstream of Proxy → Upstreams |
 | `--serve-on +PROXY\|-PROXY` | Copy the routes to another proxy, or take them off one. `+private`, `+public`, `+all` (or with `-`): every approved proxy of that access now; a proxy named so is named by its id |
@@ -327,6 +328,8 @@ dnz proxy waf unban 203.0.113.9                    # back in now
 dnz proxy waf lists --on tor-exit                  # the lists of bad networks; --off, --download
 dnz proxy waf campaigns --since 24h                # attacks grouped by network
 dnz proxy waf campaign-block AS4134 --everywhere   # its addresses; --ranges for its /24s
+dnz proxy waf shields --since 7d -p edge           # shields: each one's CVE, routes and hits, and routes worth a look
+dnz proxy routes edit edge wiki.example.com --shield cve-2022-26134   # -ID takes one off, `off` every one; DNZ Proxy only
 ```
 
 [AI crawlers and verified bots](/proxy/waf-page#bots), DNZ Proxy only:
