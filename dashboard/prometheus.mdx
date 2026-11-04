@@ -199,6 +199,7 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_proxy_sites_sync_success{proxy,kind}` | A [read-only proxy](/proxy/read-only): 1 when the last sync of its sites worked (those not paused), `kind` `caddy` or `traefik`; `dnz_proxy_sites_sync_timestamp_seconds` says when |
 | `dnz_caddy_sync_success`, `dnz_caddy_sync_timestamp_seconds` `{id,caddy,kind}` | The same under their names from before v2 (Sites in DNS; `id` is the proxy's), kept for one release: move dashboards and alerts to `dnz_proxy_sites_sync_*` |
 | `dnz_health_findings{status}` | [Diagnostics](/admin/diagnostics) findings by status |
+| `dnz_name_findings{kind}`, `dnz_name_checks_last_run_timestamp_seconds` | [Name checks](/dashboard/name-checks): open findings per kind (0 for a kind with none), and when the last round ended |
 | `dnz_uptime_up{monitor,kind}`, `dnz_uptime_response_seconds{monitor}`, `dnz_uptime_ratio_30d{monitor}` | [Uptime monitors](/dashboard/uptime): 1 while up (0 while down), the last check's response time, and the share of the last 30 days' checks it was up. Also `dnz_uptime_status`, `dnz_uptime_last_check_timestamp_seconds` and `dnz_uptime_open_incidents` |
 | `dnz_dhcp_leases{server}`, `dnz_dhcp_read_success{server}` | DHCP servers' live leases, and whether DNZ can read them |
 | `dnz_ipam_conflicts{division}` | What [IPAM](/integrations/dhcp#ipam) found that doesn't add up |

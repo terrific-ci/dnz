@@ -82,6 +82,7 @@
               "dashboard/monitoring",
               "dashboard/uptime",
               "dashboard/what-changed",
+              "dashboard/name-checks",
               "dashboard/prometheus",
               "dashboard/topology"
             ]

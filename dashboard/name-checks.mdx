@@ -1,0 +1,111 @@
+---
+title: "Name checks"
+description: "DNZ looks at the names it manages the way an attacker would: dangling CNAMEs, origins reachable without the proxy, exposed files. It lists what it finds and changes nothing by itself."
+---
+
+**High availability → Name checks** looks at the names DNZ manages the way an attacker would, on a
+schedule and on demand, and lists what it finds with how to fix it.
+
+<Note>
+It is read-only: **it never changes a record, a route or a setting by itself**.
+</Note>
+
+## What is checked
+
+| Finding | What it means | Where it comes from |
+| --- | --- | --- |
+| **Claimable name** | A CNAME at a name that doesn't exist on a service where anyone with an account can register it: whoever does serves pages under your name (subdomain takeover) | DNZ's own zones and resolver |
+| **Exposed file** | A file that should never answer did: `/.env`, `/.git/config`… Off until you turn it on | The route, like a visitor |
+| **Dangling record** | A CNAME whose target doesn't exist | DNZ's own zones and resolver |
+| **Origin reachable without the proxy** | An origin on a public address took a connection without going through the proxy, so the WAF, sign-in and rate limits can be walked around | DNZ, or a node of another proxy |
+| **Origin: can't tell** | Nowhere outside the proxy could try the address. **It doesn't mean safe** | |
+
+### Dangling records
+
+Every enabled, unproxied CNAME in DNZ's zones. A target counts as gone only when DNZ's resolver says
+it doesn't exist (NXDOMAIN). A timeout or a server failure says nothing, so such a name stays
+undecided and any older finding about it stays as it is.
+
+**Claimable** is a short, honest list: only services where a missing name shows it is free to take,
+so DNS alone can tell: Azure App Service, Cloud Services, virtual machines, Traffic Manager, Blob
+Storage and CDN, and AWS Elastic Beanstalk. Services that answer every name (GitHub Pages, S3,
+Fastly…) would need a request to tell, and are never called safe, only not recognised.
+
+### Origins reachable without the proxy
+
+A node reaches its origin by design, so asking from one of the proxy's own nodes proves nothing.
+
+- A private address is fine, and isn't tried.
+- A public one is tried from DNZ and from any connected node of another proxy, with a plain
+  connection: nothing is sent. DNZ doesn't count when it runs a node of that proxy, shares an address
+  with it, or is the origin's own machine.
+- Without such a place, or when nothing there has shown it reaches the outside at all, the answer is
+  **"can't tell", never "safe"**.
+- Not reached is said as just that: "not reached from where it was tried".
+
+### Exposed files
+
+**Off until you turn it on**, and only who manages proxies can: these are odd requests to your own
+applications, and they show in their logs and in the proxy's request log.
+
+For every enabled route's exact hostnames, up to 500 a round, DNZ asks for `/.env`, `/.git/config`,
+`/.git/HEAD`, `/.aws/credentials`, `/.htpasswd`, `/id_rsa`, `/backup.sql`, `/dump.sql`, `/.DS_Store`
+and `/wp-config.php.bak`:
+
+- **On DNZ Proxy**, a connected node asks through its own listener as a visitor would, so **the WAF's
+  and the firewall's real answer is what counts**. The browser check and the waiting room let the
+  request by instead of answering for the application.
+- **On Traefik and Caddy**, which have no nodes, DNZ asks at the proxy's own address.
+
+An answer is a finding only if it is 200 and its first bytes really look like that file: a site
+answering everything with its home page isn't exposing anything. **Only the status and the kind of
+file are kept, never the content.** The content doesn't reach DNZ from a node at all.
+
+## A finding's life
+
+- **Open**: found in the last round.
+- **Dismissed**: set aside with a reason, by who may write the zone or manage proxies. It stays so
+  while the same thing is found.
+- **Fixed**: a round looked and no longer finds it. Kept 90 days. If it comes back it is open and new
+  again, with no old dismissal.
+
+A zone's finding shows with *View zones* in its division, a proxy's with *Manage proxies*.
+
+## From the terminal
+
+```bash
+dnz check names                               # how the last round went, and what's open
+dnz check names --run                         # ask for a round now, then list
+dnz check names --kind exposed_file --state all
+dnz check dismiss 7 --reason "ours, parked on purpose"
+dnz check reopen 7
+dnz check settings --every-hours 24
+dnz check settings --schedule off             # only when asked
+dnz check settings --exposed-files on         # off until asked
+```
+
+## Alerts and metrics
+
+A round that finds something new sends one message, however much it found, to the
+[notification providers](/integrations/notifications) subscribed to *Name checks found something new*.
+"Can't tell" alone sends nothing. [Prometheus](/dashboard/prometheus) gets `dnz_name_findings{kind}`
+and `dnz_name_checks_last_run_timestamp_seconds`, and AI assistants the read-only `list_name_findings`
+tool ([AI assistants](/integrations/ai-assistants)).
+
+## Where it runs
+
+Only the cluster's leader checks, and never a DNZ secondary following a primary. A round is due every
+6 hours by default (1 hour to a week, or only when asked), not right after a start. Nothing runs while
+visitors are being served, and nodes do nothing until asked. In a cluster, a node connected to another
+server can't be asked, and shows as "can't tell" or "not asked".
+
+## API
+
+| | |
+| --- | --- |
+| `GET /api/name-checks` | The settings, how the last round went, what's open per kind |
+| `GET /api/name-checks/findings` | Worst first, then newest: `state` (`open`, `dismissed`, `fixed`, `all`), `kind`, `q`, `page`, `per_page` |
+| `POST /api/name-checks/findings/{id}/dismiss` | `{"reason": "…"}` |
+| `POST /api/name-checks/findings/{id}/reopen` | Takes a dismissal back |
+| `POST /api/name-checks/run` | Asks for a round; the leader picks it up within seconds |
+| `PUT /api/name-checks/settings` | `{"scheduled": true, "every_hours": 6, "exposed_files": false}` |
