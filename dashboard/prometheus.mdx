@@ -199,7 +199,10 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_proxy_waf_hits_total` `{proxy,node,middleware,rule,action}` | Requests a DNZ Proxy [web application firewall](/proxy/waf) matched, by rule id and action (`block`: refused, `log`: only logged). Starts at 0 when a node restarts |
 | `dnz_proxy_waf_routes` `{proxy,state}` | A DNZ Proxy's HTTP routes to an upstream by what the WAF does on them: `block`, `log` or `off` |
 | `dnz_proxy_waf_page_blocks` `{kind}` | Different addresses and ranges (`ip`) or countries (`country`) blocked from Proxy → WAF, each counted once however many firewalls hold it |
-| `dnz_proxy_waf_bans` `{proxy,source}` | Addresses banned now (`proxy="all"`: every DNZ Proxy's; `source`: `auto`, a node decided, or `page`, by hand) |
+| `dnz_proxy_waf_bans` `{proxy,source}` | Addresses banned now (`proxy="all"`: every DNZ Proxy's; `source`: `auto`, a node decided, `page`, by hand, or `decoy`, a [decoy name](/proxy/decoys)) |
+| `dnz_decoy_names` | [Decoy names](/proxy/decoys) this server is watching for |
+| `dnz_decoy_touches_total` `{kind}` | Times a decoy name was touched, as this server heard of it (`visit`, `dns`) |
+| `dnz_decoy_bans_total` | Addresses banned for visiting a decoy name |
 | `dnz_proxy_node_bans_held` `{proxy,node}` | Bans a node holds, as it last reported (only while its proxy has bans on) |
 | `dnz_proxy_banned_requests_total` `{proxy,node}` | Requests a node refused because of a ban (also in its blocked requests). Starts at 0 when a node restarts |
 | `dnz_proxy_waf_list_ranges` `{list}` | Ranges a [list of bad networks](/proxy/waf-page#lists-of-bad-networks) holds, for each list turned on |
