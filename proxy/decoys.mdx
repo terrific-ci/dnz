@@ -1,0 +1,99 @@
+---
+title: "Decoy names"
+sidebarTitle: "Decoy names"
+description: "Names nobody has a reason to open, such as vpn-old.example.com: a visit bans the address on the proxy, a DNS query for one raises an alert. Per zone, off by default."
+---
+
+Names nobody has a reason to open, such as `vpn-old.example.com`. Whoever opens one is looking for a
+way in, so **a visit bans the address** on the proxy, and **a DNS query for one raises an alert**. A
+list per zone that you can edit, off by default.
+
+<Note>
+  Only [DNZ Proxy](/proxy/dnz-proxy) has bans, and bans cover HTTP routes only. A Traefik or Caddy proxy
+  can't answer decoy names, and TCP and UDP routes are never involved.
+</Note>
+
+## How it works
+
+Turning them on for a zone gives each name an ordinary record, tagged `decoy` and proxied through the
+DNZ Proxy you pick, and adds one route of DNZ's own for those names to that proxy. That route isn't
+listed under **Proxy → Routes**: nothing there can edit or delete it by accident.
+
+A visit gets a plain refusal, and within about ten seconds the address is
+[banned](/proxy/waf-page#bans-that-expire) on every node, with the note `block ban:decoy`, whether or
+not the proxy's automatic bans are on. Its requests count in the ban totals on the WAF page.
+
+A DNS query only alerts: it usually comes from a resolver, not from the attacker's address.
+
+## The list
+
+It is yours to edit. It starts with names chosen to look worth a look and to be unlikely in real use,
+and one click puts them back:
+
+`vpn-old`, `backup-admin`, `admin-old`, `staging-db`, `git-backup`, `jenkins-old`, `phpmyadmin-old`,
+`intranet-old`
+
+A name the zone already has, or a route already serves, is **skipped and shown**, never overwritten. A
+wildcard or the zone itself can't be a decoy.
+
+## Real people never land on one
+
+- They stay out of [typo help](/dns/typo-help)'s names: it never suggests `vpn-old` for a typo.
+- **Wildcard routes don't count.** Only the route for the exact names bans. If a wildcard route covers
+  a name on your list, the decoy takes that name from it (a name's own route always beats a wildcard)
+  and the Decoys tab says so. If the site behind the wildcard answers such names for real people, take
+  the name off the list.
+- **A real route always wins**: a route that gets a decoy's name takes it over, and so does a record of
+  your own at that name.
+- **Never banned:** DNZ's own checks, private and loopback addresses (they only alert), the entry
+  points' trusted forwarders, addresses the proxy's firewall allows, and the addresses of DNZ and of
+  the proxies and their nodes.
+
+## HTTPS
+
+| Choice | What happens |
+|---|---|
+| **Only a wildcard certificate** (default) | Served by a certificate that covers the name anyway, such as `*.example.com`. The names stay out of Certificate Transparency logs, so only someone guessing or scanning finds them. Without such a certificate, only `http://` reaches them. |
+| **A certificate of their own** | DNZ gets one certificate for the zone's names, published in those logs. Scanners read them, so this draws more of them. |
+
+## What it costs
+
+Nothing while off. On, and while no ban is held, the proxy's other routes do no ban lookup: it is as if
+the proxy had one more route per zone. Once a ban is held, visits do the one lookup any ban costs, for
+as long as it lasts. DNS answers never pay anything: the names are looked for in the query log's
+batches, off the answer path.
+
+## Secondaries and alerts
+
+Decoy names are records, so a DNZ secondary answers them as its primary does. A secondary also watches
+its own queries for them and tells its primary at its check-in, and **the primary alerts**, so a query
+that only reached a secondary still raises one.
+
+Alerts use the event `decoy` (**Settings → Notifications**, *Decoy name touched*). New providers have
+it; existing ones must tick it, and the Decoys tab says when no provider gets it. A zone's alerts come
+at most every 5 minutes, with everything new in one message. A query from loopback doesn't count.
+
+## Using it
+
+**DNS → Zones →** the zone **→ Decoys**: on or off, the DNZ Proxy, how long a ban lasts and where it
+holds, the certificate, the list with each name's state, and who touched them. Zones whose changes wait
+for approval can't have them, since a save writes the zone's records at once. **Proxy → WAF → Decoy
+names** lists who touched what across zones. In the record list the names carry a *Decoy* mark, and the
+topology map shows them as decoy names.
+
+```bash
+dnz zone decoys on example.com --proxy edge                 # the default names, a day's ban on edge's nodes
+dnz zone decoys on example.com --proxy edge --ban-minutes 10080 --ban-scope all --certificate own
+dnz zone decoys show example.com                            # the settings, each name's state
+dnz zone decoys add example.com old-portal backup-ftp       # a name the zone has is skipped and shown
+dnz zone decoys remove example.com jenkins-old
+dnz zone decoys reset example.com                           # the default names again
+dnz zone decoys touches example.com --kind visit            # who, paged
+dnz zone decoys off example.com                             # DNZ's records go, the list stays
+```
+
+- MCP: `zone_decoys` and `decoy_touches`, read-only.
+- Prometheus: `dnz_decoy_names`, `dnz_decoy_touches_total{kind="visit|dns"}`, `dnz_decoy_bans_total`.
+
+Nodes older than this version turn the route off and ban nobody; the Decoys tab names them. Who touched
+what is kept for 30 days.
