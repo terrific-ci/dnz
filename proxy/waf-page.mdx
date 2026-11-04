@@ -1,6 +1,6 @@
 ---
 title: "The WAF page"
-description: "See what the web application firewall caught and where it came from on a world map, look an attacker's address up, block it, its network or its country, and fix a false alarm in one click."
+description: "See what the web application firewall caught and where it came from on a world map, look an attacker's address up, block it, ban it for a while, challenge lists of bad networks, and fix a false alarm in one click."
 ---
 
 **Proxy → WAF** brings the [web application firewall](/proxy/waf) into one place: what it caught,
@@ -23,8 +23,11 @@ Pick a span (1 hour to 30 days), a proxy and a hostname at the top.
 | **Attack types, rules, addresses, hostnames, paths** | The busiest of each. Click a rule for its events, an address for its details, a hostname to show only that one |
 | **Events** | Each request the WAF matched, newest first. Filter by action, rule, country, address, or search a path, user agent or request ID. Open a row for what the rule catches, the full URL, the answer and the node |
 | **Coverage** | How many DNZ Proxy routes have the WAF, blocking or log only, at which sensitivity. Pick the routes without it and turn it on |
+| **Campaigns** | The addresses grouped by network, across hostnames, with what they did (see below) |
+| **Banned now** | Addresses refused for a while, with the time left, why and where, and **Unban** (see below) |
 | **Blocked from this page** | Everything you blocked here, with **Unblock** |
 | **Location data** | Where places and networks come from (see below) |
+| **Lists of bad networks** | Outside lists DNZ keeps up to date, their size and last update (see below) |
 
 <Note>
   Events come from the nodes' request logs, which keep a sample of what they serve. Blocked requests
@@ -70,6 +73,96 @@ after the firewall's own rules, so your allow rules still act first. A route wit
 the shared `waf-blocklist` firewall. A firewall other routes use blocks the address there too.
 **Unblock** takes it out of every firewall again.
 
+## Bans that expire
+
+A block stays until you take it out. A **ban** ends by itself: an address the WAF blocked too often
+is refused for a while, then let back in. It works like fail2ban, but across nodes.
+
+Bans are a DNZ Proxy feature on HTTP routes: Traefik and Caddy have no WAF to count, and a TCP or UDP
+route has no page to answer with.
+
+They are off by default. Turn them on per proxy, in its DNZ Proxy settings under **Bans that expire**:
+
+| Setting | What it does |
+| --- | --- |
+| **Blocks** within **minutes** | How many WAF blocks by one address ban it (20 within 5) |
+| **Ban for** | How long the ban lasts (60 minutes) |
+| **Who refuses it** | **This proxy**: the nodes of the proxy whose node saw the attack (the default). **Every DNZ Proxy**: all nodes of all DNZ Proxies |
+| **Private and loopback addresses too** | Off, an address on a private network is never banned on its own |
+
+The node that sees an address cross the number bans it at once, without waiting for DNZ, and the
+other nodes have the ban within seconds. Only blocks count: a route in log-only mode bans nobody.
+
+A banned visit gets the `403` *Access blocked* page with its request ID, never a dropped connection,
+so a real visitor banned by mistake sees why and has something to send you. The request log shows
+`block ban:<rule>`, with the rule that led to the ban.
+
+<Note>
+  A ban never stops the entry point's trusted forwarders, addresses the route's WAF allows, what the
+  route's firewall lets through with an allow rule, or DNZ's own uptime checks.
+</Note>
+
+**Banned now** lists them, newest first, with **Unban**. To ban one address by hand for an hour, pick
+**Ban for an hour** in the block dialog; this works without the settings above. Ranges and countries
+are for blocks. On the map and the chart, banned requests have a colour of their own, and the switch
+above the map folds them into blocked. Either way they count as blocked in the totals, in Analytics
+and in attack alerts.
+
+Off, a visit reads one setting it already holds and does nothing more; on, it does one lookup. A node
+older than DNZ 2.5 doesn't ban, and the panel names it. A node restarted while DNZ is away holds no
+bans until it connects again.
+
+## Lists of bad networks
+
+Outside lists of bad networks, kept up to date by DNZ. Your nodes never reach the internet for them:
+DNZ downloads each list and sends it to the nodes that need it.
+
+| List | Name | What it is | Terms |
+| --- | --- | --- | --- |
+| [Spamhaus DROP](https://www.spamhaus.org/blocklists/do-not-route-or-peer/) | `spamhaus-drop` | Networks taken over by spammers and criminals, IPv4 and IPv6. EDROP is part of it since 2024. Downloaded once a day, as Spamhaus asks | Free for any use, with credit to The Spamhaus Project |
+| [Tor exit nodes](https://metrics.torproject.org/collector.html) | `tor-exit` | Addresses Tor traffic leaves from, from Tor Metrics, every 6 hours | CC0 |
+| [abuse.ch Feodo Tracker](https://feodotracker.abuse.ch/blocklist/) | `feodo` | Command-and-control servers of banking botnets, every 6 hours. Often short or empty | CC0 |
+
+Lists are off by default, and a list does nothing by itself. A DNZ Proxy firewall rule names them, so
+it applies to the routes you pick and costs one lookup per request only there:
+
+<Steps>
+  <Step title="Add a rule to a firewall">
+    In **Proxy → Middlewares**, open a firewall and add a rule with the condition **Network list**.
+    DNZ downloads a list as soon as a rule names it.
+  </Step>
+  <Step title="Pick what it does">
+    A rule on a list **challenges** by default: the *Under attack* browser check, which real browsers
+    pass on their own and scripts don't. It can block or only log instead.
+  </Step>
+  <Step title="Give the firewall to your routes">
+    In the route dialog, or with batch edit.
+  </Step>
+</Steps>
+
+In JSON, the condition is `{ "field": "list", "op": "in", "values": ["tor-exit", "spamhaus-drop"] }`.
+
+<Warning>
+  Saving such a rule is refused while a node of a proxy using that firewall is older than DNZ 2.5,
+  naming the node: an older node would turn the routes using it off. What isn't a browser (an app, a
+  monitor) can't pass a challenge and gets a `403`, so add an allow rule above it for those you trust.
+</Warning>
+
+DNZ leaves out private and reserved ranges and anything wider than a `/8` (`/16` for IPv6), and keeps
+the last good copy when a download fails. Lists are read by the node's firewall, so a Traefik or
+Caddy proxy has none. A list can't be turned off while a rule names it.
+
+## Campaigns
+
+The addresses the WAF matched, grouped by network (ASN), across hostnames, with what they did:
+
+> AS4134 Chinanet: 3 addresses, 291 requests, 2 hostnames, Path traversal and SQL injection
+
+Without the ASN database (see Location data) they group by `/24` (`/48` for IPv6). Times and hostnames
+come from the latest events, so they may leave out some on a busy day. Open an address for its
+details, or block the campaign's addresses or their `/24`s: the same block as above. Blocking a whole
+network by its ASN isn't offered.
+
 ## When it wasn't an attack
 
 When the WAF stops a real visitor or app, use **Not an attack…** on its event and pick the narrowest
@@ -105,7 +198,17 @@ dnz proxy waf unblock 203.0.113.0/24
 dnz proxy waf except shop.example.com --skip-path /search
 dnz proxy waf coverage                             # routes with and without the WAF
 dnz proxy waf locations --download                 # DNZ's country and ASN databases
+dnz proxy settings edge --bans on --ban-blocks 20 --ban-within 5 --ban-minutes 60 --ban-scope proxy
+dnz proxy waf bans                                 # who is banned now
+dnz proxy waf ban 203.0.113.9 --for 1h             # by hand; --proxy edge for one proxy
+dnz proxy waf unban 203.0.113.9
+dnz proxy waf lists                                # the lists, their size and last update
+dnz proxy waf lists --on tor-exit                  # keep one up to date; --off, --download
+dnz proxy waf campaigns --since 24h                # attacks grouped by network
+dnz proxy waf campaign-block AS4134 --host shop.example.com   # its addresses; --ranges for its /24s
 ```
 
 AI assistants get the MCP tools `proxy_waf_overview`, `proxy_waf_events`, `proxy_waf_address`,
-`proxy_waf_coverage` and, with write access, `waf_block`, `waf_unblock` and `waf_exception`.
+`proxy_waf_coverage`, `proxy_waf_bans`, `proxy_waf_lists`, `proxy_waf_campaigns` and, with write
+access, `waf_block`, `waf_unblock`, `waf_exception`, `waf_ban` and `waf_unban`. Downloading lists
+and location databases is left to people.

@@ -321,6 +321,12 @@ dnz proxy waf except shop.example.com --skip-rule sqli-union   # or --skip-path 
 dnz proxy waf coverage                             # routes with and without it
 dnz proxy waf blocks                               # what was blocked, and in which firewalls
 dnz proxy waf locations --download                 # DNZ's country and ASN databases
+dnz proxy waf bans                                 # who is banned now: why, until when, where, by whom
+dnz proxy waf ban 203.0.113.9 --for 1h             # refuse one address for a while (every DNZ Proxy, or -p edge)
+dnz proxy waf unban 203.0.113.9                    # back in now
+dnz proxy waf lists --on tor-exit                  # the lists of bad networks; --off, --download
+dnz proxy waf campaigns --since 24h                # attacks grouped by network
+dnz proxy waf campaign-block AS4134 --everywhere   # its addresses; --ranges for its /24s
 ```
 
 ### Rules
@@ -513,6 +519,7 @@ dnz proxy settings edge --peak-tracking off       # stop counting, within second
 dnz proxy settings edge --server-header origin    # visitors get the origin's Server header
 dnz proxy settings edge --server-header dnz       # "Server: dnz" instead (the default for new proxies)
 dnz proxy settings edge --request-id on           # a DNZ-Request-Id on every request (off by default)
+dnz proxy settings edge --bans on --ban-blocks 20 --ban-within 5 --ban-minutes 60 --ban-scope proxy   # ban an address the WAF keeps blocking (off by default)
 ```
 
 [Peak concurrency](/proxy/dnz-proxy#peak-concurrency) is off by default, since counting it adds a

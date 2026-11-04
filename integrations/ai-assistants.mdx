@@ -154,6 +154,9 @@ and ask for the next page.
 | `proxy_waiting_rooms` | DNZ Proxy waiting rooms now: visitors in, the limit and visitors waiting, per hostname |
 | `proxy_waf_rules` | The [web application firewall](/proxy/waf)'s rules (id, category, level, what each catches), optionally only those a sensitivity runs |
 | `proxy_waf_hits` | Requests the web application firewall matched since each node started, per proxy, middleware, rule and action (`block` or `log`) |
+| `proxy_waf_bans` | Addresses [banned](/proxy/waf-page#bans-that-expire) now: reason, when it ends, where and who made it; each proxy's ban settings (paged) |
+| `proxy_waf_lists` | The [lists of bad networks](/proxy/waf-page#lists-of-bad-networks): size, last update, terms and the firewalls naming each |
+| `proxy_waf_campaigns` | Attacks [grouped by network](/proxy/waf-page#campaigns), across hostnames: addresses, requests, hostnames, attack types, times (paged) |
 | `proxy_nodes` | DNZ Proxy nodes and their servers: state, version, uptime, upstreams, and the node's CPU and memory, the machine's or container's memory, load average and free disk; a page of them (`page`, `limit`, `proxy`) with the total and how many wait for approval, or one `node` |
 | `proxy_node_updates` | [Updating DNZ Proxy nodes](/proxy/dnz-proxy#updating-nodes), per proxy: what an update would do for each node (`ready`, `current`, `by_hand` with the command, `offline`), the update under way node by node, and past ones with why one stopped. Read-only: starting one is for people |
 | `proxy_sites` | [Read-only proxies](/proxy/read-only) (a Caddy or Traefik DNZ only reads): their division, API, what DNS answers with, records mode, sync state and last error, and every hostname of their last read with its status |
@@ -192,6 +195,8 @@ and ask for the next page.
 | `set_route_redirect` ✎ | Redirects every visit to a route's hostnames to another address (`to`, `keep_path`, `permanent`), or removes the redirect (`off`); the rest of the route stays |
 | `set_route_rules` ✎ | Sets a route's [rules](/proxy/rules) (redirects, rewrites and header changes when conditions hold, in order), or removes them (`off`); the rest of the route stays. Answers with each rule in plain words; a rule a Traefik or Caddy can't run is refused with its number |
 | `set_waf` ✎ | Sets or turns off a DNZ Proxy route's web application firewall (`mode`, `sensitivity`, `skip_paths`, `skip_rules`, `allow_ips`); the rest of the route stays. Refused on Traefik and Caddy |
+| `waf_ban` ✎ | Refuses one address for a while (`minutes`, 60 by default), on every DNZ Proxy or one; it comes back in by itself ([bans](/proxy/waf-page#bans-that-expire)) |
+| `waf_unban` ✎ | Lets a banned address back in now |
 
 ✎ marks the tools that change DNS or what visitors see. They are only offered with **read and change** access (OAuth),
 `--allow-writes` (stdio) or an API token. A change that needs approval isn't made: the tool answers
