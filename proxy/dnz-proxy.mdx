@@ -456,10 +456,10 @@ holds:
 | **Certificates** | Where the routes' certificates come from: the ACME account and the DNS credentials added for names DNZ couldn't prove |
 | **Ports** | The [entry points](#entry-points) |
 | **Cache** | What each node holds, and **Clear cache** |
-| **Nodes and DNS** | Joining without approval, the TTL of proxied answers, checking the nodes' ports, cache sizes, request log sampling, **Peak concurrency** (off by default, see [Peak concurrency](#peak-concurrency)), the GeoIP database |
+| **Nodes and DNS** | Joining without approval, the TTL of proxied answers, checking the nodes' ports, cache sizes, request log sampling, **Peak concurrency** (off by default, see [Peak concurrency](#peak-concurrency)), the [Server header](#the-server-header), the GeoIP database |
 
-From the CLI, `dnz proxy settings <proxy>` shows them and `--peak-tracking on|off` sets peak
-concurrency.
+From the CLI, `dnz proxy settings <proxy>` shows them, `--peak-tracking on|off` sets peak
+concurrency and `--server-header dnz|origin` the Server header.
 
 ### Route defaults
 
@@ -491,6 +491,72 @@ What every route of the proxy gets, without touching a router, live on every nod
 
 They go into the nodes' configuration as `dnz-defaults-*` routers, services and middlewares, so names
 starting with `defaults-` are DNZ's own. A firewall used here can't be deleted until it is taken off.
+
+### The Server header
+
+What visitors see as the web server, the way Cloudflare answers with `server: cloudflare`:
+
+| Value | Visitors get |
+| --- | --- |
+| `dnz` | `Server: dnz` on every answer. The origin's own `Server` (`Apache/2.4.41 (Ubuntu)`, `nginx/1.18.0`) is replaced, so its software and version don't show. DNZ Proxy's own answers say it too: status pages, the block page, the browser check, the waiting room, typo help, redirects, 404s and errors. |
+| `origin` | The origin's `Server` as it sent it. DNZ Proxy's own pages send none. |
+
+New proxies start with `dnz`. Proxies made before DNZ 2.4 keep `origin`, so nothing changes for them
+when you upgrade.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    **Proxy** → open the proxy → **Settings** → **Nodes and DNS** → **Server header**.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz proxy settings edge --server-header dnz
+    ```
+
+  </Tab>
+</Tabs>
+
+A route's own header rules still win. A [rule](/proxy/rules) that removes `Server`, or a headers
+middleware with `customResponseHeaders` for `Server` (`""` removes it, any other value sets it), applies
+after this setting, on the site's answers and on DNZ Proxy's own pages. Answers from the cache get it
+too. A malformed request that is refused before any route is read (a 400 for a broken header) still
+says `Server: Pingora`. Nodes older than 2.4 ignore the setting and pass the origin's header on.
+
+### A request's ID (`DNZ-Request-Id`)
+
+Every request a node answers gets an ID of 16 hex digits, sent as `DNZ-Request-Id: 8f2a1b3c4d5e6f70`
+(as Cloudflare sends `CF-Ray`). The same ID goes:
+
+- to the visitor, on every answer (the site's, the cache's and DNZ Proxy's own pages),
+- to the origin, as a `DNZ-Request-Id` request header, so its own logs can name it. One the visitor
+  sends is replaced, never passed on.
+- on DNZ Proxy's own pages (status pages, the block page, the browser check, the waiting room, typo
+  help) as their **Request ID**,
+- onto the request log line, when the line is kept (the request log is sampled).
+
+When a visitor reports a failed page, or an origin log line looks wrong, search the request log for
+its ID. The line tells you which node answered.
+
+<Tabs>
+  <Tab title="Dashboard">
+
+    **Proxy** → **Analytics** → the request log's search box.
+
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz proxy logs -q 8f2a1b3c4d5e6f70
+    ```
+
+  </Tab>
+</Tabs>
+
+`DNZ-Request-Id` is always sent, whatever the Server header setting. A route's rules can remove it
+like any other header. TCP and UDP routes have none, and nodes older than 2.4 send none.
 
 ## Entry points
 

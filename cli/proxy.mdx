@@ -495,6 +495,8 @@ ports, cache sizes, request log lines per second, the GeoIP database and peak co
 dnz proxy settings edge                           # show them
 dnz proxy settings edge --peak-tracking on        # nodes count the most requests in progress and connections open at once
 dnz proxy settings edge --peak-tracking off       # stop counting, within seconds
+dnz proxy settings edge --server-header origin    # visitors get the origin's Server header
+dnz proxy settings edge --server-header dnz       # "Server: dnz" instead (the default for new proxies)
 ```
 
 [Peak concurrency](/proxy/dnz-proxy#peak-concurrency) is off by default, since counting it adds a
@@ -592,6 +594,7 @@ dnz proxy analytics --host app.example.com -n 50  # that hostname's 50 busiest p
 dnz proxy logs                                    # newest 50 request log lines
 dnz proxy logs --host app.example.com --status 5xx -q /api
 dnz proxy logs --client 198.51.100.7 -n 200
+dnz proxy logs -q 8f2a1b3c4d5e6f70                # one request, by its DNZ-Request-Id (each line ends with it)
 dnz proxy logs -f                                 # follow, oldest first (with --json: one JSON line each)
 ```
 
