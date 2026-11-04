@@ -98,6 +98,30 @@ dnz ca download 7 --key -o nas-with-key.pem       # with the private key (supera
 - `revoke --reason` is `unspecified` (default), `key_compromise`, `superseded`,
   `cessation_of_operation` or `affiliation_changed`.
 
+## ACME
+
+The CA's [ACME server](/proxy/private-ca#acme): certbot, lego, Caddy, Traefik and cert-manager ask it for
+certificates themselves. Off by default. Settings, keys and allow lists are for superadmins; proxy managers read.
+
+```bash
+dnz ca acme                                       # = dnz ca acme show: on or off, the directory address, counts
+dnz ca acme on --address https://dns.lab.internal # on; --address: where clients reach DNZ
+dnz ca acme off                                   # nothing answers under /acme/; accounts and certificates stay
+dnz ca acme set --days 30                         # certificates' validity (90 days by default)
+dnz ca acme set --require-key off --default-allow lab.internal  # anyone may sign up, and may ask for this
+dnz ca acme set --no-default-allow                # accounts without a key may ask for nothing until given a list
+dnz ca acme keys add lab.internal office.lan --name "traefik on web1"  # one per client: its secret shows once
+dnz ca acme keys                                  # = keys list, without their secrets
+dnz ca acme keys delete 4                         # an account it bound stays
+dnz ca acme accounts --search lab.internal --status valid --page 2
+dnz ca acme allow 3 lab.internal                  # what the account may ask for, replacing the list
+dnz ca acme deactivate 3 --yes                    # for good; its certificates stay valid until revoked
+dnz ca acme orders --account 3 --status invalid   # what clients asked for, and why it failed
+```
+
+`dnz ca list` lists what they got with the rest (`FOR`: `acme`); `dnz ca revoke` works on it. DNZ holds no key for
+those, so `reissue` and `download --key` are refused.
+
 ## Where the CA is used
 
 ```bash

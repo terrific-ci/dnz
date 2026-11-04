@@ -22,6 +22,9 @@ It lives under **Proxy → Certificates → Private CA** in the dashboard, and `
   <Card title="Certificates it signs" icon="certificate" href="#certificates">
     For routes, Traefik, Caddy, DNZ's own DoT and DoH, and client certificates (mTLS).
   </Card>
+  <Card title="ACME" icon="plug" href="#acme">
+    Traefik, Caddy, cert-manager and certbot ask the CA for certificates themselves.
+  </Card>
   <Card title="Secondaries and clusters" icon="clone" href="#secondaries-and-clusters">
     Shared in a cluster; carried across a take over by export and import.
   </Card>
@@ -358,6 +361,180 @@ The root is public and needs no sign-in: it is the certificate only, no key.
 
 The same files are also under `/api/ca/root.crt`, `/api/ca/root.cer` and `/api/ca/root.mobileconfig`.
 
+## ACME
+
+Traefik, Caddy, cert-manager, certbot and lego can ask the CA for certificates themselves over ACME
+(RFC 8555), as they would ask Let's Encrypt, and renew them by themselves. **Private CA → ACME** in the
+dashboard, [`dnz ca acme`](/cli/ca#acme) on the command line. It is **off by default**: nothing answers
+under `/acme/` until a superadmin turns it on.
+
+The directory address to give clients is `https://<DNZ>/acme/private-ca/directory`. It names the CA, not a
+version, so it stays the same through new versions.
+
+<Warning>
+  ACME is meant to run over HTTPS. Give DNZ a certificate ([Encrypted DNS](/dns/encrypted-dns#from-the-private-ca);
+  the private CA can sign it) and have clients trust the root. Plain `http://` works, but some clients refuse it.
+</Warning>
+
+| Setting | Default | |
+| --- | --- | --- |
+| On | off | Off: `/acme/` answers 404 |
+| The address clients reach DNZ on | the address each request came to | Goes into every address the server hands out. Set it when clients come through a reverse proxy |
+| Who may sign up | clients with a key | Or anyone who can reach DNZ |
+| What new accounts may ask for | nothing | For accounts without a key, when anyone may sign up |
+| Certificates are valid for | 90 days | Up to the issuing CA's own end. Clients may not ask for their own dates |
+
+### Who gets which names
+
+An order is only taken when every name in it is inside the CA's [name constraints](#name-constraints) **and**
+on the account's **allow list**: zones or suffixes (`lab.internal` covers it and every name under it,
+wildcards included).
+
+An account gets its list from the **external key** it signed up with (external account binding): a key a
+superadmin makes per client, with what that client may ask for. A key binds one account, and its secret shows
+once, when it is made. If anyone may sign up, a new account gets the *What new accounts may ask for* list; left
+empty, it can't get anything until a superadmin gives it a list.
+
+<Note>
+  The allow list is what authorizes a name in a zone DNZ holds, since DNZ answers that DNS challenge itself.
+  Keep it as narrow as each client needs.
+</Note>
+
+### Challenges
+
+| Challenge | How it is checked | |
+| --- | --- | --- |
+| `dns-01` | For a name in a zone DNZ holds, DNZ's own DNS answers `_acme-challenge.<name>` from the order's token while the order waits. **No record is written**, no serial moves, nothing to clean up: the client just says it is ready. For a name elsewhere, DNZ asks its own resolver, and the client must have written the record | The only one for wildcards |
+| `http-01` | DNZ fetches `http://<name>/.well-known/acme-challenge/<token>`, looking the name up with its own resolver, from its own network. Redirects are followed to ports 80 and 443 only. The client must answer there | Not for wildcards |
+
+`tls-alpn-01` is not offered. Only DNS names are ordered; addresses aren't. A pending answer sits next to any
+real TXT record at the name, and costs DNS nothing while no challenge is pending.
+
+### Set up a client
+
+The dashboard has a guide per client with the address, the name and the key filled in and a copy button on each
+block. Run it on the machine with the client: it doesn't have to be DNZ's. With `https://dns.lab.internal` as
+DNZ's address, and the root downloaded first ([Public addresses](#public-addresses)):
+
+<Tabs>
+  <Tab title="certbot">
+
+    ```bash
+    # A name in a zone DNZ holds: the hooks do nothing on purpose
+    sudo REQUESTS_CA_BUNDLE=/etc/ssl/dnz/root.crt certbot certonly --non-interactive --agree-tos \
+      --server https://dns.lab.internal/acme/private-ca/directory --email you@example.com \
+      --eab-kid dnz-… --eab-hmac-key … \
+      --manual --preferred-challenges dns --manual-auth-hook /bin/true --manual-cleanup-hook /bin/true \
+      -d app.lab.internal
+    ```
+
+    For `http-01`, `--standalone --preferred-challenges http` in place of the `--manual` line: port 80 must
+    reach this machine from DNZ's network.
+
+  </Tab>
+  <Tab title="lego">
+
+    ```bash
+    sudo LEGO_CA_CERTIFICATES=/etc/ssl/dnz/root.crt EXEC_PATH=/bin/true lego --accept-tos \
+      --server https://dns.lab.internal/acme/private-ca/directory --email you@example.com \
+      --eab --kid dnz-… --hmac … --dns exec --dns.resolvers dns.lab.internal:53 \
+      --domains app.lab.internal run
+    ```
+
+    For `http-01`, `--http` in place of `--dns exec --dns.resolvers …`.
+
+  </Tab>
+  <Tab title="Caddy">
+
+    ```text
+    {
+      email you@example.com
+      acme_ca https://dns.lab.internal/acme/private-ca/directory
+      acme_ca_root /etc/caddy/dnz-root.crt
+      acme_eab {
+        key_id dnz-…
+        mac_key …
+      }
+    }
+    ```
+
+    Caddy then gets and renews the certificates of its sites by itself, over `http-01`: port 80 must reach it
+    from DNZ's network.
+
+  </Tab>
+  <Tab title="Traefik">
+
+    ```yaml
+    # traefik.yml, with LEGO_CA_CERTIFICATES=/etc/traefik/dnz-root.crt in its environment
+    certificatesResolvers:
+      dnz:
+        acme:
+          caServer: https://dns.lab.internal/acme/private-ca/directory
+          email: you@example.com
+          storage: /etc/traefik/dnz-acme.json
+          certificatesDuration: 2160
+          httpChallenge:
+            entryPoint: web
+          eab:
+            kid: dnz-…
+            hmacEncoded: …
+    ```
+
+  </Tab>
+  <Tab title="cert-manager">
+
+    ```bash
+    kubectl -n cert-manager create secret generic dnz-acme-key --from-literal=secret='…'
+    ROOT=$(curl -fsSL "http://192.168.1.10:8080/ca/root.crt" | base64 -w0)
+    kubectl apply -f - <<EOF
+    apiVersion: cert-manager.io/v1
+    kind: ClusterIssuer
+    metadata:
+      name: dnz
+    spec:
+      acme:
+        server: https://dns.lab.internal/acme/private-ca/directory
+        email: you@example.com
+        caBundle: $ROOT
+        privateKeySecretRef:
+          name: dnz-acme-account
+        externalAccountBinding:
+          keyID: dnz-…
+          keySecretRef:
+            name: dnz-acme-key
+            key: secret
+        solvers:
+          - http01:
+              ingress:
+                ingressClassName: nginx
+    EOF
+    ```
+
+  </Tab>
+</Tabs>
+
+### What it signs
+
+Every certificate is listed under Private CA → Certificates (*For an ACME client*), and every issuance is in the
+[audit log](/admin/audit-log) (`ca.acme.issue`, by `acme account <id>`). DNZ never holds its private key, so it is
+neither served to proxies, nor renewed by DNZ, nor counted in the alerts about expiring certificates: the client
+renews, and an old certificate simply ends. **Revoke** works as for any other certificate, here or over ACME (by
+the account that ordered it, by one holding valid authorizations for all its names, or with the certificate's own
+key), and lands in the revocation list.
+
+A new version of the CA doesn't touch these certificates: they keep working until they end, and each client's next
+renewal comes from the new version. An older version can be retired only after they ended. Orders that finished and
+certificates that ended stay for 30 days, then go.
+
+### In a cluster, on a secondary
+
+- In a [cluster](/deploy/cluster) any server answers: accounts and orders live in the database. Nonces are per
+  server, so a nonce from another server gets `badNonce` with a fresh one, which clients retry with.
+- A DNZ secondary following a primary signs nothing: `/acme/` answers 503 there, and its settings are refused. It
+  does answer the primary's pending `dns-01` challenges, **within a minute**. A client that checks all of a zone's
+  name servers before it says it is ready (lego, cert-manager) may wait that long.
+- After a take over, the new primary has no CA of the old one, so clients have to sign up again there.
+
 ## Security
 
 - The CA's keys live in DNZ's database like every private key DNZ holds, so they are in its
@@ -369,12 +546,17 @@ The same files are also under `/api/ca/root.crt`, `/api/ca/root.cer` and `/api/c
 - Everything is in the [audit log](/admin/audit-log): `ca.create`, `ca.change`, `ca.version`,
   `ca.retire`, `ca.export`, `ca.import`, `ca.certificate.issue`, `ca.certificate.reissue`,
   `ca.certificate.revoke` and `ca.certificate.download_key`.
+- The ACME server's settings, external keys and allow lists need a superadmin and are audited too
+  (`ca.acme.settings`, `ca.acme.key_create`, `ca.acme.key_delete`, `ca.acme.account_allow`,
+  `ca.acme.account_deactivate`), and so is what clients do (`ca.acme.account`, `ca.acme.issue`,
+  `ca.acme.revoke`, `ca.acme.key_change`).
 - **Export** (superadmin, confirmed) gives the active version with its keys as one PEM file, to back it
   up or move it. **Import** makes such a file the active version. Anyone with the file can sign
   certificates every device that trusts the root accepts: keep it like a password.
-- The [AI assistant tool](/integrations/ai-assistants) `private_ca` reads the CA, its certificates and
-  the root, never a key. An assistant signed in over OAuth can't download a certificate's key or export
-  the CA.
+- The [AI assistant tools](/integrations/ai-assistants) `private_ca` and `private_ca_acme` read the CA, its
+  certificates, the root and the ACME server's accounts, keys and orders, never a key or a key's secret. An
+  assistant signed in over OAuth can't download a certificate's key, export the CA, or change anything of the
+  ACME server.
 
 ## Secondaries and clusters
 
@@ -411,6 +593,7 @@ The same files are also under `/api/ca/root.crt`, `/api/ca/root.cer` and `/api/c
 | `dnz_ca_certificate_expiry_seconds{id,certificate}` | Seconds until a certificate of the CA ends (revoked ones left out) |
 | `dnz_ca_root_expiry_seconds{version}` | Seconds until a version's root ends (retired ones left out) |
 | `dnz_ca_intermediate_expiry_seconds{version}` | Seconds until a version's intermediate ends: no certificate it signs outlives it |
+| `dnz_ca_acme_enabled`, `dnz_ca_acme_accounts{status}`, `dnz_ca_acme_orders{state}`, `dnz_ca_acme_certificates` | The [ACME server](#acme): on or off, its accounts, its orders, the certificates clients got that haven't ended |
 
 Certificates the CA signs also count in `dnz_certificate_expiry_timestamp_seconds` (`source="ca"`) and in
 the [proxy alerts](/integrations/notifications#proxy-alerts) for certificates about to expire. See
@@ -430,7 +613,6 @@ Every command is in [CLI → Private CA](/cli/ca), every endpoint in [Private CA
 
 ## Not yet
 
-- An ACME server in DNZ, so Traefik, Caddy, cert-manager or servers elsewhere ask the CA for certificates
-  themselves.
 - OCSP (the revocation list covers revocation inside a network).
+- Over ACME: addresses as names (RFC 8738), `tls-alpn-01`, renewal information (ARI).
 - An offline root (only the intermediate inside DNZ).

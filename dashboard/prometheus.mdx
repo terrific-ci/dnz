@@ -177,6 +177,10 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_ca_certificates{state}` | Certificates DNZ's [private CA](/proxy/private-ca) signed, DNZ's own included, by state (`pending`, `valid`, `failed`, `revoked`) |
 | `dnz_ca_certificate_expiry_seconds{id,certificate}` | Seconds until a certificate of the private CA ends (revoked ones left out) |
 | `dnz_ca_root_expiry_seconds{version}`, `dnz_ca_intermediate_expiry_seconds{version}` | Seconds until a CA version's root or intermediate ends (retired versions left out); no certificate the intermediate signs outlives it |
+| `dnz_ca_acme_enabled` | 1 while the private CA's [ACME server](/proxy/private-ca#acme) answers |
+| `dnz_ca_acme_accounts{status}` | Its accounts (`valid`, `deactivated`) |
+| `dnz_ca_acme_orders{state}` | Its orders (`waiting`, `valid`, `invalid`; finished ones are kept 30 days) |
+| `dnz_ca_acme_certificates` | Certificates ACME clients got from the CA that haven't ended; they renew by themselves, so they stay out of the expiry metrics |
 | `dnz_proxy_enabled`, `dnz_proxies{kind}` | Whether proxying is on (1), and approved proxies by kind (`traefik`, `dnz`, `caddy`) |
 | `dnz_proxies_by_access{access}` | Approved proxies by [access](/proxy/overview#private-and-public-proxies): `private` (reached only from inside the network) or `public` |
 | `dnz_proxy_upstreams{protocol}` | Upstreams (Proxy → Upstreams, shared by every proxy) by kind of traffic: `http`, `tcp`, `udp` |
