@@ -101,7 +101,8 @@ Each rule starts at one sensitivity and runs at every higher one:
 - Analytics' **Firewall rules** list counts the rules that matched; blocked requests count as blocked.
 - `dnz proxy analytics` prints the blocked and logged counts with the top rules and addresses.
 - `dnz proxy routes waf-hits edge` lists matches since each node started, per rule and action.
-- Prometheus: `dnz_proxy_waf_hits_total{proxy, node, middleware, rule, action}`.
+- Prometheus: `dnz_proxy_waf_hits_total{proxy, node, middleware, rule, action}`, and for coverage and
+  the page's blocks `dnz_proxy_waf_routes{proxy, state}` and `dnz_proxy_waf_page_blocks{kind}`.
 - AI assistants: the MCP tools `proxy_waf_rules`, `proxy_waf_hits` and, with write access, `set_waf`.
 
 ## Exceptions
