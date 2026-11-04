@@ -219,6 +219,27 @@ dnz cf sync example.com on --proxied
 dnz cf sync example.com now
 ```
 
+## Sync a zone once
+
+**Sync to Cloudflare** in a local zone's menu (right-click it in the zone list) pushes the zone to
+the Cloudflare zone of the same name once, after a preview.
+
+- A record Cloudflare has under the same name and type with another value is **updated** to DNZ's
+  value, keeping its proxy switch, comment and tags. A different TTL is updated too.
+- A record Cloudflare lacks is **added** with the comment **Synced from DNZ**.
+- **Nothing on Cloudflare is deleted**, and names DNZ doesn't have are not touched.
+- A and AAAA records with private addresses stay local unless you tick **Send private addresses
+  too**: in a split-horizon zone they would replace the public address.
+
+<Warning>
+Unlike *Keep in sync*, this also changes records made on Cloudflare. Check the preview first.
+</Warning>
+
+```bash
+dnz cf push example.com --update --dry-run
+dnz cf push example.com --update
+```
+
 ## More of a Cloudflare zone
 
 Below a Cloudflare zone's records:
