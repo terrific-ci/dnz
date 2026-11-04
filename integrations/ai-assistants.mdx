@@ -158,6 +158,7 @@ and ask for the next page.
 | `zone_decoys` | A zone's [decoy names](/proxy/decoys): on or off, the DNZ Proxy, the ban, each name's state |
 | `decoy_touches` | Who touched a decoy name in the last 30 days: visits, which ban, and DNS queries, which only alert (paged) |
 | `proxy_waf_lists` | The [lists of bad networks](/proxy/waf-page#lists-of-bad-networks): size, last update, terms and the firewalls naming each |
+| `proxy_bot_traffic` | Humans, verified bots, AI crawlers and fake bots over a span on [routes that tell them apart](/proxy/waf-page#bots): totals, over time, per hostname, the top crawlers, the fake ones' addresses; with `catalog` the names DNZ knows |
 | `proxy_waf_campaigns` | Attacks [grouped by network](/proxy/waf-page#campaigns), across hostnames: addresses, requests, hostnames, attack types, times (paged) |
 | `proxy_nodes` | DNZ Proxy nodes and their servers: state, version, uptime, upstreams, and the node's CPU and memory, the machine's or container's memory, load average and free disk; a page of them (`page`, `limit`, `proxy`) with the total and how many wait for approval, or one `node` |
 | `proxy_node_updates` | [Updating DNZ Proxy nodes](/proxy/dnz-proxy#updating-nodes), per proxy: what an update would do for each node (`ready`, `current`, `by_hand` with the command, `offline`), the update under way node by node, and past ones with why one stopped. Read-only: starting one is for people |
@@ -201,6 +202,7 @@ and ask for the next page.
 | `set_route_redirect` ✎ | Redirects every visit to a route's hostnames to another address (`to`, `keep_path`, `permanent`), or removes the redirect (`off`); the rest of the route stays |
 | `set_route_rules` ✎ | Sets a route's [rules](/proxy/rules) (redirects, rewrites and header changes when conditions hold, in order), or removes them (`off`); the rest of the route stays. Answers with each rule in plain words; a rule a Traefik or Caddy can't run is refused with its number |
 | `set_waf` ✎ | Sets or turns off a DNZ Proxy route's web application firewall (`mode`, `sensitivity`, `skip_paths`, `skip_rules`, `allow_ips`); the rest of the route stays. Refused on Traefik and Caddy |
+| `set_ai_crawlers` ✎ | [What AI crawlers may do](/proxy/waf-page#what-a-route-lets-ai-crawlers-do) (`allow`, `block`, `robots`) on the routes of some hostnames or every DNZ Proxy route |
 | `waf_ban` ✎ | Refuses one address for a while (`minutes`, 60 by default), on every DNZ Proxy or one; it comes back in by itself ([bans](/proxy/waf-page#bans-that-expire)) |
 | `waf_unban` ✎ | Lets a banned address back in now |
 

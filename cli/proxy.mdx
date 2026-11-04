@@ -329,6 +329,15 @@ dnz proxy waf campaigns --since 24h                # attacks grouped by network
 dnz proxy waf campaign-block AS4134 --everywhere   # its addresses; --ranges for its /24s
 ```
 
+[AI crawlers and verified bots](/proxy/waf-page#bots), DNZ Proxy only:
+
+```bash
+dnz proxy routes edit edge shop.example.com --ai-crawlers block   # allow (the default), block, or robots: as the site's robots.txt says
+dnz proxy routes list --type ai-crawlers           # the routes with a setting
+dnz proxy bots --since 7d                          # humans, verified bots, AI crawlers, fake bots (--proxy, --host, -n)
+dnz proxy bots --list                              # the names DNZ knows, and how each is checked
+```
+
 ### Rules
 
 A route's [rules](/proxy/rules): redirects, rewrites and header changes when conditions hold, run from

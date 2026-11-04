@@ -1,6 +1,6 @@
 ---
 title: "The WAF page"
-description: "See what the web application firewall caught and where it came from on a world map, look an attacker's address up, block it, ban it for a while, challenge lists of bad networks, and fix a false alarm in one click."
+description: "See what the web application firewall caught and where it came from on a world map, look an attacker's address up, block it, ban it for a while, challenge lists of bad networks, decide what AI crawlers may do, catch fake Googlebots, and fix a false alarm in one click."
 ---
 
 **Proxy → WAF** brings the [web application firewall](/proxy/waf) into one place: what it caught,
@@ -28,6 +28,7 @@ Pick a span (1 hour to 30 days), a proxy and a hostname at the top.
 | **Blocked from this page** | Everything you blocked here, with **Unblock** |
 | **Location data** | Where places and networks come from (see below) |
 | **Lists of bad networks** | Outside lists DNZ keeps up to date, their size and last update (see below) |
+| **Bots** | Humans, verified bots, AI crawlers and fake bots per hostname, the top crawlers, the fake ones' addresses (see below) |
 
 <Note>
   Events come from the nodes' request logs, which keep a sample of what they serve. Blocked requests
@@ -167,6 +168,82 @@ come from the latest events, so they may leave out some on a busy day. Open an a
 details, or block the campaign's addresses or their `/24`s: the same block as above. Blocking a whole
 network by its ASN isn't offered.
 
+## Bots
+
+Decide what AI crawlers may do on a route, and catch visitors who only claim to be a search engine. Both
+are off by default and run on DNZ Proxy.
+
+<Warning>
+  Traefik and Caddy can't do this. A setting on one of their routes is kept but does nothing: the proxy's
+  page warns *AI crawler settings are DNZ Proxy only*, and the crawler gets in.
+</Warning>
+
+Only routes that ask look at a request's user agent: one with an AI crawler setting, or one whose firewall
+has a rule on bots. Every other route runs exactly as before and counts nothing.
+
+### What a route lets AI crawlers do
+
+GPTBot, ClaudeBot, CCBot, Bytespider, PerplexityBot and the others, by their user agent. Pick in the route
+dialog under **Who gets in**, in the **Bots** section of this page, or with `--ai-crawlers`:
+
+| Setting | What happens |
+| --- | --- |
+| **Allow** (the default) | Nothing looks at them |
+| **Block** | They get the `403` page, logged as `block ai:GPTBot` |
+| **As robots.txt says** | Each crawler only where the site's own `robots.txt` lets it in; elsewhere the `403` page, logged as `block robots:GPTBot` |
+
+For **As robots.txt says**, the node reads `/robots.txt` from the site's server after a crawler's first
+visit, never while a visit waits, and keeps it for an hour.
+
+<Warning>
+  A crawler is let in until the file is known, and whenever it can't be read: a 404, a server error or a
+  timeout all count as *no rules* for ten minutes. So a crawler's first visit to a hostname always gets
+  through. To keep it out from the first request, use **Block**.
+</Warning>
+
+`/robots.txt` itself stays open to crawlers, in **Block** too, so a polite one can read that it isn't
+welcome. A firewall rule that allows the visit first wins over the setting.
+
+<Note>
+  **Google-Extended** and **Applebot-Extended** are only words in `robots.txt`: their requests say Googlebot
+  and Applebot, so no route can refuse them. Write them in your `robots.txt`.
+</Note>
+
+### Verified bots
+
+A visitor claiming Googlebot, Bingbot, Applebot, DuckDuckBot, YandexBot, Baiduspider, UptimeRobot or Pingdom
+is first treated as a **plain visitor**. DNZ checks the address in the background, against the ranges the
+vendor publishes or by forward-confirmed reverse DNS (the reverse name must be in the vendor's domains, such as
+`*.googlebot.com`, and that name must point back to the address). The verdict holds for a day: **verified** or
+**fake**, and a fake one's log line says `fake bot`. None of it holds up a request.
+
+If the check can't finish (a resolver that fails, a list that can't be read), there is no verdict and it stays a
+plain visitor: a DNS failure never makes a real crawler fake. The same goes for a claim from a private address,
+which is usually a forwarder you haven't told the entry point to trust.
+
+The names ship with DNZ, from each vendor's own documentation, and reach the nodes only while a route or
+firewall of that proxy uses them. **Names DNZ knows** in the section lists them all.
+
+### Rules on bots
+
+Add a rule with the condition **Bot** to a firewall in **Proxy → Middlewares**. It takes *verified*, *fake* and
+*AI crawler*, with any action:
+
+```json
+{ "name": "fakes", "action": "challenge", "conditions": [{ "field": "bot", "op": "in", "values": ["fake"] }] }
+```
+
+A visitor with no verdict yet is none of them, so its first visits pass. A node refuses a firewall with a field
+it doesn't know, and the routes using it: so a rule on bots and an AI crawler setting are refused while a node
+older than DNZ 2.5 serves that proxy, naming the node to update. Update a node before it joins.
+
+### The section
+
+**Humans** here means what is left of the requests told apart: people, bots DNZ doesn't know, and visitors whose
+claim hasn't been checked yet. Routes that don't tell bots apart count in none of these. Per hostname you see
+what its routes let AI crawlers do, and can change it there or for every route; each change is a version in
+[route history](/proxy/route-history). Click a fake bot's address for its details.
+
 ## When it wasn't an attack
 
 When the WAF stops a real visitor or app, use **Not an attack…** on its event and pick the narrowest
@@ -210,9 +287,13 @@ dnz proxy waf lists                                # the lists, their size and l
 dnz proxy waf lists --on tor-exit                  # keep one up to date; --off, --download
 dnz proxy waf campaigns --since 24h                # attacks grouped by network
 dnz proxy waf campaign-block AS4134 --host shop.example.com   # its addresses; --ranges for its /24s
+dnz proxy routes edit edge shop.example.com --ai-crawlers block   # or robots, allow
+dnz proxy bots --since 7d                          # humans, verified bots, AI crawlers, fake bots
+dnz proxy bots --list                              # the names DNZ knows and how each is checked
 ```
 
 AI assistants get the MCP tools `proxy_waf_overview`, `proxy_waf_events`, `proxy_waf_address`,
 `proxy_waf_coverage`, `proxy_waf_bans`, `proxy_waf_lists`, `proxy_waf_campaigns` and, with write
 access, `waf_block`, `waf_unblock`, `waf_exception`, `waf_ban` and `waf_unban`. Downloading lists
-and location databases is left to people.
+and location databases is left to people. `proxy_bot_traffic` reads the Bots section and, with write
+access, `set_ai_crawlers` sets what AI crawlers may do.
