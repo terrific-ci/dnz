@@ -169,7 +169,7 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_ratelimit_limited_total`, `dnz_rrl_responses_total` | Rate limiting |
 | `dnz_access_sign_ins_total` | Sign-ins to proxied routes (allowed, denied, failed) |
 | `dnz_cloudflare_syncs_total`, `dnz_cloudflare_sync_records_total` | Local zones pushed to Cloudflare, and the records added, updated or removed |
-| `dnz_logpush_lines_total`, `dnz_logpush_failures_total` | Log push |
+| `dnz_logpush_lines_total`, `dnz_logpush_failures_total` | Log push: per server, and `{source="proxy",job,proxy,node}` per DNZ Proxy node, with `dnz_logpush_lag_seconds`, `dnz_logpush_last_push_timestamp_seconds` and `dnz_logpush_node_pushing` |
 | `dnz_web_terminal_runs_total{result}` | Commands typed in the dashboard's [CLI](/cli/browser), by how they ended |
 | `dnz_dnssec_validations_total{result}` | DNSSEC validation |
 | `dnz_domain_expiry_days{zone,domain}` | Days until a [monitored domain](/dns/domain-expiry) expires |
@@ -203,7 +203,7 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_proxy_sites_sync_success{proxy,kind}` | A [read-only proxy](/proxy/read-only): 1 when the last sync of its sites worked (those not paused), `kind` `caddy` or `traefik`; `dnz_proxy_sites_sync_timestamp_seconds` says when |
 | `dnz_caddy_sync_success`, `dnz_caddy_sync_timestamp_seconds` `{id,caddy,kind}` | The same under their names from before v2 (Sites in DNS; `id` is the proxy's), kept for one release: move dashboards and alerts to `dnz_proxy_sites_sync_*` |
 | `dnz_health_findings{status}` | [Diagnostics](/admin/diagnostics) findings by status |
-| `dnz_uptime_up{monitor,kind}`, `dnz_uptime_response_seconds{monitor}`, `dnz_uptime_ratio_30d{monitor}` | [Uptime monitors](/dashboard/uptime): 1 while up (0 while down), the last check's response time, and the share of the last 30 days' checks it was up. Also `dnz_uptime_status`, `dnz_uptime_last_check_timestamp_seconds` and `dnz_uptime_open_incidents` |
+| `dnz_uptime_up{monitor,kind}`, `dnz_uptime_response_seconds{monitor}`, `dnz_uptime_ratio_30d{monitor}` | [Uptime monitors](/dashboard/uptime): 1 while up (0 while down), the last check's response time, and the share of the last 30 days' checks it was up. Also `dnz_uptime_status`, `dnz_uptime_last_check_timestamp_seconds`, `dnz_uptime_open_incidents` and, for monitors checked from several places, `dnz_uptime_place_up{monitor,place}` and `dnz_uptime_place_response_seconds{monitor,place}` |
 | `dnz_dhcp_leases{server}`, `dnz_dhcp_read_success{server}` | DHCP servers' live leases, and whether DNZ can read them |
 | `dnz_ipam_conflicts{division}` | What [IPAM](/integrations/dhcp#ipam) found that doesn't add up |
 

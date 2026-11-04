@@ -214,6 +214,9 @@ dnz logpush add siem --dataset query-log --to http --url https://siem.example.co
   --header "Authorization=Bearer …" --source blocked --source error
 dnz logpush add loki --dataset audit-log --to loki --url http://loki:3100 --label env=prod
 dnz logpush add syslog --to syslog --address 10.0.0.5:514 --protocol tcp
+dnz logpush add waf --source proxy --security-only --to http --url https://siem.example.com/ingest
+dnz logpush add edge --source proxy --proxy Edge --every-request --to loki --url http://loki:3100
+dnz logpush nodes waf
 dnz logpush test siem
 dnz logpush disable siem
 dnz logpush rm siem

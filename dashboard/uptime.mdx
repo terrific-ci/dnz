@@ -60,6 +60,34 @@ Under attack and the waiting room would stop DNZ's own checks (a check runs no s
 its checks for each DNZ Proxy serving the hostname, and the nodes let them through those two;
 sign-in, the WAF and the firewall still apply.
 
+## Checks from several places
+
+From one place, a problem on DNZ's own network reads as an outage. A URL monitor can also be checked
+from **DNZ Proxy nodes** elsewhere (the dialog's *Where it checks from*): it is then down only when most
+places agree, and each place's response time shows.
+
+A **place** is a node's name or a **region**, a label on a node: start it with `--region jakarta`
+(`DNZ_PROXY_REGION`), or set it in the node's dialog. A region is one place, however many nodes are in
+it. DNZ itself is always one of the places.
+
+| State | When, among the places that answered |
+| --- | --- |
+| **Down** | More than half of the places failed *Down after* checks in a row (2 by default) |
+| **Degraded** | Some places fail or are slower than the limit, but not more than half |
+| **Up** | All of them pass |
+
+The incident and the alert say so (*down from 2 of 3 places: DNZ: answered 502; jakarta: no answer within
+10 s*), the monitor's details show each place with its last checks, and the 24 h, 30 and 90 day numbers
+count the monitor as a whole, as for any other.
+
+Only the cluster's leader schedules. It asks each place's node over that node's stream, and a node's
+check carries the same signature as DNZ's, so *Under attack* and the waiting room don't stop it. **A place
+that can't be asked doesn't count**, either way, and says why: a node older than this version, one not
+connected to the leader, a name no node goes by any more.
+
+A DNZ Proxy upstream monitor has no places: it already reads what every node reports. The public status
+page shows nothing new: no places, numbers per place or node names.
+
 ## A group of routes
 
 Rather than one monitor per route, watch a whole group from **Proxy → Routes**: **Add monitor → A
