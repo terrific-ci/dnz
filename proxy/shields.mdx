@@ -1,0 +1,97 @@
+---
+title: "Shields"
+description: "Virtual patches for apps you can't upgrade yet: stop Log4Shell, Confluence, Exchange, PHP and other known vulnerabilities at the proxy, one route at a time."
+---
+
+A **shield** stops one known vulnerability from being exploited, for an app you can't upgrade yet. It
+recognises the request (a path, and where it takes one, a parameter or header shape) and answers it
+with a `403` page, before your servers see it. Upgrading is still the fix.
+
+Shields are off by default, a [DNZ Proxy](/proxy/dnz-proxy) runs them, and they work whether the
+route's [web application firewall](/proxy/waf) is on or off.
+
+## Turn one on
+
+<Steps>
+  <Step title="Open the route">
+    On the proxy's page, open the route in front of the app (**Routes** → the route).
+  </Step>
+  <Step title="Pick its shields">
+    Under **Shields for apps that can't be upgraded**, tick those for what the app runs. Each says
+    its CVE, the product, what it stops and what it costs.
+  </Step>
+  <Step title="Save">
+    Every node has it within a second.
+  </Step>
+</Steps>
+
+Or from the terminal:
+
+```bash
+dnz proxy routes edit edge wiki.example.com --shield cve-2022-26134 --shield cve-2023-22515
+dnz proxy routes edit edge wiki.example.com --shield -cve-2023-22515   # one off
+dnz proxy routes edit edge wiki.example.com --shield off               # every one off
+dnz proxy routes edit edge blog.example.com shop.example.com --shield cve-2020-25213   # several routes at once
+dnz proxy waf shields --since 7d                                       # each one's CVE, routes and hits
+```
+
+In the route's YAML it is `shields: [cve-2022-26134]`, and [route history](/proxy/route-history) shows
+and restores it.
+
+## The shields
+
+| Shield | Product | Stops |
+| --- | --- | --- |
+| `cve-2014-6271` | GNU Bash (Shellshock) | Commands hidden in a header, which an old Bash behind CGI scripts runs |
+| `cve-2017-5638` | Apache Struts 2 | OGNL code in the `Content-Type` header |
+| `cve-2017-9841` | PHPUnit | Code sent to `eval-stdin.php` left reachable in a site's vendor folder |
+| `cve-2020-25213` | WP File Manager (WordPress) | Uploads through the plugin's `connector.minimal.php`, which needs no sign-in |
+| `cve-2021-3129` | Laravel Ignition | Code run through `/_ignition/execute-solution`, open when debug mode is left on |
+| `cve-2021-34473` | Microsoft Exchange (ProxyShell, ProxyNotShell) | The autodiscover address tricked into reaching the back end (also CVE-2022-41040) |
+| `cve-2021-41773` | Apache HTTP Server 2.4.49 and 2.4.50 | Encoded dots in the path, which climb out of the site's folder (also CVE-2021-42013) |
+| `cve-2021-44228` | Apache Log4j 2 (Log4Shell) | A `${jndi:…}` lookup in the address or any header |
+| `cve-2022-26134` | Atlassian Confluence | OGNL code in the path |
+| `cve-2023-22515` | Atlassian Confluence | A request that reopens the setup, so that anyone can make an administrator |
+| `cve-2024-4577` | PHP on CGI | PHP command-line options in the query string (Windows; the older CVE-2012-1823 too) |
+| `cve-2024-27198` | JetBrains TeamCity | An address ending in `;.jsp`, which walks past the sign-in |
+| [`php2shell`](/proxy/upload-limits#shield-an-old-php-from-php2shell) | PHP | PHP's upload progress field (CVE-2026-109618, CVE-2026-109619) |
+
+`php2shell` is a preset of the [upload limits](/proxy/upload-limits), since it looks at an upload's
+fields as the body streams in; its flag stays `--php2shell`. The others look at the path, the query
+and the headers, never at a request's body: a vulnerability reached only through a body isn't covered.
+
+## What they stopped
+
+A request a shield stopped shows on the [WAF page](/proxy/waf-page) like a rule of the WAF, under the
+attack type *Known vulnerabilities*, each event with its CVE. It counts toward
+[bans](/proxy/waf-page#bans-that-expire) and the attack alerts too.
+
+**Shields** on that page lists them all, with the release that added each one, the routes that have
+it on and the requests it stopped. Below that, **Worth a look** names routes that seem to run a
+shield's product, going by their hostnames, upstream and server ports (`wordpress` in a hostname, port
+8090 for Confluence). DNZ doesn't ask the app, so check before you rely on it: a shield does nothing
+for an app without the vulnerability.
+
+The WAF's exceptions don't reach a shield. When one stops something real, **Not an attack…** on its
+event turns it off for the routes of that hostname, and route history can undo that.
+
+## What they cost
+
+Off, nothing: a route without a shield runs nothing more. On, a request that matches none costs one
+pass over the path, and over what the picked shields look at without a path of their own: the query,
+or every header for Shellshock and Log4Shell. Each shield's line in the route dialog says which.
+
+## How they update
+
+The definitions come from DNZ, only those a proxy's routes use, and each node compiles them. So new
+shields and corrected signatures reach your nodes with DNZ's own release, without updating the nodes.
+DNZ doesn't fetch new shields between releases.
+
+A node older than DNZ 2.5 can't run them: its routes go on without them, and the WAF page names it
+until it is [updated](/proxy/dnz-proxy).
+
+## Traefik and Caddy
+
+Shields run on DNZ Proxy only. A route that a Traefik or Caddy also serves has them on the DNZ Proxy
+alone, so visitors reaching it through the others aren't shielded: the route dialog, the API, batch
+edit and the CLI all say so. A proxy YAML naming shields for a Traefik or Caddy is refused.
