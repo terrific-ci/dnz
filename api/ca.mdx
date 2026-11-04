@@ -85,6 +85,26 @@ No sign-in: these hold certificates only, no key.
 | `GET` | `/ca/<id>.crl` | A version's revocation list (DER) |
 | `GET` | `/ca/check` | Over HTTPS: a page saying whether the device trusts the CA |
 
+## The ACME server
+
+For what it does, see [ACME](/proxy/private-ca#acme).
+
+| Method | Path | Who | Body / answer |
+| --- | --- | --- | --- |
+| `GET` | `/api/ca/acme` | `proxy.manage` | The settings, the directory address, addresses DNZ can be reached on, counts |
+| `PUT` | `/api/ca/acme` | superadmin | `{"enabled": true, "require_key": true, "days": 90, "base_url": "https://dns.lab.internal", "default_allow": []}` |
+| `GET` | `/api/ca/acme/accounts` | `proxy.manage` | Paged (`page`, `per_page`), `q`, `status` |
+| `PUT` | `/api/ca/acme/accounts/{id}` | superadmin | `{"allowed_names": ["lab.internal"]}` |
+| `POST` | `/api/ca/acme/accounts/{id}/deactivate` | superadmin | For good; its certificates stay valid until revoked |
+| `GET` | `/api/ca/acme/keys` | `proxy.manage` | External keys, paged, without their secrets |
+| `POST` | `/api/ca/acme/keys` | superadmin | `{"name": "traefik on web1", "allowed_names": ["lab.internal"]}`: the only answer holding `hmac_key` |
+| `DELETE` | `/api/ca/acme/keys/{id}` | superadmin | An account it bound stays |
+| `GET` | `/api/ca/acme/orders` | `proxy.manage` | Paged, `account`, `status` |
+
+RFC 8555 itself is under `/acme/private-ca/`, with no sign-in: `directory`, `new-nonce`, `new-account`, `new-order`,
+`account/{id}`, `account/{id}/orders`, `order/{id}`, `order/{id}/finalize`, `authz/{id}`, `chall/{id}/{type}`,
+`cert/{id}`, `revoke-cert` and `key-change`. Requests are JWS, ES256 or RS256.
+
 ## DNZ's own certificate
 
 `PUT /api/encrypted-dns/certificate` with `"resolver": "private-ca"` has the CA sign DNZ's own certificate
