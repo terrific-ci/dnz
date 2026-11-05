@@ -184,6 +184,17 @@ These are left out, with a warning on the proxy's page:
 | TCP and UDP routers | All of them (Caddy needs the layer4 plugin) |
 | TLS options and stores | All of them |
 
+## HTTP/3
+
+Caddy serves HTTP/3 by itself and sends `Alt-Svc`, so a Caddy DNZ configures has it on unless you say
+otherwise. It needs **UDP port 443 open on the host's firewall** (`sudo ufw allow 443/udp`) and
+published in Docker (`"443:443/udp"`, which the setup guide does). While it is closed, browsers stay
+on TCP.
+
+To turn it off, use **HTTP/3** on the proxy's **Settings** tab, or `dnz proxy edit edge --http3 off`:
+DNZ then lists only `h1` and `h2` as `protocols` on Caddy's HTTPS server, and Caddy closes the UDP
+port. On leaves Caddy's configuration exactly as it was. A read-only Caddy's own configuration decides.
+
 ## Trying the endpoint by hand
 
 Run this from the Caddy's machine, so DNZ recognizes it by that address:

@@ -650,10 +650,79 @@ Per entry point:
 - **Trusted forwarders**: peers whose `X-Forwarded-*` headers are kept. From anyone else they are
   replaced, and `X-Real-Ip` and `Forwarded` are dropped. See [The visitor's address](#the-visitors-address).
 - Timeouts for idle connections and for reading a request.
+- **HTTP/3** on an HTTPS entry point ([below](#http3)), off by default.
 
 Changing these on a running node keeps the port open. New connections get the new settings at once,
 and connections already open finish their request on the old ones and close. A new address opens
 before the old one closes (on the same port, the old one closes first, for a moment).
+
+### HTTP/3
+
+Turn on **HTTP/3** on an HTTPS entry point and its nodes also listen on UDP on the same port (QUIC).
+Browsers learn about it from the `Alt-Svc` header on the entry point's answers
+(`Alt-Svc: h3=":443"; ma=86400`) and use it from their next request. A visit over HTTP/3 goes through
+the same routers, middlewares, firewall, WAF, cache, load balancing, analytics and request log as one
+over TCP, with the same certificates and client certificates. The request log shows it as `HTTP/3.0`.
+
+It is **off by default**. While it is off, no UDP port opens, and the node doesn't send `Alt-Svc` or
+spend anything on it per request. Turning it off closes the UDP port and stops `Alt-Svc` at once: open
+connections get a GOAWAY and a few seconds to finish, and browsers that remember HTTP/3 fall back to
+TCP on their next request.
+
+<Warning>
+  UDP has to be open, and DNZ can't do that for you. Open the port on each node's firewall and in the
+  cloud's security group, and publish it where the node runs in a container. While it is closed
+  nothing breaks: browsers stay on TCP.
+</Warning>
+
+<CodeGroup>
+```bash Firewall
+sudo ufw allow 443/udp
+```
+
+```bash Docker
+docker run … -p 80:80 -p 443:443 -p 443:443/udp …
+```
+
+```yaml Compose
+ports:
+  - "80:80"
+  - "443:443"
+  - "443:443/udp"
+```
+
+```yaml Swarm
+# Host mode: the routing mesh would hide visitors' addresses.
+ports:
+  - { target: 443, published: 443, protocol: udp, mode: host }
+```
+</CodeGroup>
+
+A node in Kubernetes needs `hostPort: 443` with `protocol: UDP` on its container, or a `LoadBalancer`
+Service that keeps the client address (`externalTrafficPolicy: Local`). If you can't open the same port
+(a container publishing `8443` for `443`), set **Port for `Alt-Svc`** to the one visitors reach.
+
+Worth knowing:
+
+- **No 0-RTT.** Early data can be replayed by anyone who captured it, and origins can't tell it from a
+  normal request. A returning visitor pays one round trip, as on TLS 1.3 over TCP.
+- **No PROXY protocol.** QUIC has none, so an HTTP/3 visitor's address is the one it reaches the node
+  from. It suits nodes that face visitors directly, the normal setup, as DNS answers with the nodes'
+  addresses. Behind an L4 load balancer that hides that address, leave HTTP/3 off.
+- **WebSocket** stays on HTTP/1.1 and HTTP/2, where browsers open it anyway. Upstreams are reached the
+  way they always are: only visitors speak HTTP/3.
+- **An `Alt-Svc` of the site's own wins**: one from the origin or a route's header rule is left alone.
+- A UDP entry point on the same port is refused when saving. If something else holds the UDP port, the
+  entry point shows the error, TCP goes on without `Alt-Svc`, and the node tries again every 10 seconds.
+- **Socket buffers:** under heavy HTTP/3 load, Linux's default UDP buffers (208 KiB) can drop packets.
+  They are a host setting, not a container's: `sudo sysctl -w net.core.rmem_max=7500000
+  net.core.wmem_max=7500000` if `nstat -az UdpRcvbufErrors` climbs.
+
+From the command line: `dnz proxy entrypoints edit "Edge JKT" websecure --http3 on` and
+`dnz proxy http3` ([CLI](/cli/proxy#entry-points-and-http3)). Prometheus has
+[`dnz_proxy_http3_*`](/dashboard/prometheus) while a node has the port open. Nodes older than this
+version ignore the switch and stay on TCP, without `Alt-Svc`.
+[Caddy](/proxy/caddy#http3) and [Traefik](/proxy/traefik#http3) have their own way.
 
 ### The visitor's address
 
