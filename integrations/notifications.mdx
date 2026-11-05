@@ -31,6 +31,7 @@ automatically, and **Send test** checks a provider right away.
 | `proxy_attack` | Requests blocked on a hostname spike (see [Proxy alerts](#proxy-alerts)); and when it is over |
 | `proxy_origin` | A proxy service's server fails its health check; and when it answers again |
 | `name_finding` | [Name checks](/dashboard/name-checks) found something new: one message per round, however much it found |
+| `failover_drill` | A [failover drill](/dashboard/failover-drills) failed: once per run, with its report |
 | `proxy_node` | A DNZ Proxy node stops reporting, a Traefik or Caddy stops fetching its configuration; and when it is back |
 | `certificate_failed` | A [DNZ Proxy certificate](/proxy/certificates) failed 3 times in a row; and when it is issued after all |
 | `certificate_expiring` | A certificate in use ends within 14 days |

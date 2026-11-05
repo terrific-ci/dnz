@@ -170,6 +170,8 @@ and ask for the next page.
 | `encrypted_dns` | Encrypted DNS: whether DoT, DoH, DoQ and DoH3 are on, the addresses devices use, the certificate in use and, for superadmins, the certificate DNZ issues itself |
 | `audit_log` | Who changed what, newest first; `page` and `limit` (20 a page) |
 | `list_name_findings` | What DNZ found looking at [its own names](/dashboard/name-checks): dangling CNAMEs, names anyone can claim, origins reachable without the proxy, exposed files, each with how to fix it, and how the last round went; `state`, `kind`, `search`, `page` and `limit` (20 a page). `origin_unknown` never means safe. Read-only |
+| `failover_drills` | The [failover drills](/dashboard/failover-drills) set up: whether they are switched on, what each stage does, the run under way, each drill's window, schedule and last result; `search`, `page` and `limit` (20 a page). Read-only: people start drills |
+| `failover_drill_runs` | Past drills, newest first, each with its report: time to notice, time until traffic moved, errors visitors saw, what didn't go as set; `drill`, `status`, `page` and `limit` (20 a page). Read-only |
 | `list_changes` | [What changed](/dashboard/what-changed) around an incident or in a window: records, routes, firewall and WAF rules, certificates, nodes, settings and earlier incidents on one timeline, each line only if the caller may read its source, lines about `near` or the `incident` first; `page` and `limit` (20 a page). It shows what happened before and never what caused it. Read-only |
 | `pending_changes` | Change requests waiting for approval (or, with `status`, decided ones); `page` and `limit` (20 a page) |
 | `topology` | How divisions, zones, views, upstreams, proxies and replication fit together |

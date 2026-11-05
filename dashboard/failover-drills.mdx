@@ -1,0 +1,131 @@
+---
+title: "Failover drills"
+description: "On a schedule, DNZ takes a server or a node out on purpose and reports whether the failover worked and how long it took. Off by default."
+---
+
+**High availability → Drills.** A failover you have never tried is a guess. On a schedule, DNZ takes
+something out on purpose and reports whether the failover worked and how long it took.
+
+<Warning>
+A drill touches production on purpose, so it is **off by default**. Switching drills on starts nothing by
+itself: a drill runs only if you set one up, and by itself only if you say so.
+</Warning>
+
+## What keeps it safe
+
+- **Nothing is killed.** A node leaves DNS and stops answering, or one node counts a server as down.
+  The process stays, open connections finish, and the origin isn't touched.
+- **It is refused when it would leave nothing.** No drill takes out the last healthy node of a proxy, or
+  the last healthy server of an upstream, or a server without a health check (nothing would notice).
+- **It runs only in your window**, on its schedule or when someone starts it, and only when it can finish
+  inside it.
+- **It stops by itself**: at its time limit, and at the first sign of visitors getting errors.
+- **An undone drill leaves no change behind**, even if DNZ restarts in the middle. What a drill changes is
+  written down before it changes it, and every change has an end time. A node that lost DNZ comes back by
+  itself, in its own clock.
+- **One at a time.** None starts while another drill, a [node update](/proxy/dnz-proxy#updating-nodes), or
+  an open incident on what it touches is under way.
+- **People start drills.** An assistant only reads them.
+
+## The stages
+
+Start with the first; go on when it passes.
+
+| Stage | What it does |
+| --- | --- |
+| **An origin server** | One node's health checks count one server of an upstream as down until the end. Nothing else changes and the server isn't touched: the node sends its visitors to the upstream's other servers. Needs another healthy server and a health check on the upstream |
+| **A node** | The node leaves DNS, DNZ waits for resolvers to let go of it (the proxy's DNS TTL, a minute at most), then the node closes its listeners and stops reporting until the end, as if its machine were gone. Open connections finish, and it comes back by itself. Needs another healthy node |
+| **A take over's dry run** | Asks what a take over would ask, and whether the other side is up to date. Changes nothing, holds nothing, and never takes over. A real one is too heavy to do on a schedule |
+
+The first two are for **DNZ Proxy** only: DNZ can't take anything out on a Traefik or Caddy it doesn't run.
+Nodes must run this version or newer; an older one is refused by name.
+
+## How a run goes
+
+<Steps>
+  <Step title="Reading">
+    For 30 seconds nothing changes: DNZ reads what errors look like now, so a site that always answers some
+    500s doesn't count against the drill.
+  </Step>
+  <Step title="Asking again">
+    Everything that could refuse it is asked again, right before anything changes.
+  </Step>
+  <Step title="Out">
+    A server is counted as down, or a node leaves DNS and then stops answering.
+  </Step>
+  <Step title="Noticed">
+    For a server, the node's next health check finds it down, as it would a real failure. For a node, DNZ
+    notices the way it notices a real failure: its reports stop, or its check of the node's port fails.
+  </Step>
+  <Step title="Held">
+    For 30 seconds once traffic moved, to see visitors aren't hurt.
+  </Step>
+  <Step title="Back">
+    Everything goes back, and DNZ waits up to 3 minutes until it is as it was.
+  </Step>
+</Steps>
+
+## When it stops by itself
+
+Whichever comes first, and everything goes back at once:
+
+| What | The run ends as |
+| --- | --- |
+| **Visitors' errors**: 5xx answers on the proxy's nodes above what they were before by the points you set (1 by default, at least 5 errors) | failed |
+| **A monitor it covers fails a check**: its check still runs and tells the truth, though it counts nothing while the drill is on | failed |
+| **No other healthy node or server is left** | failed |
+| **Nothing noticed within the time limit**, or the node didn't take the order within 40 seconds | failed |
+| **A real alert or incident opens** on the proxy or on what it touches: the alert goes out as usual | stopped |
+| **A node update starts**, or someone switches drills off or presses **Stop** | stopped |
+
+A node that **doesn't come back** within 3 minutes after a drill fails it, by name. If it is still gone, its
+usual alert goes out too.
+
+## The report
+
+Each run is kept with its drill's history, a page at a time, and stays when the drill goes:
+
+- **Time to notice**: from taking it out until its health check found the server down, or DNZ found the node gone.
+- **Time until traffic moved**: for a server, until nothing was in progress to it on that node; for a node, until
+  its requests fell to a tenth of what they were. For a node this is mostly your DNS TTL, and the number to look at.
+- **Errors visitors saw**: 5xx answers on the proxy's nodes during the drill, against the share before it. Nodes
+  that can't tell (older ones, or with analytics off) are named: their errors aren't in the count. A connection
+  refused by a stopped node shows on no node: that is why a node's drill waits for the TTL first, and why a
+  monitor's failed check counts.
+- **What didn't go as set**: noticing or moving slower than the seconds you expect (120 by default), visitors
+  still arriving after the node's time in DNS, a take over's check that failed.
+
+A run ends as **passed**, **failed** (it found something), **stopped** (someone or something ended it, no
+finding), or **refused** (a schedule's chance that wasn't safe, said once per window, with why).
+
+<Note>
+A passed drill says the failover worked that day, under that day's traffic. It isn't proof of the next one.
+</Note>
+
+## Quiet on purpose
+
+A drill uses [scheduled maintenance's way](/dashboard/uptime) of keeping things quiet, only for what it covers:
+
+- **Monitors** of the hostnames it covers keep checking, but a failed check counts nothing: no incident, nothing
+  in the day's uptime. Their row says *In maintenance until …*.
+- **Alerts** about its node and its server wait. If it is still down after the drill, they go out then.
+- **Its incident** is marked *A failover drill*, and is never on the public status page.
+
+A real failure elsewhere alerts as ever. On the same proxy that also stops the drill.
+
+## Secondaries
+
+A node's address leaving DNS reaches a DNZ secondary as a real failure does: the primary's answers change, the
+zone's serial moves, and the transfer no longer holds it (and again on the way back). Only the cluster's leader
+runs drills, never a DNZ secondary or a standby.
+
+## Alerts
+
+Add the event **A failover drill failed** (`failover_drill`) to a notification provider (Settings →
+Notifications). New providers get it; existing ones keep the events they had. It goes out once per failed run.
+
+## Related
+
+- [`dnz drill`](/cli/drills)
+- [Drills API](/api/drills)
+- [Prometheus metrics](/dashboard/prometheus)
