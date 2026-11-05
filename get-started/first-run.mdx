@@ -24,11 +24,13 @@ everything, including managing other users, divisions and roles.
       </Step>
     </Steps>
 
-    You're signed in when it's done, and the [setup wizard](#the-setup-wizard) takes over.
+    You're signed in when it's done. Next comes [connecting Cloudflare](#connect-cloudflare-optional),
+    which you can skip, and then the [setup wizard](#the-setup-wizard) takes over.
   </Tab>
   <Tab title="dnz setup">
-    Without the web UI, run this on the server. It asks for the admin and the first division, then
-    the setup wizard's questions, in the terminal:
+    Without the web UI, run this on the server. It asks for the admin and the first division, offers
+    to connect Cloudflare (leave it empty to skip), then asks the setup wizard's questions, in the
+    terminal:
 
     ```bash
     dnz setup
@@ -65,6 +67,27 @@ everything, including managing other users, divisions and roles.
   welcome page, set `DNZ_JOIN_CODE`, or run `dnz setup --join-code`, and it signs in with the
   primary's superadmins. See [A new server as a secondary](/dns/replication#a-new-server-as-a-secondary).
 </Tip>
+
+## Connect Cloudflare (optional)
+
+If your domains are on Cloudflare, you can connect the account right after creating the admin. On the
+setup page a screen follows the last step, with an API token or
+[Sign in with Cloudflare](/integrations/cloudflare#connect-a-division) where the server has it set up.
+
+**Skip** is always there and needs nothing filled in: setup is already finished by then. A token
+Cloudflare refuses shows the reason, and you can try another or skip. Reloading the screen or coming
+back from Cloudflare doesn't repeat anything. Connect later under **Settings → Integrations →
+Cloudflare**, or with `dnz cloudflare connect`.
+
+In a script, give `dnz setup` the token in `DNZ_CLOUDFLARE_TOKEN` (or `--cloudflare-token`). A refused
+token is reported and setup still finishes:
+
+```bash
+DNZ_PASSWORD='…' DNZ_CLOUDFLARE_TOKEN='…' dnz setup --username admin --division IT
+```
+
+With [`--proxy-only`](/proxy/proxy-only) it is offered too, since that is where your routes' records
+can go. A server that joins a primary or a cluster isn't asked.
 
 ## The setup wizard
 

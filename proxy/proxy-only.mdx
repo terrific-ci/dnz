@@ -49,8 +49,9 @@ docker compose -f docker-compose.proxy-only.yml up -d
 
 At its first start (no proxy yet) DNZ turns proxying on, makes a DNZ Proxy called **Default** and runs
 a node of it in the same container, which serves your routes on ports 80 and 443. Open
-`http://<host>:8080`, create the admin (two steps: the admin and the first division) and add a route
-under **Proxy → Routes**. More nodes on other servers join the same proxy as always
+`http://<host>:8080`, create the admin (two steps: the admin and the first division), connect Cloudflare
+if your domains are there ([optional](/get-started/first-run#connect-cloudflare-optional): **Skip** goes
+straight in) and add a route under **Proxy → Routes**. More nodes on other servers join the same proxy as always
 ([DNZ Proxy](/proxy/dnz-proxy)).
 
 On a Linux server without Docker, the installer sets up the service the same way:
