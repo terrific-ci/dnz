@@ -17,6 +17,18 @@ dnz filter show                               # server-wide: mode, lists, rules 
 dnz filter show --division it
 ```
 
+## History and undo
+
+Every change of these settings is kept 90 days. Undoing one puts back that change alone, through the
+same checks as the dashboard, and is a new line itself (see [History](/dns/filtering#history)).
+
+```bash
+dnz filter history                                 # server-wide, newest first (--division, --page, --limit)
+dnz filter history --kind list -q ads.example --who alice   # kind: list, rule, network, client, schedule, safe_search, mode, block_page
+dnz filter history --show 42                       # one line, its domain lines, what undoing it does
+dnz filter undo 42                                 # says what it does and asks; --yes to skip
+```
+
 ## Blocklists
 
 Blocklists can be in hosts, AdGuard or domain-list format. A list can also come from a text file of
