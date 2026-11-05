@@ -166,6 +166,7 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_secondary_server_version_info{secondary,version}`, `dnz_secondary_server_uptime_seconds`, `…_memory_bytes`, `…_cpu_ratio`, `…_host_cpus`, `…_load1`, `…_host_memory_total_bytes`, `…_host_memory_used_bytes`, `…_disk_total_bytes`, `…_disk_available_bytes`, `…_query_log_bytes` `{secondary}` | A DNZ secondary's [numbers](/dashboard/server#secondary-servers) as of its last check-in, on its primary. One too old to send them has no samples |
 | `dnz_query_log_bytes`, `dnz_query_log_files` | This server's [query log](/dns/query-logs) day files: their size (WAL included) and how many days are kept |
 | `dnz_query_log_searches_rejected_total`, `dnz_query_log_dropped_total` | Searches turned away with 429 because two were still running, and log entries dropped because the writer fell behind |
+| `dnz_query_rollup_bytes`, `dnz_query_rollup_skipped_total` | The file of counts and top lists behind [DNS analytics](/dns/analytics): its size, and rounds of top list counts dropped because its writer was behind |
 | `dnz_live_captures` | [Live captures](/dns/live-capture) running on this server |
 | `dnz_ratelimit_limited_total`, `dnz_rrl_responses_total` | Rate limiting |
 | `dnz_access_sign_ins_total` | Sign-ins to proxied routes (allowed, denied, failed) |

@@ -182,6 +182,24 @@ dnz stats --json
   default).
 </Note>
 
+## DNS analytics
+
+`dnz dns analytics` prints what [DNS → Analytics](/dns/analytics) shows for the server it asks: queries
+per second, answers from zones, cache, upstream and blocked, response codes, average and p50/p95 time,
+by type and protocol, and the first page of each top list. It reads counts kept for this, never the
+log files.
+
+```bash
+dnz dns analytics                          # the last 24 hours
+dnz dns analytics --since 7d               # 1h, 6h, 24h, 7d or 30d
+dnz dns analytics --zone example.com
+dnz dns analytics --division it
+dnz dns analytics --all                    # the whole server
+dnz dns analytics --node ns2               # another server of a cluster
+dnz dns analytics --top blocked --page 2   # a page of one list: names, blocked, clients, zones or countries
+dnz dns analytics --json
+```
+
 ## Checking your own names
 
 What DNZ found looking at the names it manages the way an attacker would: see
