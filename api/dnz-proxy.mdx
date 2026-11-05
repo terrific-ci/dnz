@@ -93,6 +93,11 @@ nodes in `nodes`, with `answered: false` and an `error` for any that didn't answ
 
 ## Web application firewall
 
+The WAF page's reading endpoints (`overview`, `events`, `address`, `coverage`, `shields`, `blocks`, `bans`, `decoys`, `lists`,
+`leaked-passwords`, `campaigns`, `locations`, and `/api/proxy/bots`) take `access=private|public` beside `proxy_id` (both must
+hold) and answer `scope`, the proxies shown: `{ proxy_id, access, narrowed, proxies }`. `proxies` empty with `narrowed` true is a
+filter that leaves no proxy, which shows nothing. See [Private or public proxies](/proxy/waf-page#private-or-public-proxies).
+
 | Method and path | What it does |
 | --- | --- |
 | `GET /api/proxy/waf/counts` | What it blocked and logged per hostname over the last `hours` (default 24): `hosts` (`host`, `blocked`, `logged`) and `nodes` |

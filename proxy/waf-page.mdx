@@ -13,7 +13,7 @@ outside service.
 
 ## What it shows
 
-Pick a span (1 hour to 30 days), a proxy and a hostname at the top.
+Pick a span (1 hour to 30 days), a proxy, private or public proxies and a hostname at the top.
 
 | Part | What you get |
 | --- | --- |
@@ -38,6 +38,34 @@ Pick a span (1 hour to 30 days), a proxy and a hostname at the top.
   get ten times the room, so the totals are exact while the event list can miss some. Nodes older
   than DNZ 2.5 can't filter their log for the WAF: the page names them until they are updated.
 </Note>
+
+## Private or public proxies
+
+**All / Private / Public** beside the proxy filter looks at the attacks on local sites and those on public sites apart:
+which addresses, from where, against what. The category is the proxy's own
+[access](/proxy/overview#private-and-public-proxies), the one Serve on's *All private* and *All public* use. It can be set together with one proxy
+(both must hold), it stays in the page's address (`?access=private`) so a view can be shared, and the line under the
+filters says which proxies are being shown.
+
+A filter that leaves no proxy (private with a public proxy picked, or no proxy marked private) shows nothing and says
+why. It never shows everything.
+
+| Part of the page | With the filter |
+| --- | --- |
+| Map, totals, chart, top lists, events, campaigns, bots, an address's and a country's panels | Only the nodes of those proxies are asked |
+| Shields, coverage, leaked passwords' routes and nodes, each proxy's ban settings | Those proxies only |
+| Banned now | Bans on those proxies, and bans on every DNZ Proxy, which reach them too |
+| Blocked from this page, an address's firewalls | The firewalls running on those proxies. A firewall can serve several proxies; the list says how many blocks are only on other proxies |
+| Decoy names | Visits to those proxies. A DNS query belongs to no proxy: those are left out, and the section says how many |
+| Lists of bad networks, the leaked password filter, location databases | Every proxy's, and the section says so |
+
+<Note>
+  **A block or a ban keeps its own scope.** It goes where you pick in its dialog (these hostnames, every route with the
+  WAF, every DNZ Proxy), whatever the page is showing, and the dialog says so. Unblock takes the value out of every
+  firewall, those of other proxies too.
+</Note>
+
+Nothing is added to the request path and nothing is stored: the filter only picks which nodes DNZ asks.
 
 ## Look an address up
 

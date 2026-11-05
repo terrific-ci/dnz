@@ -207,6 +207,13 @@ A server that will only be a secondary doesn't need an admin of its own. It copi
 - Every minute it copies the primary's resolver settings (`/api/replication/settings`), so it
   answers like the primary (see below).
 
+### Watching a secondary's queries
+
+[Live capture](/dns/live-capture#another-server) on a primary can show the queries a DNZ secondary answers. The secondary
+connects out only while a capture runs (it hears of one in its check-in's answer, usually at once through a NOTIFY for the
+reserved name `capture.dnz.invalid`), and nothing is stored for reaching its API. Its NOTIFY never counts in
+[the NOTIFY status](#the-notify-box).
+
 ### The secondary follows its primary
 
 A DNZ secondary is a copy of its primary, not a second server to set up. While it follows a DNZ

@@ -138,7 +138,7 @@ and ask for the next page.
 | `zone_history` | A zone's versions: who changed what, when, from where; `page` and `limit` (20 a page) |
 | `explain_query` | The decision path and answer for a name, type and client ([Query explain](/dns/query-explain)) |
 | `query_log` | Recent queries, filtered by name, client or source; the last 24 hours unless `range` (`1h`, `24h`, `7d`, `all`) or `since`/`until`. In a cluster every server's, each row naming its server; `node` (a node id) for one server ([Query logs](/dns/query-logs#in-a-cluster)); `page` (from 1, 5,000 rows deep; `limit` is then the page size, 20 by default, at most 100) answers `more` and the `until` to pass for the next pages ([pages](/dns/query-logs#pages)) |
-| `capture_queries` | Watch live queries matching keywords (typed, or saved keyword lists) for a few seconds, grouped by domain ([Live capture](/dns/live-capture)) |
+| `capture_queries` | Watch live queries matching keywords (typed, or saved keyword lists) for a few seconds, grouped by domain; `on` watches a DNZ secondary from its primary ([Live capture](/dns/live-capture)) |
 | `capture_keyword_lists` | The saved keyword lists live capture can pick, server-wide and a division's |
 | `traffic_stats` | Query counts, NXDOMAIN ratio, top names and clients |
 | `threat_findings` | What threat detection found, newest first: `limit` per page (50, at most 200), `page`, and the `total` that match |
@@ -153,7 +153,7 @@ and ask for the next page.
 | `proxy_config_plan` | What applying a proxy YAML file would change, or why it can't be applied. Writes nothing: people apply |
 | `proxy_waiting_rooms` | DNZ Proxy waiting rooms now: visitors in, the limit and visitors waiting, per hostname |
 | `proxy_waf_rules` | The [web application firewall](/proxy/waf)'s rules (id, category, level, what each catches), optionally only those a sensitivity runs |
-| `proxy_waf_hits` | Requests the web application firewall matched since each node started, per proxy, middleware, rule and action (`block` or `log`) |
+| `proxy_waf_hits` | Requests the web application firewall matched since each node started, per proxy, middleware, rule and action (`block` or `log`). Every `proxy_waf_*` tool that reads, `proxy_bot_traffic` and `decoy_touches` take `access` (`private`, `public`) to look at those proxies only ([The WAF page](/proxy/waf-page#private-or-public-proxies)) |
 | `proxy_waf_shields` | [Shields](/proxy/shields) for apps that can't be upgraded: each one's CVE, product, what it stops and costs, the routes with it on and what it stopped; routes that seem to run a shield's product; nodes too old to run them |
 | `proxy_waf_bans` | Addresses [banned](/proxy/waf-page#bans-that-expire) now: reason, when it ends, where and who made it; each proxy's ban settings (paged) |
 | `zone_decoys` | A zone's [decoy names](/proxy/decoys): on or off, the DNZ Proxy, the ban, each name's state |
