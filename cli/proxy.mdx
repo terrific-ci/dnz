@@ -634,6 +634,16 @@ dnz proxy edit edge --http3 off                   # a Caddy's
 HTTP/3 is off by default and needs UDP open on each host's firewall, published in Docker
 (`-p 443:443/udp`); `--http3 on` says so, as DNZ can't do it. `edit` changes only what is passed.
 
+A route can take HTTP/3 off for itself ([per route](/proxy/dnz-proxy#http3-per-route)), DNZ Proxy only.
+`on` (the default) follows the entry point:
+
+```bash
+dnz proxy routes edit edge shop.example.com --http3 off   # no Alt-Svc on its answers, a 421 over HTTP/3
+dnz proxy routes edit edge shop.example.com --http3 on    # follows the entry point again
+dnz proxy routes edit all a.example.com b.example.com --http3 off   # a batch; also --switch http3=off
+dnz proxy routes list --type http3-off             # the routes with it off
+```
+
 `nodes` shows each node's CPU (a share of the CPUs it may use: its container's limit, else the
 machine's) and its process's memory. `nodes show` adds the load average, the container's and the
 machine's memory, the free disk and TCP sockets, from the node's last report (see

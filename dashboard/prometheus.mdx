@@ -218,6 +218,7 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_proxy_node_bans_held` `{proxy,node}` | Bans a node holds, as it last reported (only while its proxy has bans on) |
 | `dnz_proxy_banned_requests_total` `{proxy,node}` | Requests a node refused because of a ban (also in its blocked requests). Starts at 0 when a node restarts |
 | `dnz_proxy_ai_crawler_routes` `{proxy,mode}` | A DNZ Proxy's HTTP routes by [what AI crawlers may do](/proxy/waf-page#what-a-route-lets-ai-crawlers-do) on them (`allow`, `block`, `robots`) |
+| `dnz_proxy_http3_off_routes` `{proxy}` | A DNZ Proxy's routes with [HTTP/3 turned off](/proxy/dnz-proxy#http3-per-route) |
 | `dnz_proxy_node_bot_requests_total` `{proxy,node,kind}` | Requests a node told apart on routes that ask for it (`checked`, `ai`, `verified`, `fake`); starts at 0 when a node restarts |
 | `dnz_proxy_node_bot_verdicts_held` `{proxy,node}` | Addresses a node holds a [verdict](/proxy/waf-page#verified-bots) for |
 | `dnz_proxy_bot_verdicts` `{verdict}` | Addresses claiming a known bot that this DNZ checked (`verified`, `fake`, `unknown`) |

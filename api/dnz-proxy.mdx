@@ -51,7 +51,7 @@ The stream stays open and must not be buffered by a reverse proxy in front of DN
 | `POST /api/proxies/{id}/dnz/updates/{rollout}/stop` | No further node is asked |
 | `POST /api/proxies/{id}/entrypoints` | Add an entry point: `name`, `address`, `protocol`, `proxy_protocol_from`, `forwarded_from`, `idle_timeout_secs`, `read_timeout_secs`, `http3`, `http3_advertised_port` |
 | `PUT /api/proxies/{id}/entrypoints/{eid}` | Change an entry point. Without `http3`, both HTTP/3 settings stay as they are |
-| `GET /api/proxy/http3`, `GET /api/proxies/{id}/http3` | Where visitors get [HTTP/3](/proxy/dnz-proxy#http3), on every kind of proxy: `on` (null: DNZ can't tell), `switch` (`entry_point`, `proxy`, `traefik_static`, `caddy_own`), `entry_points` (a DNZ Proxy's with `listening` nodes and `errors`), `counts` |
+| `GET /api/proxy/http3`, `GET /api/proxies/{id}/http3` | Where visitors get [HTTP/3](/proxy/dnz-proxy#http3), on every kind of proxy: `on` (null: DNZ can't tell), `switch` (`entry_point`, `proxy`, `traefik_static`, `caddy_own`), `entry_points` (a DNZ Proxy's with `listening` nodes and `errors`), `counts`, and on a DNZ Proxy `routes_off` (the hostnames of routes with [HTTP/3 off](/proxy/dnz-proxy#http3-per-route)) and `nodes_ignoring_routes_off` |
 | `PUT /api/proxies/{id}/http3` | A Caddy's HTTP/3: `{"on": false}` (refused on other kinds, which say where theirs is) |
 | `DELETE /api/proxies/{id}/entrypoints/{eid}` | Delete an entry point |
 | `POST /api/proxies/{id}/purge` | Clear the cache on every node: `{"target": {"kind": "everything" \| "host" \| "url" \| "prefix", …}}` |
