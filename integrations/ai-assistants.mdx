@@ -141,6 +141,7 @@ and ask for the next page.
 | `capture_queries` | Watch live queries matching keywords (typed, or saved keyword lists) for a few seconds, grouped by domain; `on` watches a DNZ secondary from its primary ([Live capture](/dns/live-capture)) |
 | `capture_keyword_lists` | The saved keyword lists live capture can pick, server-wide and a division's |
 | `traffic_stats` | Query counts, NXDOMAIN ratio, top names and clients |
+| `dns_analytics` | One server's queries over a span (`range`: `1h` to `30d`), for a `division` or `zone`: answers by kind, response codes, average and p50/p95 time, by type and protocol, top names, blocked names, clients, zones and countries; `list` with `page` and `limit` for a page of one list; `node` for another server of a cluster ([DNS analytics](/dns/analytics)) |
 | `threat_findings` | What threat detection found, newest first: `limit` per page (50, at most 200), `page`, and the `total` that match |
 | `proxy_analytics` | DNZ Proxy traffic: totals, active users now (each visitor once, per proxy too), most requested URLs per hostname and path, top lists, and the web application firewall's blocked and logged requests with its top rules, addresses and paths; with `peaks` (a proxy counts [peak concurrency](/proxy/dnz-proxy#peak-concurrency)) the most requests in progress and connections open at once (`peak_inflight`, `peak_connections`: at most, the nodes' peaks added up) |
 | `proxy_visitors` | Distinct visitors of each hostname DNZ Proxy serves over the last hours, total and per hour |

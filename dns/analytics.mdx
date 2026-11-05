@@ -1,0 +1,98 @@
+---
+title: "DNS analytics"
+description: "Queries per second, answers by kind, response codes, response times and top lists for a span from an hour to 30 days, by division, zone and server."
+---
+
+**DNS → Analytics** shows what a server answered over a span: how many queries, where the answers
+came from, how long they took, and who asked what. It reads counts kept for this, never the query
+log's files, so opening it costs the server next to nothing.
+
+## What it shows
+
+Pick a span of 1 hour, 6 hours, 24 hours, 7 days or 30 days, and optionally a division, a zone or
+another server of a cluster.
+
+- **Totals and over time:** queries, queries per second, answered from zones, from the cache,
+  forwarded upstream and blocked by filtering, NXDOMAIN, SERVFAIL and other response codes, average
+  and p50/p95 response time.
+- **How queries split:** by kind of answer, query type, protocol (UDP, TCP, DoT, DoH, DoQ) and response
+  code.
+- **Top lists:** domains, blocked domains, clients and zones, a page at a time; countries when
+  [GeoDNS' country database](/dns/geodns) is there; upstreams with their latency.
+
+Click a domain or client to open it in [Query logs](/dns/query-logs) with that filter. The antenna
+beside it, or a right click, opens it in [Live capture](/dns/live-capture). Clicking a zone filters
+the page.
+
+The page refreshes itself and stops while its tab is hidden.
+
+<Note>
+Viewing it needs the same permission as the query log: `logs.read` shows a division's zones and what
+clients in its client networks asked; `logs.server` shows the whole server, and any division or
+zone in it.
+</Note>
+
+## What the numbers mean
+
+- **One server.** Each server counts what it answered itself. In a [cluster](/deploy/cluster) the **Server**
+  picker asks another one for its numbers. A DNZ [secondary](/dns/replication) has its own numbers: open
+  the page on it. The dashboard's charts add up every server of a cluster, so its totals can be
+  higher.
+- **What was logged.** Counting happens as the query log is written. If the log's queue is full, queries
+  are left out of both, and the page tells you how many since the server started. Queries the rate
+  limit drops are never counted.
+- **Top lists are capped.** Each hour a list keeps its busiest 1,000 items, and 100 within one zone. The
+  rest are added up as *others*, so a flood of random names can't grow what is kept, and a list can read
+  lower than the totals. The totals stay exact.
+- **Top lists count whole hours**, and whole days beyond the last two. The page says from when.
+- **p50 and p95 are estimates** from a histogram of answer times between 100 µs and 5 s.
+- **Upstreams** show counters since the server started, whatever the span, and only for the whole
+  server.
+
+## How long it is kept
+
+| What | Kept |
+| --- | --- |
+| Counts per minute | 7 hours |
+| Counts per hour | 31 days, or the query log's retention if that is longer |
+| Top lists | The [query log's retention](/dns/query-logs) (`dns.log_retention_days`, 7 days by default) |
+
+Counts hold no names or clients, so a 30-day span shows 30 days of counts even with 7 days of log,
+and the page says how far the top lists reach. **Clear log** empties the top lists too; the counts
+stay.
+
+Each server keeps these in its own file, `<data folder>/logs/rollups.sqlite`, on every database. Like
+the log files it isn't in DNZ's backups: without it, the page starts over and fills up again.
+
+## From the command line
+
+```bash
+dnz dns analytics                          # the last 24 hours
+dnz dns analytics --since 7d               # 1h, 6h, 24h, 7d or 30d
+dnz dns analytics --zone example.com
+dnz dns analytics --division it
+dnz dns analytics --all                    # the whole server
+dnz dns analytics --node ns2               # another server of a cluster
+dnz dns analytics --top blocked --page 2   # a page of one list
+dnz dns analytics --json
+```
+
+The MCP tool `dns_analytics` answers the same.
+
+## API
+
+| Method | Path | Permission | |
+| --- | --- | --- | --- |
+| `GET` | `/api/dns-analytics` | `logs.server` | The whole server; `division` or `zone` narrow it |
+| `GET` | `/api/divisions/{id}/dns-analytics` | `logs.read` | A division's; `zone` for one of its zones |
+| `GET` | `/api/dns-analytics/top` | `logs.server` | A page of one top list |
+| `GET` | `/api/divisions/{id}/dns-analytics/top` | `logs.read` | A page of one of the division's top lists |
+
+Parameters: `range` (`1h`, `6h`, `24h`, `7d`, `30d`), `zone` (an id), `division` (an id, on the
+server-wide paths), `node` (another server of a cluster); on `/top`, `list` (`names`, `blocked`,
+`clients`, `zones`, `countries`), `page` and `per_page` (10 unless asked, at most 100).
+
+## With `--proxy-only`
+
+The page doesn't exist on a server that [manages reverse proxies only](/proxy/proxy-only): it has no
+DNS, so no queries to count.
