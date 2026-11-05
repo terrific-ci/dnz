@@ -1,0 +1,80 @@
+---
+title: "Server"
+description: "Overview → Server: this server's role, load, memory, disk, ports and certificate, its secondaries with their numbers, and every proxy with its nodes."
+---
+
+**Overview → Server** puts the servers of an install on one tab: this server, its secondaries (or
+the primary it follows), and every proxy with its nodes. Nothing here runs per query or per request.
+
+| Section | Who sees it |
+|---|---|
+| **This server** | Superadmins |
+| **Secondary servers** | Those who may manage replication; not on a [reverse-proxies-only](/proxy/proxy-only) server, which has standbys instead |
+| **Proxies** | Those who may manage proxies |
+
+A section you may not see is left out. Someone who may see none of them doesn't get the tab.
+
+## This server
+
+The gauges (CPU, memory and swap, disk, network) refresh every 5 seconds. Under them:
+
+- **DNZ process**: its CPU, memory and uptime; **Container** limits for memory and CPUs; **Database**:
+  backend, size and where it is; **Query log**: size, days kept and where.
+- **Host**: hostname, OS, kernel, architecture, CPU model, how long the machine has run.
+- **This server**: its role (*Primary with 2 secondaries*, *Secondary of ns1*, *Standalone*, *Reverse
+  proxies only*), its cluster when it has one, its name, the version with the build and platform, how
+  long DNZ has run, the data directory and the time zone.
+- **Listening on**: DNS, HTTP, and HTTPS, DoT, DoQ and DoH3 when on.
+- **Certificate in use**: names, issuer, when it ends (a warning three weeks before, red in the last
+  week), whether DNZ issues it or it comes from files.
+
+## Secondary servers
+
+Every secondary, a page at a time: DNZ or other, name, address, its zones, the *Behind* state with its
+reason ([Sync status](/dns/replication#sync-status)), the last copy, and for a DNZ secondary its last
+check-in, version and numbers.
+
+**A DNZ secondary's numbers** (CPU, load, memory, swap, disk of its data directory, query log size, TCP
+sockets, OS, kernel, architecture, uptime) come with its check-in, once a minute. They are read then,
+apart from the work of answering DNS.
+
+- A secondary too old to send them shows what's known and says to update it.
+- One that stopped checking in keeps its last numbers, dimmed, with when.
+
+**Any other DNS server** says nothing about itself: its card shows what its answers and transfers tell
+(address, zones, last copy) and says there are no numbers.
+
+**On a DNZ secondary** the section shows the primary it follows instead, as far as it knows it: name,
+address, version, the last answer, the last copy and the zones.
+
+## Proxies
+
+Every proxy that isn't ignored, a page at a time, searchable by name: kind, managed or read-only,
+private or public, routes (a read-only proxy: sites), and health in words. Each links to its own page.
+
+| Kind | Shows | Health |
+|---|---|---|
+| DNZ Proxy | Per node: state, region, version, updates, address, last report, uptime, CPU, memory, disk, load, TCP sockets, HTTP/3 | Healthy nodes of those serving; drained ones don't count |
+| Nginx | What its agent reports: Nginx and agent versions, last call, sites or reloads | The agent calling in, `nginx -t`'s last answer |
+| Traefik, Caddy | Address, last fetch and where from; a read-only one: last read and sync | Fetching its configuration; a read-only one: DNZ reading its sites |
+
+Traefik, Caddy and an Nginx report no server numbers, and the page says so instead of showing blanks.
+A proxy shows its first 50 nodes; past that the row says how many there are and links to the proxy's
+page, which pages them.
+
+## In the terminal and for assistants
+
+```bash
+dnz server                         # every section you may see
+dnz server secondaries             # one of them: server, secondaries, proxies
+dnz server proxies --query edge --page 2 --limit 50
+dnz server --json
+```
+
+The MCP tool `server_overview` answers the same ([AI assistants](/integrations/ai-assistants)). The API
+is `GET /api/server/overview`, with `part` for one section and `page`, `per_page` and `q` for the lists.
+
+## Metrics
+
+A DNZ secondary's numbers are on the primary's `/metrics` as `dnz_secondary_server_*`, labelled by
+the secondary ([Prometheus](/dashboard/prometheus#metrics-reference)).

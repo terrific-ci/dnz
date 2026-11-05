@@ -126,6 +126,18 @@ dnz version          # the server's version, the latest release on GitHub and ho
 `dnz version` is what the **Update** badge in the web UI shows (see
 [Diagnostics](/admin/diagnostics#update-badge)); it says so when the release check is turned off.
 
+## This server, its secondaries and proxies
+
+[Overview → Server](/dashboard/server) in the terminal. A section you may not see is left out.
+
+```bash
+dnz server                         # every section you may see
+dnz server server                  # one section: server, secondaries or proxies
+dnz server secondaries --page 2 --limit 50
+dnz server proxies --query edge
+dnz server --json
+```
+
 ## Factory reset
 
 ```bash
