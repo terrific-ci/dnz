@@ -203,8 +203,8 @@ On a new server with no users yet, create the first admin with `dnz setup`:
 dnz setup
 ```
 
-It asks for the admin's username and password, the first division and the upstream resolvers. You're
-signed in when it's done.
+It asks for the admin's username and password, the first division and the upstream resolvers, and
+offers to connect Cloudflare (leave it empty to skip). You're signed in when it's done.
 
 To run it without questions, pass everything as options and put the password in `DNZ_PASSWORD`:
 
@@ -221,6 +221,7 @@ DNZ_PASSWORD='a-long-password' dnz setup --username admin --division IT \
 | `--upstream` | Upstream resolvers (repeat or comma-separate) |
 | `--strategy` | Forwarding strategy: `failover`, `wrr`, `p2c`, `hrw`, `least_time` |
 | `--zone` | Create this first zone |
+| `--cloudflare-token` | Optional: connect the first division to Cloudflare (or `DNZ_CLOUDFLARE_TOKEN`, which keeps it out of the process list). A refused token is reported and setup still finishes |
 | `--join-code` | Join the DNZ primary this code names instead of creating an admin; its superadmins sign in here ([details](/dns/replication#a-new-server-as-a-secondary)) |
 
 <Tip>
