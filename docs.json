@@ -129,6 +129,7 @@
               "proxy/middlewares",
               "proxy/route-history",
               "proxy/config-as-code",
+              "proxy/nginx-import",
               "proxy/traefik-records",
               "proxy/compose",
               "proxy/compose-caddy",
