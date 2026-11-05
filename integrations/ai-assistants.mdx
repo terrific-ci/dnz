@@ -153,7 +153,7 @@ and ask for the next page.
 | `proxy_config_plan` | What applying a proxy YAML file would change, or why it can't be applied. Writes nothing: people apply |
 | `proxy_waiting_rooms` | DNZ Proxy waiting rooms now: visitors in, the limit and visitors waiting, per hostname |
 | `proxy_waf_rules` | The [web application firewall](/proxy/waf)'s rules (id, category, level, what each catches), optionally only those a sensitivity runs |
-| `proxy_waf_hits` | Requests the web application firewall matched since each node started, per proxy, middleware, rule and action (`block` or `log`) |
+| `proxy_waf_hits` | Requests the web application firewall matched since each node started, per proxy, middleware, rule and action (`block` or `log`). Every `proxy_waf_*` tool that reads, `proxy_bot_traffic` and `decoy_touches` take `access` (`private`, `public`) to look at those proxies only ([The WAF page](/proxy/waf-page#private-or-public-proxies)) |
 | `proxy_waf_shields` | [Shields](/proxy/shields) for apps that can't be upgraded: each one's CVE, product, what it stops and costs, the routes with it on and what it stopped; routes that seem to run a shield's product; nodes too old to run them |
 | `proxy_waf_bans` | Addresses [banned](/proxy/waf-page#bans-that-expire) now: reason, when it ends, where and who made it; each proxy's ban settings (paged) |
 | `zone_decoys` | A zone's [decoy names](/proxy/decoys): on or off, the DNZ Proxy, the ban, each name's state |

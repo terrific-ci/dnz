@@ -314,6 +314,7 @@ What it caught, from where, and what to do about it ([The WAF page](/proxy/waf-p
 
 ```bash
 dnz proxy waf overview --since 7d -p edge          # totals, attack types, rules, countries, addresses, hostnames
+dnz proxy waf overview --access private            # only the private proxies (--access public); on every list below, and dnz proxy bots
 dnz proxy waf events --action block --country CN   # each request it matched, newest first (--ip, --rule, --host, -n)
 dnz proxy waf address 203.0.113.9                  # place, network, reverse name, what it set off, blocked where
 dnz proxy waf block 203.0.113.9 --host shop.example.com
