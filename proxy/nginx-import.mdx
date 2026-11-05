@@ -38,7 +38,7 @@ it includes), and pick the proxy it goes to. You see the plan and what wasn't im
 | `server_name` | The route's `hosts`. `.example.com` becomes `example.com` and `*.example.com` |
 | `listen 443 ssl`, `listen 80` | `https: true`, or a plain HTTP route |
 | A port 80 server with `return 301 https://$host$request_uri` | `redirect_http: true` on the HTTPS routes of those names |
-| `location /path`, `location ^~ /path` | The route's `path` |
+| `location /path`, `location ^~ /path` | The route's `path`; when a name has several routes, a `PathPrefix` condition in `matchers` for each of them (a hostname has one plain route) |
 | `location = /path` | A `Path` condition in `matchers` |
 | `location ~ ^/path/` with no regular expression in it | The same as the prefix or exact path it spells |
 | `proxy_pass http://10.0.0.5:8080` | The route's own `servers` |

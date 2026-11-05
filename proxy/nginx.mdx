@@ -1,0 +1,232 @@
+---
+title: "Nginx"
+description: "Connect an Nginx to DNZ with a small agent next to it: DNS records for the sites in your own configuration."
+---
+
+An Nginx can be a proxy of DNZ, next to Traefik, Caddy and DNZ Proxy. Traefik and Caddy fetch their configuration
+from DNZ, while open source Nginx only reads files, so a small program runs next to it: **`dnz-nginx-agent`**. It
+connects out to DNZ with the proxy's token, as Traefik and Caddy do; DNZ never reaches into the server.
+
+Moving to DNZ Proxy instead gets you every feature: [importing an Nginx configuration](/proxy/nginx-import) makes
+that a matter of checking a plan.
+
+An Nginx proxy is **read only**: DNZ keeps DNS records for the sites in your own configuration, and writes nothing
+to Nginx. The agent reads the `server_name`s from `nginx -T`, on the server.
+
+## Versions
+
+The agent shares DNZ's version number, and the commands name that version, never `latest`: `latest` can be newer
+than the DNZ it talks to.
+
+```sh
+dnz --version        # use what this prints as DNZ_VERSION below
+```
+
+The first DNZ release with the agent is **v2.5.0**.
+
+- **An older agent keeps working**, and the proxy's page marks it *Older than DNZ*.
+- **An agent newer than its DNZ is refused** with a message naming both versions, and nothing is written to Nginx
+  until they match.
+
+| Nginx | Where it comes from |
+|---|---|
+| 1.18.0 | Debian 11, Ubuntu 22.04 |
+| 1.20.1 | RHEL 9, Rocky Linux 9, AlmaLinux 9 |
+| 1.22.1 | Debian 12 |
+| 1.24.0 | Ubuntu 24.04 |
+| 1.26.3 | Debian 13 |
+| 1.28.3 | nginx.org stable, and the image `terrificci/dnz-nginx` |
+
+**Older than 1.18 is refused** with a clear message: the agent says so on the proxy's page and in its log, and reads
+and writes nothing. The binary is for `x86_64` and `aarch64`, Linux with glibc 2.34 or newer (so not Alpine: use the
+image).
+
+## Adding one
+
+**Proxy → Proxies → Add proxy → Nginx**, or:
+
+```sh
+dnz proxy add web-1 --kind nginx --read-only --address 203.0.113.5 --division Main
+```
+
+You get the proxy's **token**, once, with the steps filled in. Its settings are those of any
+[read-only proxy](/proxy/read-only): the addresses or CNAME DNS answers with, DNS only or through DNZ, the TTL, the
+division whose zones get the records, how often the sites are read, and whether a site that leaves keeps its
+records. A new one starts paused: install the agent, look at the **Preview**, and apply it.
+
+## Installing the agent
+
+<Warning>
+DNZ's address is the one **the Nginx server reaches DNZ on**, not the one in your browser. `localhost` or `127.0.0.1`
+works only when DNZ runs on that same server.
+</Warning>
+
+<Tabs>
+  <Tab title="Already have Nginx">
+On the server that runs Nginx, as one paste. It needs root: `nginx -T` reads Nginx's certificates. Set the three
+values at the top:
+
+```sh
+sudo sh -s <<'INSTALL'
+set -e
+DNZ_VERSION=2.5.0                          # what `dnz --version` prints
+DNZ_URL=https://dnz.example.com            # how this server reaches DNZ
+DNZ_NGINX_TOKEN=dnzp_THE_PROXY_TOKEN       # shown when the proxy was added
+case "$(uname -m)" in x86_64) ARCH=amd64 ;; aarch64) ARCH=arm64 ;; *) echo "unsupported: $(uname -m)"; exit 1 ;; esac
+curl -fsSL -o /usr/local/bin/dnz-nginx-agent "https://github.com/terrific-ci/dnz/releases/download/v$DNZ_VERSION/dnz-nginx-agent-linux-$ARCH"
+chmod 755 /usr/local/bin/dnz-nginx-agent
+mkdir -p /etc/dnz-nginx-agent
+umask 077
+cat > /etc/dnz-nginx-agent/dnz-nginx-agent.env <<ENV
+DNZ_URL=$DNZ_URL
+DNZ_NGINX_TOKEN=$DNZ_NGINX_TOKEN
+ENV
+umask 022
+cat > /etc/systemd/system/dnz-nginx-agent.service <<UNIT
+[Unit]
+Description=dnz-nginx-agent, connects this Nginx to DNZ
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/dnz-nginx-agent
+Restart=always
+RestartSec=5
+EnvironmentFile=/etc/dnz-nginx-agent/dnz-nginx-agent.env
+StateDirectory=dnz-nginx-agent
+Environment=DNZ_NGINX_STATE_DIR=/var/lib/dnz-nginx-agent
+ProtectSystem=full
+ReadWritePaths=/etc/nginx/conf.d
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now dnz-nginx-agent
+systemctl --no-pager status dnz-nginx-agent | head -n 5
+INSTALL
+```
+
+The Add proxy dialog shows this with the values filled in. Follow it with `journalctl -u dnz-nginx-agent -f`.
+`SHA256SUMS` in each release has the binary's checksum.
+  </Tab>
+  <Tab title="Install new (Docker)">
+In Docker, the agent has to run inside the Nginx container: from a separate one it could only reach Nginx through
+the Docker socket, which is root on the host. So Docker means the image, Nginx with the agent in it:
+
+```sh
+DNZ_VERSION=2.5.0                          # what `dnz --version` prints
+docker run -d --name dnz-nginx --restart unless-stopped \
+  -p 80:80 -p 443:443 \
+  -v dnz-nginx:/data \
+  -e DNZ_URL=https://dnz.example.com \
+  -e DNZ_NGINX_TOKEN=dnzp_THE_PROXY_TOKEN \
+  terrificci/dnz-nginx:$DNZ_VERSION
+```
+
+Or with compose:
+
+```yaml
+services:
+  nginx:
+    image: terrificci/dnz-nginx:2.5.0   # what `dnz --version` prints
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DNZ_URL: https://dnz.example.com
+      DNZ_NGINX_TOKEN: dnzp_THE_PROXY_TOKEN
+    volumes:
+      - dnz-nginx:/data
+      # Your own sites, for a read-only proxy:
+      # - ./my-sites.conf:/etc/nginx/conf.d/my-sites.conf:ro
+volumes:
+  dnz-nginx:
+```
+
+The agent is the entry point: it starts Nginx, passes signals on and exits when Nginx dies, so Docker's restart
+policy sees a failure. What it keeps lives in the `/data` volume, and you can mount configuration of your own into
+`/etc/nginx/conf.d/`. The image is Debian-based, with a pinned Nginx: one tag always holds the same Nginx. An Nginx
+security fix reaches the image with a DNZ release, and the release notes say so.
+  </Tab>
+</Tabs>
+
+### Settings
+
+| Flag | Environment | Default | |
+|---|---|---|---|
+| `--dnz` | `DNZ_URL` | | DNZ's address, as this server reaches it |
+| `--token` | `DNZ_NGINX_TOKEN` | | The proxy's token |
+| `--nginx` | `DNZ_NGINX_BIN` | `nginx` | The nginx program |
+| `--state-dir` | `DNZ_NGINX_STATE_DIR` | `/var/lib/dnz-nginx-agent` | What it keeps across restarts |
+| `--insecure` | `DNZ_NGINX_INSECURE` | off | Accept a self-signed certificate from DNZ |
+| `--supervise` | `DNZ_NGINX_SUPERVISE` | off | Start Nginx too and exit when it dies (the image) |
+
+`DNZ_NGINX_LOG` sets how much it logs (`info` by default).
+
+### A new token
+
+The token is shown once. **Connect** on the proxy's card makes a new one (the old one stops working), or
+`dnz proxy nginx token web-1`.
+
+### Updating the agent
+
+Update DNZ first: an agent newer than its DNZ is refused.
+
+```sh
+sudo sh -s <<'UPDATE'
+set -e
+DNZ_VERSION=2.5.0                          # what `dnz --version` prints
+case "$(uname -m)" in x86_64) ARCH=amd64 ;; aarch64) ARCH=arm64 ;; *) echo "unsupported: $(uname -m)"; exit 1 ;; esac
+curl -fsSL -o /usr/local/bin/dnz-nginx-agent.new "https://github.com/terrific-ci/dnz/releases/download/v$DNZ_VERSION/dnz-nginx-agent-linux-$ARCH"
+chmod 755 /usr/local/bin/dnz-nginx-agent.new
+mv /usr/local/bin/dnz-nginx-agent.new /usr/local/bin/dnz-nginx-agent
+systemctl restart dnz-nginx-agent
+UPDATE
+```
+
+In Docker, change the image's tag and start it again. Updating the agent from DNZ, as DNZ Proxy nodes do, isn't there
+yet.
+
+### Removing the agent
+
+```sh
+sudo systemctl disable --now dnz-nginx-agent
+sudo rm -f /etc/systemd/system/dnz-nginx-agent.service /usr/local/bin/dnz-nginx-agent
+sudo rm -rf /etc/dnz-nginx-agent /var/lib/dnz-nginx-agent
+sudo systemctl daemon-reload
+```
+
+Nginx keeps running with its own files. In Docker: `docker rm -f dnz-nginx && docker volume rm dnz-nginx`. Then remove
+the proxy in DNZ, with or without its records.
+
+## What it reads
+
+Which hostnames get records, and how, works as for any [read-only proxy](/proxy/read-only). From `nginx -T`:
+
+- Every `server_name` of a `server` block in `http`. `.example.com` is `example.com` and `*.example.com`.
+- `_`, regular expressions and `www.example.*` are no name DNS could hold; they show as skipped on the proxy's page.
+  `stream` and `mail` aren't sites.
+- A read that fails changes nothing, and neither does an agent that stopped: its last report counts for 3 minutes, and
+  after that a sync says so and leaves the records alone. An Nginx with no name at all fails too, so one that just
+  started empty never looks like sites that left.
+
+`nginx -T` prints every file Nginx reads. The agent takes only the names from it; the rest never leaves the server.
+
+## Commands
+
+```sh
+dnz proxy add web-1 --kind nginx --read-only --address 203.0.113.5 --division Main
+dnz proxy nginx show web-1       # the agent, its versions, the sites it read
+dnz proxy nginx token web-1      # a new token; the old one stops working
+dnz proxy sites plan web-1       # what a sync would change
+dnz proxy sites sync web-1
+```
+
+An assistant reads the same with the MCP tool `proxy_nginx`. Prometheus: `dnz_nginx_agent_connected`,
+`dnz_nginx_agent_last_seen_timestamp_seconds`, `dnz_nginx_agent_behind_dnz` and `dnz_nginx_problem`, each per `proxy`.

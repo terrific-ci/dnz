@@ -152,6 +152,7 @@ and ask for the next page.
 | `proxy_config_export` | A proxy's configuration as the YAML file kept in Git ([configuration as code](/proxy/config-as-code)); passwords by user name only |
 | `proxy_config_plan` | What applying a proxy YAML file would change, or why it can't be applied. Writes nothing: people apply |
 | `proxy_config_import_nginx` | An Nginx configuration read as text into a proxy YAML file, what didn't map listed with its file and line. Nothing runs, nothing is stored or applied |
+| `proxy_nginx` | An Nginx proxy's `dnz-nginx-agent`: connected or not, its version and Nginx's, the sites it read |
 | `proxy_waiting_rooms` | DNZ Proxy waiting rooms now: visitors in, the limit and visitors waiting, per hostname |
 | `proxy_waf_rules` | The [web application firewall](/proxy/waf)'s rules (id, category, level, what each catches), optionally only those a sensitivity runs |
 | `proxy_waf_hits` | Requests the web application firewall matched since each node started, per proxy, middleware, rule and action (`block` or `log`) |

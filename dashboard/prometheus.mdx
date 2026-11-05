@@ -220,6 +220,8 @@ DNZ describes every metric it exports: each one comes with a `# HELP` line in th
 | `dnz_proxy_leaked_password_filter_entries`, `dnz_proxy_leaked_password_filter_bytes` | Passwords in the filter, and what each node with the check on holds in memory |
 | `dnz_proxy_leaked_password_filter_updated_timestamp_seconds` | When the filter last changed |
 | `dnz_traefik_connected{proxy}`, `dnz_caddy_proxy_connected{proxy}` | 1 while a Traefik or Caddy proxy fetched its configuration in the last minute (`…_last_seen_timestamp_seconds` says when) |
+| `dnz_nginx_agent_connected{proxy}` | 1 while an [Nginx proxy](/proxy/nginx)'s agent reported in the last minute (`dnz_nginx_agent_last_seen_timestamp_seconds` says when) |
+| `dnz_nginx_agent_behind_dnz{proxy}`, `dnz_nginx_problem{proxy}` | 1 while the agent is older than DNZ; 1 while it can't use this Nginx (too old, not found), is refused (newer than DNZ) or can't read its configuration |
 | `dnz_proxy_sites_sync_success{proxy,kind}` | A [read-only proxy](/proxy/read-only): 1 when the last sync of its sites worked (those not paused), `kind` `caddy` or `traefik`; `dnz_proxy_sites_sync_timestamp_seconds` says when |
 | `dnz_caddy_sync_success`, `dnz_caddy_sync_timestamp_seconds` `{id,caddy,kind}` | The same under their names from before v2 (Sites in DNS; `id` is the proxy's), kept for one release: move dashboards and alerts to `dnz_proxy_sites_sync_*` |
 | `dnz_health_findings{status}` | [Diagnostics](/admin/diagnostics) findings by status |

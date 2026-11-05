@@ -122,6 +122,7 @@
               "proxy/proxy-only",
               "proxy/traefik",
               "proxy/caddy",
+              "proxy/nginx",
               "proxy/read-only",
               "proxy/routing",
               "proxy/upstreams",

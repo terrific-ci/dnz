@@ -4,7 +4,7 @@ sidebarTitle: "Read-only proxies"
 description: "DNS records for the sites a Caddy or Traefik serves, kept up to date as its own configuration changes. DNZ only reads it."
 ---
 
-A Caddy or Traefik can also be a proxy **DNZ never configures**. Its sites, routes and
+A Caddy, Traefik or [Nginx](/proxy/nginx) can also be a proxy **DNZ never configures**. Its sites, routes and
 certificates stay in the Caddyfile or in Traefik's own configuration (files, Docker labels,
 Kubernetes…). DNZ only **reads** which hostnames it serves, from Caddy's admin API or Traefik's
 API, and keeps DNS records for them in a division's zones, like ExternalDNS does for Kubernetes.

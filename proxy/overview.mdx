@@ -39,6 +39,9 @@ Pick Traefik when you already run it, or want its providers (Docker, Kubernetes)
 DNZ Proxy when you want DNZ to run the whole path, from certificates to analytics. Pick Caddy when
 you'd rather run Caddy and let it get its own certificates.
 
+An [Nginx](/proxy/nginx) can be a proxy too, through a small agent next to it, since open source Nginx only reads files.
+Moving from Nginx to DNZ Proxy instead? [Import its configuration](/proxy/nginx-import).
+
 Kinds can be mixed. A record can go through a Traefik and a DNZ Proxy at once, and DNS answers
 with all of their addresses.
 
@@ -46,7 +49,7 @@ with all of their addresses.
 
 **Settings → Proxy** has one switch: proxying on or off. Below it, **Proxies** lists the proxies.
 
-**Add proxy** first asks what runs the proxy: **Traefik**, **DNZ Proxy** or **Caddy**. For a Caddy
+**Add proxy** first asks what runs the proxy: **Traefik**, **DNZ Proxy**, **Caddy** or **Nginx**. For a Caddy
 or a Traefik it then asks whether DNZ configures it: **Caddy proxy** / **Traefik proxy**, or **Keep
 my Caddyfile** / **Keep my Traefik config**, which adds a [read-only proxy](/proxy/read-only)
 instead: DNZ only reads its configuration and keeps DNS records for its sites. DNZ Proxy has no
