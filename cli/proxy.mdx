@@ -259,10 +259,11 @@ A batch takes:
 | `--enabled on\|off` | Turn the routes on or off |
 | `--group NAME`, `--no-group` | Put them in a [route group](#route-groups), or in none |
 | `--https on\|off`, `--redirect on\|off` | HTTPS, and whether `http://` redirects to it |
-| `--switch NAME=on\|off` | On, with the route dialog's defaults: `waf`, `challenge`, `cache`, `waiting_room`, `uploads`, `rate_limit`. Off also: `allow_ips`, `headers`, `rules`, `firewall`, `basic_auth`, `sign_in`. Repeat for more; a switch already on keeps its settings |
+| `--switch NAME=on\|off` | On, with the route dialog's defaults: `waf`, `challenge`, `cache`, `waiting_room`, `uploads`, `rate_limit`. Off also: `allow_ips`, `headers`, `rules`, `firewall`, `basic_auth`, `sign_in`, `leaked_passwords`. Repeat for more; a switch already on keeps its settings |
 | `--challenge`, `--cache`, `--waf block\|off`, the `--no-…` switches | The same as `--switch`. `--cache` only at its default of 10 minutes (`--cache` or `--cache 10m`); a route whose cache is already on keeps its time |
 | `--uploads` | The default [upload limits](/proxy/upload-limits) (`--no-uploads` turns them off) |
 | `--shield ID` | A [shield](/proxy/shields) on them; `--shield -ID` takes it off, `--shield off` takes every one off; repeat for more |
+| `--no-leaked-passwords` | [Leaked password checks](/proxy/leaked-passwords) off. On is one route at a time: `dnz proxy routes edit PROXY HOST --leaked-passwords --leaked-path /login` |
 | `--middleware +NAME\|-NAME` | Add or remove a shared middleware; repeat for more |
 | `--service NAME` | Send them all to one upstream of Proxy → Upstreams |
 | `--serve-on +PROXY\|-PROXY` | Copy the routes to another proxy, or take them off one. `+private`, `+public`, `+all` (or with `-`): every approved proxy of that access now; a proxy named so is named by its id |
@@ -326,6 +327,9 @@ dnz proxy waf bans                                 # who is banned now: why, unt
 dnz proxy waf ban 203.0.113.9 --for 1h             # refuse one address for a while (every DNZ Proxy, or -p edge)
 dnz proxy waf unban 203.0.113.9                    # back in now
 dnz proxy waf lists --on tor-exit                  # the lists of bad networks; --off, --download
+dnz proxy waf leaked-passwords                     # leaked password checks: the filter, its source and terms, the routes and nodes
+dnz proxy waf leaked-passwords --file common.txt   # your own list, passwords or SHA-1 hashes (--format plain|sha1; --clear-file; --download)
+dnz proxy waf events --action leaked               # logins it marked
 dnz proxy waf campaigns --since 24h                # attacks grouped by network
 dnz proxy waf campaign-block AS4134 --everywhere   # its addresses; --ranges for its /24s
 dnz proxy waf shields --since 7d -p edge           # shields: each one's CVE, routes and hits, and routes worth a look
