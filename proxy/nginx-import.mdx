@@ -1,0 +1,89 @@
+---
+title: "Importing an Nginx configuration"
+description: "Turn Nginx server and location blocks into a proxy YAML file. Nothing is applied until you say so, and what didn't map is named with its file and line."
+---
+
+Moving to DNZ starts from what already runs. `dnz proxy import nginx` reads an Nginx configuration and writes a
+[proxy YAML file](/proxy/config-as-code). **Nothing is applied**: the file goes through `dnz proxy plan` and
+`dnz proxy apply` like any other, and what didn't map is named with its file and line, never guessed at and
+never dropped without a word.
+
+The configuration is only read as text. Nothing in it runs, and `include` looks only among the files you give.
+
+## On the command line
+
+```sh
+dnz proxy import nginx /etc/nginx/nginx.conf -p edge -o edge.yaml   # what nginx.conf reaches
+dnz proxy import nginx /etc/nginx -p edge -o edge.yaml              # a folder
+dnz proxy import nginx conf.d/app.conf conf.d/api.conf              # several files
+cat app.conf | dnz proxy import nginx -                             # from stdin
+
+dnz proxy plan -f edge.yaml                                         # what it would change
+dnz proxy apply -f edge.yaml
+```
+
+It needs no server: the files stay on your machine until you plan them. What wasn't imported is listed at the
+top of the YAML as comments, so it travels with the file.
+
+## In the dashboard
+
+**Proxy → Proxies → Add proxy → Import its configuration**: paste a file or choose files (`nginx.conf` and what
+it includes), and pick the proxy it goes to. You see the plan and what wasn't imported side by side, and
+**Apply** applies the plan. The text is read once and never stored or logged.
+
+## What maps
+
+| Nginx | In the file |
+|---|---|
+| `server_name` | The route's `hosts`. `.example.com` becomes `example.com` and `*.example.com` |
+| `listen 443 ssl`, `listen 80` | `https: true`, or a plain HTTP route |
+| A port 80 server with `return 301 https://$host$request_uri` | `redirect_http: true` on the HTTPS routes of those names |
+| `location /path`, `location ^~ /path` | The route's `path`; when a name has several routes, a `PathPrefix` condition in `matchers` for each of them (a hostname has one plain route) |
+| `location = /path` | A `Path` condition in `matchers` |
+| `location ~ ^/path/` with no regular expression in it | The same as the prefix or exact path it spells |
+| `proxy_pass http://10.0.0.5:8080` | The route's own `servers` |
+| `proxy_pass http://backend` and `upstream backend { … }` | `upstream: backend` and its entry in `upstreams` |
+| `weight=`, `least_conn`, `ip_hash`, `random two` | The server's `weight`, `strategy: leasttime`, `hrw`, `p2c` |
+| `proxy_pass http://b/v2/` in `location /api/` | `stripPrefix` and `addPrefix` middlewares: the same path reaches the server |
+| `proxy_set_header Host $host` | `pass_host_header: true`. Without that line Nginx sends the upstream's own name, and so does the route |
+| `proxy_set_header X-Forwarded-For …` and the usual ones | Nothing: the proxy sends them itself |
+| `proxy_set_header X-Name value`, `add_header X-Name value` | The route's `headers` (fixed values) |
+| `return 301 https://new.example.com$request_uri`, a rewrite of every path | The route's `redirect` |
+| `client_max_body_size 20m` | `uploads: {max_body_bytes: …}` (see below) |
+| `auth_basic` with `auth_basic_user_file`, the file given | `basic_auth` with its users (bcrypt, MD5 or SHA1, as `htpasswd` writes them) |
+| `allow ADDRESS; … deny all;` | `allow_ips` |
+| `limit_req` with `limit_req_zone $binary_remote_addr … rate=10r/s` | `rate_limit: {average: 10, burst: …}` |
+
+Nginx's inheritance is followed: `add_header`, `proxy_set_header`, `allow`/`deny` and `limit_req` written in a
+`location` replace those from the `server` and `http` above it, as they do in Nginx. Without
+`proxy_ssl_verify on`, Nginx doesn't check an HTTPS server's certificate, so the server gets
+`skip_tls_verify: true`.
+
+## What doesn't
+
+Named with its file and line: `if`, `map`, `geo`, `set`, Lua, regular expression `location`s that aren't a plain
+path, named `location`s, a variable in `proxy_pass` or in a header's value, `fastcgi_pass` and the other non-HTTP
+upstreams, serving files (`root`, `try_files`), backup servers, `stream`, timeouts and `proxy_ssl_*`.
+
+Settings of the whole server (`worker_processes`, logs, `gzip`, TLS versions, MIME types) are listed apart, since
+they have no place in a route.
+
+<Warning>
+A route whose protection can't be carried over comes out switched off (`enabled: false`): a password file not
+given, an address list it can't read, `auth_request`, `satisfy`, an `if` or `limit_except` that may guard the
+site. Applying the file can't open a site that was closed. Fix what is named, then turn it on.
+</Warning>
+
+- **Certificates aren't copied.** Their paths are listed, and the hostnames go to DNZ's
+  [automatic certificates](/proxy/certificates).
+- **`client_max_body_size` is for every body in Nginx**; a route's upload limit is for multipart uploads.
+- **`*.example.com` covers one label on a route**, and any number in Nginx.
+- **A regular expression `location` beats a longer prefix in Nginx**, and routes rank by length. Check the plan when
+  such a location overlapped others.
+- **Another port than 80 or 443**: the route takes the proxy's usual entry point, and the line is named. Put the
+  right one in the route's `entry_points`.
+
+## For an assistant
+
+`proxy_config_import_nginx` gives an assistant the YAML with the leftovers at its top, and `proxy_config_plan` shows
+what it would change. Neither applies it: that is for people.

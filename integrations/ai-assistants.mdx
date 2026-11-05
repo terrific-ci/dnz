@@ -151,6 +151,8 @@ and ask for the next page.
 | `proxy_middlewares` | What happens to a visit on its way, one list for every proxy: each [middleware](/proxy/middlewares)'s type and settings (password hashes left out), HTTP or TCP, the proxy kinds that run it and what uses it (routes per proxy, chains, route defaults, not used). It can list only the firewalls with their rules, add routes' own switches, or show one by name |
 | `proxy_config_export` | A proxy's configuration as the YAML file kept in Git ([configuration as code](/proxy/config-as-code)); passwords by user name only |
 | `proxy_config_plan` | What applying a proxy YAML file would change, or why it can't be applied. Writes nothing: people apply |
+| `proxy_config_import_nginx` | An Nginx configuration read as text into a proxy YAML file, what didn't map listed with its file and line. Nothing runs, nothing is stored or applied |
+| `proxy_nginx` | An Nginx proxy's `dnz-nginx-agent`: connected or not, its version and Nginx's, the sites it read; managed: the last check and reload, what Nginx can't take, the file DNZ builds |
 | `proxy_waiting_rooms` | DNZ Proxy waiting rooms now: visitors in, the limit and visitors waiting, per hostname |
 | `proxy_waf_rules` | The [web application firewall](/proxy/waf)'s rules (id, category, level, what each catches), optionally only those a sensitivity runs |
 | `proxy_waf_hits` | Requests the web application firewall matched since each node started, per proxy, middleware, rule and action (`block` or `log`). Every `proxy_waf_*` tool that reads, `proxy_bot_traffic` and `decoy_touches` take `access` (`private`, `public`) to look at those proxies only ([The WAF page](/proxy/waf-page#private-or-public-proxies)) |
