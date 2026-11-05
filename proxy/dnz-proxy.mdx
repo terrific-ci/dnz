@@ -711,7 +711,8 @@ Worth knowing:
   addresses. Behind an L4 load balancer that hides that address, leave HTTP/3 off.
 - **WebSocket** stays on HTTP/1.1 and HTTP/2, where browsers open it anyway. Upstreams are reached the
   way they always are: only visitors speak HTTP/3.
-- **An `Alt-Svc` of the site's own wins**: one from the origin or a route's header rule is left alone.
+- **An `Alt-Svc` of the site's own wins**: one from the origin or a route's header rule is left alone,
+  unless the route has [HTTP/3 off](#http3-per-route), which takes the origin's away.
 - A UDP entry point on the same port is refused when saving. If something else holds the UDP port, the
   entry point shows the error, TCP goes on without `Alt-Svc`, and the node tries again every 10 seconds.
 - **Socket buffers:** under heavy HTTP/3 load, Linux's default UDP buffers (208 KiB) can drop packets.
@@ -723,6 +724,33 @@ From the command line: `dnz proxy entrypoints edit "Edge JKT" websecure --http3 
 [`dnz_proxy_http3_*`](/dashboard/prometheus) while a node has the port open. Nodes older than this
 version ignore the switch and stay on TCP, without `Alt-Svc`.
 [Caddy](/proxy/caddy#http3) and [Traefik](/proxy/traefik#http3) have their own way.
+
+#### HTTP/3 per route
+
+The socket is the entry point's, so a route can only take HTTP/3 **off**, on an entry point that has it
+on: the route dialog's **HTTP/3** under *Speed and headers*, `dnz proxy routes edit edge shop.example.com
+--http3 off`, or `http3: off` in the proxy's YAML. On, the default, follows the entry point; a route can't
+turn HTTP/3 on where its entry point has it off. Use it for a site that misbehaves over HTTP/3, or to try
+HTTP/3 on some sites while others stay on HTTP/2.
+
+With HTTP/3 off on a route:
+
+- **No `Alt-Svc` on its answers**, the origin's included, so browsers stay on HTTP/2.
+- **A visitor who still arrives over HTTP/3 gets `421 Misdirected Request`** and retries over HTTP/2 or
+  HTTP/1.1, which browsers do by themselves. That happens when a browser remembers an earlier `Alt-Svc`,
+  or reuses a connection made for another name on the same entry point. The other routes on that
+  connection go on.
+- **What browsers remember lasts until its `ma`**: 86400 seconds, a day. Until then a returning browser
+  tries HTTP/3 first and pays one round trip more for the 421.
+- **A route's own rule still wins**: a rule or custom header that sets `Alt-Svc` stays (it can name
+  another service), and one that removes it leaves none.
+- A route on an entry point without HTTP/3 isn't affected, and neither is the origin's own `Alt-Svc` there.
+
+It is DNZ Proxy's only. On a Traefik or Caddy the setting is saved and does nothing, and the proxy's
+warnings say so. A node older than this version ignores it: it keeps serving the route and goes on
+advertising HTTP/3 there, and DNZ names such nodes where the route is saved and in `dnz proxy http3`.
+It costs nothing where it isn't used. `dnz proxy routes list --type http3-off` lists these routes, batch
+edit's **Switches → HTTP/3** turns it off or on for several, and route history keeps each change.
 
 ### The visitor's address
 
