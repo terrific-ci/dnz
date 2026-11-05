@@ -163,6 +163,38 @@ https://www.example.net/some/page
   </Tab>
 </Tabs>
 
+### Add one domain to a list
+
+In **Blocking → Your rules**, the choice beside **Block** says where a domain goes: **Just a rule**
+(the first choice, what happens if you don't choose), one of your own lists, or **New list…**. With
+no list of your own yet, a field for a new list's name is there at once: a name makes the list with
+this domain in it, and left empty the domain is just a rule. **Block** on a domain test's result has
+the same choice. **Allow** is always a rule.
+
+A list downloaded from a URL can't be chosen, because its next update would lose the line. A domain
+already on the list says so and adds no second line.
+
+<Tabs>
+  <Tab title="Dashboard">
+    **DNS → Filtering → Blocking → Your rules**, then pick the list beside **Block**.
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz filter list add-domain School ads.example.com   # by name or id; --division for a division's list
+    ```
+
+  </Tab>
+  <Tab title="API">
+
+    ```bash
+    curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+      -d '{"domain": "ads.example.com"}' https://dnz.example.com/api/filtering/lists/5/domains
+    ```
+
+  </Tab>
+</Tabs>
+
 ### Export a list
 
 **⋯ → Export as .txt** (or right-click a list) downloads what DNZ currently blocks from it, for a
@@ -475,13 +507,95 @@ apps and sites calling home aren't the proxy's traffic.
   [RPZ](/dns/rpz) rule), whether that entry is only for some clients or a schedule, and whether safe
   search rewrites it. Fill in **Client IP** to see it from a particular device's point of view: its
   division comes from the client networks, its client groups from their addresses. Schedules are
-  checked at the current time. The **Allow** and **Block** buttons add a rule straight away.
+  checked at the current time. **Allow** adds a rule straight away; **Block** adds a rule or a line
+  in the list you choose beside it (see [Add one domain to a list](#add-one-domain-to-a-list)).
 - **Query Logs → All queries → Blocked** lists every blocked query (blocklists and RPZ) with the
   client's IP (see [Query logs](/dns/query-logs)).
 - **DNS → Live Capture** shows the queries holding a few keywords as they arrive, grouped by
   domain, and blocks a domain (or several at once) straight from the results (see
   [Live capture](/dns/live-capture)).
-- Every change to lists, rules and networks is recorded in the [audit log](/admin/audit-log).
+- Every change to lists, rules and networks is recorded in the [audit log](/admin/audit-log), and in
+  this page's own [history](#history), with what it takes to undo it.
+
+## History
+
+The **History** tab lists every change of this page's settings, newest first, a page at a time: who
+made it, when and from where (the dashboard, the CLI, the API or an assistant), and what was there
+before and after. Open a line to see the parts that changed. Filter by kind, by who, or by a domain
+or a list's name. Lines are kept **90 days**.
+
+| Kept | As |
+| --- | --- |
+| Lists | Added, removed, on or off, renamed, clients and schedule |
+| A list of your own's domains | Only the lines added and removed, so a 4 MB list doesn't cost 4 MB per edit. A deleted list keeps its whole text, to bring it back |
+| Rules | Added, removed, comment, clients and schedule |
+| Client networks, clients, schedules, safe search | Added, removed, every field |
+| Blocked answers, the block page | Before and after (server-wide) |
+
+A downloaded list's own contents aren't history: an update of the list is no change of yours.
+
+### Undo one change
+
+**Undo** on a line says what it will do, asks first, and puts back **that change alone**. Later
+changes stay: undoing a rename leaves the list's later on/off as it is, and undoing "added
+`ads.example`" leaves the other lines of the list alone. It goes through the same checks as the page
+and is a new line itself, so an undo can be undone.
+
+Things deleted come back with what they held: a list with its domains, clients and schedule (a
+downloaded list is downloaded again), a rule with its clients and schedule.
+
+An undo is **refused with the reason**, before anything is written, when what it would restore is
+gone or has moved on:
+
+- the rule or list it is about was removed since, or was changed since and undoing its creation
+  would lose that;
+- a part it would put back was changed again (undo the later change first);
+- a line it would take out is no longer on the list, or a line it would put back is on it again;
+- a client or schedule it names is no longer there, or a name is taken;
+- the page's own checks refuse the result: a list left without a domain or over 4 MB, a client still
+  in use, the block page answering without a proxy.
+
+<Note>
+  Replacing the block page's certificate authority can't be undone. The line is kept, with the old and
+  the new fingerprint, but the old key is gone on purpose and devices must trust the new authority. No
+  line ever holds the authority's private key.
+</Note>
+
+### Who sees what
+
+A line belongs to a scope, like the settings it is about: people see and undo the lines of a division
+where they have *Manage blocklists*, and the server-wide ones (client networks too) when they may
+edit server-wide filtering.
+
+A [secondary](/dns/replication) answers like its primary, so an undo reaches it as any edit does. It
+refuses the undo itself, as it refuses this page's other changes, and shows no **Undo**. The history
+isn't copied to secondaries: changes are kept and undone on the primary, and after a take over the
+new primary's history starts then.
+
+<Tabs>
+  <Tab title="Dashboard">
+    **DNS → Filtering → History**. [What changed?](/dashboard/what-changed) links here from a change of
+    filtering.
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz filter history                                 # server-wide (--division, --page, --limit)
+    dnz filter history --kind list -q ads.example --who alice
+    dnz filter history --show 42                       # one line, its domain lines, what undoing it does
+    dnz filter undo 42                                 # says what it does and asks; --yes to skip
+    ```
+
+  </Tab>
+  <Tab title="API">
+
+    ```bash
+    curl -H "Authorization: Bearer $TOKEN" "https://dnz.example.com/api/filtering/history?kind=list&q=ads.example"
+    curl -X POST -H "Authorization: Bearer $TOKEN" https://dnz.example.com/api/filtering/history/42/undo
+    ```
+
+  </Tab>
+</Tabs>
 
 ## Troubleshooting
 
