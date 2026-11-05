@@ -304,6 +304,8 @@ dnz proxy routes waf-hits edge --json
 | `--waf-skip-path` | A path prefix the rules leave alone, e.g. `/admin/editor`; repeat for more |
 | `--waf-skip-rule` | A rule id from `dnz proxy waf rules` to leave out; repeat for more. An unknown id is refused |
 | `--waf-allow` | An address or range the rules never stop; repeat for more |
+| `--waf-preview` | `medium` or `high`: [try that sensitivity](/proxy/waf-page#preview-a-higher-sensitivity). Its rules only count, then it turns itself off. `off` stops it |
+| `--waf-preview-hours` | How long a new preview runs: 1 to 168 hours, 24 unless given |
 
 `edit` adds the exceptions to what the route has and keeps the rest; the other `--waf-*` flags need
 it on first (`--waf block` or `--waf log`). Turning it off and on again starts with no exceptions. A
@@ -334,7 +336,13 @@ dnz proxy waf campaigns --since 24h                # attacks grouped by network
 dnz proxy waf campaign-block AS4134 --everywhere   # its addresses; --ranges for its /24s
 dnz proxy waf shields --since 7d -p edge           # shields: each one's CVE, routes and hits, and routes worth a look
 dnz proxy routes edit edge wiki.example.com --shield cve-2022-26134   # -ID takes one off, `off` every one; DNZ Proxy only
+dnz proxy waf previews -p edge                     # what each preview would also have stopped, in words
+dnz proxy waf events --action shadow               # those requests, from the log's sample
+dnz proxy waf report                               # the weekly report over the last seven days, and who gets it
+dnz proxy waf report --send-now                    # sends it now to the providers that ticked waf_report
 ```
+
+A batch edit starts a preview with `--switch waf_preview=on` (High, 24 hours).
 
 [AI crawlers and verified bots](/proxy/waf-page#bots), DNZ Proxy only:
 
@@ -506,6 +514,8 @@ dnz proxy middlewares merge office office-edge2    # everything using office-edg
 dnz proxy middlewares rm strip-v1                  # refused while anything uses it
 dnz proxy firewalls list                           # every firewall, its rule count and what uses it
 dnz proxy firewalls show office                    # its rules, in order
+dnz proxy firewall try office --number 2           # rule 2 on past traffic, nothing saved (--hours, --host, -p, --limit)
+dnz proxy firewall try --rule '{"action":"block","conditions":[{"field":"path","op":"startsWith","values":["/admin"]}]}' --hours 6
 ```
 
 `--kind` defaults to the type `--settings` holds. A TCP route picks TCP middlewares with

@@ -910,6 +910,10 @@ Countries need a GeoIP database. Set **GeoIP database URL** on the proxy's **Set
 `.mmdb` (or `.mmdb.gz`) file, such as MaxMind GeoLite2 Country or DB-IP's IP to Country Lite. Each
 node downloads it.
 
+Before you save a rule, **Try on past traffic** in the editor runs it over the nodes' request logs and says
+what it would have matched, from a sample and saying so. See
+[Try a firewall rule](/proxy/waf-page#try-a-firewall-rule-on-past-traffic).
+
 ### Web application firewall (`dnzWaf`)
 
 Ready-made rules against well-known attacks (SQL injection, XSS, path traversal, command injection,

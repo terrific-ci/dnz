@@ -61,6 +61,7 @@ replaces them all.
 | `rate_limited` | Queries over the per-client rate limit in 5 minutes pass the threshold |
 | `cache_full` | Answers are pushed out of the cache before their TTL (`cache_size` is too small) |
 | `daily_summary` | Once a day, at the summary hour: yesterday's traffic, outages, top names and clients |
+| `waf_report` | Mondays at 08:00: the [weekly WAF report](/proxy/waf-page#the-weekly-report). Only providers that ask for it |
 | `proxy_attack` | Requests blocked on a hostname spike; and when it is over |
 | `proxy_origin` | A proxy service's server fails its health check; and when it answers again |
 | `proxy_node` | A DNZ Proxy node, Traefik or Caddy is gone; and when it is back |

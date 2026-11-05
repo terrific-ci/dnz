@@ -31,6 +31,7 @@ Pick a span (1 hour to 30 days), a proxy and a hostname at the top.
 | **Lists of bad networks** | Outside lists DNZ keeps up to date, their size and last update (see below) |
 | **Bots** | Humans, verified bots, AI crawlers and fake bots per hostname, the top crawlers, the fake ones' addresses (see below) |
 | **Leaked passwords** | The [leaked password](/proxy/leaked-passwords) filter, the routes checking logins and the nodes serving them |
+| **Previews of a higher sensitivity** | What a route would also block at High, before you raise it, and the weekly report (see below) |
 
 <Note>
   Events come from the nodes' request logs, which keep a sample of what they serve. Blocked requests
@@ -246,6 +247,87 @@ claim hasn't been checked yet. Routes that don't tell bots apart count in none o
 what its routes let AI crawlers do, and can change it there or for every route; each change is a version in
 [route history](/proxy/route-history). Click a fake bot's address for its details.
 
+## Preview a higher sensitivity
+
+*What would this route block at High?* Let it run the extra rules in shadow mode for a while before you
+raise it. A preview is off by default, per route, and turns itself off after 24 hours.
+
+Start one with **Preview High** in the route dialog's WAF group, under **Previews of a higher
+sensitivity** on this page, or in a batch edit. While it runs, the rules above the route's sensitivity
+only count, with the note `shadow waf:<rule>`:
+
+- the visitor gets exactly what they got before;
+- nothing shows as blocked or logged: not in the totals, the map, the chart, the attack alerts or a SIEM's
+  security events;
+- no address gets closer to a [ban](#bans-that-expire).
+
+The panel says what came of it in words:
+
+> So far High would also block 37 requests: 30 from addresses the WAF stopped nothing else from (mostly
+> /search), which may be real visitors, and 7 from addresses it also stopped.
+
+Look at the first number before you switch: those may be real visitors. Only the busiest addresses are told
+apart, so the second number is *at least*. The events' **Preview only** filter shows the requests themselves,
+from the log's sample. **Switch to High** raises the route and ends the preview, and
+[route history](/proxy/route-history) keeps a version.
+
+The end is a time kept with the route: neither a restart nor DNZ being away extends it, since each node reads
+the time itself. A node too old for previews ignores it, and the panel names it.
+
+<Note>
+  While it runs, a preview costs that route's requests one more pass over the extra rules. The whole rule set
+  takes about 11–12 µs on a browser-like request. A route without a preview pays nothing more.
+</Note>
+
+## The weekly report
+
+Every Monday at 08:00 in the server's time zone, DNZ sends the seven days before it through the
+[notification providers](/integrations/notifications) that ticked **Weekly WAF report**: requests blocked and
+logged, the busiest countries, rules and addresses, new bans, how many routes have the WAF, and **the nodes that
+didn't answer**, whose numbers are missing from it.
+
+A new provider doesn't get it until you tick it. Only the server that leads a cluster sends it, never a
+secondary. DNZ remembers which Monday it sent, so a restart or a new leader doesn't send it twice. A server that
+was down at 08:00 still sends it, up to 48 hours late. **Send it now** on this page sends the last seven days as
+a test, which doesn't count as Monday's.
+
+## Try a firewall rule on past traffic
+
+Before you save a [firewall](/proxy/dnz-proxy#firewall-dnzfirewall) rule, **Try on past traffic** in the rule
+editor says what it would have matched: how many requests, from how many addresses, with examples. Pick the
+last hour to the last 7 days. The rule is what's in the editor, unsaved: nothing is written anywhere.
+
+It runs on the nodes, over each one's request log, with the code the firewall itself runs, so a result can't
+differ from the real rule. For a firewall that routes run, it looks only at those routes' hostnames. What the
+rules above it stop never reaches it, as in the firewall.
+
+**The log is a sample, and the answer says so.** Each node keeps a part of what it serves (blocked requests get
+ten times the room):
+
+> This rule would have matched 340 of the 5,210 lines in the logs' sample, from 12 addresses. The logs hold
+> 3.1% of the 168,000 requests served in this window, which comes to about 11,000 requests in all (an estimate).
+
+The estimate scales each hour and hostname by the requests the node counted, which are exact. It is an estimate
+and no more: a request the log keeps more often than others weighs differently.
+
+**What the log can't answer is named, never guessed.** A log line holds the host, method, path with its query
+string, address, country, user agent and referer.
+
+| Condition | What happens |
+| --- | --- |
+| Any other header | The line is a *maybe*, counted apart: *Another 12 match only if the X-Env header also holds*. With *all* conditions, a line another condition rules out isn't one; with *any*, one another condition catches is a real match |
+| Country, on a node without a GeoIP database | A *maybe* too, and it says so |
+| Network lists | Read as they are now, not as they were on the day of the request |
+| Paths longer than 1,024 characters | Cut in the log; the answer counts those lines. User agents are kept up to 256 and referers up to 512 |
+
+On a route that rewrites paths, a line may hold the rewritten path. Lines that were already blocked or challenged
+count too, and are said apart.
+
+It runs off the request path: one at a time on each node, at most 50,000 lines per node unless you ask for more
+(200,000 at most), newest first, within 20 seconds. If it stops early the answer says where. A node too old to try
+a rule isn't asked and is named, as is one that didn't answer. WAF exceptions and rate limits can't be tried this
+way yet.
+
 ## When it wasn't an attack
 
 When the WAF stops a real visitor or app, use **Not an attack…** on its event and pick the narrowest
@@ -293,12 +375,23 @@ dnz proxy waf campaign-block AS4134 --host shop.example.com   # its addresses; -
 dnz proxy routes edit edge shop.example.com --ai-crawlers block   # or robots, allow
 dnz proxy bots --since 7d                          # humans, verified bots, AI crawlers, fake bots
 dnz proxy bots --list                              # the names DNZ knows and how each is checked
+dnz proxy routes edit edge shop.example.com --waf-preview high   # 24 hours; --waf-preview-hours 6, --waf-preview off
+dnz proxy waf previews                             # what each preview would also have stopped, in words
+dnz proxy waf events --action shadow               # those requests, from the log's sample
+dnz proxy waf report                               # what the weekly report says of the last seven days
+dnz proxy waf report --send-now                    # sends it now to the providers that ticked it
+dnz proxy firewall try office --number 2           # a firewall's rule on past traffic; nothing is saved
+dnz proxy firewall try --rule '{"action":"block","conditions":[{"field":"path","op":"startsWith","values":["/admin"]}]}'
 ```
 
 AI assistants get the MCP tools `proxy_waf_overview`, `proxy_waf_events`, `proxy_waf_address`,
 `proxy_waf_coverage`, `proxy_waf_bans`, `proxy_waf_lists`, `proxy_waf_leaked_passwords`, `proxy_waf_campaigns` and, with write
 access, `waf_block`, `waf_unblock`, `waf_exception`, `waf_ban` and `waf_unban`. Downloading lists
 and location databases is left to people. `proxy_bot_traffic` reads the Bots section and, with write
+`proxy_waf_coverage`, `proxy_waf_bans`, `proxy_waf_lists`, `proxy_waf_campaigns`, `proxy_waf_previews`,
+`proxy_waf_report`, `try_firewall_rule` and, with write access, `waf_block`, `waf_unblock`, `waf_exception`, `waf_ban` and
+`waf_unban`; `set_waf` starts a preview. Downloading lists and location databases and sending the report
+are left to people. `proxy_bot_traffic` reads the Bots section and, with write
 access, `set_ai_crawlers` sets what AI crawlers may do.
 dnz proxy waf shields --since 7d                   # each shield's CVE, routes and hits; routes worth a look
 ```
