@@ -410,7 +410,7 @@ dnz proxy export edge > edge.yaml                 # passwords by user name only 
 dnz proxy plan -f edge.yaml                       # what would change; nothing is written
 dnz proxy plan -f edge.yaml --exit-code           # exit 2 when the proxy differs from the file
 dnz proxy import nginx /etc/nginx -p edge -o edge.yaml   # from an Nginx configuration; nothing is applied
-dnz proxy nginx show web-1                        # an Nginx proxy's agent, its versions, the sites it read
+dnz proxy nginx show web-1                        # an Nginx proxy's agent, its versions, the sites it read; managed: the last check, what Nginx can't take
 dnz proxy nginx token web-1                       # a new token for its agent; the old one stops working
 dnz proxy apply -f edge.yaml                      # apply it; routes the file leaves out stay
 dnz proxy apply -f edge.yaml --prune              # and remove them

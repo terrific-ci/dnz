@@ -1,6 +1,6 @@
 ---
 title: "Nginx"
-description: "Connect an Nginx to DNZ with a small agent next to it: DNS records for the sites in your own configuration."
+description: "Connect an Nginx to DNZ with a small agent next to it: DNS records for your own sites, or a configuration DNZ writes and checks with nginx -t before each reload."
 ---
 
 An Nginx can be a proxy of DNZ, next to Traefik, Caddy and DNZ Proxy. Traefik and Caddy fetch their configuration
@@ -10,8 +10,12 @@ connects out to DNZ with the proxy's token, as Traefik and Caddy do; DNZ never r
 Moving to DNZ Proxy instead gets you every feature: [importing an Nginx configuration](/proxy/nginx-import) makes
 that a matter of checking a plan.
 
-An Nginx proxy is **read only**: DNZ keeps DNS records for the sites in your own configuration, and writes nothing
-to Nginx. The agent reads the `server_name`s from `nginx -T`, on the server.
+It works in two ways, picked when it is added:
+
+- **Read only**: DNZ keeps DNS records for the sites in your own configuration, and writes nothing to Nginx. The agent
+  reads the `server_name`s from `nginx -T`, on the server.
+- **Managed**: DNZ writes a file of its own under `conf.d`, checks it with `nginx -t`, and reloads only when that
+  passes. Routes are made as for any proxy ([below](#managed)). Your own files stay as they are.
 
 ## Versions
 
@@ -43,13 +47,15 @@ image).
 
 ## Adding one
 
-**Proxy → Proxies → Add proxy → Nginx**, or:
+**Proxy → Proxies → Add proxy → Nginx**, then **Nginx proxy** (managed) or **Keep my Nginx configuration** (read only),
+or:
 
 ```sh
-dnz proxy add web-1 --kind nginx --read-only --address 203.0.113.5 --division Main
+dnz proxy add web-2 --kind nginx --ipv4 203.0.113.6                                # managed
+dnz proxy add web-1 --kind nginx --read-only --address 203.0.113.5 --division Main  # read only
 ```
 
-You get the proxy's **token**, once, with the steps filled in. Its settings are those of any
+You get the proxy's **token**, once, with the steps filled in. A read-only proxy's settings are those of any
 [read-only proxy](/proxy/read-only): the addresses or CNAME DNS answers with, DNS only or through DNZ, the TTL, the
 division whose zones get the records, how often the sites are read, and whether a site that leaves keeps its
 records. A new one starts paused: install the agent, look at the **Preview**, and apply it.
@@ -63,7 +69,7 @@ works only when DNZ runs on that same server.
 
 <Tabs>
   <Tab title="Already have Nginx">
-On the server that runs Nginx, as one paste. It needs root: `nginx -T` reads Nginx's certificates. Set the three
+On the server that runs Nginx, as one paste. It needs root: `nginx -t` and `nginx -T` read Nginx's certificates, and a reload signals its master process. Set the three
 values at the top:
 
 ```sh
@@ -143,7 +149,7 @@ services:
       DNZ_NGINX_TOKEN: dnzp_THE_PROXY_TOKEN
     volumes:
       - dnz-nginx:/data
-      # Your own sites, for a read-only proxy:
+      # Your own sites:
       # - ./my-sites.conf:/etc/nginx/conf.d/my-sites.conf:ro
 volumes:
   dnz-nginx:
@@ -163,6 +169,7 @@ security fix reaches the image with a DNZ release, and the release notes say so.
 | `--dnz` | `DNZ_URL` | | DNZ's address, as this server reaches it |
 | `--token` | `DNZ_NGINX_TOKEN` | | The proxy's token |
 | `--nginx` | `DNZ_NGINX_BIN` | `nginx` | The nginx program |
+| `--conf-file` | `DNZ_NGINX_CONF_FILE` | `/etc/nginx/conf.d/dnz.conf` | Where DNZ's configuration goes (managed); Nginx must include it |
 | `--state-dir` | `DNZ_NGINX_STATE_DIR` | `/var/lib/dnz-nginx-agent` | What it keeps across restarts |
 | `--insecure` | `DNZ_NGINX_INSECURE` | off | Accept a self-signed certificate from DNZ |
 | `--supervise` | `DNZ_NGINX_SUPERVISE` | off | Start Nginx too and exit when it dies (the image) |
@@ -202,10 +209,11 @@ sudo rm -rf /etc/dnz-nginx-agent /var/lib/dnz-nginx-agent
 sudo systemctl daemon-reload
 ```
 
-Nginx keeps running with its own files. In Docker: `docker rm -f dnz-nginx && docker volume rm dnz-nginx`. Then remove
+Nginx keeps running with its own files. A managed proxy's file stays until you remove it and reload:
+`sudo rm /etc/nginx/conf.d/dnz.conf && sudo nginx -s reload`. In Docker: `docker rm -f dnz-nginx && docker volume rm dnz-nginx`. Then remove
 the proxy in DNZ, with or without its records.
 
-## What it reads
+## Read only
 
 Which hostnames get records, and how, works as for any [read-only proxy](/proxy/read-only). From `nginx -T`:
 
@@ -218,15 +226,76 @@ Which hostnames get records, and how, works as for any [read-only proxy](/proxy/
 
 `nginx -T` prints every file Nginx reads. The agent takes only the names from it; the rest never leaves the server.
 
+## Managed
+
+DNZ builds the configuration from the proxy's routes, upstreams and middlewares, as for Traefik and Caddy. On every
+change the agent:
+
+1. writes it to **a file of its own**, `/etc/nginx/conf.d/dnz.conf` (`--conf-file`), never touching your files;
+2. runs `nginx -t`, and checks that Nginx really reads that file;
+3. reloads Nginx **only if that passes**.
+
+A refused configuration changes nothing that serves: the last good file goes back at once, and Nginx reads files
+only when it reloads. What `nginx -t` said shows on the proxy's page and under `dnz proxy nginx show`, and
+`dnz_nginx_config_check_ok` goes to 0. It tries again a minute later, as the cause may be in your own files.
+
+The file sits beside your configuration, so it never takes `default_server`: a name no route serves gets whatever your
+own configuration answers.
+
+### Certificates
+
+HTTPS routes get their certificates from DNZ's [automatic certificates](/proxy/certificates), as on a DNZ Proxy.
+The agent receives them and writes them where only root reads them, in `certs/` under its state folder. Names under DNZ's
+private CA get theirs from it. HTTP-01 is answered through a `location` for the challenge in what DNZ generates, which
+passes the question on to DNZ: Nginx must reach DNZ at the address the agent uses. A wildcard needs DNS-01.
+
+Until a name has its certificate it has no HTTPS on Nginx (it serves plain HTTP if a route says so), and the proxy's
+page says so.
+
+### What Nginx gets
+
+| | On Nginx |
+|---|---|
+| Hostnames | One `server` per name and scheme. `*.example.com` covers one label, as on the other kinds (a regular expression in `server_name`) |
+| A name's own route and a wildcard | The name's own route wins, whatever the paths' lengths; a path it leaves open still reaches the wildcard |
+| Path, `Path`, `PathPrefix`, `PathRegexp` | `location` |
+| Upstreams | `upstream` blocks: weights, Fallback as `backup`, Split, `least_conn`, `ip_hash`, `random two least_conn` |
+| Password, address list, rate limit, custom headers, compression, strip / add prefix, replace path, redirect to HTTPS | `auth_basic`, `allow`/`deny`, `limit_req`, `proxy_set_header`/`add_header`, `gzip`, `rewrite`, `return` |
+| Upload limit | `client_max_body_size`: for **every** request's body, not only multipart uploads |
+| Status pages | Answered in front of the name's locations, HTML, JSON or text by `Accept`, with allowed addresses |
+| Connection settings | The HTTPS certificate check, server name, timeouts |
+
+### What it doesn't get
+
+Left out, and listed on the proxy's page with a warning, as for Caddy. Never dropped without a word:
+
+- **DNZ Proxy only**: the web application firewall, the browser check (under attack), the waiting room, the cache,
+  shields, AI crawler controls and DNZ Proxy's analytics. The route is served without them.
+- **The route stays out altogether** when what it would lose is its lock: sign-in through DNZ (Nginx's `auth_request`
+  can't pass DNZ's redirect to the visitor, and the route dialog refuses it here) or a firewall.
+- **A route's rules**, and conditions on a method, header, query or address: DNZ writes no `if`. The route dialog
+  refuses rules here; a route with such conditions stays out, and is named.
+- **Active health checks** aren't in open source Nginx: it takes a server out after visits fail. Per-server certificate
+  checks and health paths are DNZ Proxy only; **sticky sessions** by cookie too.
+- **TCP and UDP routes** and a name each proxy looks up itself: refused or left out, and named.
+- A priority: Nginx picks a `location` by its path. Entry points: it listens on 80 and 443.
+- DNS filtering's **block page**: it would need the default server of your Nginx.
+
+The whole file is on the proxy's page (`GET /api/proxies/{id}/nginx`, `dnz proxy nginx show --json`). A long
+hostname may need `server_names_hash_bucket_size` raised in your `nginx.conf`: `nginx -t` says so.
+
 ## Commands
 
 ```sh
+dnz proxy add web-2 --kind nginx --ipv4 203.0.113.6
+dnz proxy routes add web-2 app.example.com -u http://10.0.0.5:8080
 dnz proxy add web-1 --kind nginx --read-only --address 203.0.113.5 --division Main
-dnz proxy nginx show web-1       # the agent, its versions, the sites it read
+dnz proxy nginx show web-1       # the agent, its versions, the sites it read; managed: the last check, what Nginx can't take
 dnz proxy nginx token web-1      # a new token; the old one stops working
 dnz proxy sites plan web-1       # what a sync would change
 dnz proxy sites sync web-1
 ```
 
-An assistant reads the same with the MCP tool `proxy_nginx`. Prometheus: `dnz_nginx_agent_connected`,
-`dnz_nginx_agent_last_seen_timestamp_seconds`, `dnz_nginx_agent_behind_dnz` and `dnz_nginx_problem`, each per `proxy`.
+An assistant reads the same with the MCP tool `proxy_nginx`, and writes nothing. Prometheus: `dnz_nginx_agent_connected`,
+`dnz_nginx_agent_last_seen_timestamp_seconds`, `dnz_nginx_agent_behind_dnz`, `dnz_nginx_problem`, `dnz_nginx_config_check_ok`,
+`dnz_nginx_reloads_total`, `dnz_nginx_reload_failures_total` and `dnz_nginx_last_reload_timestamp_seconds`, each per `proxy`.

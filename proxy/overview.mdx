@@ -39,7 +39,8 @@ Pick Traefik when you already run it, or want its providers (Docker, Kubernetes)
 DNZ Proxy when you want DNZ to run the whole path, from certificates to analytics. Pick Caddy when
 you'd rather run Caddy and let it get its own certificates.
 
-An [Nginx](/proxy/nginx) can be a proxy too, through a small agent next to it, since open source Nginx only reads files.
+An [Nginx](/proxy/nginx) can be a proxy too, read only or written by DNZ, through a small agent next to it, since open source
+Nginx only reads files. It gets less than the others: no web application firewall, browser check, waiting room or analytics.
 Moving from Nginx to DNZ Proxy instead? [Import its configuration](/proxy/nginx-import).
 
 Kinds can be mixed. A record can go through a Traefik and a DNZ Proxy at once, and DNS answers
