@@ -80,6 +80,7 @@
             "pages": [
               "dashboard/tour",
               "dashboard/monitoring",
+              "dashboard/server",
               "dashboard/uptime",
               "dashboard/what-changed",
               "dashboard/name-checks",
