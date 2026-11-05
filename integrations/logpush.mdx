@@ -43,7 +43,11 @@ and pushes again once it is connected, from where it stopped.
 | --- | --- | --- |
 | **Security events only** | Lines the WAF or a firewall rule matched: blocks, challenges, log-only matches | Next to nothing: the nodes log these anyway |
 | **What the nodes log** | The sample each node keeps: up to the proxy's *Request log lines per second*, with ten times the room for errors, blocks and challenges | Next to nothing: the same lines, sent on |
-| **Every request** | A line for every visit, past the proxy's budget | **It costs.** Every request is written to the node's database and sent on: CPU, disk and bandwidth on a busy node, and its log grows with its traffic for as long as logs are kept. Off by default |
+| **Every request** | A line for every visit, past the proxy's budget | **It costs.** Every request is written to the node's database and sent on: in our tests 34 µs more CPU per request on one CPU (a third fewer requests a second at the most a node handles), about 230 bytes of disk per line, up to 25 MiB more memory, and answers held up while a push runs (at 5,000 requests a second the slowest 1% took up to 0.7 s). Its log grows with its traffic for as long as logs are kept. Off by default |
+
+A push sends at most 50,000 lines, so with **Every request** the job's interval decides how much traffic it keeps up
+with: 1,666 requests a second at the default 30 seconds, 10,000 at 5 seconds. Measurements:
+[Proxy benchmarks](/proxy/benchmarks#25-the-new-features-off-and-on).
 
 While a proxy has no such job a visit costs nothing more. How it goes shows on the job's row: how many
 of its nodes push, fail or don't report, the longest lag and the last error, and **Nodes** lists them.

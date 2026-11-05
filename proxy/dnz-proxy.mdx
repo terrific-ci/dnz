@@ -669,6 +669,11 @@ spend anything on it per request. Turning it off closes the UDP port and stops `
 connections get a GOAWAY and a few seconds to finish, and browsers that remember HTTP/3 fall back to
 TCP on their next request.
 
+Measured on one CPU ([Proxy benchmarks](/proxy/benchmarks#25-the-new-features-off-and-on)): on, a visit
+over TCP pays for the `Alt-Svc` header, about 2 µs, and the node holds 2–3 MiB more. A visit over HTTP/3
+costs more CPU than one over HTTP/2, as QUIC does on the node what the kernel does for TCP: about 15% more
+per small request, 46% more per 64 KiB answer, and 59 KiB per open connection against HTTP/2's 52 KiB.
+
 <Warning>
   UDP has to be open, and DNZ can't do that for you. Open the port on each node's firewall and in the
   cloud's security group, and publish it where the node runs in a container. While it is closed

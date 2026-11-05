@@ -249,6 +249,67 @@ Docker's bridge and connection tracking), and the rest Pingora's HTTP/1 handling
 before ("Tried and not kept" above). There is no change in DNZ Proxy's code left that would move
 these numbers by more than the noise.
 
+## 2.5: the new features, off and on
+
+The check before 2.5's release (2026-11-05 and 06), on the server above, one DNZ Proxy on one CPU.
+Everything 2.5 adds to DNZ Proxy is off by default: bans, lists of bad networks, shields, AI crawler
+and bot checks, previews of a higher sensitivity, leaked password checks, a log push of every request,
+decoy names and HTTP/3.
+
+**2.4.0 against 2.5, everything at its defaults**, a fresh node per run, the builds taking turns,
+median of 8 rounds each:
+
+| Build | HTTP 1 KiB | HTTPS 1 KiB | New connection | HTTP 64 KiB | p50 / p99 at 5,000/s | CPU per request | Memory idle / loaded |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2.4.0 | 13,142/s | 12,435/s | 2,526/s | 7,580/s | 0.58 / 1.45 ms | 96.2 µs | 5 / 10 MiB |
+| 2.5 | 13,219/s | 12,453/s | 2,536/s | 7,513/s | 0.59 / 1.45 ms | 96.4 µs | 5 / 10 MiB |
+
+Every difference is inside the other build's range of rounds: **2.5 costs nothing while its features
+are off.** Under a burst of 1,000 connections of 64 KiB answers, both peaked at 56 MiB and were back at
+11 MiB a minute later.
+
+**Each feature on**, on one route, against the same route with it off, the states taking turns, medians
+of 6 rounds. *Browser-like* is a request with 11 query parameters, 8 cookies, a browser's user agent
+and referer; *plain* is `GET /`. Differences of 1–2% in requests a second are within the noise of
+these runs; CPU per request is the steadier number.
+
+| Feature on | Request | Requests a second | CPU per request |
+| --- | --- | ---: | ---: |
+| Bans, 10,000 held | plain | −0.2% | the same |
+| A firewall rule on a list of 100,000 ranges | plain | −1.9% | the same |
+| Shields: all 12 on one route | browser-like / plain | −10.3% / −1.0% | +9.3 / +2.8 µs |
+| Shield on one path (PHPUnit) | browser-like | −0.3% | +0.9 µs |
+| Shield on the path, query and every header (Log4Shell) | browser-like | −5.3% | +4.9 µs |
+| AI crawlers `block` and a firewall rule on bots | browser-like / plain | −1.9% / within the noise | +2.9 / +2.5 µs |
+| Preview of High on a route at Medium | browser-like / plain | −6.4% / −1.0% | +5.5 / +2.0 µs |
+| Leaked password checks, a login | form POST | −7 to −10% | +5.5 µs |
+| Leaked password checks, other requests on the route | plain / browser-like | +0.1% / −1.8% | the same / +2.2 µs |
+| Log push of every request | plain | −32% | +34 µs |
+| Decoy names (nobody banned) | plain | +1.3% | the same |
+| HTTP/3 on the entry point, visitors over TCP | HTTPS | −1.4% | +2.3 µs |
+| HTTP/3 off on the route, on at the entry point | HTTPS | +0.3% | +1.3 µs (within the noise) |
+
+Only the log push of every request costs much: every visit becomes a line in the node's database (about
+230 bytes each) and is sent on, and while it pushes, the node's answers wait: at 5,000 requests a second
+the p99 went from 1.4 to 688 ms. Leaked password checks with the largest filter (20 million
+passwords) hold about 43 MiB more on each node and cost a login 12 µs more; the default filter about
+1 MiB. A list of 100,000 ranges takes about 8 MiB.
+
+**HTTP/3 against HTTP/2**, the same client (oha with HTTP/3) and route, 64 connections, medians of 6
+rounds:
+
+| | HTTP/2 | HTTP/3 |
+| --- | ---: | ---: |
+| 1 KiB, requests a second | 10,932 | 9,491 (−13%) |
+| 64 KiB, requests a second | 4,583 | 3,109 (−32%) |
+| CPU per request at 5,000/s | 118 µs | 135 µs (+14%) |
+| p50 / p99 at 5,000/s | 0.86 / 3.55 ms | 1.01 / 4.91 ms |
+| Memory per open connection | 52 KiB | 59 KiB |
+
+QUIC does on the node what the kernel does for TCP (packets, encryption per packet, acknowledgements),
+so HTTP/3 costs more CPU, the more the larger the answer. With the same client, Traefik 3.7.16 went from
+5,128 to 4,869 requests a second (1 KiB) and Caddy 2.11.7 from 3,553 to 2,268.
+
 ## 2.4: Server: dnz and request IDs
 
 One DNZ Proxy, HTTP 1 KiB, the builds taking turns, medians:

@@ -140,7 +140,8 @@ are for blocks. On the map and the chart, banned requests have a colour of their
 above the map folds them into blocked. Either way they count as blocked in the totals, in Analytics
 and in attack alerts.
 
-Off, a visit reads one setting it already holds and does nothing more; on, it does one lookup. A node
+Off, a visit reads one setting it already holds and does nothing more; on, it does one lookup, which
+measured the same as off with 10,000 bans held ([Proxy benchmarks](/proxy/benchmarks#25-the-new-features-off-and-on)). A node
 older than DNZ 2.5 doesn't ban, and the panel names it. A node restarted while DNZ is away holds no
 bans until it connects again.
 
@@ -160,7 +161,8 @@ DNZ downloads each list and sends it to the nodes that need it.
 | [abuse.ch Feodo Tracker](https://feodotracker.abuse.ch/blocklist/) | `feodo` | Command-and-control servers of banking botnets, every 6 hours. Often short or empty | CC0 |
 
 Lists are off by default, and a list does nothing by itself. A DNZ Proxy firewall rule names them, so
-it applies to the routes you pick and costs one lookup per request only there:
+it applies to the routes you pick and costs one lookup per request only there (nothing measurable with a
+list of 100,000 ranges, which takes a node about 8 MiB):
 
 <Steps>
   <Step title="Add a rule to a firewall">
@@ -235,6 +237,9 @@ visit, never while a visit waits, and keeps it for an hour.
 `/robots.txt` itself stays open to crawlers, in **Block** too, so a polite one can read that it isn't
 welcome. A firewall rule that allows the visit first wins over the setting.
 
+A route with a setting other than **Allow** looks at every request's user agent: about 3 µs of CPU on one CPU
+([Proxy benchmarks](/proxy/benchmarks#25-the-new-features-off-and-on)). **Allow** costs nothing.
+
 <Note>
   **Google-Extended** and **Applebot-Extended** are only words in `robots.txt`: their requests say Googlebot
   and Applebot, so no route can refuse them. Write them in your `robots.txt`.
@@ -303,8 +308,9 @@ The end is a time kept with the route: neither a restart nor DNZ being away exte
 the time itself. A node too old for previews ignores it, and the panel names it.
 
 <Note>
-  While it runs, a preview costs that route's requests one more pass over the extra rules. The whole rule set
-  takes about 11–12 µs on a browser-like request. A route without a preview pays nothing more.
+  While it runs, a preview costs that route's requests one more pass over the extra rules. Measured on one
+  CPU, a preview of High on a route at Medium cost a browser-like request about 5.5 µs (6% fewer requests a
+  second at the most a node handles) and a plain one about 2 µs. A route without a preview pays nothing more.
 </Note>
 
 ## The weekly report
