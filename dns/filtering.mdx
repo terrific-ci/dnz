@@ -163,6 +163,38 @@ https://www.example.net/some/page
   </Tab>
 </Tabs>
 
+### Add one domain to a list
+
+In **Blocking → Your rules**, the choice beside **Block** says where a domain goes: **Just a rule**
+(the first choice, what happens if you don't choose), one of your own lists, or **New list…**. With
+no list of your own yet, a field for a new list's name is there at once: a name makes the list with
+this domain in it, and left empty the domain is just a rule. **Block** on a domain test's result has
+the same choice. **Allow** is always a rule.
+
+A list downloaded from a URL can't be chosen, because its next update would lose the line. A domain
+already on the list says so and adds no second line.
+
+<Tabs>
+  <Tab title="Dashboard">
+    **DNS → Filtering → Blocking → Your rules**, then pick the list beside **Block**.
+  </Tab>
+  <Tab title="CLI">
+
+    ```bash
+    dnz filter list add-domain School ads.example.com   # by name or id; --division for a division's list
+    ```
+
+  </Tab>
+  <Tab title="API">
+
+    ```bash
+    curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+      -d '{"domain": "ads.example.com"}' https://dnz.example.com/api/filtering/lists/5/domains
+    ```
+
+  </Tab>
+</Tabs>
+
 ### Export a list
 
 **⋯ → Export as .txt** (or right-click a list) downloads what DNZ currently blocks from it, for a
@@ -475,7 +507,8 @@ apps and sites calling home aren't the proxy's traffic.
   [RPZ](/dns/rpz) rule), whether that entry is only for some clients or a schedule, and whether safe
   search rewrites it. Fill in **Client IP** to see it from a particular device's point of view: its
   division comes from the client networks, its client groups from their addresses. Schedules are
-  checked at the current time. The **Allow** and **Block** buttons add a rule straight away.
+  checked at the current time. **Allow** adds a rule straight away; **Block** adds a rule or a line
+  in the list you choose beside it (see [Add one domain to a list](#add-one-domain-to-a-list)).
 - **Query Logs → All queries → Blocked** lists every blocked query (blocklists and RPZ) with the
   client's IP (see [Query logs](/dns/query-logs)).
 - **DNS → Live Capture** shows the queries holding a few keywords as they arrive, grouped by
