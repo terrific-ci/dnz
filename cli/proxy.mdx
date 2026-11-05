@@ -330,7 +330,7 @@ dnz proxy waf ban 203.0.113.9 --for 1h             # refuse one address for a wh
 dnz proxy waf unban 203.0.113.9                    # back in now
 dnz proxy waf lists --on tor-exit                  # the lists of bad networks; --off, --download
 dnz proxy waf leaked-passwords                     # leaked password checks: the filter, its source and terms, the routes and nodes
-dnz proxy waf leaked-passwords --file common.txt   # your own list, passwords or SHA-1 hashes (--format plain|sha1; --clear-file; --download)
+dnz proxy waf leaked-passwords --file common.txt   # add your own list to the default one, passwords or SHA-1 hashes (--format plain|sha1; --clear-file for the default alone; --download, refused while your own list is in the filter)
 dnz proxy waf events --action leaked               # logins it marked
 dnz proxy waf campaigns --since 24h                # attacks grouped by network
 dnz proxy waf campaign-block AS4134 --everywhere   # its addresses; --ranges for its /24s
