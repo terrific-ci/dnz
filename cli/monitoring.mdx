@@ -80,12 +80,14 @@ dnz capture tiktok --group                    # each domain once, when it first 
 dnz capture --client 192.168.1.20 --for 2m    # everything one device asks, for two minutes
 dnz capture ads --division it --json          # one JSON object per query
 dnz capture --list "Social media" -l Games    # the keywords of saved keyword lists
+dnz capture tiktok --on ns2                   # the queries a DNZ secondary answers, watched from its primary
 ```
 
 | Flag | Meaning |
 | --- | --- |
 | *keywords* | A name holding any of them is shown; none shows every query |
 | `--division`, `-d` | Only that division's queries: names in its zones and what clients in its client networks ask. Superadmins capture the whole server by default |
+| `--on` | A DNZ secondary's name or id: watch [that server](/dns/live-capture#another-server) from its primary. It connects within a minute, usually at once, and `--for` counts from then |
 | `--list`, `-l` | Add a keyword list's keywords, by name or id (repeatable) |
 | `--client` | Only this client address |
 | `--for` | Stop after this long (`90s`, `10m`, `1h`); default: until Ctrl-C |

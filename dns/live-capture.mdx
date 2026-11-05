@@ -139,6 +139,44 @@ Which block list the rule lands in follows the capture's scope:
 
 Without that permission, the results show no **Block** buttons.
 
+## Another server
+
+Queries are answered where clients send them: often at a secondary, while you are on the primary. On a primary,
+**DNS → Live Capture** has a **Server** choice: this server and each DNZ secondary. Pick one or more; the queries of the
+ones picked show here, with a **Server** column in the Live view when more than one is shown.
+
+- **You need nothing on the secondary**: no account, and no way to reach its API. Permissions are asked and checked on the
+  primary (**View query logs** in a division, **View all query logs** for all of a server's queries), and the secondary
+  connects out to the primary, as it does for everything else. A firewall that keeps the primary from its API changes nothing.
+- **It is connected only during a capture.** Nothing stays open between captures. *Start* notes the capture on the primary,
+  in memory. The secondary hears of it in its check-in's answer and only then opens two connections to the primary: a
+  server-sent event stream for the filter, and a streaming upload of its hits. Both close when the capture ends.
+- **Usually at once, within a minute at worst.** At *Start* the primary sends a DNS NOTIFY for the reserved name
+  `capture.dnz.invalid` to the secondary's NOTIFY addresses, which makes it check in now. If a firewall keeps it out, the
+  capture starts at the next check-in, and the page says *Waiting for ns2…* until then. A NOTIFY says nothing by itself: only
+  the check-in's answer decides, so a forged one costs one check-in, at most one every 5 seconds. It never counts in the
+  NOTIFY status, so a lost one doesn't mark the secondary *Behind*.
+- **Bounded on both sides.** A capture stops when the viewer leaves, the stream breaks or its time is up (its time counts
+  from when the secondary connects). A primary that restarts knows no capture, so nothing stays running on the secondary.
+  At most 16 captures run on a server, and at most 16 per secondary are asked for. Hits past a slow link are dropped and counted
+  on the page (*N skipped*), as a slow viewer's are.
+- **A division's capture** goes to the secondary as zone names and client networks, since zone ids differ between servers.
+- **Which servers.** Only DNZ secondaries are listed; BIND, Knot and the like aren't. One running an older DNZ shows disabled
+  with *update it*, and one that hasn't checked in for 3 minutes with *not connected*. A secondary shows only its own queries: it
+  has no server choice and can't watch its primary.
+- **Nothing more per query.** The secondary runs the same capture code as ever: while nobody captures, a batch of queries
+  costs one atomic load.
+
+Starting one is in the primary's audit log as `capture.start`, with `on` naming the server. Blocking from the results adds the
+rule on the primary, which the secondaries copy.
+
+<Note>
+  A reverse proxy in front of the primary must not buffer request bodies (nginx: `proxy_request_buffering off` for
+  `/api/replication/capture/`), or hits wait until the capture ends. In a cluster of primaries, the secondary's check-in must
+  reach the server you are connected to: a capture starts there and nowhere else. On a secondary that is a cluster itself,
+  the leader answers it.
+</Note>
+
 ## Scope and permissions
 
 | Capture | Permission | Sees |
@@ -158,7 +196,8 @@ their division. See [Access](/admin/access) for roles and permissions.
   **Stop** is pressed, or its time runs out. Starting one is in the audit log as `capture.start`.
 - At most **16 captures** run at once on a server. A viewer that falls behind gets a count of the
   queries it skipped instead of slowing anything down.
-- Live capture works on every server, a DNZ secondary included.
+- Live capture works on every server, a DNZ secondary included, and a primary can show a secondary's
+  queries ([Another server](#another-server)).
 - In a [cluster](/deploy/cluster), a capture shows the queries answered by the server you are
   connected to, like the query log. Queries a client sends to another server show up in a capture
   there.
@@ -182,6 +221,7 @@ curl -N -X POST https://dns.example.com/api/capture \
 | `division_id` | A division, or `null` for the whole server |
 | `client` | One client address, or empty for all |
 | `seconds` | How long to run; empty runs until the client disconnects (at most 24 hours) |
+| `on` | A DNZ secondary's name or id, to watch [that server](#another-server) from its primary; empty is this server |
 
 Events:
 
@@ -190,6 +230,15 @@ Events:
 | `start` | `{"keywords": ["tiktok", "facebook"], "lists": ["Social media"], "division_id": null, "client": null, "seconds": 60, "node": "…"}` |
 | `hits` | `{"at": "2026-10-27T08:55:03.120Z", "hits": [{"name": "api.tiktok.com", "domain": "tiktok.com", "qtype": "A", "client": "192.168.1.20", "rcode": "NOERROR", "source": "upstream", "duration_ms": 12}], "dropped": 0}` |
 | `end` | `{"reason": "time"}` when `seconds` ran out |
+
+With `on`, `start` also has `"server": "ns2", "waiting": true`; `connected` (`{"server": "ns2"}`) says the secondary's stream is
+up; each `hits` has `server`; and `end` can also be `{"reason": "ended", "message": "…"}` (it stopped or broke) or
+`{"reason": "not_connected", "message": "…"}` (it never connected, after 150 seconds). `on` is refused on a secondary (`400`) and
+for a server that is older or not connected (`409`).
+
+`GET /api/capture/servers?division_id=2` lists what can be picked (`logs.read` there; without `division_id`, `logs.server`):
+`{"this": "ns1", "follows_primary": null, "servers": [{"id": 4, "name": "ns2", "available": true, "why": null, "message": null, "last_seen": "…"}]}`.
+`why` is `older` or `not_connected`; `follows_primary` names the primary on a secondary, which lists nothing.
 
 A comment line (`: ping`) every 15 seconds keeps idle streams open through proxies. When too many
 captures are running, the answer is `429`.
