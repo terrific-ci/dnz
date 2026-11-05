@@ -1,0 +1,35 @@
+---
+title: "Failover drills"
+description: "dnz drill: set up, run and read failover drills from the terminal."
+---
+
+These commands match **High availability → Drills** in the dashboard. For what a drill does and what keeps it
+safe, see [Failover drills](/dashboard/failover-drills).
+
+Reading needs **Manage proxies**, **Manage monitoring** or **Manage replication**. A server's or a node's drill
+needs **Manage proxies**, a secondary's dry run **Manage replication**, a standby's a superadmin.
+
+```bash
+dnz drill switch on                           # allowed; starts nothing by itself
+dnz drill list                                # the switch, the stages in words, what's under way, the drills
+dnz drill add "App server 1" --stage origin --proxy edge --node edge-a --upstream app --origin http://10.0.0.1:80 --at 03:00 --days sun
+dnz drill add "Node A" --stage node --proxy edge --node edge-a --at 03:00 --days sun --schedule
+dnz drill add "Could ns2 take over?" --stage take_over --secondary ns2 --peer-url http://10.0.0.6:8080 --at 04:00
+dnz drill edit "Node A" --limit 900 --expect 90 --errors 2 --no-schedule
+dnz drill check "Node A"                      # whether it would start now, changing nothing
+dnz drill run "Node A"                        # inside its window; asks first (--yes doesn't)
+dnz drill stop                                # the one under way: everything goes back
+dnz drill runs --status failed --page 2       # 20 to a page (--limit); --drill "Node A"
+dnz drill report 12                           # time to notice, traffic moved, errors visitors saw, what didn't go as set
+dnz drill rm "Node A"                         # its history stays
+```
+
+| Flag | What |
+| --- | --- |
+| `--stage` | `origin` (a server of an upstream, for one node), `node` (it leaves DNS and stops answering) or `take_over` (only the dry run) |
+| `--at`, `--days` | Its window's start and days (`mon,sun` or `daily`), in the server's time zone |
+| `--window` | How long the window stays open, in minutes; by default enough for the limit |
+| `--limit` | It ends by itself this many seconds after it took anything out, 180 to 1800 (600 by default) |
+| `--expect` | Noticing and traffic moving should each take at most this many seconds (120 by default) |
+| `--errors` | Percentage points of 5xx above normal that stop it (1 by default) |
+| `--schedule`, `--no-schedule` | Runs by itself in its window, or only when a person starts it (the default) |

@@ -83,6 +83,7 @@
               "dashboard/uptime",
               "dashboard/what-changed",
               "dashboard/name-checks",
+              "dashboard/failover-drills",
               "dashboard/prometheus",
               "dashboard/topology"
             ]
@@ -208,6 +209,7 @@
               "cli/ca",
               "cli/status-pages",
               "cli/uptime",
+              "cli/drills",
               "cli/cloudflare",
               "cli/dhcp",
               "cli/notifications",
@@ -245,6 +247,7 @@
               "api/dnz-proxy",
               "api/status-pages",
               "api/uptime",
+              "api/drills",
               "api/certificates",
               "api/ca",
               "api/backups"

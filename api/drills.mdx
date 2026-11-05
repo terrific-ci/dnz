@@ -1,0 +1,82 @@
+---
+title: "Drills API"
+description: "Endpoints for failover drills: the switch, drills, runs and their reports."
+---
+
+For what a drill does and what keeps it safe, see [Failover drills](/dashboard/failover-drills).
+
+<Note>
+  Reading needs `proxy.manage`, `monitoring.manage` or `replication.manage`. Setting up or running a server's or a
+  node's drill needs `proxy.manage`, a secondary's dry run `replication.manage`, a standby's a superadmin. Stopping
+  needs only reading. API tokens can't reach these endpoints, and OAuth tokens only read, with any scope: people
+  start drills. On a DNZ secondary or a standby, changes are refused.
+</Note>
+
+## Endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/drills` | The switch (`settings.enabled`), `runs_here`, `follows`, the run under way (`running`), `stages` with what each does, `drills`, `scheduled`, `limits`, `can_manage` |
+| `PUT` | `/api/drills/settings` | `{"enabled": true}`. Off stops a run under way |
+| `GET` | `/api/drills/plans` | The drills (`q`, `stage`, `page`, `per_page`: 20, at most 200) as `{drills, total, page, per_page}`, each with `in_window`, `next_window`, `next_window_end`, `last_run` |
+| `POST` | `/api/drills/plans` | Set one up |
+| `GET`, `PUT`, `DELETE` | `/api/drills/plans/{id}` | Read, change, remove. A running one can't be removed; its history stays |
+| `GET` | `/api/drills/plans/{id}/check` | `{can_start, refusal}`, changing nothing |
+| `POST` | `/api/drills/plans/{id}/run` | Starts it, or answers 409 with why not |
+| `GET` | `/api/drills/runs` | The history, newest first (`drill`, `status`, `page`, `per_page`), as `{runs, total, page, per_page}` |
+| `GET` | `/api/drills/runs/{id}` | One run, with its `report` and `changes` |
+| `POST` | `/api/drills/runs/{id}/stop` | Everything goes back from here |
+| `GET` | `/api/drills/targets` | What can be picked (`proxy_id`, `node_id`, `q`, `page`, `per_page`): `proxies`, `nodes`, a page of the `servers` a node reports (each with `why_not`), `secondaries`, `standbys` |
+
+## A drill
+
+```json
+{
+  "name": "App server 1",
+  "stage": "origin",
+  "proxy_id": 1,
+  "node_id": 4,
+  "service": "dnz-app",
+  "server_url": "http://10.0.0.1:80",
+  "enabled": false,
+  "days": 64,
+  "start_minute": 180,
+  "window_mins": 60,
+  "limit_secs": 600,
+  "expect_secs": 120,
+  "error_percent": 1
+}
+```
+
+`stage` is `origin`, `node` or `take_over`. `days` has bit 0 for Monday up to bit 6 for Sunday, `start_minute` is
+minutes after midnight in the server's time zone. A dry run takes `peer_kind` (`secondary`, `standby`), `peer_id`
+and `peer_url` instead of the proxy's fields. `enabled` means it runs by itself in its window, off by default.
+
+## A run's report
+
+```json
+{
+  "id": 12,
+  "name": "Node A",
+  "stage": "node",
+  "target": "edge-a",
+  "started_by": "admin",
+  "status": "failed",
+  "step": "restoring",
+  "message": "Visitors got errors: 60 of 1100 requests answered 5xx (5.5%, against 0.0% before)",
+  "report": {
+    "noticed_secs": 20.0,
+    "moved_secs": 31.0,
+    "back_secs": 12.0,
+    "requests": 1100,
+    "errors": 60,
+    "before_error_percent": 0.0,
+    "error_percent": 5.45,
+    "nodes_unread": [],
+    "deviations": []
+  }
+}
+```
+
+`status` is `running`, `passed`, `failed`, `stopped` or `refused`. `nodes_unread` names nodes that can't tell what
+visitors got: their errors aren't in the count. A dry run's report holds `checks` (`name`, `ok`, `detail`).
