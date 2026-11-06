@@ -314,6 +314,28 @@ QUIC does on the node what the kernel does for TCP (packets, encryption per pack
 so HTTP/3 costs more CPU, the more the larger the answer. With the same client, Traefik 3.7.16 went from
 5,128 to 4,869 requests a second (1 KiB) and Caddy 2.11.7 from 3,553 to 2,268.
 
+## 2.5: rate limits and floods
+
+What recording rate limit refusals, the automatic Under attack, hard bans and connection limits cost. One
+DNZ Proxy on one CPU, the version before them against the version with them, a fresh node per run, in turns
+(A B, then B A). Requests a second at full load (wrk, 64 connections), then CPU per request and p99 at a
+fixed 5,000 requests a second. Medians of 4 to 6 rounds.
+
+| Scenario | Before | With them |
+| --- | ---: | ---: |
+| Defaults (bans, floods and connection limits off) | 12,980/s, 95.9 µs, 1.30 ms | 13,159/s, 96.8 µs, 1.29 ms |
+| A rate limit on every route that refuses nothing | 12,857/s, 96.6 µs, 1.37 ms | 12,836/s, 96.5 µs, 1.32 ms |
+| A rate limit refusing 80% of requests | 26,504/s, 68.9 µs, 1.12 ms | 25,585/s, 69.6 µs, 1.09 ms |
+| Log only, 80% of requests over the limit (before: the limit refusing nothing) | 13,036/s, 96.4 µs, 1.30 ms | 12,774/s, 100.0 µs, 1.39 ms |
+| The automatic Under attack on, nothing flooded (off, then on) | 13,241/s, 95.9 µs, 1.30 ms | 13,190/s, 96.3 µs, 1.31 ms |
+
+- **A request no limit refuses costs nothing more**, and neither does the automatic Under attack while no
+  hostname is flooded.
+- **A refused request** is now counted and kept for **Proxy → Rate limits**: with almost every request refused,
+  3.5% fewer refusals a second and 3–4 MiB more memory. Before, a refusal was a bare `429` nobody could see.
+- **Log only** counts what it would refuse: with 80% of requests over the limit, about 2% fewer requests a
+  second and 3.6 µs a request, while you try a number.
+
 ## 2.4: Server: dnz and request IDs
 
 One DNZ Proxy, HTTP 1 KiB, the builds taking turns, medians:
