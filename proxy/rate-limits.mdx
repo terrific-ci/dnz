@@ -130,6 +130,10 @@ itself. A launch or a newsletter your origin handles changes nothing.
   </Step>
 </Steps>
 
+**Exempt** under the setting lists the addresses and user agents that never see this check: your monitoring, your office,
+partners. DNZ's own uptime checks always go through. A route with its own **Under attack** keeps its own check and its own
+exempt lists.
+
 DNZ decides once a minute from every node's counts, so it acts one to two minutes after a flood starts. A hostname
 stays checked at most 6 hours in a row. Each start and end is an incident and a notification
 (**Under attack on by itself**), and shows in **What changed?**. End one early with **End** on the page, or
