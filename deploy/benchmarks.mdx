@@ -215,6 +215,46 @@ per query is within 0.2 µs either way: 2.0 answers DNS as fast as 1.27, with th
 earlier set of the same runs, taken while other work ran on the same server, had cached forwarding
 2% lower for 2.0 at the same CPU per query; with the server quiet, the gap was gone.
 
+### The next version: against 2.4
+
+The check after the next version's features (2026-11-06): release builds of v2.4.0 and the next
+version, checked to be different builds, side by side on the server above, taking turns. Every run
+was done twice, the second time with the two swapped; the two numbers in a cell are the two runs.
+DNZ writes every query to its query log in all of them, and the new version also counts each one for
+[DNS analytics](/dns/analytics) on the same background writer.
+
+| | v2.4.0 | Next version | Change |
+| --- | ---: | ---: | ---: |
+| Authoritative, queries/s (6 rounds) | 139,733 / 141,929 | 140,291 / 139,969 | −0.7% |
+| Cached forwarding, queries/s | 142,335 / 142,195 | 140,026 / 143,281 | −0.4% |
+| CPU per query at 80,000/s, authoritative | 20.91 / 20.92 µs | 20.73 / 21.08 µs | the same |
+| CPU per query at 80,000/s, cached | 20.75 / 20.89 µs | 20.85 / 20.84 µs | the same |
+| CPU per query at 20,000/s, every query logged, authoritative | 36.71 / 37.33 µs | 37.46 / 37.86 µs | within ±2% |
+| CPU per query at 20,000/s, every query logged, cached | 36.85 / 36.56 µs | 36.44 / 36.03 µs | within ±2% |
+| Blocked names, queries/s (363,600 blocked domains and a 1.57-million-host threat feed) | 124,846 / 124,869 | 125,838 / 127,525 | +1.4% |
+| Cached forwarding with those lists, queries/s | 139,102 / 140,139 | 141,020 / 139,291 | +0.4% |
+| Memory after the runs | 48–52 MiB | 55–59 MiB | +3 to +10 MiB |
+
+Both builds sit at what dnsperf sends, and CPU per query is the same in every scenario. With the
+lists loaded, authoritative answers had medians 3% apart (147,154 / 146,561 against 142,015 /
+142,558), but compared round by round the difference was −0.6%, with single rounds anywhere from
+135,000 to 153,000. Counting a query for DNS analytics takes 18 to 19 ns on the query log's writer
+(about 0.3% of its work per entry), and the writer kept up equally well in both.
+
+Memory through a day's work (the method of [Memory](#memory)), two runs each:
+
+| Phase | v2.4.0, RSS / heap | Next version, RSS / heap |
+| --- | ---: | ---: |
+| Idle after start | 60.2 / 18.3, 63.5 / 19.1 MB | 67.4 / 20.7, 69.1 / 21.0 MB |
+| Cached forwarding load | 101.4 / 52.8, 110.9 / 60.6 MB | 110.8 / 57.9, 116.1 / 62.0 MB |
+| Idle, a minute later | 97.3 / 45.7, 99.7 / 46.9 MB | 107.2 / 51.3, 105.3 / 48.9 MB |
+
+The new version holds about 2 MB more heap at idle and 2 to 5 MB more after load, and its larger
+binary maps about 4 MB more. A flood of 3 million names that never repeat peaked at the same memory
+in both (212 to 214 MB). Starting the next version on a database made by v2.4.0 (a 10,000-record zone,
+the lists above, a 300 MB query log), its migrations included, took as long as v2.4.0 restarting on it:
+a median of 5.06 against 5.07 seconds to the first answer.
+
 ## Features compared
 
 Speed is half the picture: the servers level with DNZ answer DNS and little else, and the ones
