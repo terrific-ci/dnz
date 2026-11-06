@@ -255,6 +255,14 @@ in both (212 to 214 MB). Starting the next version on a database made by v2.4.0 
 the lists above, a 300 MB query log), its migrations included, took as long as v2.4.0 restarting on it:
 a median of 5.06 against 5.07 seconds to the first answer.
 
+After this check, DNS analytics' writer keeps a smaller cache (512 KiB instead of 2 MiB) and DNZ's rare
+background jobs no longer keep their database statements prepared on every connection. Measured
+against the build before it, the same way: queries per second the same (146,762 against 148,460
+authoritative and 148,352 against 148,142 cached, both at dnsperf's limit), CPU per query the same
+(20.60 against 20.61 µs authoritative at 80,000/s; 34.68 against 34.76 µs with every query logged at
+20,000/s, 16 runs each). The heap was the same in these short runs too: what it saves (up to about
+1.5 MiB for the writer, plus the statements) builds up only over weeks of analytics.
+
 ## Features compared
 
 Speed is half the picture: the servers level with DNZ answer DNS and little else, and the ones
