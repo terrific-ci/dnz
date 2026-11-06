@@ -70,6 +70,50 @@ with `dnz proxy settings edge --ban-rate-limited on`.
 Leave it off when a limit is keyed by a header, or when many people share one address (an office behind NAT):
 it would ban real people.
 
+## Soft and hard bans
+
+A banned address is refused one of two ways. Pick it under **Proxy → Rate limits → Settings → Bans**, or in the proxy's
+**Bans that expire**:
+
+| | What the visitor gets | Use it when |
+| --- | --- | --- |
+| **Soft ban** (default) | The *Access blocked* page with a request ID | Someone may be banned by mistake and should see why |
+| **Hard during an attack** | The page on a quiet day; a closed connection while an attack or traffic spike is open | You want both |
+| **Hard ban** | The connection is closed before TLS: no page, no request ID | An attacker should cost the proxy nothing |
+
+A ban you make by hand (the block dialog on the WAF page or this page) is soft or hard by itself. Trusted forwarders
+(a CDN, a load balancer) and private addresses are never hard-banned: they get the page.
+
+### Drop hard bans in the kernel firewall
+
+Off by default. On, each node also drops hard-banned addresses in its own nftables table, so their packets never reach
+the proxy. It helps only against visitors who connect directly, not those behind a CDN.
+
+Each node needs nftables and the right to change the firewall:
+
+<CodeGroup>
+```bash systemd
+sudo apt-get install -y nftables
+sudo mkdir -p /etc/systemd/system/dnz-proxy.service.d
+sudo tee /etc/systemd/system/dnz-proxy.service.d/kernel-bans.conf >/dev/null <<'EOF'
+[Service]
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_NET_ADMIN
+EOF
+sudo systemctl daemon-reload && sudo systemctl restart dnz-proxy
+```
+</CodeGroup>
+
+For Docker, follow the steps the settings page shows once you turn it on. The page lists each node: how many addresses
+it drops, or why it can't.
+
+## Connections per address
+
+Each HTTP or HTTPS entry point can cap how many connections one address keeps open at once. Past it, a new connection
+is closed before TLS. No limit by default. Set it on the proxy's **Ports** (the entry point dialog), or
+`dnz proxy entrypoints edit edge websecure --max-connections-per-ip 50`. Trusted forwarders and private addresses are never
+limited; a browser opens about 6 connections per site.
+
 ## Under attack during a spike
 
 Off by default, per proxy. On, a hostname whose traffic spikes **and** whose origin struggles (5xx answers on at
