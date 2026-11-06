@@ -1,0 +1,112 @@
+---
+title: "Rate limits"
+description: "See who hit a route's rate limit, where and when, set limits per route with a suggested number, and let DNZ Proxy turn Under attack on by itself during a flood."
+---
+
+A route's **Rate limit** (requests a second per visitor, with a burst) and an **in-flight limit** (requests in
+progress at once per visitor) answer `429` when one visitor sends too much. A [DNZ Proxy](/proxy/dnz-proxy) records
+every refusal, so **Proxy → Rate limits** shows who hit which limit, from where and on which route, as the
+[WAF](/proxy/waf) page does for attacks.
+
+## See what was refused
+
+Open **Proxy → Rate limits**. Pick a proxy (or all of them) and a span.
+
+- **Totals**: refused by a rate limit, by an in-flight limit, the addresses, and addresses banned for hitting limits.
+- **Over time**, the **map**, the **busiest limits** (with their setting, like `rate 5/s, burst 10`, and their
+  routes), **addresses**, **paths**, **countries** and **hostnames**.
+- **Refused requests**: one row per request, newest first. Filter by address, hostname, limit, rate or in-flight,
+  or a path. Open a row for the user agent, referer, node and request ID.
+- **Banned for limits**, with **Unban**.
+
+**Block** and **Ban** work as on the WAF page. Before you use them, look for two marks:
+
+- **Shared address**: a mobile carrier's network, or several browsers from one address. Many people may be
+  behind it, and a block would refuse them all.
+- **Forwarder warning**: most refusals come from a private address, one of your nodes, or a hosting or CDN
+  network. The limit is probably counting the load balancer or CDN in front of DNZ Proxy, not your visitors. Add
+  it to the entry point's **Trusted forwarders**, and the limit sees each visitor again.
+
+**Proxy → Analytics** shows the same numbers beside the WAF section, and its request log has a **Rate limited**
+filter. On the home page, **Overview → Proxy** says how many of the blocked requests a rate limit refused.
+
+<Note>
+Blocked numbers go up after you upgrade wherever rate limits already refuse traffic: before, those refusals
+weren't counted anywhere.
+</Note>
+
+## Set limits on routes
+
+The **Settings** tab lists every route with its limits and what each refused in the last 24 hours.
+
+- **Edit** or **Add** opens the route dialog.
+- **Suggest** proposes a rate and burst from the busiest address on the route in any ten minutes of the last day:
+  three times its average then. It is an average over ten minutes, not a peak.
+- **Add a limit to routes**: pick routes and set one limit on all of them. Each route's history keeps a version.
+
+Starting points: a login or password reset, a few requests a minute per address. A whole site, some tens a second,
+with a burst of twice that.
+
+In the route dialog, a rate limit on a DNZ Proxy also has:
+
+- **Log only**: refuse nothing, and count and list what the limit would refuse. Try a number first.
+- **Never limit these addresses**: your monitoring, your office, partners.
+
+<CodeGroup>
+```bash Terminal
+dnz proxy routes edit edge shop.example.com --rate-limit 10/20 --rate-limit-log-only on
+dnz proxy limits suggest edge shop.example.com
+dnz proxy limits show --since 1h
+dnz proxy limits refused --client 203.0.113.9
+```
+</CodeGroup>
+
+## Ban addresses that keep hitting limits
+
+Off by default. On, a limit's refusals count towards the proxy's **Bans that expire** (its DNZ Proxy settings)
+(*N* blocks within *M* minutes), as the WAF's blocks do. Turn it on under **Proxy → Rate limits → Settings**, or
+with `dnz proxy settings edge --ban-rate-limited on`.
+
+Leave it off when a limit is keyed by a header, or when many people share one address (an office behind NAT):
+it would ban real people.
+
+## Under attack during a spike
+
+Off by default, per proxy. On, a hostname whose traffic spikes **and** whose origin struggles (5xx answers on at
+least 5% of its requests) gets the browser check (**Under attack**) until the spike is over, then it goes off by
+itself. A launch or a newsletter your origin handles changes nothing.
+
+<Steps>
+  <Step title="Turn it on">
+    **Proxy → Rate limits → Settings → Under attack during a spike**, or `dnz proxy flood set edge --on`.
+  </Step>
+  <Step title="Mark routes that must never be checked">
+    A browser check answers API clients and webhooks with `403`. In the route dialog, under **Stop attacks**, switch
+    on **Never turn on Under attack by itself**. The settings list routes that look like an API.
+  </Step>
+</Steps>
+
+DNZ decides once a minute from every node's counts, so it acts one to two minutes after a flood starts. A hostname
+stays checked at most 6 hours in a row. Each start and end is an incident and a notification
+(**Under attack on by itself**), and shows in **What changed?**. End one early with **End** on the page, or
+`dnz proxy flood end edge shop.example.com`: it stays off for that hostname for an hour.
+
+## Alerts
+
+Under **Settings → Notifications → Proxy alerts**:
+
+- **Traffic spike** (on by default): requests on a hostname, blocked or not, rise sharply. The message says how
+  many got a 5xx answer and whether they come from a few addresses or many.
+- **Attack spike** counts what rate limits refuse as blocked, unless you switch **Count rate limits** off.
+
+See [Notifications](/integrations/notifications).
+
+## What it costs
+
+A request no limit refuses costs nothing more: the counting happens only for a refused request, and the automatic
+Under attack is in no route while it is off. Details in [Proxy benchmarks](/proxy/benchmarks).
+
+## Traefik, Caddy and Nginx
+
+They enforce a rate limit too, but don't record refusals for this page. **Log only** and **Never limit these
+addresses** are DNZ Proxy only: elsewhere the limit holds for everyone, and the proxy's page says so.

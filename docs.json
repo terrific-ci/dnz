@@ -147,6 +147,7 @@
               "proxy/leaked-passwords",
               "proxy/decoys",
               "proxy/shields",
+              "proxy/rate-limits",
               "proxy/rules",
               "proxy/upload-limits",
               "proxy/sign-in",
