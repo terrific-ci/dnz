@@ -740,13 +740,19 @@ HTTP/3 on some sites while others stay on HTTP/2.
 
 With HTTP/3 off on a route:
 
-- **No `Alt-Svc` on its answers**, the origin's included, so browsers stay on HTTP/2.
+- **No HTTP/3 promise on its answers**, the origin's `Alt-Svc` included, so browsers stay on HTTP/2.
+- **`Alt-Svc: clear` when the whole name is off**: browsers remember `Alt-Svc` per name and port, not
+  per path. When every route of the name on that entry point has HTTP/3 off, its answers say
+  `Alt-Svc: clear` (RFC 7838), and a browser that remembered HTTP/3 forgets it at its next answer. When
+  another route of the same name keeps HTTP/3 (`/old` off, `/` on), this route's answers leave `Alt-Svc`
+  out instead: `clear` there would undo what the other route's answers say. A route that may match any
+  name and keeps HTTP/3 (a wildcard or `HostRegexp`) counts as such a route for every name.
 - **A visitor who still arrives over HTTP/3 gets `421 Misdirected Request`** and retries over HTTP/2 or
   HTTP/1.1, which browsers do by themselves. That happens when a browser remembers an earlier `Alt-Svc`,
   or reuses a connection made for another name on the same entry point. The other routes on that
-  connection go on.
-- **What browsers remember lasts until its `ma`**: 86400 seconds, a day. Until then a returning browser
-  tries HTTP/3 first and pays one round trip more for the 421.
+  connection go on. The 421 carries `Alt-Svc: clear` too where the answers above do.
+- **Without `clear`, what browsers remember lasts until its `ma`**: 86400 seconds, a day. Until then a
+  returning browser tries HTTP/3 first and pays one round trip more for the 421.
 - **A route's own rule still wins**: a rule or custom header that sets `Alt-Svc` stays (it can name
   another service), and one that removes it leaves none.
 - A route on an entry point without HTTP/3 isn't affected, and neither is the origin's own `Alt-Svc` there.
