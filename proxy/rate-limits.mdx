@@ -104,8 +104,59 @@ sudo systemctl daemon-reload && sudo systemctl restart dnz-proxy
 ```
 </CodeGroup>
 
-For Docker, follow the steps the settings page shows once you turn it on. The page lists each node: how many addresses
-it drops, or why it can't.
+In Docker the node can't write the firewall itself, so a small sidecar beside it does (bridge networking works, the
+release image stays as it is). Add it beside the node's service; it touches only the node's own table and removes it when
+stopped. The settings page fills in your service and volume names:
+
+<CodeGroup>
+```yaml Docker Compose
+  dnz-proxy-firewall:
+    image: nicolaka/netshoot@sha256:7f08c4aff13ff61a35d30e30c5c1ea8396eac6ab4ce19fd02d5a4b3b5d0d09a2
+    network_mode: "service:dnz-proxy"
+    cap_add: [NET_ADMIN]
+    volumes:
+      - dnz-proxy:/data
+    restart: unless-stopped
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        f=/data/kernel-bans.nft; last=
+        trap 'nft delete table inet dnz_proxy 2>/dev/null; exit 0' TERM INT
+        while :; do
+          if [ -f $$f ] && s=$$(sha1sum $$f) && [ "$$s" != "$$last" ]; then
+            n=$$(head -1 $$f | awk '{print $$5}')
+            if grep -E '^(table|delete|flush|add|insert|create)' $$f | grep -qv 'inet dnz_proxy'; then ok=no; out='refused: the file names another table'
+            elif out=$$(nft -f $$f 2>&1); then ok=yes; else ok=no; fi
+            if [ $$ok = yes ]; then echo "ok $$n"; else printf 'error %s\n%s\n' "$$n" "$$out"; fi > /data/.kernel-bans.status
+            mv /data/.kernel-bans.status /data/kernel-bans.status; last=$$s
+          fi
+          sleep 2 & wait $$!
+        done
+```
+
+```bash docker run
+docker run -d --name dnz-proxy-firewall --restart unless-stopped \
+  --network container:dnz-proxy --cap-add NET_ADMIN -v dnz-proxy:/data \
+  --entrypoint sh nicolaka/netshoot@sha256:7f08c4aff13ff61a35d30e30c5c1ea8396eac6ab4ce19fd02d5a4b3b5d0d09a2 -c "$(cat <<'EOF'
+f=/data/kernel-bans.nft; last=
+trap 'nft delete table inet dnz_proxy 2>/dev/null; exit 0' TERM INT
+while :; do
+  if [ -f $f ] && s=$(sha1sum $f) && [ "$s" != "$last" ]; then
+    n=$(head -1 $f | awk '{print $5}')
+    if grep -E '^(table|delete|flush|add|insert|create)' $f | grep -qv 'inet dnz_proxy'; then ok=no; out='refused: the file names another table'
+    elif out=$(nft -f $f 2>&1); then ok=yes; else ok=no; fi
+    if [ $ok = yes ]; then echo "ok $n"; else printf 'error %s\n%s\n' "$n" "$out"; fi > /data/.kernel-bans.status
+    mv /data/.kernel-bans.status /data/kernel-bans.status; last=$s
+  fi
+  sleep 2 & wait $!
+done
+EOF
+)"
+```
+</CodeGroup>
+
+The image is `nicolaka/netshoot` v0.14, pinned by digest (about 850 MB, pulled once). The settings page lists each node:
+how many addresses it drops, or why it can't.
 
 ## Connections per address
 
