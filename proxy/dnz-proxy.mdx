@@ -797,7 +797,9 @@ Routers, services and middlewares work as described in
   HTTP/2 and h2c upstreams, WebSocket and gRPC.
 - **Headers to the upstream**: `X-Forwarded-For`, `-Proto`, `-Host`, `-Port`, `-Server` and
   `X-Real-Ip`. `X-Forwarded-For` gets the peer appended (a trusted forwarder's list is kept); `X-Real-Ip`
-  is always the [visitor's address](#the-visitors-address), never one passed on.
+  is always the [visitor's address](#the-visitors-address), never one passed on. Cookies a browser sends
+  as separate lines over HTTP/2 or HTTP/3 (Firefox does) reach the upstream as one `Cookie` line, as
+  HTTP/1.1 applications expect (since v2.5.1).
 - **Server names**: a server URL with a hostname is **one** server, the name looked up per connection
   (kept 30 seconds, a random address of its set). An upstream of
   [Docker Swarm tasks](/proxy/upstream-discovery#docker-swarm-tasks) is different: the node looks
