@@ -126,6 +126,11 @@ Blocking adds a rule to the **block list** (**DNS → Filtering → Blocking →
 `tiktok.com` blocks `api.tiktok.com` too. To block one name only, open its domain and click
 **Block only this**. Domains a block rule already covers say **In block list**.
 
+To keep what you block together, pick a list in **Block into** next to the results' filter: **Just a
+rule** (the default), one of your own lists (the ones you made under **Blocklists**), or **New list…**
+with a name, which makes the list with the domains you block and keeps it picked for the next ones. A
+domain in a list is blocked with everything under it, like a rule.
+
 The rule's comment records the keywords it came from, and it is in the
 [audit log](/admin/audit-log) as `filter_rule.create`, like any other rule. Rules take effect on the
 next query: cached answers are not used for blocked names.
