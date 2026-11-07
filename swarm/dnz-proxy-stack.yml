@@ -15,12 +15,19 @@ services:
       # Only needed to join; taken from the shell at deploy time.
       DNZ_PROXY_KEY: ${DNZ_PROXY_KEY:?paste the connect key from Settings → Proxy}
       DNZ_PROXY_NAME: "{{.Node.Hostname}}"
+      # Swarm owns these containers: DNZ shows `docker service update` for them
+      # instead of updating them itself.
+      DNZ_PROXY_INSTALL: swarm
+      DNZ_PROXY_SERVICE: "{{.Service.Name}}"
       # The proxy to join, by name; with "Let nodes join without approval" on
       # that proxy, new servers join by themselves.
       DNZ_PROXY_PROXY: Edge
     ports:
       - { target: 80, published: 80, protocol: tcp, mode: host }
       - { target: 443, published: 443, protocol: tcp, mode: host }
+      # With HTTP/3 on the entry point (DNZ → the proxy → Entry points), and UDP 443
+      # open on the hosts' firewalls; host mode keeps visitors' addresses:
+      # - { target: 443, published: 443, protocol: udp, mode: host }
     volumes:
       - dnz-proxy:/data
     ulimits:

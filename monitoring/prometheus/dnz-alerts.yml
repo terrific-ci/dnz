@@ -212,6 +212,33 @@ groups:
           summary: "Record sync from {{ if $labels.kind }}read-only proxy{{ else }}Traefik routers of{{ end }} {{ $labels.proxy }} fails"
           description: "DNZ cannot read the hostnames it should keep records for; existing records stay as they are."
 
+      - alert: DnzNginxAgentDown
+        expr: dnz_nginx_agent_connected == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The dnz-nginx-agent of {{ $labels.proxy }} doesn't report"
+          description: "Records of its sites stay as they are until it is back. Look at the agent on the Nginx server (journalctl -u dnz-nginx-agent)."
+
+      - alert: DnzNginxProblem
+        expr: dnz_nginx_problem == 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "dnz-nginx-agent of {{ $labels.proxy }} can't do its work"
+          description: "Its Nginx is too old or not found, the agent is newer than DNZ, or it can't read Nginx's configuration. The proxy's page says which."
+
+      - alert: DnzNginxConfigRefused
+        expr: dnz_nginx_config_check_ok == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nginx of {{ $labels.proxy }} refused DNZ's configuration"
+          description: "nginx -t refused it or the reload failed; Nginx keeps serving the last good one. The proxy's page shows what nginx said."
+
       - alert: DnzClusterNodeBehind
         expr: |
           max by (instance) (dnz_cluster_generation{kind="latest"})
