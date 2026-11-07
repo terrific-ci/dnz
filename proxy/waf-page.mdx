@@ -141,7 +141,7 @@ above the map folds them into blocked. Either way they count as blocked in the t
 and in attack alerts.
 
 Off, a visit reads one setting it already holds and does nothing more; on, it does one lookup, which
-measured the same as off with 10,000 bans held ([Proxy benchmarks](/proxy/benchmarks#25-the-new-features-off-and-on)). A node
+measured the same as off with 10,000 bans held ([Proxy benchmarks](/proxy/benchmarks#what-each-feature-costs)). A node
 older than DNZ 2.5 doesn't ban, and the panel names it. A node restarted while DNZ is away holds no
 bans until it connects again.
 
@@ -238,7 +238,7 @@ visit, never while a visit waits, and keeps it for an hour.
 welcome. A firewall rule that allows the visit first wins over the setting.
 
 A route with a setting other than **Allow** looks at every request's user agent: about 3 µs of CPU on one CPU
-([Proxy benchmarks](/proxy/benchmarks#25-the-new-features-off-and-on)). **Allow** costs nothing.
+([Proxy benchmarks](/proxy/benchmarks#what-each-feature-costs)). **Allow** costs nothing.
 
 <Note>
   **Google-Extended** and **Applebot-Extended** are only words in `robots.txt`: their requests say Googlebot

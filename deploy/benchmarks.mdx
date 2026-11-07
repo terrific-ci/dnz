@@ -1,6 +1,6 @@
 ---
 title: "Benchmarks"
-description: "How fast DNZ answers compared with 18 other DNS servers, from Knot DNS, NSD, BIND 9 and PowerDNS to Technitium, AdGuard Home and Pi-hole, which features each one has built in, how much memory DNZ uses, and how to measure it yourself."
+description: "How fast DNZ 2.5 answers compared with 18 other DNS servers, from Knot DNS, NSD, BIND 9 and PowerDNS to Technitium, AdGuard Home and Pi-hole, which features each one has built in, how much memory DNZ uses, and how to measure it yourself."
 ---
 
 DNZ was measured against 18 other DNS servers, from the classic authoritative servers to the
@@ -15,7 +15,7 @@ For DNZ Proxy against nginx, HAProxy, Envoy, Caddy and Traefik, see [Proxy bench
 
 ## Results
 
-Measured on 2026-11-01 on a dedicated server: a KVM virtual machine with 4 CPUs (Intel Xeon Silver
+Measured on 2026-11-07 on a dedicated server: a KVM virtual machine with 4 CPUs (Intel Xeon Silver
 4114, 2.2 GHz), x86_64, nothing else running. 2 CPUs and 1 GiB per server, dnsperf on the other 2
 CPUs over UDP, 32 clients, 500 queries outstanding, median of 3 runs of 20 s.
 
@@ -23,207 +23,80 @@ CPUs over UDP, 32 clients, 500 queries outstanding, median of 3 runs of 20 s.
 
 | Server | Queries/s | Avg latency | Memory |
 | --- | ---: | ---: | ---: |
-| **DNZ 2.1.0** | **145,528** | **1.58 ms** | **44.9 MiB** |
-| NSD 4.12.0 | 141,999 | 0.74 ms | 76.8 MiB |
-| Knot DNS 3.4.6 | 141,103 | 0.59 ms | 8.5 MiB |
-| gdnsd 3.8.3 | 131,413 | 0.66 ms | 3.2 MiB |
-| PowerDNS Authoritative 4.9.18 | 130,984 | 0.79 ms | 64.4 MiB |
-| Unbound 1.26.2 (`auth-zone`) | 127,628 | 0.74 ms | 19.0 MiB |
-| BIND 9.20.30 | 127,190 | 1.25 ms | 16.4 MiB |
-| YADIFA 3.0.2 ¹ | 80,352 | 1.62 ms | 64.6 MiB |
-| CoreDNS 1.12.1 (`file`) | 53,650 | 3.96 ms | 83.3 MiB |
-| Technitium 15.6.2 | 38,838 | 11.25 ms | 147.9 MiB |
-| Hickory DNS 0.26.3 | 12,122 | 14.21 ms | 20.6 MiB |
+| Knot DNS 3.4.6 | 141,301 | 0.59 ms | 14.8 MiB |
+| **DNZ 2.5** | **138,566** | **1.90 ms** | **49.7 MiB** |
+| NSD 4.12.0 | 136,652 | 0.80 ms | 80.0 MiB |
+| PowerDNS Authoritative 4.9.18 | 127,286 | 0.74 ms | 70.7 MiB |
+| BIND 9.20.30 | 127,255 | 1.20 ms | 16.5 MiB |
+| Unbound 1.26.2 (`auth-zone`) | 126,115 | 0.71 ms | 19.0 MiB |
+| gdnsd 3.8.3 | 124,006 | 0.67 ms | 3.9 MiB |
+| YADIFA 3.0.2 ¹ | 77,130 | 1.73 ms | 70.8 MiB |
+| CoreDNS 1.12.1 (`file`) | 50,065 | 4.07 ms | 83.0 MiB |
+| Technitium 15.6.2 | 36,372 | 12.32 ms | 152.7 MiB |
+| Hickory DNS 0.26.3 | 11,376 | 15.76 ms | 20.6 MiB |
 
 ### Cached forwarding
 
 | Server | Queries/s | Avg latency | Memory |
 | --- | ---: | ---: | ---: |
-| **DNZ 2.1.0** | **144,171** | **1.49 ms** | **53.2 MiB** |
-| dnsdist 1.9.16 (packet cache) | 143,134 | 2.16 ms | 45.9 MiB |
-| BIND 9.20.30 | 141,648 | 1.01 ms | 22.5 MiB |
-| PowerDNS Recursor 5.2.13 | 141,492 | 1.42 ms | 29.6 MiB |
-| Unbound 1.26.2 | 123,702 | 0.76 ms | 26.2 MiB |
-| Knot Resolver 5.7.5 | 121,598 | 1.29 ms | 11.8 MiB |
-| CoreDNS 1.12.1 | 69,390 | 2.88 ms | 94.9 MiB |
-| dnsmasq 2.91 | 68,670 | 2.38 ms | 4.9 MiB |
-| Technitium 15.6.2 | 38,272 | 11.69 ms | 169.7 MiB |
-| AdGuard Home 0.107.79 | 32,122 | 6.68 ms | 75.0 MiB |
-| Pi-hole 2026.10.0 | 22,702 | 7.28 ms | about 44 MiB ² |
-| Hickory DNS 0.26.3 | 20,328 | 8.40 ms | 38.1 MiB |
-| Blocky 0.35.0 | 17,541 | 12.23 ms | 75.4 MiB |
+| **DNZ 2.5** | **138,820** | **1.73 ms** | **56.8 MiB** |
+| PowerDNS Recursor 5.2.13 | 137,037 | 1.53 ms | 28.6 MiB |
+| BIND 9.20.30 | 130,359 | 1.18 ms | 22.2 MiB |
+| Knot Resolver 5.7.5 | 128,842 | 1.01 ms | 12.3 MiB |
+| dnsdist 1.9.16 (packet cache) | 127,273 | 3.25 ms | 45.7 MiB |
+| Unbound 1.26.2 | 121,408 | 0.71 ms | 25.8 MiB |
+| CoreDNS 1.12.1 | 66,899 | 2.82 ms | 96.0 MiB |
+| dnsmasq 2.91 | 64,398 | 2.53 ms | 4.8 MiB |
+| Technitium 15.6.2 | 35,720 | 12.63 ms | 177.2 MiB |
+| AdGuard Home 0.107.79 | 31,337 | 6.93 ms | 81.7 MiB |
+| Pi-hole 2026.10.0 | 21,881 | 7.55 ms | about 44 MiB ² |
+| Hickory DNS 0.26.3 | 20,362 | 8.40 ms | 37.6 MiB |
+| Blocky 0.35.0 | 17,716 | 12.38 ms | 72.9 MiB |
 
-DNZ is the 2.1.0 release image from Docker Hub with its defaults. It answers the most queries a
-second in both scenarios, but not the fastest: at dnsperf's limit its average latency is 1.5 to
-1.6 ms against Knot DNS's 0.6 ms. In the cached scenario the top four (DNZ, dnsdist, BIND 9,
-PowerDNS Recursor) are within 2% of each other. Other servers vary 3 to 8% between runs, so compare
-places within one run. The run before (2026-10-30, DNZ 1.22): DNZ 146,152, NSD 140,030, Knot DNS
-139,706 authoritative; DNZ 147,302, dnsdist 136,023, Knot Resolver 131,431 cached. v1.5.0 answered
-66,772 authoritative and 65,581 cached queries a second at 2.3 ms; what changed is below.
+DNZ is the 2.5 release build with its defaults. It answers the most cached queries a second and
+the second most authoritative ones, 2% behind Knot DNS, but not the fastest: at dnsperf's limit its
+average latency is 1.7 to 1.9 ms against Knot DNS's 0.6 ms. Servers vary 3 to 8% between runs, so
+compare places within one run: in the run of 2026-11-01 (DNZ 2.1.0) DNZ came first in both, at
+145,528 and 144,171, and NSD, gdnsd, dnsdist and BIND 9's cache measured 4 to 12% higher there
+too.
+Side by side with the build before it, 2.5 answers as many queries as 2.4 at the same CPU per query
+([2.5 against 2.4](#25-against-24)).
 
 1. YADIFA 3.0.2 (the Debian 13 package) sends malformed NXDOMAIN answers (the SOA in the wrong
    section), one query in ten here, so its number is not quite comparable.
-2. Not captured in this run; a 3-second trial run of the same harness showed 43.7 MiB.
+2. Not captured: `docker stats` returns nothing for Pi-hole after its runs. A 3-second trial run of
+   the same harness showed 43.7 MiB.
 
 What the numbers say:
 
-- **The top group is the load generator's limit.** DNZ, NSD, Knot DNS, gdnsd, PowerDNS, Unbound,
-  BIND 9, dnsdist, Knot Resolver and PowerDNS Recursor all land between 121k and 146k queries a
-  second, within 20% of each other. That is what dnsperf sends from its 2 CPUs; their real capacity
+- **The top group is the load generator's limit.** Knot DNS, DNZ, NSD, PowerDNS, BIND 9, Unbound,
+  gdnsd, PowerDNS Recursor, Knot Resolver and dnsdist all land between 121k and 142k queries a
+  second, within 17% of each other. That is what dnsperf sends from its 2 CPUs; their real capacity
   is higher, and this run doesn't rank them among themselves.
-- **DNZ is at the top of that group** in both scenarios, while writing every query to its query
-  log, with 1.5 to 1.6 ms of latency at the limit. v1.5.0 answered half as many at twice the
-  latency (below). DNZ answers 2.7 times what CoreDNS does authoritative and 2.1 times what CoreDNS
-  and dnsmasq do cached.
+- **CPU per query tells them apart.** At a steady 80,000 authoritative queries a second, taking
+  turns for 6 rounds, Knot DNS used 11.7 µs of CPU per query and DNZ 20.4 µs, for the same 64-byte
+  answers. Most of DNZ's is the kernel sending the answers; the rest is what DNZ does that Knot DNS
+  doesn't: the query log, statistics, DNS analytics, filtering and policy.
+- **DNZ writes every query to its query log** in these runs, and answers 2.8 times what CoreDNS does
+  authoritative and 2.1 times what CoreDNS and dnsmasq do cached.
 - **Against the servers with a web UI, a query log and filtering**, the ones people often pick
-  instead of DNZ: Technitium answers 27% of what DNZ does, AdGuard Home 22%, Pi-hole 16% and
-  Blocky 12%, with 4.5 to 8 times DNZ's latency.
-- **Hickory DNS**, the other DNS server written in Rust, answers 8% of DNZ's authoritative and 14%
+  instead of DNZ: Technitium answers 26% of what DNZ does, AdGuard Home 23%, Pi-hole 16% and
+  Blocky 13%, with 4 to 7 times DNZ's latency.
+- **Hickory DNS**, the other DNS server written in Rust, answers 8% of DNZ's authoritative and 15%
   of its cached queries (with its default `info` logging of every request).
-- **Memory**: the C servers that only answer DNS mostly hold 3 to 30 MiB; NSD, PowerDNS
-  Authoritative and YADIFA set aside 64 to 77 MiB. DNZ holds 45 to 53 MiB with its web API, query
+- **Memory**: the C servers that only answer DNS mostly hold 4 to 30 MiB; NSD, PowerDNS
+  Authoritative and YADIFA set aside 71 to 80 MiB. DNZ holds 50 to 57 MiB with its web API, query
   log and cache: less than AdGuard Home, Blocky and CoreDNS here, about a third of Technitium.
 
-### Cache hits, before and after
+## 2.5 against 2.4
 
-DNZ used to keep cached answers as parsed messages behind one lock and encode each hit again. It
-now keeps them in wire format in a map split into shards, and a hit only copies the bytes and
-patches the id, the question and the TTLs. Both builds side by side, taking turns for six rounds of
-20 s:
+The check before 2.5's release (2026-11-06): release builds of 2.4.0 and 2.5, checked to be
+different builds, side by side on the server above, taking turns. Every run was done twice, the
+second time with the two swapped; the two numbers in a cell are the two runs. DNZ writes every query
+to its query log in all of them, and 2.5 also counts each one for [DNS analytics](/dns/analytics)
+on the same background writer.
 
-| DNZ | Queries/s (median) | Avg latency (median) |
-| --- | ---: | ---: |
-| Before | 181,945 | 0.87 ms |
-| After | 261,893 | 0.53 ms |
-
-About 44% more cached answers per second on the same two CPUs, ahead in every round.
-
-### From v1.5.0 to v1.6.0: UDP, a full cache and the query log
-
-Profiling v1.5.0 on the benchmark server turned up three things, fixed in v1.6.0:
-
-- **UDP**: one loop received every query and handed each to another thread. DNZ now binds the DNS
-  port several times per CPU (SO_REUSEPORT, Linux) and answers local names and cache hits on the
-  thread that received them.
-- **A full cache**: every answer from upstream swept the whole cache for one to drop, 3 ms per
-  insert with 100,000 entries, so names not yet cached ran at under 300 a second. Now 1.5 µs.
-- **Memory that kept climbing**: the query log's batches were written as one statement per batch
-  size, and the database driver kept up to 100 of them prepared per connection. Under steady load
-  the heap grew from 52 to 240 MB over 20 minutes; it now levels off within minutes.
-
-Both builds side by side, the settings above, taking turns:
-
-| | v1.5.0 | First step |
-| --- | ---: | ---: |
-| Authoritative, queries/s | 69,381 | 104,169 |
-| Cached forwarding, queries/s | 64,311 | 103,045 |
-| Names not in a full cache, queries/s | 290 | 14,000 |
-| Their average latency | 665 ms | 14 ms |
-
-Ahead in every round (5 of 5 for authoritative and cached, 3 of 3 for the misses).
-
-### Then: UDP in batches
-
-Three more changes, again found with `perf` on the benchmark server:
-
-- **Less state per query**: answering a query carried 22 KB of state, sized for its rarest
-  paths, allocated and copied every time. Those paths keep their own now, and a query's is 2 KB.
-- **The name once**: a local answer wrote the query name out four times; now once, with a
-  third fewer allocations.
-- **Batches**: on Linux each socket reads the queries waiting on it with one `recvmmsg` (up to
-  32) and sends the answers with one `sendmmsg`, instead of a system call per query each way. A
-  busy socket hands its thread over after 128 queries, so the others aren't kept waiting.
-
-The build before and after, side by side, the settings above, taking turns:
-
-| | Before | After |
-| --- | ---: | ---: |
-| Authoritative, queries/s | 99,790 | 136,002 |
-| Cached forwarding, queries/s | 103,984 | 132,411 |
-| Average latency | 1.6-1.9 ms | 1.1-1.5 ms |
-| CPU per query at a steady 80,000/s | 23.9-24.3 µs | 20.9 µs |
-
-Ahead in every round (5 of 5 for each scenario). That is the top group above, at what dnsperf
-sends from its 2 CPUs, with DNZ's query log still on.
-
-### 1.22: mimalloc
-
-From 1.22 `dnz` allocates through [mimalloc](https://github.com/microsoft/mimalloc) instead of
-glibc's allocator, as DNZ Proxy does, and gives emptied memory back at once instead of a second
-later. Both builds side by side on the server above, taking turns, then in each other's place:
-
-| | glibc (1.21) | mimalloc (1.22) | Change |
-| --- | ---: | ---: | ---: |
-| Authoritative, queries/s | 126,259-128,647 | 132,030-132,661 | +2.6 to +5.1% |
-| Cached forwarding, queries/s | 120,667-123,703 | 129,015-136,336 | +6.9 to +10.2% |
-| CPU per query at a steady 80,000/s | 21.1-21.8 µs | 20.8-21.2 µs | up to −4.6% |
-| Average latency at 80,000/s | 1.36-1.48 ms | 1.22-1.27 ms | −10 to −16% |
-| Memory after the runs | 43-65 MiB | 45-50 MiB | the same range |
-
-mimalloc with its default (memory given back a second later) was as fast but held 79 to 87 MiB
-after load, so DNZ sets that delay to 0.
-
-### 1.22: against Knot DNS, and the UDP hand-over
-
-At dnsperf's limit the top servers look alike, so Knot DNS and DNZ also answered the authoritative
-queries at a steady 80,000 a second, taking turns, with the CPU each used: **Knot DNS 12.0 µs per
-query, DNZ 20.9 µs**, for the same 64-byte answers. Most of DNZ's is the kernel sending the
-answers; DNZ's own work per answer is about 2 µs, and the rest is what it does that Knot doesn't
-(the query log, statistics, filtering and policy).
-
-Each UDP socket's receive loop used to hand its worker over after 128 queries, so that one busy
-socket can't keep it while the others fill up. From 1.22 it does so after 512. Against the build
-before, side by side, then in each other's place:
-
-| | Before | After | Change |
-| --- | ---: | ---: | ---: |
-| Authoritative, queries/s | 137,443-137,918 | 144,561-145,521 | +5.2 to +5.5% |
-| Cached forwarding, queries/s | 137,536-138,000 | 146,490-148,073 | +6.2 to +7.7% |
-| CPU per query at 80,000/s | 20.6-21.0 µs | 20.5-20.7 µs | the same or lower |
-| Datagrams dropped (receive buffer full) | 10,724-10,902 | 2,655-3,199 | −71 to −75% |
-| Avg latency at the limit | 1.10-1.37 ms | 1.35-1.71 ms | higher |
-| Avg latency at 80,000/s | 1.18-1.19 ms | 1.22-1.27 ms | +3 to +8% |
-| Memory after the runs | 48-52 MiB | 49-53 MiB | the same range |
-
-Fewer hand-overs let the workers drain the sockets faster, so a quarter as many datagrams were
-dropped. Using 1 or 2 sockets per CPU instead of 4 was tried too and cost 4 to 13% of the queries
-a second. In this harness DNZ now answers more queries a second than Knot DNS, at 1.7 times its
-CPU per query. The cost is latency at the limit: a query waits behind a longer batch, and queries
-the old build dropped at a full buffer are answered late instead.
-
-### 2.0: against 1.27
-
-2.0 doesn't change how DNZ answers DNS, so the check before its release (2026-11-01) asked only
-whether anything got slower. Release builds of 1.27 and 2.0, checked to be different builds, ran
-side by side on the server above in both scenarios, taking turns, 6 rounds per run. There were four
-runs: twice with 1.27 in the first place and twice with the two swapped, since the places alone
-differ by a few percent. CPU per query was measured at a steady 80,000 queries a second, 5 rounds,
-in both orders.
-
-| | 1.27 | 2.0 | Change |
-| --- | ---: | ---: | ---: |
-| Authoritative, queries/s | 143,441-143,995 | 141,153-146,733 | −0.4% (medians of the runs) |
-| Cached forwarding, queries/s | 139,931-142,851 | 140,837-143,572 | +0.8% |
-| CPU per query at 80,000/s, authoritative | 20.65-20.81 µs | 20.58-20.71 µs | the same |
-| CPU per query at 80,000/s, cached | 20.54-20.59 µs | 20.44-20.57 µs | the same |
-| Average latency at 80,000/s | 1.25-1.33 ms | 1.24-1.33 ms | the same |
-| Queries lost | 0.00-0.04% | 0.00-0.04% | the same |
-| Memory after the runs | 48-78 MiB | 48-76 MiB | the same range |
-
-Both builds sit at what dnsperf sends from its 2 CPUs (139,000 to 147,000 a second), and their CPU
-per query is within 0.2 µs either way: 2.0 answers DNS as fast as 1.27, with the same memory. An
-earlier set of the same runs, taken while other work ran on the same server, had cached forwarding
-2% lower for 2.0 at the same CPU per query; with the server quiet, the gap was gone.
-
-### The next version: against 2.4
-
-The check after the next version's features (2026-11-06): release builds of v2.4.0 and the next
-version, checked to be different builds, side by side on the server above, taking turns. Every run
-was done twice, the second time with the two swapped; the two numbers in a cell are the two runs.
-DNZ writes every query to its query log in all of them, and the new version also counts each one for
-[DNS analytics](/dns/analytics) on the same background writer.
-
-| | v2.4.0 | Next version | Change |
+| | 2.4.0 | 2.5 | Change |
 | --- | ---: | ---: | ---: |
 | Authoritative, queries/s (6 rounds) | 139,733 / 141,929 | 140,291 / 139,969 | −0.7% |
 | Cached forwarding, queries/s | 142,335 / 142,195 | 140,026 / 143,281 | −0.4% |
@@ -233,51 +106,32 @@ DNZ writes every query to its query log in all of them, and the new version also
 | CPU per query at 20,000/s, every query logged, cached | 36.85 / 36.56 µs | 36.44 / 36.03 µs | within ±2% |
 | Blocked names, queries/s (363,600 blocked domains and a 1.57-million-host threat feed) | 124,846 / 124,869 | 125,838 / 127,525 | +1.4% |
 | Cached forwarding with those lists, queries/s | 139,102 / 140,139 | 141,020 / 139,291 | +0.4% |
-| Memory after the runs | 48–52 MiB | 55–59 MiB | +3 to +10 MiB |
 
-Both builds sit at what dnsperf sends, and CPU per query is the same in every scenario. With the
-lists loaded, authoritative answers had medians 3% apart (147,154 / 146,561 against 142,015 /
-142,558), but compared round by round the difference was −0.6%, with single rounds anywhere from
-135,000 to 153,000. Counting a query for DNS analytics takes 18 to 19 ns on the query log's writer
-(about 0.3% of its work per entry), and the writer kept up equally well in both.
-
-Memory through a day's work (the method of [Memory](#memory)), two runs each:
-
-| Phase | v2.4.0, RSS / heap | Next version, RSS / heap |
-| --- | ---: | ---: |
-| Idle after start | 60.2 / 18.3, 63.5 / 19.1 MB | 67.4 / 20.7, 69.1 / 21.0 MB |
-| Cached forwarding load | 101.4 / 52.8, 110.9 / 60.6 MB | 110.8 / 57.9, 116.1 / 62.0 MB |
-| Idle, a minute later | 97.3 / 45.7, 99.7 / 46.9 MB | 107.2 / 51.3, 105.3 / 48.9 MB |
-
-The new version holds about 2 MB more heap at idle and 2 to 5 MB more after load, and its larger
-binary maps about 4 MB more. A flood of 3 million names that never repeat peaked at the same memory
-in both (212 to 214 MB). Starting the next version on a database made by v2.4.0 (a 10,000-record zone,
-the lists above, a 300 MB query log), its migrations included, took as long as v2.4.0 restarting on it:
-a median of 5.06 against 5.07 seconds to the first answer.
-
-After this check, DNS analytics' writer keeps a smaller cache (512 KiB instead of 2 MiB) and DNZ's rare
-background jobs no longer keep their database statements prepared on every connection. Measured
-against the build before it, the same way: queries per second the same (146,762 against 148,460
-authoritative and 148,352 against 148,142 cached, both at dnsperf's limit), CPU per query the same
-(20.60 against 20.61 µs authoritative at 80,000/s; 34.68 against 34.76 µs with every query logged at
-20,000/s, 16 runs each). The heap was the same in these short runs too: what it saves (up to about
-1.5 MiB for the writer, plus the statements) builds up only over weeks of analytics.
+Both builds sit at what dnsperf sends, and CPU per query is the same in every scenario. Counting a
+query for DNS analytics takes 18 to 19 ns on the query log's writer (about 0.3% of its work per
+entry), and the writer kept up equally well in both. 2.5 holds about 2 MB more heap at idle and 2 to
+5 MB more after load; a flood of 3 million names that never repeat peaked at the same memory in both
+(212 to 214 MB). Starting 2.5 on a database made by 2.4.0 (a 10,000-record zone, the lists above, a
+300 MB query log), its migrations included, took as long as 2.4.0 restarting on it: a median of 5.06
+against 5.07 seconds to the first answer.
 
 **Forwarded queries, cheaper.** A stream of names that never repeat and don't exist in a zone with
-*Forward missing names* on (the default) sends every one of them to the upstream. DNZ answered such a
+*Forward missing names* on (the default) sends every one of them to the upstream. 2.4 answered such a
 stream at about 16,000 a second, its two CPUs busy with its own work per forwarded query, not waiting
-for the upstream (with the option off, the same stream ran at dnsperf's limit). Each upstream query
-now reads its answer without first clearing a 64 KiB buffer, and still goes out from a fresh, random
-source port, which is what keeps forged answers out. Against the build before it:
+for the upstream. In 2.5 each upstream query reads its answer without first clearing a 64 KiB buffer,
+and still goes out from a fresh, random source port, which is what keeps forged answers out:
 
-| | Before | Now |
+| | Before | 2.5 |
 | --- | ---: | ---: |
 | Never-repeated missing names, queries/s | 16,046 | 20,641 (+28.6%) |
 | CPU per forwarded query, flat out | 122.7 µs | 95.1 µs (−22.5%) |
 | CPU per forwarded query at 10,000/s | 131.4 µs | 119.0 µs (−9.4%) |
 | CPU per query at 80,000/s, authoritative / cached | 20.60 / 20.43 µs | 20.50 / 20.46 µs |
 
-Authoritative and cached answers are unchanged (both still at dnsperf's limit).
+Authoritative and cached answers are unchanged (both at dnsperf's limit). DNS analytics' writer also
+keeps a smaller cache in 2.5 (512 KiB instead of 2 MiB) and DNZ's rare background jobs no longer keep
+their database statements prepared on every connection; measured the same way, nothing got slower,
+and what it saves builds up over weeks of analytics.
 
 ## Features compared
 
@@ -414,188 +268,40 @@ Technitium comes closest, and it has a DHCP server of its own, which DNZ doesn't
   and YADIFA); caches have room for every name; servers that take a thread count get one per CPU.
   Each server keeps its default logging: DNZ writes every query to its query log, as Pi-hole,
   AdGuard Home and Blocky do; Technitium keeps statistics.
+- **Comparing two builds of DNZ** (the 2.5 against 2.4 section): both run side by side on the same
+  server, taking turns, and every run is done twice, the second time with the two in each other's
+  place, since the places alone differ by a few percent. At dnsperf's limit fast builds look alike,
+  so they are also compared by the CPU time each spends per query at a steady 80,000 queries a
+  second.
 
 ## Memory
 
-How much memory DNZ holds through a day's work: the release image with its defaults (web UI
-included) on 2 CPUs, idle after start, after importing a zone of 10,000 records, under
-authoritative and cached query load, and idle a minute later. The figure is the resident set (RSS);
-about 20 MB of it is the `dnz` binary itself, which the kernel can drop and read again.
+How much memory DNZ 2.5 holds through a day's work: the release image with its defaults (web UI
+included) on 2 CPUs and 1 GiB, idle after start, after importing a zone of 10,000 records through
+the API, under authoritative and cached query load, and idle a minute later. Read from
+`/proc/<pid>/status`, two runs (2026-11-07):
 
-| Phase | Before | After |
-| --- | ---: | ---: |
-| Idle after start | 37.3 MB | 27.8 MB |
-| After the import | 86.4 MB | 85.8 MB |
-| Authoritative load | 95.9 MB | 64.3 MB |
-| Cached forwarding load | 115.4 MB | 84.4 MB |
-| Idle, a minute later | 117.3 MB | 72.9 MB |
+| Phase | Resident (RSS) | Heap and stacks | The binary |
+| --- | ---: | ---: | ---: |
+| Idle after start | 73–74 MB | 20.5 MB | 53–54 MB |
+| After the import | 92 MB | 32 MB | 60 MB |
+| Authoritative load | 101–103 MB | 41–42 MB | 60–61 MB |
+| Cached forwarding load | 110–112 MB | 50–51 MB | 60–61 MB |
+| Idle, a minute later | 112–113 MB | 49–50 MB | 63–64 MB |
 
-On 4 CPUs: 30.3 MB at idle instead of 48.5 MB, and 59.6 MB a minute after the load instead of
-155.9 MB. Each extra CPU adds about 1.2 MB. Query throughput is the same as before.
-
-- The web server's routes no longer compile into full regexes once per CPU.
-- On Linux, DNZ uses one malloc arena per CPU and returns freed memory to the system every minute,
-  so the minute after a large import or a burst of queries is the high point, not the new normal.
-- The query log keeps every query for 7 days by default (`DNZ_LOG_RETENTION_DAYS`), so the database
-  file grows until then. Tools that report a container's memory including the kernel's page cache
-  show that file too; see [the database file in the container's memory](#the-database-file-in-the-containers-memory).
-- Zones kept in memory no longer reserve room for four records under every name.
-
-### With blocklists and a threat feed
-
-Blocklists and threat feeds are most of what a filtering DNZ holds. The same zone and load as the
-UDP sections above, plus HaGeZi Pro and OISD big as blocklists (361,000 domains together) and the
-HaGeZi Threat Intelligence feed (2 million hosts), each refreshed eight times, then ten minutes of
-mixed load at 4,000 queries a second. The figure is the heap (anonymous resident memory); measured
-on 2026-10-24 on the benchmark server: before is v1.6.1's code, after has the changes below,
-released in v1.7.0.
-
-| Phase | Before | After |
-| --- | ---: | ---: |
-| After the zone import | 69 MB | 68 MB |
-| After adding the lists and the feed | 195 MB | 101 MB |
-| After eight refreshes | 255 MB | 134 MB |
-| After ten minutes of load | 363 MB | 244 MB |
-| Idle, a minute later | 351 MB | 231 MB |
-
-- **Domains packed together.** Every domain was a heap block of its own in a hash set, 58 to 69
-  bytes each. Now a list's domains sit one after another in one buffer with a table of 4-byte
-  positions, about 28 bytes each. The 2-million-host feed went from 132 MB to 54 MB on its own.
-- **Large inserts not kept prepared.** Lists go into the database 5,000 rows at a time, and the
-  database driver kept each such statement prepared: megabytes each, on each of eight connections,
-  and one more whenever a refresh ended on a chunk of a new size.
-- **Cached answers without spare room.** Each cached answer kept a 512-byte buffer; most need 100 to
-  200 bytes.
-
-Finding a name got faster too. Side by side with the lists and the feed loaded on both, six rounds
-of 20 s, the new build was ahead in every round: 123,154 against 109,673 authoritative and 118,956
-against 101,559 cached queries a second (medians), with lower latency. At a steady 80,000 queries a
-second both spent the same CPU time per query.
-
-### The database file in the container's memory
-
-`docker stats` counts the kernel's cache of the files a container uses, and DNZ's SQLite file holds
-the query log: a few GB with 7 days of busy traffic. On a server with plenty of memory the kernel
-had no reason to give that cache back, so a container whose process used 130 MB showed over 1 GB.
-After v1.7.3, on Linux, DNZ drops its cached pages of the database file once nobody has read the
-query log for 10 minutes. Answering queries never reads the file; while someone looks through the
-log, the cache stays (since v1.16.0 only a search or a filter counts, see below).
-
-Measured on 2026-10-25 on the benchmark server, before (v1.7.3) and after side by side, each with
-2 CPUs and a 1 GiB limit, taking turns for six rounds of 20 s per scenario; the query log grew to
-900 MB on each. The figure is all memory charged to the container (the cgroup's
-`memory.current`), page cache included:
-
-| Phase | Before | After |
-| --- | ---: | ---: |
-| Right after the load | 1,013 MB | 503 MB |
-| A minute later, log unread | 1,004 MB | 169 MB |
-| After two searches through the whole log | 1,006 MB | 810 MB |
-| 12 minutes after the searches | 1,010 MB | 58 MB |
-
-How much of that `docker stats` shows depends on the kernel: it leaves out pages the kernel marks
-inactive. On this server's kernel (7.0) that was nearly all of the cache; on older ones, such as
-5.4, pages read more than once stay active and `docker stats` shows them, which is where the 1 GB
-came from.
-
-Throughput is the same: 132,309 against 133,039 authoritative and 123,091 against 127,379 cached
-queries a second (medians, before against after). A search that finds its names returns in 3 ms
-either way. A search that matches nothing reads the whole log: 1.6 s from the cache on both, and
-55 to 60 s the first time after an idle spell on this server's slow disk (about 16 MB/s), 1.6 s
-again from then on. Dropping the cache every minute regardless made every such search take that
-long, so the cache stays while the log is being read.
-
-Until v1.16.0 the *Live* list on Query Logs counted as reading the log too. It polls the newest
-rows every 5 seconds, so a tab left open kept the cache for good: a production server showed
-2.2 GiB in `docker stats` for a process of 200 MB, 2.1 GB of it a 7.5 GB database file's cache, on
-kernel 5.4. Now only a search or a filter counts. Measured on 2026-10-27 on the benchmark server,
-v1.15.0 against the fix, a 1.8 GB query log (15 million rows), one search that matches nothing and
-then the Live list every 5 seconds for 13 minutes; the container's `memory.current`:
-
-| Minute | v1.15.0 | Fix |
-| --- | ---: | ---: |
-| After the search | 1,401 MiB | 1,345 MiB |
-| 10 | 1,404 MiB | 1,348 MiB |
-| 11 to 13 | 1,404 MiB | 81 MiB |
-
-The Live list answered the same: 3.5 against 3.6 ms median, 19.5 against 14.2 ms p99 (167 polls
-each). As before, the first search through the whole log after the cache is dropped reads the disk
-(65 to 89 s for 1.8 GB on this server's disk, 4 s from the cache). Answering DNS queries doesn't
-touch this code.
-
-Since v1.16.0 a search also stays inside a time window, the last 24 hours unless asked otherwise:
-the window becomes a range of ids through the index on `created_at`. The same 1.8 GB log (six
-days), a search that matches nothing, the file's cache dropped before each run (2026-10-27):
-
-| Window | Time | Read into the cache |
-| --- | ---: | ---: |
-| None (before) | 65.0 s, 71.6 s | 1,262 MiB |
-| Last 24 hours | 4.7 s, 4.5 s | 197 MiB |
-| Last hour | 0.01 s | 0 MiB |
-| All days | 31.0 s | 1,262 MiB |
-
-### The query log in day files of its own
-
-Since v1.16.0 the query log is no longer a table in the main database but one SQLite file per UTC
-day on each server, with connections of its own ([Query logs](/dns/query-logs#where-the-log-is-kept)).
-Writing the log to a second file must not cost queries: the build before it and the one with it
-side by side on the benchmark server (2026-10-27), the settings above, six rounds taking turns,
-then CPU time per query at a fixed 80,000 queries a second (five rounds). The two slots can differ
-by about 10% on their own, so the whole run was done twice, the second time with the builds
-swapped:
-
-| | Before | Day files |
-| --- | ---: | ---: |
-| Authoritative, queries/s (median), first run / swapped | 116,873 / 129,587 | 132,388 / 130,436 |
-| Cached, queries/s (median), first run / swapped | 119,363 / 128,179 | 125,569 / 127,162 |
-| CPU µs per query, authoritative, first run / swapped | 21.03 / 21.09 | 20.81 / 20.74 |
-| CPU µs per query, cached, first run / swapped | 21.66 / 21.39 | 21.49 / 21.28 |
-| Container memory after the run, first run / swapped | 82.5 / 54.1 MiB | 49.0 / 40.9 MiB |
-
-With the slots swapped the throughput is the same (within 1%); the first run's gap was mostly the
-slot. CPU time per query is slightly lower with the day files in both runs, and the container ends
-smaller: the main database no longer grows with the log.
-
-**Searches that never end.** The day files exist so that a search through a large log can't take
-the rest of DNZ down with it. To check, one server (2 CPUs, 1 GiB) held 5.4 GB of day files (26
-million rows today, 18 million yesterday), its page cache cold, took 20,000 DNS queries a second,
-and three clients sent a search for a name that isn't there over the last 24 hours every 5 seconds
-without waiting for the answer, as the old Live list did. Every second a probe asked for the Live
-list, the health check, the dashboard and the Server tab (2026-10-27):
-
-| | First build | With the fix |
-| --- | ---: | ---: |
-| Live list (`/api/logs?limit=50`) | 446 of 584 failed after 30 s | all OK: p50 6.6 ms, p99 57 ms |
-| Health check, p50 / p99 | 1.9 / 22 ms | 1.9 / 19 ms |
-| Dashboard (`/api/stats?range=24h`), p50 / p99 | 16 / 55 ms | 14 / 69 ms |
-| Server tab, p50 / p99 | 4.1 / 40 ms | 4.2 / 37 ms |
-| DNS, queries/s and average | 19,744, 0.89 ms | 19,982, 0.79 ms |
-| Memory at the end | 131 MiB | 129 MiB |
-
-Two searches ran at a time and every other one got 429 within 61 ms. The first build gave each day
-file as many readers as searches allowed (two), so the two endless searches held both of today's
-readers and the Live list, which reads only the newest rows, waited for one until it timed out.
-Each day file now has two readers more than searches, and the Live list answered every time. Under
-load, nothing else waited, and DNS lost no query.
-
-Two things to know about such a search: one through 24 hours of a 6.7 GB log, for a name that isn't
-there, didn't finish within 10 minutes on this 1 GiB container and its slow disk; and while it
-runs, it keeps its snapshot of today's file, so the file's WAL can't be reset and grows (1.2 GB
-after 5 minutes, 1.9 GB after 10) until the search ends.
-
-## Threat detection on and off
-
-[Threat detection](/dns/threats) looks at a copy of the query log, on its own task. The same release
-build ran twice side by side, detection on and off, taking turns for six rounds of 20 seconds per
-scenario on a busy MacBook:
-
-| Scenario | Detection on (median) | Detection off (median) |
-| --- | ---: | ---: |
-| Authoritative | 27,056 q/s | 26,698 q/s |
-| Cached forwarding | 70,465 q/s | 71,826 q/s |
-
-The same within the noise (+1% and −2%); detection looked at all 11.3 million queries, dropped
-none, and held about 5 MB more.
+- **Heap and stacks** is what DNZ itself holds. **The binary** is the `dnz` file mapped into memory
+  (the web UI is built into it): pages the kernel can drop and read again when it needs room.
+- DNZ allocates through [mimalloc](https://github.com/microsoft/mimalloc) and gives freed memory
+  back to the system at once, so a large import or a burst of queries doesn't leave a high mark.
+- **Blocklists and threat feeds** are most of what a filtering DNZ holds: a list's domains sit one
+  after another in one buffer, about 28 bytes each (a 2-million-host threat feed about 54 MB).
+- **The query log** is one SQLite file per UTC day, outside the main database
+  ([Query logs](/dns/query-logs#where-the-log-is-kept)). `docker stats` counts the kernel's cache of
+  the files a container reads, so a few GB of log could show as container memory. On Linux, DNZ
+  drops its cached pages of those files once nobody has searched the log for 10 minutes; answering
+  queries never reads them. At most two searches run at a time on each server, so a search through a
+  large log can't hold up the rest of DNZ.
+- The query log keeps every query for 7 days by default (`DNZ_LOG_RETENTION_DAYS`).
 
 ## Run it yourself
 
@@ -612,7 +318,7 @@ cd bench
 
 | Variable | Default | What it sets |
 | --- | --- | --- |
-| `DNZ_IMAGE` | `terrificci/dnz:latest` | The DNZ image to measure, e.g. `terrificci/dnz:1.5.0` |
+| `DNZ_IMAGE` | `terrificci/dnz:latest` | The DNZ image to measure, e.g. `terrificci/dnz:2.4.0` |
 | `BENCH_SERVERS` | all | Only these servers, e.g. `"dnz knot"` |
 | `BENCH_DURATION`, `BENCH_RUNS` | `20`, `3` | Seconds per run, and runs per scenario |
 | `BENCH_CPUS`, `BENCH_PERF_CPUS` | `2`, `2` | CPUs per server, and for dnsperf |
@@ -627,4 +333,4 @@ root is not part of it: a cold recursive lookup depends on the internet far more
 resolver, and a cached one is the cached forwarding case.
 
 The memory table comes from `./memory.sh` in the same folder (`MEM_CPUS=4` for 4 CPUs,
-`MEM_IMAGE=terrificci/dnz:1.5.0` for a given release).
+`MEM_IMAGE=terrificci/dnz:2.4.0` for a given release).

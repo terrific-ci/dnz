@@ -1,6 +1,6 @@
 ---
 title: "Proxy benchmarks"
-description: "How fast DNZ Proxy forwards requests compared with nginx, HAProxy, Envoy, Caddy and Traefik on one CPU, how much memory each holds, and how to measure it yourself."
+description: "How fast DNZ Proxy 2.5 forwards requests compared with nginx, HAProxy, Envoy, Caddy and Traefik on one CPU, how much memory each holds, what each of its features costs, and how to measure it yourself."
 ---
 
 [DNZ Proxy](/proxy/dnz-proxy) was measured against the reverse proxies people run (nginx, HAProxy,
@@ -8,256 +8,61 @@ Envoy, Caddy and Traefik), each pinned to one CPU in front of the same origin.
 
 ## Results
 
-Measured on 2026-11-01 on a dedicated server: a KVM virtual machine with 4 CPUs (Intel Xeon Silver
+Measured on 2026-11-07 on a dedicated server: a KVM virtual machine with 4 CPUs (Intel Xeon Silver
 4114, 2.2 GHz), x86_64, nothing else running. Each proxy pinned to **one CPU**, the origin to
 another, the load generators to the other two. Requests per second are the median of 3 runs of 20 s
 with 64 connections.
 
 | Proxy | HTTP, 1 KiB | HTTPS, 1 KiB | HTTPS, new connection per request | HTTP, 64 KiB |
 | --- | ---: | ---: | ---: | ---: |
-| nginx 1.30.6 | 25,658 | 18,291 | 1,413 | 7,352 |
-| HAProxy 3.4.7 | 24,199 | 18,359 | 1,318 | 6,031 |
-| **DNZ Proxy 2.1.0** | **13,776** | **12,867** | **2,670** | **7,709** |
-| Traefik 3.7.16 | 8,675 | 8,127 | 1,462 | 5,310 |
-| Envoy 1.40.1 | 8,670 | 8,161 | 2,011 ¹ | 5,826 |
-| Caddy 2.11.7 | 6,830 | 6,326 | 1,366 | 4,595 |
+| nginx 1.30.6 | 24,866 | 17,902 | 1,353 | 7,212 |
+| HAProxy 3.4.7 | 23,682 | 17,737 | 1,264 | 5,914 |
+| **DNZ Proxy 2.5** | **13,275** | **12,589** | **2,590** | **7,533** |
+| Traefik 3.7.16 | 8,552 | 7,938 | 1,441 | 5,208 |
+| Envoy 1.40.1 | 8,490 | 8,126 | 1,986 ¹ | 5,656 |
+| Caddy 2.11.7 | 6,711 | 6,213 | 1,340 | 4,548 |
 
 At a steady 5,000 requests a second over HTTP, one every 0.2 ms (well below every proxy's limit):
 
 | Proxy | Latency p50 | Latency p99 | CPU per request | Memory idle | Memory loaded |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| nginx | 0.51 ms | 1.37 ms | 79 µs | 17 MiB | 22 MiB |
-| HAProxy | 0.53 ms | 1.22 ms | 74 µs | 17 MiB | 21 MiB |
-| **DNZ Proxy** | **0.52 ms** | **1.40 ms** | **95 µs** | **4 MiB** | **10 MiB** |
-| Traefik | 0.78 ms | 11.35 ms | 130 µs | 13 MiB | 40 MiB |
-| Envoy | 1.23 ms | 2.64 ms | 142 µs | 14 MiB | 22 MiB |
-| Caddy | 1.27 ms | 10.42 ms | 164 µs | 9 MiB | 20 MiB |
+| nginx | 0.46 ms | 1.33 ms | 76 µs | 17 MiB | 22 MiB |
+| HAProxy | 0.48 ms | 1.21 ms | 73 µs | 17 MiB | 21 MiB |
+| **DNZ Proxy** | **0.62 ms** | **1.45 ms** | **95 µs** | **5 MiB** | **13 MiB** |
+| Traefik | 0.85 ms | 11.77 ms | 136 µs | 12 MiB | 36 MiB |
+| Envoy | 1.19 ms | 2.64 ms | 141 µs | 14 MiB | 23 MiB |
+| Caddy | 1.22 ms | 10.51 ms | 163 µs | 9 MiB | 20 MiB |
 
-DNZ Proxy is the 2.1.0 release image from Docker Hub (`DNZ_IMAGE=terrificci/dnz:2.1.0`), with the
-web application firewall, route rules and analytics in it but none on the route. One run of the
-suite varies by several percent between runs. No run had a failed or non-200 answer.
+DNZ Proxy is the 2.5 release build with its defaults: the web application firewall, route rules,
+shields, bans and analytics are in it, but none is on the route. One run of the suite varies by
+several percent between runs. No run had a failed or non-200 answer.
 
 1. Envoy didn't resume TLS sessions in the harness's check, so its new connections are full
    handshakes; the other five resumed.
 
 What it shows:
 
-- **nginx and HAProxy** forward keep-alive HTTP about 1.8 times as fast as DNZ Proxy and HTTPS about
-  1.4 times as fast, and use 74 to 79 µs of CPU per request against DNZ Proxy's 95 µs.
+- **nginx and HAProxy** forward keep-alive HTTP about 1.8 to 1.9 times as fast as DNZ Proxy and HTTPS
+  about 1.4 times as fast, and use 73 to 76 µs of CPU per request against DNZ Proxy's 95 µs.
 - **DNZ Proxy** comes third on keep-alive HTTP and HTTPS, ahead of Traefik, Envoy and Caddy, and
   first on new TLS connections (rustls with *ring*, against OpenSSL in nginx and HAProxy) and on
-  64 KiB answers, 5% ahead of nginx.
-- **Latency**: nginx, HAProxy and DNZ Proxy have the same p50 (0.5 ms) and p99s of 1.2 to 1.4 ms;
-  Envoy 2.6 ms, Traefik and Caddy 10 to 11 ms.
-- **Memory**: DNZ Proxy holds the least, 4 MiB idle and 10 MiB under load, against 20 to 40 MiB for
+  64 KiB answers, 4% ahead of nginx.
+- **Latency**: nginx, HAProxy and DNZ Proxy have p50s of 0.5 to 0.6 ms and p99s of 1.2 to 1.5 ms;
+  Envoy 2.6 ms, Traefik and Caddy 10 to 12 ms.
+- **Memory**: DNZ Proxy holds the least, 5 MiB idle and 13 MiB under load, against 20 to 36 MiB for
   the others.
 
-The run before (2026-10-30, DNZ Proxy 1.22.0 built from its commit): 11,521 HTTP, 10,668 HTTPS,
-2,190 new connections, 6,591 for 64 KiB, 0.61 / 1.22 ms, 102 µs per request, 5 / 11 MiB; nginx
-24,708 / 16,800 / 1,313 / 6,532 and HAProxy 22,546 / 17,129 / 1,169 / 5,637. Part of the difference
-is the run itself (nginx and HAProxy measured 4 to 9% higher this time); side by side, 2.0 measured
-level with 1.27 ([2.0 against 1.27](#20-against-127)).
+Every proxy measured up to 4% lower than in the run of 2026-11-01 (DNZ Proxy 2.1.0: 13,776 HTTP,
+12,867 HTTPS, 2,670 new connections, 7,709 for 64 KiB, 95 µs per request, 4 / 10 MiB), DNZ Proxy 2 to
+4% among them, with the same CPU per request; its memory after the load was 13 MiB here against 10
+then. Side by side, 2.5 measures level with 2.4
+([What each feature costs](#what-each-feature-costs)).
 
-The run of 2026-10-24 (DNZ Proxy 1.7.1: 11,668 HTTP, 11,476 HTTPS, 2,441 new connections, 7,216 for
-64 KiB, 100 µs per request, 2 / 8 MiB) was measured with the same harness; nginx and HAProxy measured within
-a few percent of it again.
+## What each feature costs
 
-<Note>
-  Until 2026-10-24 this page measured latency with `hey`, whose workers send in step: up to 50
-  requests arrived at once, so the latency mostly showed how long a proxy takes to work through 50
-  requests (DNZ Proxy 1.6.1: 3.5 ms p50). The harness now spaces requests evenly with `oha`.
-</Note>
-
-## After 1.7.0: one write per answer, fewer allocations
-
-A profile of DNZ Proxy under this load (`perf`, 1 CPU) showed no hot spot in DNZ Proxy's own code,
-but nearly half the CPU in the kernel's network path, and two causes worth fixing:
-
-- **Each answer's header and body went out in two writes.** Pingora gives a connection a write
-  buffer of one TCP segment only in its own listeners; connections from DNZ Proxy's listener had
-  none, so a 1 KiB answer took two packets, each a full trip through the TCP stack. Now they leave
-  in one. Event streams and WebSockets aren't held back: each chunk and each message on an upgraded
-  connection is still sent right away.
-- **Every visit built a whole request log line** (a dozen allocations, a GeoIP lookup), though only
-  **Logged per second, per node** of them are kept. The traffic counters now take what they need
-  from the visit, and a line is made only when it is kept.
-
-Measured against 1.7.0 (its DNZ Proxy is the same as 1.6.1's) on the same server, both builds taking
-turns, median of 4 rounds:
-
-| | 1.7.0 | After | Change |
-| --- | ---: | ---: | ---: |
-| HTTP, 1 KiB | 10,699 | 12,006 | +12% |
-| HTTPS, 1 KiB | 9,777 | 11,531 | +18% |
-| HTTPS, new connection per request | 2,331 | 2,429 | +4% |
-| HTTP, 64 KiB | 6,911 | 7,158 | +4% |
-| Latency p50 / p99 at 5,000/s ² | 3.5 / 6.7 ms | 3.2 / 5.5 ms | |
-| CPU per request | 108 µs | 94 µs | −13% |
-| Memory idle / loaded | 2 / 8 MiB | 2 / 8 MiB | same |
-
-These changes are in 1.7.1, the release in the tables above.
-
-2. With the old bursty load (`hey`, see the note above).
-
-## 1.7.3: mimalloc
-
-From 1.7.3, DNZ Proxy uses [mimalloc](https://github.com/microsoft/mimalloc) (v3) instead of glibc's
-allocator: Pingora makes many small allocations per request, and the allocator was the largest
-part of DNZ Proxy's CPU after the kernel. mimalloc's default asks the kernel for transparent huge
-pages, which made a few touched bytes cost 2 MiB (15 MiB idle instead of 2); it is built with
-`no_thp`, which keeps memory where glibc had it.
-
-1.7.1 against mimalloc, both builds taking turns, median of 4 rounds:
-
-| | 1.7.1 (glibc) | mimalloc | Change |
-| --- | ---: | ---: | ---: |
-| HTTP, 1 KiB | 11,909 | 13,817 | +16% |
-| HTTPS, 1 KiB | 11,439 | 12,682 | +11% |
-| HTTPS, new connection per request | 2,421 | 2,484 | +3% |
-| HTTP, 64 KiB | 7,099 | 7,681 | +8% |
-| Latency p50 / p99 at 5,000/s | 0.64 / 1.77 ms | 0.54 / 1.46 ms | |
-| CPU per request | 106 µs | 95 µs | −11% |
-| Memory idle / loaded | 2 / 8 MiB | 3 / 7 MiB | |
-
-Under a burst of 1,000 connections fetching 64 KiB answers for 30 s:
-
-| | Before | Peak | 60 s later |
-| --- | ---: | ---: | ---: |
-| 1.7.1 (glibc) | 6.5 MiB | 48 MiB | 48 MiB |
-| mimalloc | 6.4 MiB | 51 to 56 MiB | 7.6 MiB |
-
-glibc keeps what a burst took; mimalloc gives it back within a minute, at a peak 3 to 8 MiB
-higher. Its purge delay, commit-on-demand and page-retain options didn't lower that peak.
-
-## 1.18: upload limits
-
-[Upload limits](/proxy/upload-limits) (`dnzMultipart`) read multipart bodies as they stream in. A route
-without them doesn't pay for it: the 1.18 build against the one before it, taking turns, median of
-4 rounds, on the scenarios above:
-
-| | Before | With upload limits in the build | Change |
-| --- | ---: | ---: | ---: |
-| HTTP, 1 KiB | 13,196 | 13,231 | +0.3% |
-| HTTPS, 1 KiB | 12,645 | 12,707 | +0.5% |
-| HTTPS, new connection per request | 2,506 | 2,500 | −0.2% |
-| HTTP, 64 KiB | 7,574 | 7,584 | +0.1% |
-| Latency p50 / p99 at 5,000/s | 0.59 / 1.55 ms | 0.55 / 1.56 ms | |
-| CPU per request | 98.6 µs | 96.0 µs | |
-
-A route with them: multipart POSTs through DNZ Proxy (one CPU) to an origin that reads the whole
-body, 32 connections, with the php2shell shield and a 64 MiB limit on and off, taking turns,
-median of 4 rounds:
-
-| Upload | Off | On | Change |
-| --- | ---: | ---: | ---: |
-| A form (2 fields, 1 KiB) | 6,249/s, 116 µs CPU | 6,241/s, 125 µs CPU | +9 µs a request |
-| A 1 MiB file | 620/s, 941 µs CPU | 618/s, 1,076 µs CPU | same rate, +14% CPU |
-| A 16 MiB file | 54.6/s (874 MiB/s), 18.9 ms CPU | 51.1/s (818 MiB/s), 20.3 ms CPU | −6% (the CPU is full) |
-
-File data goes on as the slice of the buffer it came in; only the bytes at a chunk's end that may
-begin a boundary wait for the next one. The first version copied every byte into a buffer and out
-again, and always held a boundary's length back: 16 MiB uploads ran at 46.6/s (−13%) with 16% more
-CPU, 1 MiB ones with 23% more CPU.
-
-## 1.22: web application firewall
-
-The [web application firewall](/proxy/waf) (`dnzWaf`) runs only on routes that have it on. Three
-HTTP routes on one DNZ Proxy (one CPU) to the same origin: without a WAF, with it at Medium and at
-High (block mode), taking turns (A B C, then C B A), median of 4 rounds; req/s with wrk (64
-connections), CPU per request and latency at 5,000 requests a second with oha. Every answer was 200
-(no false positive, High included, on the browser-like request).
-
-| Request | No WAF | Medium | High | CPU per request (none / Medium / High) |
-| --- | ---: | ---: | ---: | ---: |
-| `GET /` | 13,124/s | 12,965/s (−1.2%) | 12,827/s (−2.3%) | 96.1 / 96.5 / 96.6 µs |
-| `/products?id=7&sort=price&page=2` | 13,068/s | 12,838/s (−1.8%) | 12,704/s (−2.8%) | 99.1 / 103.4 / 104.4 µs |
-| A browser's: 11 query parameters, 8 cookies, user agent, referer | 12,734/s | 11,173/s (−12.3%) | 11,053/s (−13.2%) | 99.4 / 113.2 / 111.8 µs |
-
-Latency p50 rises by 0.02–0.07 ms. Memory (anonymous, per node): +2.3 MiB at Medium and +4.2 MiB at
-High, already there when idle (the compiled rules), +2.8 / +4.4 MiB after load. The build without a
-WAF on any route is within the noise of the 1.18 numbers above (13,124/s, 96.1 µs, p50/p99
-0.55/1.49 ms).
-
-Tried and not kept: decoding only the values that have something to decode (`%`, `&`, `+`), into
-buffers kept for the visit, instead of new ones for each value. Old build against the new, taking
-turns, 4 rows each: the browser-like request at Medium 115.0 → 111.1 µs, at High 111.3 → 111.9 µs,
-requests a second ±0.5%, memory the same, all inside the noise of the route without a WAF (±3.6%
-between the two builds). The cost is the rules' scans themselves.
-
-## 1.22: route rules
-
-[Route rules](/proxy/rules) (`dnzRules`) are one middleware on the routes that have them; a route
-without rules doesn't have it. Measured on the server above with one DNZ Proxy on one CPU.
-
-**Without rules: no cost.** The build with rules against its base (main before it), the proxybench
-scenarios in turns (A B, then B A), median of 6 rounds each. The firewall shares its condition code
-with the rules now (ASCII comparisons without a lowercase copy), and no route has rules:
-
-| Build | HTTP 1 KiB | HTTPS 1 KiB | New connection | HTTP 64 KiB | p50 / p99 at 5,000/s | CPU per request | Memory idle / loaded |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Before | 13,125/s | 12,589/s | 2,481/s | 7,606/s | 0.59 / 1.51 ms | 99.5 µs | 5 / 10 MiB |
-| With rules | 13,437/s | 12,725/s | 2,531/s | 7,553/s | 0.57 / 1.50 ms | 96.0 µs | 5 / 10 MiB |
-
-**With rules.** Three HTTP routes to the same origin on the build with rules, taking turns (A B C,
-then C B A), median of 8 rounds; req/s with wrk (64 connections) on
-`/products?id=7&sort=price&page=2`, CPU per request and latency at 5,000 requests a second with oha.
-Every answer was 200.
-
-| Route | req/s | CPU per request | p50 / p99 at 5,000/s |
-| --- | ---: | ---: | ---: |
-| No rules | 13,001/s | 96.5 µs | 0.58 / 1.54 ms |
-| 5 rules, none holding (a "starts with" on two prefixes, a regular expression, a header that is there, method and path, a query parameter) | 12,768/s (−1.8%) | 99.8 µs (+3.3) | 0.64 / 1.48 ms |
-| 4 rules, all acting (a path rewrite, a request header set, one removed, a response header) | 12,355/s (−5.0%) | 102.7 µs (+6.2) | 0.63 / 1.55 ms |
-
-A first run of 4 rounds gave −4.1% and −6.6% (CPU within the noise): a few rules that don't hold cost
-a visit 2–3 µs, rules that act 5–6 µs (the rewrite parses a new URI; headers are copied in). Memory
-is the same (10 MiB after load).
-
-The same rules were checked on a real Traefik 3.7.16 and Caddy 2.11.7, fed by DNZ through their
-providers: redirects with `{rest}` and regular-expression groups, the query kept or dropped,
-rewrites, header changes and (Caddy) query, header, address and "is not" conditions all answered as
-DNZ Proxy does.
-
-## 1.22: after the crate split
-
-DNZ's server was split into several Rust crates for faster builds; DNZ Proxy's code didn't
-change, and these runs check that it is no slower and look for what to make faster. On the server
-above, one DNZ Proxy on one CPU, the scenarios above in turns (A B, then B A), median of 6 rounds each.
-
-**The split.** The build before it against after, both built as the release workflow builds DNZ
-Proxy (`cargo build --release -p dnz-proxy` on its own):
-
-| Build | HTTP 1 KiB | HTTPS 1 KiB | New connection | HTTP 64 KiB | p50 / p99 at 5,000/s | CPU per request | Memory idle / loaded |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Before the split | 12,492/s | 11,737/s | 2,286/s | 7,094/s | 0.60 / 1.45 ms | 100.2 µs | 5 / 10 MiB |
-| After | 12,607/s | 11,926/s | 2,234/s | 7,117/s | 0.58 / 1.45 ms | 99.0 µs | 5 / 10 MiB |
-
-The two DNZ Proxy binaries came out byte for byte the same (its code didn't change and it is built
-on its own), so this is the same build twice: the ±2.3% between the columns is the noise of these
-runs, and the split costs DNZ Proxy nothing.
-
-**Route rules, again.** The build before route rules against 1.22 (rules, the split and everything
-between; no route has rules): HTTP −2.0%, HTTPS −6.8%, new connections −1.3%, 64 KiB −1.5%, CPU per
-request 100.9 → 101.6 µs (+0.7%), latency and memory the same. The build before rules came from
-the old build script, which built DNZ and DNZ Proxy in one `cargo build` (their dependencies'
-features merged); with CPU per request unchanged, the HTTPS gap is that and the noise rather than
-the rules, which a route without rules doesn't run.
-
-**Where the time goes.** A profile (`perf`, wrk over HTTP) of 1.22 found nothing in DNZ Proxy's own
-code above 2% of its CPU: 44% is in system calls, 37% of it sending (the kernel's TCP/IP stack,
-Docker's bridge and connection tracking), and the rest Pingora's HTTP/1 handling and mimalloc, as
-before ("Tried and not kept" above). There is no change in DNZ Proxy's code left that would move
-these numbers by more than the noise.
-
-## 2.5: the new features, off and on
-
-The check before 2.5's release (2026-11-05 and 06), on the server above, one DNZ Proxy on one CPU.
-Everything 2.5 adds to DNZ Proxy is off by default: bans, lists of bad networks, shields, AI crawler
-and bot checks, previews of a higher sensitivity, leaked password checks, a log push of every request,
-decoy names and HTTP/3.
-
-**2.4.0 against 2.5, everything at its defaults**, a fresh node per run, the builds taking turns,
-median of 8 rounds each:
+Every feature below is off by default, and a route that doesn't use one doesn't run it. The 2.4.0 and
+2.5 builds side by side with everything at its defaults, a fresh node per run, taking turns, median of
+8 rounds each:
 
 | Build | HTTP 1 KiB | HTTPS 1 KiB | New connection | HTTP 64 KiB | p50 / p99 at 5,000/s | CPU per request | Memory idle / loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -269,38 +74,87 @@ are off.** Under a burst of 1,000 connections of 64 KiB answers, both peaked at 
 11 MiB a minute later.
 
 **Each feature on**, on one route, against the same route with it off, the states taking turns, medians
-of 6 rounds. *Browser-like* is a request with 11 query parameters, 8 cookies, a browser's user agent
+of 4 to 8 rounds. *Browser-like* is a request with 11 query parameters, 8 cookies, a browser's user agent
 and referer; *plain* is `GET /`. Differences of 1–2% in requests a second are within the noise of
 these runs; CPU per request is the steadier number.
 
 | Feature on | Request | Requests a second | CPU per request |
 | --- | --- | ---: | ---: |
-| Bans, 10,000 held | plain | −0.2% | the same |
-| A firewall rule on a list of 100,000 ranges | plain | −1.9% | the same |
-| Shields: all 12 on one route | browser-like / plain | −10.3% / −1.0% | +9.3 / +2.8 µs |
+| [Web application firewall](/proxy/waf), Medium / High | plain | −1.2% / −2.3% | the same |
+| | `/products?id=7&sort=price&page=2` | −1.8% / −2.8% | +4.3 / +5.3 µs |
+| | browser-like | −12.3% / −13.2% | +13.8 / +12.4 µs |
+| [Shields](/proxy/shields): all 12 on one route | browser-like / plain | −10.3% / −1.0% | +9.3 / +2.8 µs |
 | Shield on one path (PHPUnit) | browser-like | −0.3% | +0.9 µs |
 | Shield on the path, query and every header (Log4Shell) | browser-like | −5.3% | +4.9 µs |
-| AI crawlers `block` and a firewall rule on bots | browser-like / plain | −1.9% / within the noise | +2.9 / +2.5 µs |
 | Preview of High on a route at Medium | browser-like / plain | −6.4% / −1.0% | +5.5 / +2.0 µs |
-| Leaked password checks, a login | form POST | −7 to −10% | +5.5 µs |
+| [Bans](/proxy/waf-page), 10,000 held | plain | −0.2% | the same |
+| A firewall rule on a list of 100,000 ranges | plain | −1.9% | the same |
+| AI crawlers `block` and a firewall rule on bots | browser-like / plain | −1.9% / within the noise | +2.9 / +2.5 µs |
+| [Leaked password checks](/proxy/leaked-passwords), a login | form POST | −7 to −10% | +5.5 µs |
 | Leaked password checks, other requests on the route | plain / browser-like | +0.1% / −1.8% | the same / +2.2 µs |
-| Log push of every request | plain | about −20% | about +27 µs |
 | Decoy names (nobody banned) | plain | +1.3% | the same |
+| [Route rules](/proxy/rules): 5 that don't hold | query string | −1.8% | +3.3 µs |
+| Route rules: 4 that act (rewrite, headers) | query string | −5.0% | +6.2 µs |
+| [Peak concurrency](/proxy/dnz-proxy#peak-concurrency) | all four scenarios | within the noise | the same |
+| [Request ID](/proxy/dnz-proxy#a-requests-id-dnz-request-id) | plain | about −1 to −3% | the same to +3% |
 | HTTP/3 on the entry point, visitors over TCP | HTTPS | −1.4% | +2.3 µs |
 | HTTP/3 off on the route, on at the entry point | HTTPS | +0.3% | +1.3 µs (within the noise) |
+| [Log push](/integrations/logpush) of every request | plain | about −20% | about +27 µs |
 
-Only the log push of every request costs much: every visit becomes a line in the node's database (about
-230 bytes each) and is sent on. The node writes and sends the lines on a thread of its own at a lower
-priority, so answers don't wait for it: at 5,000 requests a second the p99 is 2.7 ms against 1 ms
-without the job, and every line was delivered at full load. Leaked password checks keep a login's p99
-at 2.5 ms even when every login carries a leaked password. Shields skip a header, path or query that
-holds nothing an attack they look for needs, which took all twelve about 4 µs off a request without a
-query. Leaked password checks with the largest filter (20 million
-passwords) hold about 43 MiB more on each node and cost a login 12 µs more; the default filter about
-1 MiB. A list of 100,000 ranges takes about 8 MiB.
+- **The web application firewall** costs a plain request next to nothing; a request carrying many
+  query parameters and cookies costs 12 to 14 µs more, the rules' scans themselves. It holds 2.3 MiB
+  more per node at Medium and 4.2 MiB at High.
+- **Shields** skip a header, path or query that holds nothing an attack they look for needs, so a
+  shield tied to one path costs under 1 µs.
+- **Only the log push of every request costs much**: every visit becomes a line in the node's database
+  (about 230 bytes each) and is sent on. The node writes and sends the lines on a thread of its own at a
+  lower priority, so answers don't wait for it: at 5,000 requests a second the p99 is 2.7 ms against
+  1 ms without the job, and every line was delivered at full load.
+- **Leaked password checks** keep a login's p99 at 2.5 ms even when every login carries a leaked
+  password. The largest filter (20 million passwords) holds about 43 MiB more on each node and costs a
+  login 12 µs more; the default filter about 1 MiB. A list of 100,000 ranges takes about 8 MiB.
+- **`Server: dnz`** costs nothing: it replaces a header the origin already sent. The request ID adds a
+  header to every answer and every request to the origin, which they read too, so it is off by default.
+- **Peak concurrency** is one atomic add and one subtract per request in progress; with 256 connections,
+  where a shared counter would cost the most, 11,280 requests a second off and 11,638 on.
 
-**HTTP/3 against HTTP/2**, the same client (oha with HTTP/3) and route, 64 connections, medians of 6
-rounds:
+### Upload limits
+
+[Upload limits](/proxy/upload-limits) read multipart bodies as they stream in. Multipart POSTs through
+DNZ Proxy to an origin that reads the whole body, 32 connections, the php2shell shield and a 64 MiB
+limit off and on, taking turns, median of 4 rounds:
+
+| Upload | Off | On | Change |
+| --- | ---: | ---: | ---: |
+| A form (2 fields, 1 KiB) | 6,249/s, 116 µs CPU | 6,241/s, 125 µs CPU | +9 µs a request |
+| A 1 MiB file | 620/s, 941 µs CPU | 618/s, 1,076 µs CPU | same rate, +14% CPU |
+| A 16 MiB file | 54.6/s (874 MiB/s), 18.9 ms CPU | 51.1/s (818 MiB/s), 20.3 ms CPU | −6% (the CPU is full) |
+
+### Rate limits and floods
+
+[Rate limits](/proxy/rate-limits), the automatic Under attack, hard bans and connection limits: the
+version before them against the version with them, a fresh node per run, in turns. Requests a second at
+full load (wrk, 64 connections), then CPU per request and p99 at a fixed 5,000 requests a second.
+Medians of 4 to 6 rounds.
+
+| Scenario | Before | With them |
+| --- | ---: | ---: |
+| Defaults (bans, floods and connection limits off) | 12,980/s, 95.9 µs, 1.30 ms | 13,159/s, 96.8 µs, 1.29 ms |
+| A rate limit on every route that refuses nothing | 12,857/s, 96.6 µs, 1.37 ms | 12,836/s, 96.5 µs, 1.32 ms |
+| A rate limit refusing 80% of requests | 26,504/s, 68.9 µs, 1.12 ms | 25,585/s, 69.6 µs, 1.09 ms |
+| Log only, 80% of requests over the limit (before: the limit refusing nothing) | 13,036/s, 96.4 µs, 1.30 ms | 12,774/s, 100.0 µs, 1.39 ms |
+| The automatic Under attack on, nothing flooded (off, then on) | 13,241/s, 95.9 µs, 1.30 ms | 13,190/s, 96.3 µs, 1.31 ms |
+
+- **A request no limit refuses costs nothing more**, and neither does the automatic Under attack while no
+  hostname is flooded.
+- **A refused request** is counted and kept for **Proxy → Rate limits**: with almost every request
+  refused, 3.5% fewer refusals a second and 3–4 MiB more memory than a bare `429` nobody could see.
+- **Log only** counts what it would refuse: with 80% of requests over the limit, about 2% fewer requests a
+  second and 3.6 µs a request, while you try a number.
+
+### HTTP/3 against HTTP/2
+
+The same client (oha with HTTP/3) and route, 64 connections, medians of 6 rounds:
 
 | | HTTP/2 | HTTP/3 |
 | --- | ---: | ---: |
@@ -313,94 +167,6 @@ rounds:
 QUIC does on the node what the kernel does for TCP (packets, encryption per packet, acknowledgements),
 so HTTP/3 costs more CPU, the more the larger the answer. With the same client, Traefik 3.7.16 went from
 5,128 to 4,869 requests a second (1 KiB) and Caddy 2.11.7 from 3,553 to 2,268.
-
-## 2.5: rate limits and floods
-
-What recording rate limit refusals, the automatic Under attack, hard bans and connection limits cost. One
-DNZ Proxy on one CPU, the version before them against the version with them, a fresh node per run, in turns
-(A B, then B A). Requests a second at full load (wrk, 64 connections), then CPU per request and p99 at a
-fixed 5,000 requests a second. Medians of 4 to 6 rounds.
-
-| Scenario | Before | With them |
-| --- | ---: | ---: |
-| Defaults (bans, floods and connection limits off) | 12,980/s, 95.9 µs, 1.30 ms | 13,159/s, 96.8 µs, 1.29 ms |
-| A rate limit on every route that refuses nothing | 12,857/s, 96.6 µs, 1.37 ms | 12,836/s, 96.5 µs, 1.32 ms |
-| A rate limit refusing 80% of requests | 26,504/s, 68.9 µs, 1.12 ms | 25,585/s, 69.6 µs, 1.09 ms |
-| Log only, 80% of requests over the limit (before: the limit refusing nothing) | 13,036/s, 96.4 µs, 1.30 ms | 12,774/s, 100.0 µs, 1.39 ms |
-| The automatic Under attack on, nothing flooded (off, then on) | 13,241/s, 95.9 µs, 1.30 ms | 13,190/s, 96.3 µs, 1.31 ms |
-
-- **A request no limit refuses costs nothing more**, and neither does the automatic Under attack while no
-  hostname is flooded.
-- **A refused request** is now counted and kept for **Proxy → Rate limits**: with almost every request refused,
-  3.5% fewer refusals a second and 3–4 MiB more memory. Before, a refusal was a bare `429` nobody could see.
-- **Log only** counts what it would refuse: with 80% of requests over the limit, about 2% fewer requests a
-  second and 3.6 µs a request, while you try a number.
-
-## 2.4: Server: dnz and request IDs
-
-One DNZ Proxy, HTTP 1 KiB, the builds taking turns, medians:
-
-| Build | Requests a second | CPU per request at 5,000/s |
-| --- | ---: | ---: |
-| 2.3.1 | 13,438 | 95.2 µs |
-| 2.4, `Server: dnz`, request ID off (the default) | 13,386 (−0.4%, within the noise) | 94.9 µs |
-| 2.4, request ID on | about 1–3% fewer | about the same to +3% |
-
-`Server: dnz` costs nothing: it replaces a header the origin already sent. The
-[request ID](/proxy/dnz-proxy#a-requests-id-dnz-request-id) adds a header to every answer and to every
-request to the origin, which the origin and the client read too, so it is off by default. Off, it
-costs nothing.
-
-## 2.0 against 1.27
-
-The check before 2.0's release (2026-11-01), on the server above, one DNZ Proxy on one CPU. What
-2.0 changes in DNZ Proxy: trusted CAs and client certificates per upstream (used only by upstreams
-that set them), upstream discovery (a lookup task beside the request path) and
-[peak concurrency](/proxy/dnz-proxy#peak-concurrency), counted only while a proxy has it on (off by
-default). Both builds were made as the release workflow builds them and checked to be different
-builds.
-
-**1.27 against 2.0, peak concurrency off.** The scenarios above in turns (A B, then B A), median of
-6 rounds each. CPU per request also comes from 4 separate steady-rate runs in turns (1.27, 2.0 off,
-2.0 on, then the other way round), in brackets:
-
-| Build | HTTP 1 KiB | HTTPS 1 KiB | New connection | HTTP 64 KiB | p50 / p99 at 5,000/s | CPU per request | Memory idle / loaded |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1.27 | 12,625/s | 12,079/s | 2,414/s | 7,335/s | 0.54 / 1.27 ms | 95.1 µs (98.0) | 5 / 10 MiB |
-| 2.0 | 13,065/s | 12,115/s | 2,351/s | 7,258/s | 0.52 / 1.22 ms | 93.0 µs (97.1) | 5 / 10 MiB |
-
-Within the noise of these runs (±2-4% between rounds of one build). The new-connection median is
-2.6% lower for 2.0 because its rounds fell in two groups (2,322-2,351 and 2,483-2,558/s): its mean
-is 2,433/s against 1.27's 2,410/s (2,365-2,433). 2.0 is no slower than 1.27.
-
-**Peak concurrency off and on.** The same 2.0 build, the proxy's setting switched through DNZ's API
-before each run (and the node's report checked to carry its concurrency when on, and not when off).
-The scenarios in turns, median of 6 rounds; CPU per request also from the 4 separate steady-rate
-runs:
-
-| Peak concurrency | HTTP 1 KiB | HTTPS 1 KiB | New connection | HTTP 64 KiB | p50 / p99 at 5,000/s | CPU per request | Memory idle / loaded |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Off | 12,744/s | 12,098/s | 2,345/s | 7,318/s | 0.56 / 1.18 ms | 95.5 µs (97.1) | 5 / 10 MiB |
-| On | 12,904/s | 11,985/s | 2,366/s | 7,213/s | 0.56 / 1.26 ms | 95.4 µs (95.0) | 5 / 10 MiB |
-
-Many requests in progress at once is where a shared counter would cost the most, so it was also
-measured with 256 connections over HTTP (wrk, 20 s), one node kept running and the setting switched
-between runs (off, on, then on, off), 6 rounds each:
-
-| Peak concurrency | Requests/s | p99 | CPU per request |
-| --- | ---: | ---: | ---: |
-| Off | 11,280 (10,798-11,921) | 31.0 ms | 86.7 µs |
-| On | 11,638 (10,951-12,364) | 29.3 ms | 85.2 µs |
-
-No cost the runs can tell: a request in progress is one atomic add and one subtract on a counter
-(the peak is written only at a new high), and the node's report showed up to 204 at once.
-
-On two CPUs with 512 connections the runs couldn't decide it: they swung from 6,500 to 14,000
-requests a second (the slow ones at up to twice the CPU per request), with peak concurrency off and
-on alike. 1.27 does the same: with a fresh node per run, 1.27 and 2.0 in turns, 4 rounds, the first
-20 s ran at 11,093-11,953/s (1.27) and 11,238-12,996/s (2.0), the next 20 s at 5,751-6,641/s and
-6,024-6,537/s. That is DNZ Proxy on two CPUs under that many connections, older than 2.0, and not
-something 2.0 changed.
 
 ## Method
 
@@ -427,6 +193,8 @@ something 2.0 changed.
   divided by the requests, so it includes whatever the proxy does in the background. **Memory** is
   the cgroup's anonymous memory, idle after start and right after the load; it leaves out the binary
   itself.
+- **A feature's cost** is the same route with the feature off and on (or two builds), taking turns
+  so that neither always runs first, on one node on one CPU.
 
 ## Run it yourself
 
@@ -446,14 +214,14 @@ own.
 
 | Variable | Default | What it sets |
 | --- | --- | --- |
-| `DNZ_IMAGE` | `terrificci/dnz:latest` | The DNZ image (DNZ and DNZ Proxy), 1.27 or newer, e.g. `terrificci/dnz:1.27.0` |
+| `DNZ_IMAGE` | `terrificci/dnz:latest` | The DNZ image (DNZ and DNZ Proxy), e.g. `terrificci/dnz:2.4.0` |
 | `BENCH_PROXIES` | all | Only these, e.g. `"dnzproxy nginx"` |
 | `BENCH_DURATION`, `BENCH_RUNS` | `20`, `3` | Seconds per run, and runs per scenario |
 | `BENCH_CONNECTIONS` | `64` | wrk's connections |
 | `BENCH_RATE` | `5000` | Requests a second in the steady-rate run |
 | `BENCH_PROXY_CPUS` | `1` | CPUs for the proxy under test (a cpuset list, e.g. `1,2`) |
 | `BENCH_BACKEND_CPUS`, `BENCH_PERF_CPUS` | `0`, `2,3` | CPUs for the origin and the load generators |
-| `BENCH_PEAK_TRACKING` | off | `1` turns the proxy's [peak concurrency](/proxy/dnz-proxy#peak-concurrency) on (2.0 or newer) and checks that the node reports it |
+| `BENCH_PEAK_TRACKING` | off | `1` turns the proxy's [peak concurrency](/proxy/dnz-proxy#peak-concurrency) on and checks that the node reports it |
 | `BENCH_KEEP` | off | Leave the containers running afterwards |
 
 ```bash
