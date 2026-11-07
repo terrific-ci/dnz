@@ -6,18 +6,26 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.5.0**, released November 7, 2026. To install or upgrade to it:
+The latest release is **v2.5.1**, released November 7, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.5.0
-docker pull terrificci/dnz-proxy:2.5.0   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.0
+docker pull terrificci/dnz:2.5.1
+docker pull terrificci/dnz-proxy:2.5.1   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.1
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.5.0" description="November 7, 2026" tags={["Latest"]}>
+<Update label="v2.5.1" description="November 7, 2026" tags={["Latest"]}>
+
+- **Live Capture: block into one of your lists.** **Block into**, next to the results' filter, puts the domains you block in one of your own lists (or a new one, named on the spot) instead of a rule each, the same choice **Filtering → Your rules** already has. *Just a rule* stays the default.
+- **WAF page: the location data download shows its progress.** **Download (DB-IP Lite, free)** under **Location data** now shows each database's progress (waiting, megabytes downloaded with a bar, unpacking), says when both are in, and shows the reason in red if a download fails. Before, the button only spun, and it wasn't clear whether anything was happening.
+- **DNZ Proxy: sign-ins that didn't stick in Firefox.** Over HTTP/2, Firefox sends each cookie as a line of its own, and DNZ Proxy passed those lines on to the origin as they came instead of joining them into one `Cookie` line. An origin behind Apache then read them as one cookie (`ci_session=abc, lb=…`), so PHP applications (CodeIgniter and others) lost their session and signed people out, most often on upstreams with sticky sessions, whose cookie is the second one. Chrome sends one line and was never affected, and neither were Traefik and Caddy proxies. The origin now always gets a single `Cookie` line, as with HTTP/3. Update your DNZ Proxy nodes to v2.5.1 (from DNZ: **Nodes → Update**, or `dnz proxy nodes update --proxy <proxy>`; nodes still on v2.4 or older are updated by hand once) for the fix.
+
+</Update>
+
+<Update label="v2.5.0" description="November 7, 2026">
 
 - **The WAF page.** **Proxy → WAF** brings DNZ Proxy's web application firewall into one place: totals, a world map of where attacks came from (hover a country for its count, click it for its addresses), blocked and logged requests over time, the busiest attack types, rules, addresses, hostnames and paths, and every request the WAF matched, with filters and a search by path, user agent or request ID. Click an address for its country, network (`AS14061 DigitalOcean, LLC`, marked *Hosting* for cloud providers), confirmed reverse name and what it did, then block the address, its /24 (/48 for IPv6) or its country on the hostnames it went for or on every route with the WAF. **Not an attack…** on an event adds the narrowest exception (skip the rule, leave the path alone, trust the address), and **Coverage** turns the WAF on for routes that lack it. *All / Private / Public* looks at attacks on local and public sites apart. Places and networks come from DNZ's own databases (DB-IP Lite, downloaded with one click); no address is sent to an outside service. CLI: `dnz proxy waf overview|events|address|block|unblock|except|coverage`.
 - **WAF: bans that expire.** An address the WAF blocked too often is refused for a while, then let back in, like fail2ban across every node. Off by default; turn it on per proxy under its DNZ Proxy settings → **Bans that expire** (20 blocks within 5 minutes bans for 60 minutes, on this proxy or on every DNZ Proxy). A node bans the moment the number is crossed and the other nodes follow within seconds. A banned visitor gets the *Access blocked* page with a request ID, never a dropped connection; trusted forwarders, addresses the route trusts, firewall allow rules, private addresses and DNZ's own uptime checks are never banned. **Banned now** on the WAF page lists bans with the time left and **Unban**, and the block dialog offers **Ban for an hour**. Rate limit refusals can count towards a ban too (*Rate limits count too*, off by default). CLI: `dnz proxy settings edge --bans on`, `dnz proxy waf ban 203.0.113.9 --for 1h`, `dnz proxy waf bans`, `dnz proxy waf unban`.
