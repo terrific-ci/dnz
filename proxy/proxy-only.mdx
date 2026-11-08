@@ -1,6 +1,6 @@
 ---
 title: "Reverse proxies only"
-description: "Run DNZ as a manager for DNZ Proxy, Traefik and Caddy without its DNS server: one container, records on Cloudflare, certificates over HTTP-01 or DNS-01."
+description: "Run DNZ as a manager for DNZ Proxy, Traefik, Caddy and Nginx without its DNS server: one container, records on Cloudflare, certificates over HTTP-01 or DNS-01."
 ---
 
 DNZ manages reverse proxies as well as DNS. When your DNS lives somewhere else (Cloudflare, your
@@ -31,6 +31,7 @@ services:
     ports:
       - "80:80"      # visitors: the DNZ Proxy node in this container
       - "443:443"
+      # - "443:443/udp"  # with HTTP/3 on the entry point, and UDP 443 open on the host's firewall
       - "8080:8080"  # the UI and API
     volumes:
       - dnz-data:/data
@@ -53,6 +54,9 @@ a node of it in the same container, which serves your routes on ports 80 and 443
 if your domains are there ([optional](/get-started/first-run#connect-cloudflare-optional): **Skip** goes
 straight in) and add a route under **Proxy → Routes**. More nodes on other servers join the same proxy as always
 ([DNZ Proxy](/proxy/dnz-proxy)).
+
+To use HTTP/3 for visitors, turn it on at the entry point, uncomment the `443:443/udp` line above and
+open UDP 443 on the host's firewall.
 
 On a Linux server without Docker, the installer sets up the service the same way:
 
@@ -79,9 +83,10 @@ curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | s
 
 ## What is off
 
-- Port 53, DNS over TLS, HTTPS (`/dns-query`), QUIC and HTTP/3.
+- Port 53, and DNS over TLS, HTTPS (`/dns-query`), QUIC and HTTP/3. HTTP/3 for visitors is DNZ
+  Proxy's and stays.
 - Local zones and records, changes and approvals, views, forwarding, filtering, threats, DHCP & IPAM,
-  typo help.
+  typo help, and [decoy names](/proxy/decoys), which are turned on per local zone.
 - The query log, Live Capture, Query Explain.
 - DNS replication (primary and secondary servers); proxy-only servers have [standbys](#a-standby) instead.
 - DNS alerts (upstreams, NXDOMAIN spikes, domain expiry, the daily summary) and DNS metrics.
@@ -90,6 +95,16 @@ Their pages are gone from the menu (their addresses lead to the Overview), their
 `404` with `DNS is off on this server (--proxy-only)`, the CLI prints the same, and MCP lists none of
 their tools. The Overview opens on **Proxy**. Local zones a server had before it was started with
 `--proxy-only` are kept, but not served or shown.
+
+## What works differently
+
+- **[Name checks](/dashboard/name-checks):** origins that can be reached without the proxy and exposed
+  files are checked; CNAMEs pointing at targets that are gone or can be claimed are not, since DNZ
+  holds no zones here.
+- **[Private CA's ACME server](/proxy/private-ca#acme):** `http-01` works as always. For `dns-01` DNZ
+  answers nothing itself: the client publishes the TXT record in your DNS, and DNZ reads it through
+  the server's resolvers.
+- **[Log push](/integrations/logpush):** only DNZ Proxy's request log can be pushed.
 
 ## DNS records for your routes
 
@@ -165,6 +180,11 @@ The standby then copies everything every 30 seconds: proxies, routes, upstreams,
 Cloudflare connections, notifications, uptime monitors, incidents and their history, users and roles.
 Each server keeps its own sessions, audit log and diagnostics. An unchanged copy costs one small
 request.
+
+While it follows, the standby leaves the install's jobs to its primary, so nothing is done twice:
+alerts and reports, uptime and name checks, renewing and signing certificates, writing records on
+Cloudflare, updating nodes and scheduled backups. It starts doing them once it is promoted or takes
+over.
 
 <Warning>
 The join code carries a secret: anyone with it can copy the server, keys included. When the two
