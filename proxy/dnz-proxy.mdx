@@ -890,6 +890,8 @@ Caches answers on each node.
   `Accept-Encoding`, and statuses outside the list.
 - Visits with `Authorization` or one of the bypass cookies go to the origin. Prefixes in the style of
   `wordpress_logged_in*` work.
+- Visits with a `Range` header go to the origin too: a part of a file is neither stored nor answered
+  from the cache, so resumed downloads and video seeking get the bytes they asked for.
 
 The cache key is the host, path and query (unless **Query in key** is off), chosen headers and
 cookies, and the accepted encoding.
