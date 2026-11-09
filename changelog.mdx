@@ -6,18 +6,25 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.5.2**, released November 8, 2026. To install or upgrade to it:
+The latest release is **v2.5.3**, released November 9, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.5.2
-docker pull terrificci/dnz-proxy:2.5.2   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.2
+docker pull terrificci/dnz:2.5.3
+docker pull terrificci/dnz-proxy:2.5.3   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.3
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.5.2" description="November 8, 2026" tags={["Latest"]}>
+<Update label="v2.5.3" description="November 9, 2026" tags={["Latest"]}>
+
+- **DNZ Proxy: faster uploads over HTTP/2.** Uploads from browsers were held to 64 KiB per round trip whatever the link, about 1.3 MB/s at 50 ms. They now reach about ten times that on such a link (13.5 MB/s at 50 ms, 59 MB/s at 10 ms). Nothing to turn on, and other traffic is unchanged.
+- **Rate limits: count per more than the address.** A rate limit or in-flight limit can now count per cookie, header, query parameter, hostname, path or method, up to four of them together, so people behind one address are treated fairly. Use **Count per** in the route dialog's *Rate limit*, *Or count per these together* on a middleware, or `--rate-limit-key` with `dnz proxy routes edit`. On full servers and on reverse proxies only. Everything here needs DNZ Proxy; Traefik supports one header or the hostname, and other parts count per address with a warning.
+
+</Update>
+
+<Update label="v2.5.2" description="November 8, 2026">
 
 - **Reverse proxies only: routes could not be added.** On a server started with `--proxy-only`, adding or editing a route was refused with *is not in any of DNZ's zones; add the zone first*, although such a server has no zones. Routes now take any hostname there. Servers that also run DNS still ask for the zone.
 - **Reverse proxies only: a standby no longer does its primary's work.** While it followed a primary, a standby also sent proxy alerts and the weekly WAF report, ran uptime and name checks, renewed and signed certificates, wrote records on Cloudflare, started node updates and ran scheduled backups, so people could get the same alert twice. A standby now leaves all of that to its primary and starts doing it once it is promoted or takes over.
