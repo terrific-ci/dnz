@@ -795,6 +795,8 @@ Routers, services and middlewares work as described in
 - **Services**: load balancing (`wrr`, `p2c`, `hrw`, `leasttime`), sticky cookies, active and passive
   health checks, weighted, mirroring (without request bodies) and failover services. HTTP/1.1,
   HTTP/2 and h2c upstreams, WebSocket and gRPC.
+- **Bodies** stream through without being stored. An HTTP/2 visitor may send up to 1 MiB per connection
+  ahead of the node reading it, so uploads aren't held to HTTP/2's default of 64 KiB per round trip.
 - **Headers to the upstream**: `X-Forwarded-For`, `-Proto`, `-Host`, `-Port`, `-Server` and
   `X-Real-Ip`. `X-Forwarded-For` gets the peer appended (a trusted forwarder's list is kept); `X-Real-Ip`
   is always the [visitor's address](#the-visitors-address), never one passed on. Cookies a browser sends
