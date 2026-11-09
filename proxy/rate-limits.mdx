@@ -51,6 +51,7 @@ In the route dialog, a rate limit on a DNZ Proxy also has:
 
 - **Log only**: refuse nothing, and count and list what the limit would refuse. Try a number first.
 - **Never limit these addresses**: your monitoring, your office, partners.
+- **Count per**: what makes one visitor. See [What counts as one visitor](#what-counts-as-one-visitor).
 
 <CodeGroup>
 ```bash Terminal
@@ -205,7 +206,43 @@ See [Notifications](/integrations/notifications).
 A request no limit refuses costs nothing more: the counting happens only for a refused request, and the automatic
 Under attack is in no route while it is off. Details in [Proxy benchmarks](/proxy/benchmarks).
 
+## What counts as one visitor
+
+Each address is one visitor unless you say otherwise. On a DNZ Proxy, on a full DNZ and on a
+[reverse proxies only](/proxy/proxy-only) one, a limit can count per any of these, and up to four together:
+
+| Part | One visitor is |
+|---|---|
+| `address` | one address |
+| `cookie:NAME` | one value of that cookie; other cookies changing make no difference |
+| `header:NAME` | one value of that request header |
+| `query:NAME` | one value of that query parameter |
+| `host` | one hostname |
+| `path` | one path, without the query |
+| `method` | one method |
+
+For example, `cookie:session` with `path` gives each signed-in person a budget per page, and `header:X-Api-Key` gives
+each API key its own.
+
+Use **Count per** in the route dialog, **Or count per these together** on a rate limit or in-flight middleware, or the
+terminal:
+
+```bash Terminal
+dnz proxy routes edit edge shop.example.com --rate-limit 10/20 --rate-limit-key cookie:session --rate-limit-key path
+```
+
+- **A request without the cookie, header or parameter counts as its address**, for that part only. Visitors without
+  a cookie never share one budget.
+- **Visitors choose what they send**, and each new value is a new budget. To stop an attacker, keep a limit per address
+  as well, with a higher number. A cookie or header is for treating people behind one address fairly.
+- With several nodes, each counts for itself unless the limit shares **Redis**.
+- A ban for hitting limits still bans the address.
+
 ## Traefik, Caddy and Nginx
 
-They enforce a rate limit too, but don't record refusals for this page. **Log only** and **Never limit these
-addresses** are DNZ Proxy only: elsewhere the limit holds for everyone, and the proxy's page says so.
+They don't record refusals for this page. **Log only** and **Never limit these addresses** are DNZ Proxy only: on
+Traefik and Nginx the limit holds for everyone, and the proxy's page says so. Caddy has no rate limit built in, so
+the limit is left out there, with a warning.
+
+**Count per**: Traefik takes one request header or the hostname. A request without that header doesn't fall back to
+its address there. Anything else counts per address on Traefik and Nginx, with a warning.

@@ -168,6 +168,22 @@ QUIC does on the node what the kernel does for TCP (packets, encryption per pack
 so HTTP/3 costs more CPU, the more the larger the answer. With the same client, Traefik 3.7.16 went from
 5,128 to 4,869 requests a second (1 KiB) and Caddy 2.11.7 from 3,553 to 2,268.
 
+### HTTP/2 uploads
+
+An HTTP/2 visitor may send 1 MiB ahead of the node reading it instead of HTTP/2's own 64 KiB. Four 32 MiB
+uploads in a row on one connection, to an origin that reads them whole, on 1 CPU:
+
+| Round trip | 64 KiB window | 1 MiB window |
+| --- | ---: | ---: |
+| None | 236 MB/s | 394 MB/s |
+| 10 ms | 6.0 MB/s | 59 MB/s |
+| 50 ms | 1.28 MB/s | 13.5 MB/s |
+
+Other HTTP/2 traffic didn't change: 10,943 against 10,940 requests a second at 1 KiB, 4,764 against 4,789 at 64 KiB,
+90.3 against 89.8 µs of CPU per request (medians of 6 rounds). What a window costs is memory while an origin hangs: 200
+connections uploading to an origin that doesn't answer held 47 MiB before and hold 278 MiB now, against 445 MiB for
+Traefik 3.7.16 in the same test.
+
 ## Method
 
 - Each proxy runs in its own container on one Docker network, started on its own, and forwards to
