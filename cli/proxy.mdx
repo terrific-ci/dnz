@@ -85,7 +85,9 @@ dnz proxy hosts edge portal                       # what Add route offers for "p
 ```
 
 The first argument is the proxy, by name or id. In the output, **DNS** shows a name's record types, or
-**new** when the name has no record yet.
+**new** when the name has no record yet. In [proxy-only mode](/proxy/proxy-only) the zones are the
+connected Cloudflare accounts' (records for a new name are written there); a name in none of them shows
+**no zone** and can still be routed: `routes add` prints the addresses to point it at.
 
 ### List, add, edit, delete
 

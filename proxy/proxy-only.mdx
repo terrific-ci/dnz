@@ -115,6 +115,10 @@ DNZ answers no DNS here, so a route's name has to point at the proxy where its D
   healthy nodes that aren't drained), in the name's Cloudflare zone, DNS only, with the comment
   *Synced from DNZ*. When a node comes or goes the records follow within about a minute and a half (a
   node that flaps doesn't rewrite them), and they go with the route.
+- The route dialog's hostname field offers the connected accounts' zones as you type and tags a name
+  in one of them *new* (records will be added there), or with the record types DNZ already keeps for
+  it; a name in none of them is *no zone* and can still be routed. Without a connection every name is
+  *no zone*. `dnz proxy hosts <proxy> [name]` lists the same.
 - Records made on Cloudflare by hand for the same name are never changed: the route says so, and the
   name keeps pointing where it did.
 - **Proxied by Cloudflare**, under the same option, writes them through Cloudflare's proxy instead:
