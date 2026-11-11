@@ -6,18 +6,26 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.5.4**, released November 9, 2026. To install or upgrade to it:
+The latest release is **v2.5.5**, released November 11, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.5.4
-docker pull terrificci/dnz-proxy:2.5.4   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.4
+docker pull terrificci/dnz:2.5.5
+docker pull terrificci/dnz-proxy:2.5.5   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.5
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.5.4" description="November 9, 2026" tags={["Latest"]}>
+<Update label="v2.5.5" description="November 11, 2026" tags={["Latest"]}>
+
+- **Reverse proxies only (`--proxy-only`): Add route knows your Cloudflare zones.** With Cloudflare connected, the hostname field now offers your Cloudflare zones as you type and tags a name in one of them *new*: its A/AAAA records pointing at the proxy are added there when the route is saved. It used to say *no zone* for every name. Without a connection names still show *no zone*, and a name outside your Cloudflare zones can still be routed, with the addresses to point it at shown.
+- **Reverse proxies only: `dnz proxy routes add` works again.** It refused every hostname with "not in any of DNZ's zones"; it now adds the route and writes its records on Cloudflare like the web UI does. `dnz proxy hosts` lists your Cloudflare zones.
+- **Reverse proxies only: no false "no DNS record" warning.** Every route on the Routes page said no DNS record pointed through its proxy, and the route check flagged it. That icon, its filter and the check's DNS step are left out in this mode, since DNZ answers no DNS there; *Add DNS record* on a route now says what it wrote on Cloudflare.
+
+</Update>
+
+<Update label="v2.5.4" description="November 9, 2026">
 
 - **DNZ Proxy on the same server as DNZ: fixed.** Since v2.5.0, a node DNZ runs itself (*Run DNZ Proxy on this server*, and the one a `--proxy-only` install makes at its first start) stopped as soon as it started, so its proxy showed *Node down* and ports 80 and 443 served nothing. Update and restart: the node starts by itself, with nothing to set up again.
 - **DNZ Proxy: on/off settings accept more values.** `DNZ_PROXY_NO_SELF_UPDATE` and `DNZ_PROXY_INSECURE` now take `1`, `yes` and `on` as well as `true` (and `0`, `no`, `off`, `false`); anything else other than `true` or `false` used to stop the node at start.
