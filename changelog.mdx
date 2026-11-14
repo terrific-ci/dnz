@@ -6,18 +6,26 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.5.5**, released November 11, 2026. To install or upgrade to it:
+The latest release is **v2.5.6**, released November 14, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.5.5
-docker pull terrificci/dnz-proxy:2.5.5   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.5
+docker pull terrificci/dnz:2.5.6
+docker pull terrificci/dnz-proxy:2.5.6   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.6
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.5.5" description="November 11, 2026" tags={["Latest"]}>
+<Update label="v2.5.6" description="November 14, 2026" tags={["Latest"]}>
+
+- **Status pages: a logo given as an address keeps showing when that site is down.** In Settings → Profile (and `dnz settings profile --logo`), DNZ now downloads a logo address when you save and keeps the image itself, so status pages show it even while the site that hosted it is offline. If it can't be downloaded or is over 48 KB, the address is kept as before and the save tells you why.
+- **Status pages link to your public uptime page.** While the uptime page is on and has its own hostname, pages that say a site is down (unreachable, bad gateway, gateway timeout, no server) get a **Service status** button that opens it.
+- **"Powered by DNZ" is a link.** The mark at the foot of status pages, the browser check, the waiting room and the public uptime page opens dnzwithazee.com in a new tab.
+
+</Update>
+
+<Update label="v2.5.5" description="November 11, 2026">
 
 - **Reverse proxies only (`--proxy-only`): Add route knows your Cloudflare zones.** With Cloudflare connected, the hostname field now offers your Cloudflare zones as you type and tags a name in one of them *new*: its A/AAAA records pointing at the proxy are added there when the route is saved. It used to say *no zone* for every name. Without a connection names still show *no zone*, and a name outside your Cloudflare zones can still be routed, with the addresses to point it at shown.
 - **Reverse proxies only: `dnz proxy routes add` works again.** It refused every hostname with "not in any of DNZ's zones"; it now adds the route and writes its records on Cloudflare like the web UI does. `dnz proxy hosts` lists your Cloudflare zones.
