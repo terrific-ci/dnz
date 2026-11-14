@@ -105,12 +105,15 @@ dnz uptime page set --on --title "Company status" --hostname status.example.com 
 dnz uptime page set --off
 ```
 
-For its own hostname, let DNZ make the route and DNS record on a proxy: `--proxy` names it and
-`--dnz-address` is DNZ's own address as that proxy reaches it (its IP and HTTP port, never the
-page's hostname). They are made while the page is on and deleted when it's turned off;
-`--no-route` deletes them and keeps the hostname.
+For its own hostname, let DNZ make the routes and DNS record on proxies: `--proxy` names them
+(repeat it or separate names with commas) and `--dnz-address` is DNZ's own address as they reach it
+(its IP and the port its web UI listens on, never the page's hostname or a proxy's port; DNZ refuses
+an address that doesn't answer as DNZ). They are made while the page is on and deleted when it's
+turned off; a proxy left out of `--proxy` loses its route, and `--no-route` deletes them all and
+keeps the hostname. Either flag alone keeps the other's saved value.
 
 ```bash
-dnz uptime page set --on --hostname status.example.com --proxy edge --dnz-address http://10.0.0.53:8080
+dnz uptime page set --on --hostname status.example.com --proxy edge,edge-2 --dnz-address http://10.0.0.53:8080
+dnz uptime page set --proxy edge
 dnz uptime page set --no-route
 ```

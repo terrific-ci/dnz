@@ -202,19 +202,24 @@ pages that say a site is down (unreachable, bad gateway, gateway timeout, no ser
 **Service status** button. Under **How visitors
 reach it**, pick one:
 
-- **Through a proxy, set up by DNZ:** choose a proxy and DNZ's own address as the proxy reaches it:
-  its IP and HTTP port, prefilled from **Settings → General → Server → Device address**. Never the page's
-  hostname (visitors would go round in a loop), and not `localhost` unless the proxy runs on the
-  same machine. **Save** with the page on and DNZ makes the route (HTTPS, with the redirect from
-  http) and the DNS record right away. Turning the page off deletes them again; a record that was
-  there before only leaves the proxy. A wildcard route of the proxy (`*.example.com`) that sends
+- **Through a proxy, set up by DNZ:** choose one or more proxies (or **All proxies**) and DNZ's own
+  address as they reach it: its IP and the port its web UI listens on, prefilled from **Settings →
+  General → Server → Device address**. **Save** with the page on and DNZ makes a route on each proxy
+  (HTTPS, with the redirect from http) and the DNS record, answered through all of them, right away,
+  so the page shows whichever proxy a visitor comes through. Taking a proxy off the list deletes its
+  route; turning the page off deletes them all, and a record that was there before only leaves the
+  proxies. DNZ first checks that the address answers as DNZ and refuses one that doesn't, such as a
+  proxy's address or its port 80/443 (its redirect to https would end in "too many redirects"). Never
+  the page's hostname either, and not `localhost` unless the proxies run on the same machine. A route
+  a picked proxy already has for the name is left as it is; if it goes somewhere else, the card warns
+  that visitors coming through that proxy won't get the page. A wildcard route of the proxy (`*.example.com`) that sends
   other names elsewhere doesn't get in the way: the page's own route goes before it. The card shows
   the name's DNS records and routes as they are.
 - **I'll point it at DNZ myself:** a DNS record pointing the name straight at DNZ (when DNZ's HTTP
   port is 80), or a route on a proxy DNZ doesn't manage, which must pass the visitor's hostname on.
 
 ```bash
-dnz uptime page set --on --hostname status.example.com --proxy edge --dnz-address http://10.0.0.53:8080
+dnz uptime page set --on --hostname status.example.com --proxy edge,edge-2 --dnz-address http://10.0.0.53:8080
 ```
 
 Making or deleting the route needs **Manage proxies** too. If the route or DNS record can't be made,
