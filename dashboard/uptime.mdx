@@ -197,7 +197,9 @@ reloads itself every minute and shows times in the visitor's time zone.
 ### On its own hostname
 
 Give the page a hostname, such as `status.example.com`, and DNZ answers requests for that name with
-the page alone: neither the DNZ dashboard nor its API is reachable under it. Under **How visitors
+the page alone: neither the DNZ dashboard nor its API is reachable under it. While the page is on, the proxies'
+pages that say a site is down (unreachable, bad gateway, gateway timeout, no server) link to it with a
+**Service status** button. Under **How visitors
 reach it**, pick one:
 
 - **Through a proxy, set up by DNZ:** choose a proxy and DNZ's own address as the proxy reaches it:

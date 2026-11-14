@@ -22,7 +22,9 @@ The page shows:
 - for unreachable, bad gateway, gateway timeout and no server pages, what to do *if you're visiting*
   and *if you run this site*
 - **Try again** and **More information** buttons
-- a request ID and the time, and "Powered by DNZ"
+- for unreachable, bad gateway, gateway timeout and no server pages, a **Service status** button to
+  your [public uptime page](/dashboard/uptime#on-its-own-hostname), while it is on and has a hostname
+- a request ID and the time, and "Powered by DNZ", a link to dnzwithazee.com
 
 It is one self-contained page (no fonts or scripts from elsewhere; the only outside image is a logo
 given as an address) in light and dark, and search engines are told not to index it.
@@ -339,16 +341,17 @@ tab's title ends with the label, and "Powered by DNZ" stays in the footer. Eithe
 
 The logo is text; nothing is uploaded. It can be:
 
-- an image address, such as `https://example.com/logo.png`. Visitors' browsers load it from there,
-  so it must be reachable from where they are. An `http://` image doesn't load on a page served over
-  HTTPS.
+- an image address, such as `https://example.com/logo.png`. DNZ downloads it when you save and keeps
+  the image itself, so the logo still shows while that site is down. If DNZ can't (it can't reach the
+  address, gets an error, the file isn't an image or is over 48 KB), it keeps the address and the save
+  tells you why; visitors' browsers then load it from there, so it must be reachable from where they
+  are, and an `http://` image doesn't load on a page served over HTTPS. Saving it again tries again.
 - a data URL, such as `data:image/png;base64,iVBORw0…`, in base64 or base64url
 - the bare base64 or base64url string of the file. DNZ reads its type from the bytes and stores it as
   a data URL.
 
-PNG, JPEG, GIF, WebP, SVG, AVIF and ICO are accepted, up to 48 KB. Caddy keeps a copy of the page in
-its configuration for every page, so a logo given as an address keeps that configuration small. The
-settings page shows a preview of what you type before you save.
+PNG, JPEG, GIF, WebP, SVG, AVIF and ICO are accepted, up to 48 KB. The settings page shows a preview
+of what you type before you save.
 
 ```bash
 dnz settings profile --label "Company" --logo https://example.com/logo.png
