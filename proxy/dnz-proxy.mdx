@@ -869,11 +869,14 @@ circuitBreaker, buffering.
 ### TCP and UDP
 
 - **TCP routers** on `tcp` entry points route by `HostSNI` (TLS passthrough, or TLS ended on the node
-  with its certificates), ``HostSNI(`*`)`` for everything, `ClientIP` and `ALPN`. Unlike Traefik, a
-  TCP router can't share an `http` or `https` entry point: one on `websecure` (:443) is refused with
-  *websecure is not a TCP entry point*. Add a `tcp` entry point on a port of its own (for example
-  `postgres` on `:5432`) under the proxy's **Settings → Entry points**; a new proxy has only `web` and
-  `websecure`.
+  with its certificates), ``HostSNI(`*`)`` for everything, `ClientIP` and `ALPN`.
+- **TCP routers on port 443**: on an `https` entry point (`websecure`), a TCP router with TLS and its
+  own `HostSNI` names takes those names ahead of the HTTP routers, as on Traefik; every other name on
+  the port stays a web visit. One that could take any name (``HostSNI(`*`)``, a regexp, no TLS) is left
+  off with a warning, and DNZ refuses it on save. Clients must open TLS with the name at once: a
+  PostgreSQL client needs `sslnegotiation=direct` (libpq 17 or newer). A `tcp` entry point on a port of
+  its own (for example `postgres` on `:5432`, under the proxy's **Settings → Entry points**) needs
+  none of that; a new proxy has only `web` and `websecure`.
 - **TCP services** balance by weight, send a PROXY protocol header if asked, and may speak TLS to the
   server.
 - **TCP middlewares**: ipAllowList and inFlightConn.
