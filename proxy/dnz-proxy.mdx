@@ -874,8 +874,13 @@ circuitBreaker, buffering.
   own `HostSNI` names takes those names ahead of the HTTP routers, as on Traefik; every other name on
   the port stays a web visit. One that could take any name (``HostSNI(`*`)``, a regexp, no TLS) is left
   off with a warning, and DNZ refuses it on save, as it does a TCP route for a hostname that already has
-  a web route on that entry point. Clients must open TLS with the name at once: a
-  PostgreSQL client needs `sslnegotiation=direct` (libpq 17 or newer). A `tcp` entry point on a port of
+  a web route on that entry point. Clients must send the name in TLS (SNI).
+- **PostgreSQL by hostname**: PostgreSQL clients (Prisma, node-postgres, `psql`, psycopg) reach a
+  TCP route by its hostname with `sslmode=require` or stricter, on port 443 too. DNZ Proxy answers
+  their request for TLS as PostgreSQL would and then reads the name; `sslnegotiation=direct` (libpq 17)
+  works as well. With **passed through**, the server's own TLS must be on (DNZ Proxy asks it for TLS
+  first); with **ended by the proxy**, the server gets a plain connection, so its `pg_hba.conf` needs a
+  `host` line (not `hostssl`) for the proxy's address. A `tcp` entry point on a port of
   its own (for example `postgres` on `:5432`, under the proxy's **Settings → Entry points**) needs
   none of that; a new proxy has only `web` and `websecure`.
 - **TCP services** balance by weight, send a PROXY protocol header if asked, and may speak TLS to the
