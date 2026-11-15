@@ -6,18 +6,25 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.5.8**, released November 14, 2026. To install or upgrade to it:
+The latest release is **v2.5.9**, released November 15, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.5.8
-docker pull terrificci/dnz-proxy:2.5.8   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.8
+docker pull terrificci/dnz:2.5.9
+docker pull terrificci/dnz-proxy:2.5.9   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.9
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.5.8" description="November 14, 2026" tags={["Latest"]}>
+<Update label="v2.5.9" description="November 15, 2026" tags={["Latest"]}>
+
+- **DNZ Proxy: PostgreSQL clients reach TCP routes by hostname.** Prisma, node-postgres, `psql` and other clients that ask for TLS before starting it (`sslmode=require` and stricter) now connect to a TCP route by its hostname, on port 443 beside your websites as well as on a TCP entry point of its own. DNZ Proxy answers their request for TLS as PostgreSQL would and then reads the name; `sslnegotiation=direct` is no longer needed. With TLS **ended by the proxy**, your server gets a plain connection, so its `pg_hba.conf` needs a `host` line (not `hostssl`) for the proxy's address; with TLS **passed through**, DNZ Proxy asks your server for TLS first, so the server's own TLS must be on.
+- **DNZ Proxy: `psql` with `sslnegotiation=direct` connects to routes whose TLS the proxy ends.** Such a route offered only the web protocols during the handshake, and libpq 17 gave up; it now gets the protocol the client asks for, unless the route's TLS options name their own list.
+
+</Update>
+
+<Update label="v2.5.8" description="November 14, 2026">
 
 - **DNZ Proxy: TCP routes on port 443.** A TCP route can now listen on the HTTPS entry point (`websecure`) beside your websites, as on Traefik: it takes only its own hostnames there, with TLS passed through or ended by the proxy, and every other name on the port stays a web visit. Pick `websecure` in **Add route → TCP** (it shows as *shared with web routes*), or `dnz proxy routes add-tcp edge -e websecure --host db.example.com --passthrough -t 10.0.0.7:5432`. DNZ refuses such a route without hostnames or TLS, for a hostname that already has a website on that entry point, and while a DNZ Proxy node of the proxy still runs an older version (it names the nodes to update). Clients must start TLS with the name right away; for PostgreSQL that means `sslnegotiation=direct` (libpq 17 or newer).
 - **DNZ Proxy: TCP routes already saved on `websecure` start working.** A TCP route a proxy's YAML file had put on the HTTPS entry point, with hostnames and TLS, was left off by the nodes until now; after updating, it serves its names on port 443. Check `dnz proxy routes list <proxy> --type tcp` before updating if you have such routes.
