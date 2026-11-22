@@ -6,18 +6,25 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.5.10**, released November 22, 2026. To install or upgrade to it:
+The latest release is **v2.5.11**, released November 22, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.5.10
-docker pull terrificci/dnz-proxy:2.5.10   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.10
+docker pull terrificci/dnz:2.5.11
+docker pull terrificci/dnz-proxy:2.5.11   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.11
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.5.10" description="November 22, 2026" tags={["Latest"]}>
+<Update label="v2.5.11" description="November 22, 2026" tags={["Latest"]}>
+
+- **DNZ Proxy: no more "too many redirects" behind Cloudflare's Flexible mode.** With Cloudflare reaching the proxy over plain HTTP, a route's *Redirect http:// to https://* (or the proxy's route default) sent visitors who were already on https back to https again, over and over, until the browser gave up. The redirect now believes the `X-Forwarded-Proto` header from a trusted forwarder: add Cloudflare's address ranges as trusted forwarders on the HTTP entry point, and those visits go through. A visitor reaching the proxy directly over HTTP is still redirected. Cloudflare's Full (strict) mode with HTTPS on the route remains the recommended setup.
+- **Security updates:** the libraries DNZ uses for its HTTP server, for sending email and for reading web addresses take the fixes for security advisories published in November 2026.
+
+</Update>
+
+<Update label="v2.5.10" description="November 22, 2026">
 
 - **DNZ Proxy: TCP routes whose TLS the proxy ends no longer hold back the last bytes of an answer.** When the client read more slowly than the server sent, the end of an answer could stay in the proxy until the server sent something else. A server that then waited for the client's next request, as PostgreSQL does after each table in `pg_dump`, left the connection stuck until it was cut, often two hours later, with `server closed the connection unexpectedly`. Every byte now reaches the client as soon as it can.
 
