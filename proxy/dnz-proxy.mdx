@@ -784,6 +784,26 @@ hop** as a trusted forwarder: Cloudflare's ranges and nginx's address. A hop tha
 taken for the visitor, so every request seems to come from it.
 </Warning>
 
+### The visitor's scheme
+
+A redirect to `https://` (a route's *Redirect http:// to https://*, the route default, or a
+`redirectScheme` middleware) asks whether the visitor is already on https. From a trusted forwarder
+that sends **`X-Forwarded-Proto`**, its answer counts (read from the right, as `X-Forwarded-For`: the
+nearest hop's value). From anyone else, or without the header, the connection to the node decides.
+
+This matters behind a CDN that reaches the node over plain HTTP, such as Cloudflare's SSL/TLS mode
+**Flexible**: the visitor is on `https://` but the node sees port 80. **List the CDN's ranges as
+trusted forwarders** on the HTTP entry point, and the redirect leaves those visits alone instead of
+sending the visitor round until the browser stops with *too many redirects*. A visitor reaching the
+node directly on port 80 is still redirected.
+
+<Tip>
+Better still, use Cloudflare's **Full (strict)** with HTTPS on the route: Cloudflare then reaches the
+node over HTTPS, so the path between them is encrypted too. An HTTP-only route behind **Full**
+answers *404 page not found*, because Cloudflare asks the node on port 443, where the route has no
+router.
+</Tip>
+
 ## Routing
 
 Routers, services and middlewares work as described in
