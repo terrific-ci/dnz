@@ -6,18 +6,24 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.5.9**, released November 15, 2026. To install or upgrade to it:
+The latest release is **v2.5.10**, released November 22, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.5.9
-docker pull terrificci/dnz-proxy:2.5.9   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.9
+docker pull terrificci/dnz:2.5.10
+docker pull terrificci/dnz-proxy:2.5.10   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.10
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.5.9" description="November 15, 2026" tags={["Latest"]}>
+<Update label="v2.5.10" description="November 22, 2026" tags={["Latest"]}>
+
+- **DNZ Proxy: TCP routes whose TLS the proxy ends no longer hold back the last bytes of an answer.** When the client read more slowly than the server sent, the end of an answer could stay in the proxy until the server sent something else. A server that then waited for the client's next request, as PostgreSQL does after each table in `pg_dump`, left the connection stuck until it was cut, often two hours later, with `server closed the connection unexpectedly`. Every byte now reaches the client as soon as it can.
+
+</Update>
+
+<Update label="v2.5.9" description="November 15, 2026">
 
 - **DNZ Proxy: PostgreSQL clients reach TCP routes by hostname.** Prisma, node-postgres, `psql` and other clients that ask for TLS before starting it (`sslmode=require` and stricter) now connect to a TCP route by its hostname, on port 443 beside your websites as well as on a TCP entry point of its own. DNZ Proxy answers their request for TLS as PostgreSQL would and then reads the name; `sslnegotiation=direct` is no longer needed. With TLS **ended by the proxy**, your server gets a plain connection, so its `pg_hba.conf` needs a `host` line (not `hostssl`) for the proxy's address; with TLS **passed through**, DNZ Proxy asks your server for TLS first, so the server's own TLS must be on.
 - **DNZ Proxy: `psql` with `sslnegotiation=direct` connects to routes whose TLS the proxy ends.** Such a route offered only the web protocols during the handshake, and libpq 17 gave up; it now gets the protocol the client asks for, unless the route's TLS options name their own list.
