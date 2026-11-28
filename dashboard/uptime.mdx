@@ -180,7 +180,9 @@ a [repeating window](/proxy/status-pages#scheduled-maintenance), or a **maintena
 Turn it on in the **Public status page** card, on the tab of the same name. It is at `http(s)://<your DNZ>/status`, its content
 as JSON at `/status.json` ([its fields](/api/uptime#the-page-as-json), scheduled maintenance included), and on its own hostname if you give one. It shows:
 
-- your logo and label from **Settings → Profile**, a title and description
+- your logo and label from **Settings → Profile**, a title and description, with Denz, DNZ's
+  mascot: happy while all is well, worried when something is degraded, sad during a major outage,
+  holding a wrench during maintenance
 - the overall status: all systems operational, degraded performance, partial or major outage, under maintenance
 - open incidents with their timeline
 - **Scheduled maintenance**: the coming 7 days' occurrences of [repeating maintenance](#scheduled-maintenance) that covers a monitor on the page
@@ -192,7 +194,8 @@ you write. Never a monitor's own name, URL, address, status code or error.
 
 The page is one self-contained document (no fonts or scripts from elsewhere; the only outside image
 is a logo given as an `https://` address), so it works over plain http and whatever else is down. It
-reloads itself every minute and shows times in the visitor's time zone.
+reloads itself every minute and shows times in the visitor's time zone. It is light or dark as the visitor's device prefers,
+unless the [default theme](/admin/settings#appearance) is set to Light or Dark.
 
 ### On its own hostname
 

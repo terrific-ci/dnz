@@ -15,7 +15,9 @@ to the backend, with the right HTTP status code and, where it fits, a `Retry-Aft
 The page shows:
 
 - your [logo and label](#logo-and-label) at the top, when set
-- an icon for the status, the error code, a title and a message
+- Denz, DNZ's mascot, in a mood that fits the status (sleepy with a wrench for maintenance, worried
+  when the site can't be reached, stern for blocked visitors, patient with an hourglass in a
+  waiting room, …) and the status's icon beside it, then the error code, a title and a message
 - the chain **You → Proxy → Destination**, with how each hop is doing (for maintenance: your
   browser *connected*, the proxy *connected*, the site *maintenance*)
 - for blocked pages, **What you can do**: check the address, or ask the administrator with the request ID
@@ -27,7 +29,10 @@ The page shows:
 - a request ID and the time, and "Powered by DNZ", a link to dnzwithazee.com
 
 It is one self-contained page (no fonts or scripts from elsewhere; the only outside image is a logo
-given as an address) in light and dark, and search engines are told not to index it.
+given as an address), and search engines are told not to index it. It is light or dark as the
+visitor's device prefers, unless the [default theme](/admin/settings#appearance) is set to Light or
+Dark. Denz moves with CSS alone and holds still (blinking only) when the visitor's device asks for
+reduced motion.
 
 The page fits the screen without scrolling. On a laptop or wider (820 px and up) the card has two
 columns: the message, buttons and tips on the left, the chain on the right. On a phone it is one
