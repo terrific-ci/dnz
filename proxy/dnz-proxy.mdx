@@ -813,7 +813,7 @@ Routers, services and middlewares work as described in
   `HeaderRegexp`, `Query`, `QueryRegexp`, `ClientIP` with `&&`, `||`, `!` and parentheses. Priority
   is by the rule's length unless set.
 - **Services**: load balancing (`wrr`, `p2c`, `hrw`, `leasttime`), sticky cookies, active and passive
-  health checks, weighted, mirroring (without request bodies) and failover services. HTTP/1.1,
+  health checks, weighted, [mirroring](#mirroring) and failover services. HTTP/1.1,
   HTTP/2 and h2c upstreams, WebSocket and gRPC.
 - **Bodies** stream through without being stored. An HTTP/2 visitor may send up to 1 MiB per connection
   ahead of the node reading it, so uploads aren't held to HTTP/2's default of 64 KiB per round trip.
@@ -885,6 +885,34 @@ circuitBreaker, buffering.
     logs it.
   </Accordion>
 </AccordionGroup>
+
+### Mirroring
+
+A mirroring service sends each visit to its main service, which answers the visitor, and **at the same
+time** to each mirror whose percentage covers it (100 copies every visit). Since v2.6 the mirror gets
+it as a normal visit of its own:
+
+- **Same request**: the method, path and query, and the headers the main upstream gets
+  (`X-Forwarded-*`, `X-Real-Ip`, cookies joined into one line). The mirror's own server path
+  (`preservePath`) and `Host` (the server's own when *pass the visitor's Host header on* is off).
+- **The body**, as it streams to the main upstream, never stored whole. With *Don't copy the request
+  body* (`mirrorBody: false`) the mirror gets the visit without it. *Copy bodies up to*
+  (`maxBodySize`) leaves out a visit whose `Content-Length` is longer, and cuts off a body without a
+  length once it passes the limit.
+- **Never in the way**: the mirror's answer is read and dropped, and the visitor never waits for it. A
+  mirror may be up to about 512 KiB of a body behind the visit; one that falls further behind (slow,
+  or not answering) is cut off while the visit goes on. A node keeps at most 1,024 mirror requests in
+  flight, and past that a visit isn't copied.
+- A mirroring service behind a split or a fallback mirrors too. WebSocket and other upgrades aren't
+  mirrored, and neither is an answer from the cache (the visit never reaches the main service).
+- Each node counts what happened in Prometheus as `dnz_proxy_mirror_requests_total{proxy, node,
+  service, mirror, result}`: `sent`, `failed`, `cut_off`, `too_big` or `busy`.
+
+<Note>
+  Before v2.6 a visit with a body wasn't copied unless `mirrorBody` was off, the mirror got the
+  visitor's headers without `X-Forwarded-*` and `X-Real-Ip`, and only a router's own service
+  mirrored. On a Traefik proxy, Traefik itself does the mirroring.
+</Note>
 
 ### TCP and UDP
 

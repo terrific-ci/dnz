@@ -76,8 +76,9 @@ The service form has tabs:
 A service can also send visits to **other services** instead of upstreams:
 
 - **Weighted** splits them by weight, for canary releases, optionally with sticky sessions.
-- **Mirroring** sends them to one service and copies a percentage to others, whose answers are
-  dropped.
+- **Mirroring** sends them to one service, and the same visits, bodies included, to others at the
+  same time: a percentage each, 100 for every visit. Their answers are dropped. On DNZ Proxy each copy
+  is a normal visit ([Mirroring](/proxy/dnz-proxy#mirroring)).
 - **Failover** sends them to one service, and to a fallback while it is down or answers with the
   status codes you list.
 
