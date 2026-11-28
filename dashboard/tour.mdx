@@ -1,33 +1,61 @@
 ---
 title: "Dashboard tour"
-description: "Find your way around the DNZ dashboard: the top bar, the menu, Find and Create New."
+description: "Find your way around the DNZ dashboard: the sidebar, the top bar, Find and Create New."
 ---
 
 The dashboard is a single-page app built into the `dnz` binary. It works offline (no fonts or
-icons from a CDN), supports light and dark mode, and moves its menu to a bottom dock on phones.
+icons from a CDN), supports light and dark mode (charcoal or near-white, with blue for what you can
+act on), and moves its menu to a bottom dock on phones.
+
+## The sidebar
+
+From top to bottom:
+
+- **DNZ logo** and version: back to the Overview. The arrows beside it fold the sidebar to icons
+  only (hover an icon for its name); DNZ remembers the choice in this browser.
+- **Search menu** (press `/`): narrows the menu as you type. **Esc** clears it.
+- **+**: Create New, a zone, user, role, division or notification provider, depending on what you
+  may do.
+- **Pin a zone**: star the zones you open most; they stay at the top of the sidebar for the division
+  you're in. With nothing pinned it offers your first zones. Hidden without `zones.read` and in
+  proxy-only mode.
+- **The menu**, in groups that fold away (DNZ remembers which): DNS, Proxy, High availability,
+  Settings. A group opens by itself when you go to one of its pages. Changes waiting for your
+  approval and your number of zones show as counts.
+- **This server**: its name, whether it is a primary or a secondary, how long it has been up, the
+  address you reach it on with the round trip, and the primary it follows. Beside it sits Denz, DNZ's
+  mascot: smiling while the forward DNS upstreams are up, worried while some are down.
 
 ## The top bar
 
 From left to right:
 
-- **DNZ logo**: back to the Overview.
-- **Division switcher**: the division you're working in. Zones, members, tokens and logs follow it.
-  You only see the divisions you're assigned to; superadmins see them all.
-- **The menu**: Overview, DNS, Proxy, High availability, Settings. Older links to Topology, Access,
-  DNS → Replication and Settings → Cluster still open the page at its new place.
+- **Where you are**: the section and page.
 - **Find** (`⌘K` on macOS, `Ctrl+K` elsewhere): jump to any page, zone or setting by typing. It
   also lists the settings cards inside the pages you may open (DNS cache, upstreams, blocklists,
   the block page, encrypted DNS, RRL, TSIG keys, MCP and more), each found by the words people use
   for it (`flush`, `adblock`, `2fa`…), and scrolls to the card. Every word you type must match, in
   any order. **Clear DNS cache** and **Your account: password and two-factor** run straight from
   Find.
+- **Division switcher**: the division you're working in. Zones, members, tokens and logs follow it.
+  You only see the divisions you're assigned to; superadmins see them all.
 - **Health** (superadmins): whether the forward DNS upstreams are up, which one is resolving now
   and which takes over next.
-- **Create New**: a zone, user, role, division or notification provider, depending on what you may
-  do.
 - **Incidents** (superadmins): upstream outages and recoveries.
 - **Account menu**: account settings (profile, password, signed-in sessions), the theme (System,
   Light or Dark), sign out, and **About DNZ** with the version.
+
+Older links to Topology, Access, DNS → Replication and Settings → Cluster still open the page at its
+new place.
+
+## Denz
+
+Denz, the round blue name server on the sign-in page, setup, the page for an address that doesn't
+exist and a few empty lists, is there for fun and changes nothing. It follows your pointer, reads
+along while you type your username, covers its eyes while you type your password (and peeks when
+you pause), warns about Caps Lock, shakes its head at a wrong password and cheers when you're in.
+Click it for a reaction; click it fast and it gets dizzy. Left alone for half a minute it dozes off.
+With **reduce motion** turned on in your system it stays still and only blinks.
 
 ## The menu
 
