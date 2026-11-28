@@ -6,18 +6,29 @@ rss: true
 
 {/* Written by the DNZ release workflow on every release. Edits here are overwritten. */}
 
-The latest release is **v2.5.11**, released November 22, 2026. To install or upgrade to it:
+The latest release is **v2.6.0**, released November 28, 2026. To install or upgrade to it:
 
 ```bash
-docker pull terrificci/dnz:2.5.11
-docker pull terrificci/dnz-proxy:2.5.11   # a server that only runs DNZ Proxy
-curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.5.11
+docker pull terrificci/dnz:2.6.0
+docker pull terrificci/dnz-proxy:2.6.0   # a server that only runs DNZ Proxy
+curl -fsSL https://raw.githubusercontent.com/terrific-ci/dnz/main/install.sh | sh -s -- --version 2.6.0
 ```
 
 The `latest` image tag and the install script without `--version` always get this release; see
 [Install](/deploy/install).
 
-<Update label="v2.5.11" description="November 22, 2026" tags={["Latest"]}>
+<Update label="v2.6.0" description="November 28, 2026" tags={["Latest"]}>
+
+- **A new look for the web UI.** A calmer dark (and light) theme that keeps DNZ's blue, flat cards with fine borders, and the key numbers of the Overview in a glowing strip at the top. The sidebar has a menu search (press `/`), a **+** button for creating things, zones you can pin, groups that fold, a compact icon-only mode, and the server's name, role, uptime and address at the bottom. The top bar shows where you are, **Find…** (⌘K), the division switcher, health, incidents and your account. Every Overview tab follows the new style.
+- **Meet Denz, DNZ's mascot.** On the sign-in page it follows your pointer, reads along as you type your user name, covers its eyes for the password, warns about Caps Lock, shakes its head at a wrong password and cheers when you get in. It also keeps you company during setup, connecting Cloudflare, changing your password, two-factor setup, the "page not found" page and first-run empty lists, and sits small in the sidebar, where it looks worried while DNS upstreams are down. Click it for a reaction or a DNS tip; with *Reduce motion* turned on in your system it only blinks.
+- **Status pages in the new look, with Denz.** The pages visitors of your proxies see (maintenance, moved, unreachable, the block page, the waiting room, the browser check, typo help) and the public status page follow the new style, and Denz sits at the top of each in a mood that fits: sleepy with a wrench during maintenance, worried when a site can't be reached, stern for blocked visitors, patient with an hourglass in a waiting room, happy or worried on the public status page depending on how your services are doing. The pages still load nothing from elsewhere and still fit a phone screen without scrolling.
+- **A default theme.** Settings → General → Appearance picks System, Light or Dark as the theme the web UI starts in, the sign-in page included, and *Let people pick their own theme* decides whether people may still change it in their account menu. Visitor pages and the public status page follow the same theme. It works the same in proxy-only mode, and from the command line with `dnz settings appearance light --choose off`.
+- **DNZ Proxy: mirroring copies every visit, body included.** A mirroring service now sends each visit its percentage covers to the mirrors at the same time as the main upstream, so uploads, form posts and API calls reach both, not only visits without a body. The body is streamed, never stored whole; tick *Don't copy the request body* to send visits without it, or set *Copy bodies up to* to leave out longer ones. Mirrors get the same forwarded headers as the main upstream (`X-Forwarded-*`, `X-Real-Ip`), mirroring works behind a split or a fallback too, and a mirror never slows a visit down: one that falls behind is cut off, and each node keeps at most 1,024 mirror requests in flight. Certificate checks, timeouts and client certificates follow the main upstream's settings. New metric: `dnz_proxy_mirror_requests_total` per node, mirror and result.
+- **Upstream editor:** the labels of servers that are unchecked or switched off are easier to read on a light background.
+
+</Update>
+
+<Update label="v2.5.11" description="November 22, 2026">
 
 - **DNZ Proxy: no more "too many redirects" behind Cloudflare's Flexible mode.** With Cloudflare reaching the proxy over plain HTTP, a route's *Redirect http:// to https://* (or the proxy's route default) sent visitors who were already on https back to https again, over and over, until the browser gave up. The redirect now believes the `X-Forwarded-Proto` header from a trusted forwarder: add Cloudflare's address ranges as trusted forwarders on the HTTP entry point, and those visits go through. A visitor reaching the proxy directly over HTTP is still redirected. Cloudflare's Full (strict) mode with HTTPS on the route remains the recommended setup.
 - **Security updates:** the libraries DNZ uses for its HTTP server, for sending email and for reading web addresses take the fixes for security advisories published in November 2026.
