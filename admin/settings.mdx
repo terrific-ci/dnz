@@ -73,6 +73,29 @@ dnz settings trusted-proxies --remove 10.0.133.10
 dnz settings trusted-proxies 10.0.133.10,172.18.0.5  # replace the saved list (--clear empties it)
 ```
 
+### Appearance
+
+The **Appearance** card sets the theme the web UI starts in, the sign-in page included:
+
+- **System** (the default): light or dark, as each person's device prefers.
+- **Light** or **Dark**: always that theme, whatever the device says.
+
+**Let people pick their own theme** is on by default: the default applies until someone picks a
+theme in their account menu (or with ⌘K), which their browser remembers. Turn it off and everyone
+gets the default, and the choice is hidden from the account menu.
+
+The theme also applies to what visitors of your proxies see (maintenance pages, the block page, the
+waiting room, the browser check; see [Status pages](/proxy/status-pages)) and to the
+[public status page](/dashboard/uptime). With **System** they follow the visitor's device. It works
+the same with [`--proxy-only`](/proxy/proxy-only). A DNZ secondary keeps its own.
+
+```bash
+dnz settings appearance                       # show
+dnz settings appearance light                 # light unless people pick their own
+dnz settings appearance light --choose off    # light for everyone
+dnz settings appearance system --choose on    # back to the default
+```
+
 ## Security
 
 ### Two-factor sign-in for superadmins
